@@ -1,0 +1,88 @@
+# =========================
+# General
+# =========================
+.DS_Store
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# =========================
+# Frontend (Next.js / Web)
+# =========================
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/.pnp
+web/.pnp.*
+web/.yarn/*
+!web/.yarn/patches
+!web/.yarn/plugins
+!web/.yarn/releases
+!web/.yarn/versions
+web/coverage/
+web/*.pem
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/.pnpm-debug.log*
+web/.vercel
+web/*.tsbuildinfo
+web/next-env.d.ts
+
+# =========================
+# Mobile (Flutter)
+# =========================
+mobile/.dart_tool/
+mobile/.flutter-plugins-dependencies
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/coverage/
+mobile/**/doc/api/
+mobile/**/ios/Flutter/.last_build_id
+mobile/app.*.symbols
+mobile/app.*.map.json
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
+mobile/.swiftpm/
+mobile/migrate_working_dir/
+
+# =========================
+# Backend (Go)
+# =========================
+backend/bin/
+backend/tmp/
+backend/vendor/
+
+# =========================
+# Runner (Python)
+# =========================
+runner/__pycache__/
+runner/*.pyc
+runner/.venv/
+runner/venv/
+runner/.pytest_cache/
+runner/*.egg-info/
+
+# =========================
+# Docker
+# =========================
+.docker/
+runner/*.out
+*.out

@@ -1,0 +1,26 @@
+apiVersion: v2
+name: agentmesh
+description: AgentMesh - AI-Powered Development Platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - agentmesh
+  - ai
+  - development
+  - saas
+maintainers:
+  - name: AgentMesh Team
+    email: team@agentmesh.dev
+home: https://agentmesh.dev
+sources:
+  - https://github.com/anthropics/agentmesh
+dependencies:
+  - name: postgresql
+    version: "13.2.24"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.6.1"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

@@ -1,0 +1,68 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agentmesh-staging
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+
+# Staging-specific patches
+patches:
+  # Moderate replicas for staging
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+  - target:
+      kind: Deployment
+      name: web
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+  # Update ingress host
+  - target:
+      kind: Ingress
+      name: agentmesh-ingress
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.agentmesh.example.com
+
+# Staging ConfigMap
+configMapGenerator:
+  - name: agentmesh-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=info
+      - DEBUG=false
+      - API_URL=https://staging-api.agentmesh.example.com
+
+# Staging uses external secrets (Sealed Secrets or External Secrets Operator)
+# secretGenerator is typically not used in staging/production

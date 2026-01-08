@@ -1,0 +1,170 @@
+# Default values for AgentMesh
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imagePullSecrets: []
+  storageClass: ""
+
+# Backend configuration
+backend:
+  replicaCount: 2
+
+  image:
+    repository: agentmesh/backend
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+  env:
+    GIN_MODE: release
+    SERVER_PORT: "8080"
+
+  # Secrets should be provided via external secret management
+  secrets:
+    databaseUrl: ""
+    redisUrl: ""
+    jwtSecret: ""
+    stripeSecretKey: ""
+
+# Web frontend configuration
+web:
+  replicaCount: 2
+
+  image:
+    repository: agentmesh/web
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+  env:
+    NEXT_PUBLIC_API_URL: "https://api.agentmesh.dev"
+    NEXT_PUBLIC_WS_URL: "wss://api.agentmesh.dev"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: agentmesh.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+    - host: api.agentmesh.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: agentmesh-tls
+      hosts:
+        - agentmesh.dev
+        - api.agentmesh.dev
+
+# PostgreSQL subchart configuration
+postgresql:
+  enabled: true
+  auth:
+    username: agentmesh
+    password: ""  # Set via --set or values file
+    database: agentmesh
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# Redis subchart configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Set via --set or values file
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 512Mi
+  replica:
+    replicaCount: 0
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod Security
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

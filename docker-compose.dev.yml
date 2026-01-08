@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentmesh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agentmesh
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentmesh_dev}
+      POSTGRES_DB: agentmesh
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentmesh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: agentmesh-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API server with hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: agentmesh-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=agentmesh
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-agentmesh_dev}
+      - DB_NAME=agentmesh
+      - DB_SSLMODE=disable
+      # Redis
+      - REDIS_URL=redis://redis:6379
+      # Auth
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      # Server
+      - SERVER_ADDRESS=:8080
+      - DEBUG=true
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      # Logging
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+      - LOG_FILE=/app/logs/agentmesh.log
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app
+      # Persist Go modules cache
+      - go-mod-cache:/go/pkg/mod
+      # Persist build cache
+      - go-build-cache:/root/.cache/go-build
+      # Persist logs
+      - ./backend/logs:/app/logs
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  go-mod-cache:
+  go-build-cache:
+
+networks:
+  default:
+    name: agentmesh-network

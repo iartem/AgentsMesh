@@ -1,0 +1,53 @@
+# gqlgen configuration
+# https://gqlgen.com/config/
+
+schema:
+  - schema/*.graphqls
+
+exec:
+  filename: generated/generated.go
+  package: generated
+
+model:
+  filename: generated/models.go
+  package: generated
+
+resolver:
+  layout: follow-schema
+  dir: resolver
+  package: resolver
+  filename_template: "{name}.resolvers.go"
+
+# Autobind models from domain packages
+autobind:
+  - github.com/anthropics/agentmesh/backend/internal/domain/organization
+  - github.com/anthropics/agentmesh/backend/internal/domain/user
+  - github.com/anthropics/agentmesh/backend/internal/domain/team
+  - github.com/anthropics/agentmesh/backend/internal/domain/runner
+  - github.com/anthropics/agentmesh/backend/internal/domain/session
+  - github.com/anthropics/agentmesh/backend/internal/domain/channel
+  - github.com/anthropics/agentmesh/backend/internal/domain/ticket
+  - github.com/anthropics/agentmesh/backend/internal/domain/agent
+  - github.com/anthropics/agentmesh/backend/internal/domain/gitprovider
+  - github.com/anthropics/agentmesh/backend/internal/domain/repository
+  - github.com/anthropics/agentmesh/backend/internal/domain/billing
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.ID
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+  Time:
+    model:
+      - github.com/99designs/gqlgen/graphql.Time
+  JSON:
+    model:
+      - github.com/99designs/gqlgen/graphql.Map
+
+# Omit GraphQL fields from resolver generation that can be resolved directly
+omit_slice_element_pointers: true
+struct_tag: json

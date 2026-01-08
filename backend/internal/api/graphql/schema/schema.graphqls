@@ -1,0 +1,439 @@
+# AgentMesh GraphQL Schema
+
+scalar Time
+scalar JSON
+
+# =============================================================================
+# Types
+# =============================================================================
+
+type User {
+  id: ID!
+  email: String!
+  username: String!
+  name: String
+  avatarURL: String
+  isActive: Boolean!
+  lastLoginAt: Time
+  createdAt: Time!
+  updatedAt: Time!
+  organizations: [Organization!]!
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  slug: String!
+  logoURL: String
+  subscriptionPlan: String!
+  subscriptionStatus: String!
+  createdAt: Time!
+  updatedAt: Time!
+  members: [OrganizationMember!]!
+  teams: [Team!]!
+  runners: [Runner!]!
+}
+
+type OrganizationMember {
+  id: ID!
+  user: User!
+  role: String!
+  joinedAt: Time!
+}
+
+type Team {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: Time!
+  updatedAt: Time!
+  members: [TeamMember!]!
+}
+
+type TeamMember {
+  id: ID!
+  user: User!
+  role: String!
+}
+
+type AgentType {
+  id: ID!
+  slug: String!
+  name: String!
+  description: String
+  launchCommand: String!
+  defaultArgs: String
+  credentialSchema: JSON
+  isBuiltin: Boolean!
+  isActive: Boolean!
+}
+
+type CustomAgentType {
+  id: ID!
+  slug: String!
+  name: String!
+  description: String
+  launchCommand: String!
+  defaultArgs: String
+  credentialSchema: JSON
+  statusDetection: JSON
+  isActive: Boolean!
+}
+
+type Runner {
+  id: ID!
+  nodeID: String!
+  description: String
+  status: RunnerStatus!
+  lastHeartbeat: Time
+  currentSessions: Int!
+  maxConcurrentSessions: Int!
+  runnerVersion: String
+  hostInfo: JSON
+  createdAt: Time!
+  updatedAt: Time!
+  activeSessions: [Session!]!
+}
+
+enum RunnerStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+type Session {
+  id: ID!
+  sessionKey: String!
+  status: SessionStatus!
+  agentStatus: String!
+  startedAt: Time
+  finishedAt: Time
+  lastActivity: Time
+  initialPrompt: String
+  branchName: String
+  worktreePath: String
+  createdAt: Time!
+  updatedAt: Time!
+  runner: Runner!
+  agentType: AgentType
+  repository: Repository
+  ticket: Ticket
+  createdBy: User!
+}
+
+enum SessionStatus {
+  INITIALIZING
+  RUNNING
+  PAUSED
+  TERMINATED
+  FAILED
+}
+
+type Repository {
+  id: ID!
+  name: String!
+  fullPath: String!
+  defaultBranch: String!
+  ticketPrefix: String
+  isActive: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+  gitProvider: GitProvider!
+}
+
+type GitProvider {
+  id: ID!
+  providerType: String!
+  name: String!
+  baseURL: String!
+  isDefault: Boolean!
+  isActive: Boolean!
+}
+
+type Ticket {
+  id: ID!
+  number: Int!
+  identifier: String!
+  type: TicketType!
+  title: String!
+  description: String
+  content: String
+  status: TicketStatus!
+  priority: TicketPriority!
+  dueDate: Time
+  startedAt: Time
+  completedAt: Time
+  createdAt: Time!
+  updatedAt: Time!
+  reporter: User!
+  assignees: [User!]!
+  labels: [Label!]!
+  sessions: [Session!]!
+  mergeRequests: [MergeRequest!]!
+  childTickets: [Ticket!]!
+  parentTicket: Ticket
+}
+
+enum TicketType {
+  TASK
+  BUG
+  FEATURE
+  EPIC
+}
+
+enum TicketStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TicketPriority {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+type Label {
+  id: ID!
+  name: String!
+  color: String!
+}
+
+type MergeRequest {
+  id: ID!
+  mrIID: Int!
+  mrURL: String!
+  sourceBranch: String!
+  targetBranch: String!
+  title: String
+  state: String!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type Channel {
+  id: ID!
+  name: String!
+  description: String
+  document: String
+  isArchived: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+  messages(limit: Int, offset: Int): [ChannelMessage!]!
+  sessions: [Session!]!
+}
+
+type ChannelMessage {
+  id: ID!
+  content: String!
+  messageType: String!
+  metadata: JSON
+  createdAt: Time!
+  session: Session
+  user: User
+}
+
+# Pagination
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type TicketConnection {
+  edges: [TicketEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type TicketEdge {
+  node: Ticket!
+  cursor: String!
+}
+
+type SessionConnection {
+  edges: [SessionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type SessionEdge {
+  node: Session!
+  cursor: String!
+}
+
+# =============================================================================
+# Inputs
+# =============================================================================
+
+input CreateTicketInput {
+  repositoryID: ID!
+  teamID: ID
+  type: TicketType!
+  title: String!
+  description: String
+  content: String
+  priority: TicketPriority
+  assigneeIDs: [ID!]
+  labels: [String!]
+  parentID: ID
+  dueDate: Time
+}
+
+input UpdateTicketInput {
+  title: String
+  description: String
+  content: String
+  type: TicketType
+  status: TicketStatus
+  priority: TicketPriority
+  assigneeIDs: [ID!]
+  labels: [String!]
+  dueDate: Time
+}
+
+input CreateSessionInput {
+  runnerID: ID!
+  agentTypeID: ID
+  customAgentTypeID: ID
+  teamID: ID
+  repositoryID: ID
+  ticketID: ID
+  initialPrompt: String
+  branchName: String
+}
+
+input CreateChannelInput {
+  name: String!
+  description: String
+  document: String
+  teamID: ID
+  repositoryID: ID
+  ticketID: ID
+}
+
+input UpdateChannelInput {
+  name: String
+  description: String
+  document: String
+}
+
+input TicketFilter {
+  teamID: ID
+  repositoryID: ID
+  status: TicketStatus
+  priority: TicketPriority
+  type: TicketType
+  assigneeID: ID
+  labels: [String!]
+  search: String
+}
+
+input SessionFilter {
+  teamID: ID
+  runnerID: ID
+  status: SessionStatus
+  ticketID: ID
+}
+
+# =============================================================================
+# Queries
+# =============================================================================
+
+type Query {
+  # User
+  me: User!
+  user(id: ID!): User
+
+  # Organization
+  organization(slug: String!): Organization
+  myOrganizations: [Organization!]!
+
+  # Teams
+  team(id: ID!): Team
+  teams: [Team!]!
+
+  # Runners
+  runner(id: ID!): Runner
+  runners(status: RunnerStatus): [Runner!]!
+  availableRunners: [Runner!]!
+
+  # Sessions
+  session(key: String!): Session
+  sessions(filter: SessionFilter, first: Int, after: String): SessionConnection!
+
+  # Agent Types
+  agentTypes: [AgentType!]!
+  agentType(id: ID!): AgentType
+  customAgentTypes: [CustomAgentType!]!
+
+  # Repositories
+  repository(id: ID!): Repository
+  repositories(teamID: ID): [Repository!]!
+
+  # Tickets
+  ticket(identifier: String!): Ticket
+  tickets(filter: TicketFilter, first: Int, after: String): TicketConnection!
+
+  # Labels
+  labels(repositoryID: ID): [Label!]!
+
+  # Channels
+  channel(id: ID!): Channel
+  channels(teamID: ID, includeArchived: Boolean): [Channel!]!
+
+  # Git Providers
+  gitProviders: [GitProvider!]!
+}
+
+# =============================================================================
+# Mutations
+# =============================================================================
+
+type Mutation {
+  # Sessions
+  createSession(input: CreateSessionInput!): Session!
+  terminateSession(key: String!): Session!
+
+  # Tickets
+  createTicket(input: CreateTicketInput!): Ticket!
+  updateTicket(identifier: String!, input: UpdateTicketInput!): Ticket!
+  deleteTicket(identifier: String!): Boolean!
+  updateTicketStatus(identifier: String!, status: TicketStatus!): Ticket!
+
+  # Labels
+  createLabel(name: String!, color: String!, repositoryID: ID): Label!
+  deleteLabel(id: ID!): Boolean!
+
+  # Channels
+  createChannel(input: CreateChannelInput!): Channel!
+  updateChannel(id: ID!, input: UpdateChannelInput!): Channel!
+  archiveChannel(id: ID!): Channel!
+  unarchiveChannel(id: ID!): Channel!
+  sendMessage(channelID: ID!, content: String!, sessionKey: String): ChannelMessage!
+
+  # Channel Session Management
+  joinChannel(channelID: ID!, sessionKey: String!): Boolean!
+  leaveChannel(channelID: ID!, sessionKey: String!): Boolean!
+}
+
+# =============================================================================
+# Subscriptions
+# =============================================================================
+
+type Subscription {
+  # Session updates
+  sessionUpdated(key: String!): Session!
+
+  # Channel messages
+  messageReceived(channelID: ID!): ChannelMessage!
+
+  # Runner status
+  runnerStatusChanged: Runner!
+}

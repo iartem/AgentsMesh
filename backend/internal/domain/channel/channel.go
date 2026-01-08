@@ -1,0 +1,192 @@
+package channel
+
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"time"
+
+	"github.com/lib/pq"
+)
+
+// Channel represents a communication channel for agent collaboration
+type Channel struct {
+	ID             int64  `gorm:"primaryKey" json:"id"`
+	OrganizationID int64  `gorm:"not null;index" json:"organization_id"`
+	TeamID         *int64 `gorm:"index" json:"team_id,omitempty"`
+
+	Name        string  `gorm:"size:100;not null" json:"name"`
+	Description *string `gorm:"type:text" json:"description,omitempty"`
+	Document    *string `gorm:"type:text" json:"document,omitempty"` // Shared document
+
+	RepositoryID *int64 `json:"repository_id,omitempty"`
+	TicketID     *int64 `json:"ticket_id,omitempty"`
+
+	CreatedBySession *string `gorm:"size:100" json:"created_by_session,omitempty"`
+	CreatedByUserID  *int64  `json:"created_by_user_id,omitempty"`
+
+	IsArchived bool `gorm:"not null;default:false" json:"is_archived"`
+
+	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
+
+	// Associations
+	Messages []Message `gorm:"foreignKey:ChannelID" json:"messages,omitempty"`
+}
+
+func (Channel) TableName() string {
+	return "channels"
+}
+
+// Message type constants
+const (
+	MessageTypeText    = "text"
+	MessageTypeSystem  = "system"
+	MessageTypeCode    = "code"
+	MessageTypeCommand = "command"
+)
+
+// MessageMetadata represents optional message metadata
+type MessageMetadata map[string]interface{}
+
+// Scan implements sql.Scanner for MessageMetadata
+func (mm *MessageMetadata) Scan(value interface{}) error {
+	if value == nil {
+		*mm = nil
+		return nil
+	}
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(bytes, mm)
+}
+
+// Value implements driver.Valuer for MessageMetadata
+func (mm MessageMetadata) Value() (driver.Value, error) {
+	if mm == nil {
+		return nil, nil
+	}
+	return json.Marshal(mm)
+}
+
+// Message represents a message in a channel
+type Message struct {
+	ID        int64 `gorm:"primaryKey" json:"id"`
+	ChannelID int64 `gorm:"not null;index" json:"channel_id"`
+
+	SenderSession *string `gorm:"size:100" json:"sender_session,omitempty"`
+	SenderUserID  *int64  `json:"sender_user_id,omitempty"`
+
+	MessageType string          `gorm:"size:50;not null;default:'text'" json:"message_type"`
+	Content     string          `gorm:"type:text;not null" json:"content"`
+	Metadata    MessageMetadata `gorm:"type:jsonb" json:"metadata,omitempty"`
+
+	CreatedAt time.Time `gorm:"not null;default:now();index" json:"created_at"`
+
+	// Associations
+	Channel *Channel `gorm:"foreignKey:ChannelID" json:"channel,omitempty"`
+}
+
+func (Message) TableName() string {
+	return "channel_messages"
+}
+
+// Binding status constants
+const (
+	BindingStatusPending  = "pending"
+	BindingStatusActive   = "active"
+	BindingStatusRejected = "rejected"
+	BindingStatusInactive = "inactive"
+	BindingStatusExpired  = "expired"
+
+	// Legacy statuses for backward compatibility
+	BindingStatusApproved = "active"  // Alias
+	BindingStatusRevoked  = "inactive" // Alias
+)
+
+// Binding scope constants
+const (
+	BindingScopeTerminalRead  = "terminal:read"
+	BindingScopeTerminalWrite = "terminal:write"
+)
+
+// Binding policy constants
+const (
+	BindingPolicySameUserAuto    = "same_user_auto"
+	BindingPolicySameProjectAuto = "same_project_auto"
+	BindingPolicyExplicitOnly    = "explicit_only"
+)
+
+// ValidBindingScopes contains all valid binding scopes
+var ValidBindingScopes = map[string]bool{
+	BindingScopeTerminalRead:  true,
+	BindingScopeTerminalWrite: true,
+}
+
+// SessionBinding represents a binding between two sessions
+type SessionBinding struct {
+	ID             int64 `gorm:"primaryKey" json:"id"`
+	OrganizationID int64 `gorm:"not null;index" json:"organization_id"`
+
+	InitiatorSession string         `gorm:"size:100;not null;index" json:"initiator_session"`
+	TargetSession    string         `gorm:"size:100;not null;index" json:"target_session"`
+	GrantedScopes    pq.StringArray `gorm:"type:text[]" json:"granted_scopes"`
+	PendingScopes    pq.StringArray `gorm:"type:text[]" json:"pending_scopes"`
+	Status           string         `gorm:"size:50;not null;default:'pending'" json:"status"`
+
+	// Timestamps
+	RequestedAt *time.Time `json:"requested_at,omitempty"`
+	RespondedAt *time.Time `json:"responded_at,omitempty"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+
+	// Rejection information
+	RejectionReason *string `gorm:"size:500" json:"rejection_reason,omitempty"`
+
+	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
+}
+
+func (SessionBinding) TableName() string {
+	return "session_bindings"
+}
+
+// HasScope checks if a specific scope is granted
+func (b *SessionBinding) HasScope(scope string) bool {
+	for _, s := range b.GrantedScopes {
+		if s == scope {
+			return true
+		}
+	}
+	return false
+}
+
+// HasPendingScope checks if a specific scope is pending approval
+func (b *SessionBinding) HasPendingScope(scope string) bool {
+	for _, s := range b.PendingScopes {
+		if s == scope {
+			return true
+		}
+	}
+	return false
+}
+
+// IsActive checks if the binding is currently active
+func (b *SessionBinding) IsActive() bool {
+	return b.Status == BindingStatusActive
+}
+
+// IsPending checks if the binding is pending approval
+func (b *SessionBinding) IsPending() bool {
+	return b.Status == BindingStatusPending
+}
+
+// CanObserve checks if the initiator can observe the target's terminal
+func (b *SessionBinding) CanObserve() bool {
+	return b.IsActive() && b.HasScope(BindingScopeTerminalRead)
+}
+
+// CanControl checks if the initiator can send input to the target's terminal
+func (b *SessionBinding) CanControl() bool {
+	return b.IsActive() && b.HasScope(BindingScopeTerminalWrite)
+}

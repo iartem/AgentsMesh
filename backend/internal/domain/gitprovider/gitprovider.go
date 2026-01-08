@@ -1,0 +1,57 @@
+package gitprovider
+
+import (
+	"time"
+)
+
+// GitProvider represents a configured Git provider for an organization
+type GitProvider struct {
+	ID             int64  `gorm:"primaryKey" json:"id"`
+	OrganizationID int64  `gorm:"not null;index" json:"organization_id"`
+	ProviderType   string `gorm:"size:50;not null" json:"provider_type"` // gitlab, github, gitee
+	Name           string `gorm:"size:100;not null" json:"name"`
+	BaseURL        string `gorm:"size:255;not null" json:"base_url"`
+
+	ClientID              *string `gorm:"size:255" json:"client_id,omitempty"`
+	ClientSecretEncrypted *string `gorm:"type:text" json:"-"`
+	BotTokenEncrypted     *string `gorm:"type:text" json:"-"`
+
+	IsDefault bool `gorm:"not null;default:false" json:"is_default"`
+	IsActive  bool `gorm:"not null;default:true" json:"is_active"`
+
+	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
+
+	// Associations
+	Repositories []Repository `gorm:"foreignKey:GitProviderID" json:"repositories,omitempty"`
+}
+
+func (GitProvider) TableName() string {
+	return "git_providers"
+}
+
+// Repository represents a Git repository configured in the system
+type Repository struct {
+	ID             int64  `gorm:"primaryKey" json:"id"`
+	OrganizationID int64  `gorm:"not null;index" json:"organization_id"`
+	TeamID         *int64 `gorm:"index" json:"team_id,omitempty"`
+	GitProviderID  int64  `gorm:"not null" json:"git_provider_id"`
+
+	ExternalID    string  `gorm:"size:255;not null" json:"external_id"`
+	Name          string  `gorm:"size:255;not null" json:"name"`
+	FullPath      string  `gorm:"size:500;not null" json:"full_path"`
+	DefaultBranch string  `gorm:"size:100;default:'main'" json:"default_branch"`
+	TicketPrefix  *string `gorm:"size:10" json:"ticket_prefix,omitempty"`
+
+	IsActive bool `gorm:"not null;default:true" json:"is_active"`
+
+	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
+
+	// Associations
+	GitProvider *GitProvider `gorm:"foreignKey:GitProviderID" json:"git_provider,omitempty"`
+}
+
+func (Repository) TableName() string {
+	return "repositories"
+}

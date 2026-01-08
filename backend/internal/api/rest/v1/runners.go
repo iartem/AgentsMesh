@@ -1,0 +1,384 @@
+package v1
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/anthropics/agentmesh/backend/internal/middleware"
+	runner "github.com/anthropics/agentmesh/backend/internal/service/runner"
+	"github.com/gin-gonic/gin"
+)
+
+// RunnerHandler handles runner-related requests
+type RunnerHandler struct {
+	runnerService *runner.Service
+}
+
+// NewRunnerHandler creates a new runner handler
+func NewRunnerHandler(runnerService *runner.Service) *RunnerHandler {
+	return &RunnerHandler{
+		runnerService: runnerService,
+	}
+}
+
+// ListRunners lists runners in organization
+// GET /api/v1/organizations/:slug/runners
+func (h *RunnerHandler) ListRunners(c *gin.Context) {
+	tenant := middleware.GetTenant(c)
+
+	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"runners": runners})
+}
+
+// GetRunner returns runner by ID
+// GET /api/v1/organizations/:slug/runners/:id
+func (h *RunnerHandler) GetRunner(c *gin.Context) {
+	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		return
+	}
+
+	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"runner": r})
+}
+
+// DeleteRunner deletes a runner
+// DELETE /api/v1/organizations/:slug/runners/:id
+func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
+	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		return
+	}
+
+	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	if err := h.runnerService.DeleteRunner(c.Request.Context(), runnerID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete runner"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Runner deleted"})
+}
+
+// CreateTokenRequest represents registration token creation request
+type CreateTokenRequest struct {
+	Description string     `json:"description"`
+	MaxUses     *int       `json:"max_uses"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+}
+
+// CreateRegistrationToken creates a new registration token
+// POST /api/v1/organizations/:slug/runners/tokens
+func (h *RunnerHandler) CreateRegistrationToken(c *gin.Context) {
+	var req CreateTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	token, err := h.runnerService.CreateRegistrationToken(
+		c.Request.Context(),
+		tenant.OrganizationID,
+		tenant.UserID,
+		req.Description,
+		req.MaxUses,
+		req.ExpiresAt,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"token":   token,
+		"message": "Save this token securely. It will only be shown once.",
+	})
+}
+
+// RegisterRunnerRequest represents runner registration request
+type RegisterRunnerRequest struct {
+	RegistrationToken     string `json:"registration_token" binding:"required"`
+	NodeID                string `json:"node_id" binding:"required"`
+	Description           string `json:"description"`
+	MaxConcurrentSessions int    `json:"max_concurrent_sessions"`
+}
+
+// RegisterRunner registers a new runner
+// POST /api/v1/runners/register
+func (h *RunnerHandler) RegisterRunner(c *gin.Context) {
+	var req RegisterRunnerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	maxSessions := req.MaxConcurrentSessions
+	if maxSessions == 0 {
+		maxSessions = 5
+	}
+
+	r, authToken, err := h.runnerService.RegisterRunner(
+		c.Request.Context(),
+		req.RegistrationToken,
+		req.NodeID,
+		req.Description,
+		maxSessions,
+	)
+	if err != nil {
+		switch err {
+		case runner.ErrInvalidToken:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid registration token"})
+		case runner.ErrTokenExpired:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Registration token expired"})
+		case runner.ErrTokenExhausted:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Registration token usage exhausted"})
+		case runner.ErrRunnerAlreadyExists:
+			c.JSON(http.StatusConflict, gin.H{"error": "Runner with this node_id already exists"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register runner"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"runner_id":  r.ID,
+		"auth_token": authToken,
+	})
+}
+
+// UpdateRunnerRequest represents runner update request
+type UpdateRunnerRequest struct {
+	Description           *string `json:"description"`
+	MaxConcurrentSessions *int    `json:"max_concurrent_sessions"`
+	IsEnabled             *bool   `json:"is_enabled"`
+}
+
+// UpdateRunner updates a runner
+// PUT /api/v1/organizations/:slug/runners/:id
+func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
+	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		return
+	}
+
+	var req UpdateRunnerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	// Verify runner belongs to organization
+	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		return
+	}
+
+	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Update runner
+	updated, err := h.runnerService.UpdateRunner(c.Request.Context(), runnerID, runner.RunnerUpdateInput{
+		Description:           req.Description,
+		MaxConcurrentSessions: req.MaxConcurrentSessions,
+		IsEnabled:             req.IsEnabled,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update runner"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"runner": updated})
+}
+
+// RegenerateAuthToken regenerates runner authentication token
+// POST /api/v1/organizations/:slug/runners/:id/regenerate-token
+func (h *RunnerHandler) RegenerateAuthToken(c *gin.Context) {
+	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	// Verify runner belongs to organization
+	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		return
+	}
+
+	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Regenerate token
+	authToken, err := h.runnerService.RegenerateAuthToken(c.Request.Context(), runnerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to regenerate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"auth_token": authToken,
+		"message":    "Save this token securely. It will only be shown once. The runner will need to be reconfigured with the new token.",
+	})
+}
+
+// ListAvailableRunners lists available runners for sessions
+// GET /api/v1/organizations/:slug/runners/available
+func (h *RunnerHandler) ListAvailableRunners(c *gin.Context) {
+	tenant := middleware.GetTenant(c)
+
+	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"runners": runners})
+}
+
+// ListRegistrationTokens lists registration tokens
+// GET /api/v1/organizations/:slug/runners/tokens
+func (h *RunnerHandler) ListRegistrationTokens(c *gin.Context) {
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	tokens, err := h.runnerService.ListRegistrationTokens(c.Request.Context(), tenant.OrganizationID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tokens"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tokens": tokens})
+}
+
+// RevokeRegistrationToken revokes a registration token
+// DELETE /api/v1/organizations/:slug/runners/tokens/:id
+func (h *RunnerHandler) RevokeRegistrationToken(c *gin.Context) {
+	tokenID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token ID"})
+		return
+	}
+
+	tenant := middleware.GetTenant(c)
+
+	// Check admin permission
+	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		return
+	}
+
+	if err := h.runnerService.RevokeRegistrationToken(c.Request.Context(), tokenID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Token revoked"})
+}
+
+// HeartbeatRequest represents runner heartbeat request
+type HeartbeatRequest struct {
+	RunnerID        int64  `json:"runner_id" binding:"required"`
+	AuthToken       string `json:"auth_token" binding:"required"`
+	CurrentSessions int    `json:"current_sessions"`
+	RunnerVersion   string `json:"runner_version"`
+}
+
+// Heartbeat handles runner heartbeat
+// POST /api/v1/runners/heartbeat
+func (h *RunnerHandler) Heartbeat(c *gin.Context) {
+	var req HeartbeatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.runnerService.UpdateHeartbeat(
+		c.Request.Context(),
+		req.RunnerID,
+		req.AuthToken,
+		req.CurrentSessions,
+		req.RunnerVersion,
+	)
+	if err != nil {
+		if err == runner.ErrInvalidAuth {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update heartbeat"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}

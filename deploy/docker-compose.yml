@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentmesh-postgres
+    environment:
+      POSTGRES_USER: agentmesh
+      POSTGRES_PASSWORD: agentmesh_dev
+      POSTGRES_DB: agentmesh
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentmesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: agentmesh-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (for development, run locally with hot reload)
+  # Uncomment when needed for production-like testing
+  # backend:
+  #   build:
+  #     context: ../backend
+  #     dockerfile: Dockerfile
+  #   container_name: agentmesh-backend
+  #   environment:
+  #     - SERVER_ADDRESS=:8080
+  #     - DEBUG=true
+  #     - DB_HOST=postgres
+  #     - DB_PORT=5432
+  #     - DB_USER=agentmesh
+  #     - DB_PASSWORD=agentmesh_dev
+  #     - DB_NAME=agentmesh
+  #     - DB_SSLMODE=disable
+  #     - REDIS_URL=redis://redis:6379
+  #     - JWT_SECRET=dev-secret-change-in-production
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # Adminer (database management UI)
+  adminer:
+    image: adminer:latest
+    container_name: agentmesh-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: agentmesh-network
