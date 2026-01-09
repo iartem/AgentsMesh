@@ -1437,3 +1437,167 @@ func TestManagerMonitorSessionExit(t *testing.T) {
 		t.Error("timeout waiting for close callback from monitor")
 	}
 }
+
+// --- Test SetOutputHandler and SetExitHandler ---
+
+func TestSetOutputHandler(t *testing.T) {
+	opts := Options{
+		Command: "echo",
+		Args:    []string{"test"},
+	}
+
+	term, err := New(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var received []byte
+	term.SetOutputHandler(func(data []byte) {
+		received = append(received, data...)
+	})
+
+	err = term.Start()
+	if err != nil {
+		t.Fatalf("failed to start terminal: %v", err)
+	}
+
+	// Wait for output
+	time.Sleep(500 * time.Millisecond)
+	term.Stop()
+
+	// Should have received some output
+	if len(received) == 0 {
+		t.Error("expected to receive output from echo command")
+	}
+}
+
+func TestSetExitHandler(t *testing.T) {
+	opts := Options{
+		Command: "true", // Command that exits immediately with code 0
+	}
+
+	term, err := New(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	exitCode := -1
+	exitCalled := make(chan struct{})
+	term.SetExitHandler(func(code int) {
+		exitCode = code
+		close(exitCalled)
+	})
+
+	err = term.Start()
+	if err != nil {
+		t.Fatalf("failed to start terminal: %v", err)
+	}
+
+	// Wait for exit handler to be called
+	select {
+	case <-exitCalled:
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0", exitCode)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for exit handler")
+		term.Stop()
+	}
+}
+
+func TestSetOutputHandlerNil(t *testing.T) {
+	opts := Options{
+		Command: "echo",
+		Args:    []string{"hello"},
+	}
+
+	term, err := New(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should not panic when setting nil handler
+	term.SetOutputHandler(nil)
+
+	// Terminal should still work
+	err = term.Start()
+	if err != nil {
+		t.Fatalf("failed to start terminal: %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	term.Stop()
+}
+
+func TestSetExitHandlerNil(t *testing.T) {
+	opts := Options{
+		Command: "true",
+	}
+
+	term, err := New(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should not panic when setting nil handler
+	term.SetExitHandler(nil)
+
+	// Terminal should still work
+	err = term.Start()
+	if err != nil {
+		t.Fatalf("failed to start terminal: %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	term.Stop()
+}
+
+func TestSetHandlersBeforeStart(t *testing.T) {
+	opts := Options{
+		Command:  "echo",
+		Args:     []string{"hello"},
+		OnOutput: func([]byte) { /* initial handler */ },
+		OnExit:   func(int) { /* initial handler */ },
+	}
+
+	term, err := New(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Override handlers before Start
+	outputReceived := make(chan struct{})
+	exitReceived := make(chan struct{})
+
+	term.SetOutputHandler(func(data []byte) {
+		select {
+		case <-outputReceived:
+		default:
+			close(outputReceived)
+		}
+	})
+	term.SetExitHandler(func(code int) {
+		close(exitReceived)
+	})
+
+	err = term.Start()
+	if err != nil {
+		t.Fatalf("failed to start terminal: %v", err)
+	}
+
+	// Wait for both handlers to be called
+	select {
+	case <-outputReceived:
+		// Good
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for output handler")
+	}
+
+	select {
+	case <-exitReceived:
+		// Good
+	case <-time.After(2 * time.Second):
+		t.Error("timeout waiting for exit handler")
+		term.Stop()
+	}
+}

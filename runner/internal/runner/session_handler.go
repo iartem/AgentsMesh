@@ -100,6 +100,13 @@ func (h *SessionHandler) handleSessionStart(ctx context.Context, msg *client.Mes
 		builder.WithWorktree(payload.TicketIdentifier)
 	}
 
+	// Enable sandbox mode if sandbox manager is available
+	// This enables the new plugin-based environment setup
+	if h.runner.sandboxManager != nil {
+		pluginConfig := payload.ToPluginConfig()
+		builder.WithSandbox(pluginConfig)
+	}
+
 	// Build and start the session
 	session, err := builder.Build(ctx)
 	if err != nil {
@@ -167,8 +174,13 @@ func (h *SessionHandler) handleSessionStop(ctx context.Context, msg *client.Mess
 		session.Terminal.Stop()
 	}
 
-	// Clean up worktree if applicable
-	if session.WorktreePath != "" && h.runner.workspace != nil {
+	// Clean up sandbox if sandbox manager is available
+	if h.runner.sandboxManager != nil {
+		if err := h.runner.sandboxManager.Cleanup(payload.SessionKey); err != nil {
+			log.Printf("[session_handler] Warning: failed to cleanup sandbox: %v", err)
+		}
+	} else if session.WorktreePath != "" && h.runner.workspace != nil {
+		// Legacy mode: clean up worktree directly
 		if err := h.runner.workspace.RemoveWorktree(ctx, session.WorktreePath); err != nil {
 			log.Printf("[session_handler] Warning: failed to remove worktree: %v", err)
 		}
@@ -257,6 +269,13 @@ func (h *SessionHandler) handleSessionExit(sessionKey string, exitCode int) {
 	session := h.sessionStore.Delete(sessionKey)
 	if session != nil {
 		session.Status = SessionStatusStopped
+	}
+
+	// Clean up sandbox if sandbox manager is available
+	if h.runner.sandboxManager != nil {
+		if err := h.runner.sandboxManager.Cleanup(sessionKey); err != nil {
+			log.Printf("[session_handler] Warning: failed to cleanup sandbox on exit: %v", err)
+		}
 	}
 
 	h.eventSender.SendSessionStatus(sessionKey, "exited", map[string]interface{}{

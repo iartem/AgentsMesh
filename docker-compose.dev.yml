@@ -68,6 +68,9 @@ services:
       - LOG_LEVEL=debug
       - LOG_FORMAT=text
       - LOG_FILE=/app/logs/agentmesh.log
+      # Email
+      - EMAIL_PROVIDER=console
+      - FRONTEND_BASE_URL=http://localhost:3000
     volumes:
       # Mount source code for hot reload
       - ./backend:/app

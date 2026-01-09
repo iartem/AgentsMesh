@@ -137,17 +137,16 @@ func TestSessionBuilderResolveWorkingDirectoryFallbackToConfig(t *testing.T) {
 	}
 }
 
-func TestSessionBuilderResolveWorkingDirectoryWithWorktreeService(t *testing.T) {
-	// This test requires a real git repository, so we skip if not available
+func TestSessionBuilderResolveWorkingDirectoryWithTicket(t *testing.T) {
+	// Test that without repository URL, falls back to config workspace even with ticket
 	runner := &Runner{
 		cfg: &config.Config{
 			WorkspaceRoot: "/tmp",
 		},
-		worktreeService: nil, // No worktree service
 	}
 
 	builder := NewSessionBuilder(runner).
-		WithSessionKey("test-worktree").
+		WithSessionKey("test-ticket-no-repo").
 		WithWorktree("TICKET-123")
 
 	workDir, _, _, err := builder.resolveWorkingDirectory(context.Background())
@@ -155,7 +154,7 @@ func TestSessionBuilderResolveWorkingDirectoryWithWorktreeService(t *testing.T) 
 		t.Fatalf("resolveWorkingDirectory failed: %v", err)
 	}
 
-	// Without worktree service, should fall back to config workspace
+	// Without repository URL, should fall back to config workspace
 	if workDir != "/tmp" {
 		t.Errorf("workDir = %v, want /tmp", workDir)
 	}
@@ -165,8 +164,7 @@ func TestSessionBuilderResolveWorkingDirectoryWithWorktreeService(t *testing.T) 
 
 func TestSessionBuilderRunPreparationWithScript(t *testing.T) {
 	runner := &Runner{
-		cfg:             &config.Config{},
-		worktreeService: nil,
+		cfg: &config.Config{},
 	}
 
 	builder := NewSessionBuilder(runner).
@@ -197,17 +195,16 @@ func TestSessionBuilderRunPreparationEmptyScript(t *testing.T) {
 	}
 }
 
-func TestSessionBuilderRunPreparationWithWorktreeService(t *testing.T) {
+func TestSessionBuilderRunPreparationBasic(t *testing.T) {
 	runner := &Runner{
-		cfg:             &config.Config{},
-		worktreeService: nil, // nil worktree service
+		cfg: &config.Config{},
 	}
 
 	builder := NewSessionBuilder(runner).
-		WithSessionKey("test-prep-wt").
+		WithSessionKey("test-prep-basic").
 		WithPreparationScript("echo test", 5)
 
-	// Test with nil worktree service - should still work
+	// Test basic preparation - should work
 	err := builder.runPreparation(context.Background(), "/tmp", "/tmp/worktree", "main")
 	_ = err // May fail but should not panic
 }

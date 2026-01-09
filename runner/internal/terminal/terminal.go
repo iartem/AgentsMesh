@@ -141,6 +141,22 @@ func (t *Terminal) Stop() {
 	}
 }
 
+// SetOutputHandler sets the output handler callback.
+// Must be called before Start().
+func (t *Terminal) SetOutputHandler(handler func([]byte)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.onOutput = handler
+}
+
+// SetExitHandler sets the exit handler callback.
+// Must be called before Start().
+func (t *Terminal) SetExitHandler(handler func(int)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.onExit = handler
+}
+
 // readOutput reads output from the PTY and sends to handler
 func (t *Terminal) readOutput() {
 	buf := make([]byte, 4096)

@@ -255,27 +255,8 @@ func TestRunnerRunStopAllSessions(t *testing.T) {
 
 // --- Test initEnhancedComponents ---
 
-func TestInitEnhancedComponentsWithWorktree(t *testing.T) {
-	tempDir := t.TempDir()
-	cfg := &config.Config{
-		WorkspaceRoot:  tempDir,
-		RepositoryPath: tempDir,
-		WorktreesDir:   tempDir,
-		BaseBranch:     "main",
-	}
-
-	r := &Runner{
-		cfg:      cfg,
-		sessions: make(map[string]*Session),
-	}
-
-	r.initEnhancedComponents(cfg)
-
-	// Worktree service should be initialized
-	if r.worktreeService == nil {
-		t.Error("worktreeService should be initialized")
-	}
-}
+// Note: TestInitEnhancedComponentsWithWorktree removed - worktreeService has been
+// replaced by sandbox plugins (WorktreePlugin). See sandbox/plugins/worktree_test.go.
 
 func TestInitEnhancedComponentsWithMCPConfig(t *testing.T) {
 	tempDir := t.TempDir()

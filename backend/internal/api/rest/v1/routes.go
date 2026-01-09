@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/anthropics/agentmesh/backend/internal/config"
+	"github.com/anthropics/agentmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentmesh/backend/internal/infra/websocket"
 	"github.com/anthropics/agentmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentmesh/backend/internal/service/auth"
@@ -11,11 +12,12 @@ import (
 	"github.com/anthropics/agentmesh/backend/internal/service/devmesh"
 	"github.com/anthropics/agentmesh/backend/internal/service/devpod"
 	"github.com/anthropics/agentmesh/backend/internal/service/gitprovider"
+	"github.com/anthropics/agentmesh/backend/internal/service/invitation"
 	"github.com/anthropics/agentmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentmesh/backend/internal/service/session"
-	"github.com/anthropics/agentmesh/backend/internal/service/team"
+	"github.com/anthropics/agentmesh/backend/internal/service/sshkey"
 	"github.com/anthropics/agentmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentmesh/backend/internal/service/user"
 	"github.com/gin-gonic/gin"
@@ -29,7 +31,6 @@ type Services struct {
 	Auth               *auth.Service
 	User               *user.Service
 	Org                *organization.Service
-	Team               *team.Service
 	Agent              *agent.Service
 	GitProvider        *gitprovider.Service
 	Repository         *repository.Service
@@ -45,38 +46,27 @@ type Services struct {
 	DevPodSettings     *devpod.SettingsService    // DevPod user settings
 	DevPodAIProvider   *devpod.AIProviderService  // DevPod AI provider management
 	Billing            *billing.Service
-	Message            *MessageService // Agent-to-agent messaging
-	Hub                *websocket.Hub  // WebSocket hub for real-time communication
+	Message            *MessageService      // Agent-to-agent messaging
+	Hub                *websocket.Hub       // WebSocket hub for real-time communication
+	SSHKey             *sshkey.Service      // SSH key management
+	Email              email.Service        // Email service
+	Invitation         *invitation.Service  // Organization invitations
 }
 
 // RegisterAllRoutes registers all API v1 routes with proper handlers
 func RegisterAllRoutes(rg *gin.RouterGroup, cfg *config.Config, svc *Services) {
 	// Auth routes (public)
-	RegisterAuthRoutes(rg.Group("/auth"), cfg, svc.Auth, svc.User)
+	RegisterAuthRoutes(rg.Group("/auth"), cfg, svc.Auth, svc.User, svc.Email)
 
 	// User routes (authenticated, but not org-scoped)
 	RegisterUserRoutes(rg.Group("/users"), svc.User, svc.Org, svc.Agent, svc.DevPodSettings, svc.DevPodAIProvider)
 
 	// Organization routes (authenticated, some require org context)
-	RegisterOrganizationRoutes(rg.Group("/organizations"), svc.Org, svc.Team)
+	RegisterOrganizationRoutes(rg.Group("/organizations"), svc.Org)
 }
 
 // RegisterOrgScopedRoutes registers organization-scoped routes (require tenant context)
 func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
-	// Teams
-	teamHandler := NewTeamHandler(svc.Team, svc.Org)
-	teams := rg.Group("/teams")
-	{
-		teams.GET("", teamHandler.ListTeams)
-		teams.POST("", teamHandler.CreateTeam)
-		teams.GET("/:id", teamHandler.GetTeam)
-		teams.PUT("/:id", teamHandler.UpdateTeam)
-		teams.DELETE("/:id", teamHandler.DeleteTeam)
-		teams.GET("/:id/members", teamHandler.ListTeamMembers)
-		teams.POST("/:id/members", teamHandler.AddTeamMember)
-		teams.DELETE("/:id/members/:user_id", teamHandler.RemoveTeamMember)
-	}
-
 	// Agents
 	agentHandler := NewAgentHandler(svc.Agent)
 	agents := rg.Group("/agents")
@@ -102,6 +92,19 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		gitProviders.DELETE("/:id", gitProviderHandler.DeleteGitProvider)
 		gitProviders.POST("/:id/test", gitProviderHandler.TestConnection)
 		gitProviders.POST("/:id/sync", gitProviderHandler.SyncProjects)
+	}
+
+	// SSH Keys
+	if svc.SSHKey != nil {
+		sshKeyHandler := NewSSHKeyHandler(svc.SSHKey)
+		sshKeys := rg.Group("/ssh-keys")
+		{
+			sshKeys.GET("", sshKeyHandler.ListSSHKeys)
+			sshKeys.POST("", sshKeyHandler.CreateSSHKey)
+			sshKeys.GET("/:id", sshKeyHandler.GetSSHKey)
+			sshKeys.PUT("/:id", sshKeyHandler.UpdateSSHKey)
+			sshKeys.DELETE("/:id", sshKeyHandler.DeleteSSHKey)
+		}
 	}
 
 	// Repositories
@@ -254,6 +257,12 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 			messages.GET("/:id", messageHandler.GetMessage)
 		}
 	}
+
+	// Invitations (organization-scoped)
+	if svc.Invitation != nil {
+		invitationHandler := NewInvitationHandler(svc.Invitation, svc.Org, svc.User)
+		invitationHandler.RegisterOrgRoutes(rg)
+	}
 }
 
 
@@ -301,8 +310,8 @@ func RegisterUserRoutes(rg *gin.RouterGroup, userSvc *user.Service, orgSvc *orga
 }
 
 // RegisterOrganizationRoutes registers organization routes
-func RegisterOrganizationRoutes(rg *gin.RouterGroup, orgSvc *organization.Service, teamSvc *team.Service) {
-	handler := NewOrganizationHandler(orgSvc, teamSvc)
+func RegisterOrganizationRoutes(rg *gin.RouterGroup, orgSvc *organization.Service) {
+	handler := NewOrganizationHandler(orgSvc)
 
 	// Organization CRUD
 	rg.GET("", handler.ListOrganizations)

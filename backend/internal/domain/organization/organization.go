@@ -11,12 +11,6 @@ const (
 	RoleMember = "member"
 )
 
-// Team role constants
-const (
-	TeamRoleLead   = "lead"
-	TeamRoleMember = "member"
-)
-
 // Organization represents a tenant in the multi-tenant system
 type Organization struct {
 	ID   int64  `gorm:"primaryKey" json:"id"`
@@ -33,7 +27,6 @@ type Organization struct {
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
 
 	// Associations
-	Teams   []Team   `gorm:"foreignKey:OrganizationID" json:"teams,omitempty"`
 	Members []Member `gorm:"foreignKey:OrganizationID" json:"members,omitempty"`
 }
 
@@ -56,25 +49,6 @@ func (o *Organization) GetName() string {
 	return o.Name
 }
 
-// Team represents a team within an organization
-type Team struct {
-	ID             int64  `gorm:"primaryKey" json:"id"`
-	OrganizationID int64  `gorm:"not null;index" json:"organization_id"`
-	Name           string `gorm:"size:100;not null" json:"name"`
-	Description    string `gorm:"type:text" json:"description,omitempty"`
-
-	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
-
-	// Associations
-	Organization *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
-	Members      []TeamMember  `gorm:"foreignKey:TeamID" json:"members,omitempty"`
-}
-
-func (Team) TableName() string {
-	return "teams"
-}
-
 // Member represents an organization membership
 type Member struct {
 	ID             int64  `gorm:"primaryKey" json:"id"`
@@ -90,19 +64,4 @@ type Member struct {
 
 func (Member) TableName() string {
 	return "organization_members"
-}
-
-// TeamMember represents a team membership
-type TeamMember struct {
-	ID     int64  `gorm:"primaryKey" json:"id"`
-	TeamID int64  `gorm:"not null;index" json:"team_id"`
-	UserID int64  `gorm:"not null;index" json:"user_id"`
-	Role   string `gorm:"size:50;not null;default:'member'" json:"role"` // lead, member
-
-	// Associations
-	Team *Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-}
-
-func (TeamMember) TableName() string {
-	return "team_members"
 }

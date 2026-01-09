@@ -55,7 +55,6 @@ type ResolverRoot interface {
 	Runner() RunnerResolver
 	Session() SessionResolver
 	Subscription() SubscriptionResolver
-	TeamMember() TeamMemberResolver
 	Ticket() TicketResolver
 	User() UserResolver
 }
@@ -165,7 +164,6 @@ type ComplexityRoot struct {
 		Slug               func(childComplexity int) int
 		SubscriptionPlan   func(childComplexity int) int
 		SubscriptionStatus func(childComplexity int) int
-		Teams              func(childComplexity int) int
 		UpdatedAt          func(childComplexity int) int
 	}
 
@@ -188,21 +186,19 @@ type ComplexityRoot struct {
 		AgentTypes       func(childComplexity int) int
 		AvailableRunners func(childComplexity int) int
 		Channel          func(childComplexity int, id int64) int
-		Channels         func(childComplexity int, teamID *int64, includeArchived *bool) int
+		Channels         func(childComplexity int, includeArchived *bool) int
 		CustomAgentTypes func(childComplexity int) int
 		GitProviders     func(childComplexity int) int
 		Labels           func(childComplexity int, repositoryID *int64) int
 		Me               func(childComplexity int) int
 		MyOrganizations  func(childComplexity int) int
 		Organization     func(childComplexity int, slug string) int
-		Repositories     func(childComplexity int, teamID *int64) int
+		Repositories     func(childComplexity int) int
 		Repository       func(childComplexity int, id int64) int
 		Runner           func(childComplexity int, id int64) int
 		Runners          func(childComplexity int, status *RunnerStatus) int
 		Session          func(childComplexity int, key string) int
 		Sessions         func(childComplexity int, filter *SessionFilter, first *int, after *string) int
-		Team             func(childComplexity int, id int64) int
-		Teams            func(childComplexity int) int
 		Ticket           func(childComplexity int, identifier string) int
 		Tickets          func(childComplexity int, filter *TicketFilter, first *int, after *string) int
 		User             func(childComplexity int, id int64) int
@@ -270,21 +266,6 @@ type ComplexityRoot struct {
 		MessageReceived     func(childComplexity int, channelID int64) int
 		RunnerStatusChanged func(childComplexity int) int
 		SessionUpdated      func(childComplexity int, key string) int
-	}
-
-	Team struct {
-		CreatedAt   func(childComplexity int) int
-		Description func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Members     func(childComplexity int) int
-		Name        func(childComplexity int) int
-		UpdatedAt   func(childComplexity int) int
-	}
-
-	TeamMember struct {
-		ID   func(childComplexity int) int
-		Role func(childComplexity int) int
-		User func(childComplexity int) int
 	}
 
 	Ticket struct {
@@ -366,7 +347,6 @@ type MutationResolver interface {
 }
 type OrganizationResolver interface {
 	Members(ctx context.Context, obj *organization.Organization) ([]OrganizationMember, error)
-
 	Runners(ctx context.Context, obj *organization.Organization) ([]runner.Runner, error)
 }
 type QueryResolver interface {
@@ -374,8 +354,6 @@ type QueryResolver interface {
 	User(ctx context.Context, id int64) (*user.User, error)
 	Organization(ctx context.Context, slug string) (*organization.Organization, error)
 	MyOrganizations(ctx context.Context) ([]organization.Organization, error)
-	Team(ctx context.Context, id int64) (*organization.Team, error)
-	Teams(ctx context.Context) ([]organization.Team, error)
 	Runner(ctx context.Context, id int64) (*runner.Runner, error)
 	Runners(ctx context.Context, status *RunnerStatus) ([]runner.Runner, error)
 	AvailableRunners(ctx context.Context) ([]runner.Runner, error)
@@ -385,12 +363,12 @@ type QueryResolver interface {
 	AgentType(ctx context.Context, id int64) (*agent.AgentType, error)
 	CustomAgentTypes(ctx context.Context) ([]agent.CustomAgentType, error)
 	Repository(ctx context.Context, id int64) (*gitprovider.Repository, error)
-	Repositories(ctx context.Context, teamID *int64) ([]gitprovider.Repository, error)
+	Repositories(ctx context.Context) ([]gitprovider.Repository, error)
 	Ticket(ctx context.Context, identifier string) (*ticket.Ticket, error)
 	Tickets(ctx context.Context, filter *TicketFilter, first *int, after *string) (*TicketConnection, error)
 	Labels(ctx context.Context, repositoryID *int64) ([]ticket.Label, error)
 	Channel(ctx context.Context, id int64) (*channel.Channel, error)
-	Channels(ctx context.Context, teamID *int64, includeArchived *bool) ([]channel.Channel, error)
+	Channels(ctx context.Context, includeArchived *bool) ([]channel.Channel, error)
 	GitProviders(ctx context.Context) ([]gitprovider.GitProvider, error)
 }
 type RunnerResolver interface {
@@ -411,9 +389,6 @@ type SubscriptionResolver interface {
 	SessionUpdated(ctx context.Context, key string) (<-chan *session.Session, error)
 	MessageReceived(ctx context.Context, channelID int64) (<-chan *ChannelMessage, error)
 	RunnerStatusChanged(ctx context.Context) (<-chan *runner.Runner, error)
-}
-type TeamMemberResolver interface {
-	User(ctx context.Context, obj *organization.TeamMember) (*user.User, error)
 }
 type TicketResolver interface {
 	Type(ctx context.Context, obj *ticket.Ticket) (TicketType, error)
@@ -996,12 +971,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Organization.SubscriptionStatus(childComplexity), true
-	case "Organization.teams":
-		if e.complexity.Organization.Teams == nil {
-			break
-		}
-
-		return e.complexity.Organization.Teams(childComplexity), true
 	case "Organization.updatedAt":
 		if e.complexity.Organization.UpdatedAt == nil {
 			break
@@ -1103,7 +1072,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Channels(childComplexity, args["teamID"].(*int64), args["includeArchived"].(*bool)), true
+		return e.complexity.Query.Channels(childComplexity, args["includeArchived"].(*bool)), true
 	case "Query.customAgentTypes":
 		if e.complexity.Query.CustomAgentTypes == nil {
 			break
@@ -1155,12 +1124,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		args, err := ec.field_Query_repositories_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Repositories(childComplexity, args["teamID"].(*int64)), true
+		return e.complexity.Query.Repositories(childComplexity), true
 	case "Query.repository":
 		if e.complexity.Query.Repository == nil {
 			break
@@ -1216,23 +1180,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Sessions(childComplexity, args["filter"].(*SessionFilter), args["first"].(*int), args["after"].(*string)), true
-	case "Query.team":
-		if e.complexity.Query.Team == nil {
-			break
-		}
-
-		args, err := ec.field_Query_team_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Team(childComplexity, args["id"].(int64)), true
-	case "Query.teams":
-		if e.complexity.Query.Teams == nil {
-			break
-		}
-
-		return e.complexity.Query.Teams(childComplexity), true
 	case "Query.ticket":
 		if e.complexity.Query.Ticket == nil {
 			break
@@ -1558,62 +1505,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subscription.SessionUpdated(childComplexity, args["key"].(string)), true
-
-	case "Team.createdAt":
-		if e.complexity.Team.CreatedAt == nil {
-			break
-		}
-
-		return e.complexity.Team.CreatedAt(childComplexity), true
-	case "Team.description":
-		if e.complexity.Team.Description == nil {
-			break
-		}
-
-		return e.complexity.Team.Description(childComplexity), true
-	case "Team.id":
-		if e.complexity.Team.ID == nil {
-			break
-		}
-
-		return e.complexity.Team.ID(childComplexity), true
-	case "Team.members":
-		if e.complexity.Team.Members == nil {
-			break
-		}
-
-		return e.complexity.Team.Members(childComplexity), true
-	case "Team.name":
-		if e.complexity.Team.Name == nil {
-			break
-		}
-
-		return e.complexity.Team.Name(childComplexity), true
-	case "Team.updatedAt":
-		if e.complexity.Team.UpdatedAt == nil {
-			break
-		}
-
-		return e.complexity.Team.UpdatedAt(childComplexity), true
-
-	case "TeamMember.id":
-		if e.complexity.TeamMember.ID == nil {
-			break
-		}
-
-		return e.complexity.TeamMember.ID(childComplexity), true
-	case "TeamMember.role":
-		if e.complexity.TeamMember.Role == nil {
-			break
-		}
-
-		return e.complexity.TeamMember.Role(childComplexity), true
-	case "TeamMember.user":
-		if e.complexity.TeamMember.User == nil {
-			break
-		}
-
-		return e.complexity.TeamMember.User(childComplexity), true
 
 	case "Ticket.assignees":
 		if e.complexity.Ticket.Assignees == nil {
@@ -1996,7 +1887,6 @@ type Organization {
   createdAt: Time!
   updatedAt: Time!
   members: [OrganizationMember!]!
-  teams: [Team!]!
   runners: [Runner!]!
 }
 
@@ -2005,21 +1895,6 @@ type OrganizationMember {
   user: User!
   role: String!
   joinedAt: Time!
-}
-
-type Team {
-  id: ID!
-  name: String!
-  description: String
-  createdAt: Time!
-  updatedAt: Time!
-  members: [TeamMember!]!
-}
-
-type TeamMember {
-  id: ID!
-  user: User!
-  role: String!
 }
 
 type AgentType {
@@ -2240,7 +2115,6 @@ type SessionEdge {
 
 input CreateTicketInput {
   repositoryID: ID!
-  teamID: ID
   type: TicketType!
   title: String!
   description: String
@@ -2268,7 +2142,6 @@ input CreateSessionInput {
   runnerID: ID!
   agentTypeID: ID
   customAgentTypeID: ID
-  teamID: ID
   repositoryID: ID
   ticketID: ID
   initialPrompt: String
@@ -2279,7 +2152,6 @@ input CreateChannelInput {
   name: String!
   description: String
   document: String
-  teamID: ID
   repositoryID: ID
   ticketID: ID
 }
@@ -2291,7 +2163,6 @@ input UpdateChannelInput {
 }
 
 input TicketFilter {
-  teamID: ID
   repositoryID: ID
   status: TicketStatus
   priority: TicketPriority
@@ -2302,7 +2173,6 @@ input TicketFilter {
 }
 
 input SessionFilter {
-  teamID: ID
   runnerID: ID
   status: SessionStatus
   ticketID: ID
@@ -2321,10 +2191,6 @@ type Query {
   organization(slug: String!): Organization
   myOrganizations: [Organization!]!
 
-  # Teams
-  team(id: ID!): Team
-  teams: [Team!]!
-
   # Runners
   runner(id: ID!): Runner
   runners(status: RunnerStatus): [Runner!]!
@@ -2341,7 +2207,7 @@ type Query {
 
   # Repositories
   repository(id: ID!): Repository
-  repositories(teamID: ID): [Repository!]!
+  repositories: [Repository!]!
 
   # Tickets
   ticket(identifier: String!): Ticket
@@ -2352,7 +2218,7 @@ type Query {
 
   # Channels
   channel(id: ID!): Channel
-  channels(teamID: ID, includeArchived: Boolean): [Channel!]!
+  channels(includeArchived: Boolean): [Channel!]!
 
   # Git Providers
   gitProviders: [GitProvider!]!
@@ -2673,16 +2539,11 @@ func (ec *executionContext) field_Query_channel_args(ctx context.Context, rawArg
 func (ec *executionContext) field_Query_channels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "teamID", ec.unmarshalOID2ᚖint64)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "includeArchived", ec.unmarshalOBoolean2ᚖbool)
 	if err != nil {
 		return nil, err
 	}
-	args["teamID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "includeArchived", ec.unmarshalOBoolean2ᚖbool)
-	if err != nil {
-		return nil, err
-	}
-	args["includeArchived"] = arg1
+	args["includeArchived"] = arg0
 	return args, nil
 }
 
@@ -2705,17 +2566,6 @@ func (ec *executionContext) field_Query_organization_args(ctx context.Context, r
 		return nil, err
 	}
 	args["slug"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_repositories_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "teamID", ec.unmarshalOID2ᚖint64)
-	if err != nil {
-		return nil, err
-	}
-	args["teamID"] = arg0
 	return args, nil
 }
 
@@ -2781,17 +2631,6 @@ func (ec *executionContext) field_Query_sessions_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["after"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2int64)
-	if err != nil {
-		return nil, err
-	}
-	args["id"] = arg0
 	return args, nil
 }
 
@@ -5736,49 +5575,6 @@ func (ec *executionContext) fieldContext_Organization_members(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Organization_teams(ctx context.Context, field graphql.CollectedField, obj *organization.Organization) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Organization_teams,
-		func(ctx context.Context) (any, error) {
-			return obj.Teams, nil
-		},
-		nil,
-		ec.marshalNTeam2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Organization_teams(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Organization",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "description":
-				return ec.fieldContext_Team_description(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Team_updatedAt(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Organization_runners(ctx context.Context, field graphql.CollectedField, obj *organization.Organization) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6245,8 +6041,6 @@ func (ec *executionContext) fieldContext_Query_organization(ctx context.Context,
 				return ec.fieldContext_Organization_updatedAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Organization_members(ctx, field)
-			case "teams":
-				return ec.fieldContext_Organization_teams(ctx, field)
 			case "runners":
 				return ec.fieldContext_Organization_runners(ctx, field)
 			}
@@ -6309,110 +6103,10 @@ func (ec *executionContext) fieldContext_Query_myOrganizations(_ context.Context
 				return ec.fieldContext_Organization_updatedAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Organization_members(ctx, field)
-			case "teams":
-				return ec.fieldContext_Organization_teams(ctx, field)
 			case "runners":
 				return ec.fieldContext_Organization_runners(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Organization", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_team(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_team,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Team(ctx, fc.Args["id"].(int64))
-		},
-		nil,
-		ec.marshalOTeam2ᚖgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeam,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "description":
-				return ec.fieldContext_Team_description(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Team_updatedAt(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_team_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_teams,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().Teams(ctx)
-		},
-		nil,
-		ec.marshalNTeam2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_teams(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "description":
-				return ec.fieldContext_Team_description(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Team_updatedAt(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
 	}
 	return fc, nil
@@ -6960,8 +6654,7 @@ func (ec *executionContext) _Query_repositories(ctx context.Context, field graph
 		field,
 		ec.fieldContext_Query_repositories,
 		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Repositories(ctx, fc.Args["teamID"].(*int64))
+			return ec.resolvers.Query().Repositories(ctx)
 		},
 		nil,
 		ec.marshalNRepository2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋgitproviderᚐRepositoryᚄ,
@@ -6970,7 +6663,7 @@ func (ec *executionContext) _Query_repositories(ctx context.Context, field graph
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_repositories(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_repositories(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -6999,17 +6692,6 @@ func (ec *executionContext) fieldContext_Query_repositories(ctx context.Context,
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Repository", field.Name)
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_repositories_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
 	}
 	return fc, nil
 }
@@ -7266,7 +6948,7 @@ func (ec *executionContext) _Query_channels(ctx context.Context, field graphql.C
 		ec.fieldContext_Query_channels,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Channels(ctx, fc.Args["teamID"].(*int64), fc.Args["includeArchived"].(*bool))
+			return ec.resolvers.Query().Channels(ctx, fc.Args["includeArchived"].(*bool))
 		},
 		nil,
 		ec.marshalNChannel2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋchannelᚐChannelᚄ,
@@ -9140,297 +8822,6 @@ func (ec *executionContext) fieldContext_Subscription_runnerStatusChanged(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_id(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_id,
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		ec.marshalNID2int64,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Team_name(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_name,
-		func(ctx context.Context) (any, error) {
-			return obj.Name, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Team_description(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_description,
-		func(ctx context.Context) (any, error) {
-			return obj.Description, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_createdAt,
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Team_updatedAt(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_updatedAt,
-		func(ctx context.Context) (any, error) {
-			return obj.UpdatedAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Team_members(ctx context.Context, field graphql.CollectedField, obj *organization.Team) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Team_members,
-		func(ctx context.Context) (any, error) {
-			return obj.Members, nil
-		},
-		nil,
-		ec.marshalNTeamMember2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamMemberᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Team_members(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TeamMember_id(ctx, field)
-			case "user":
-				return ec.fieldContext_TeamMember_user(ctx, field)
-			case "role":
-				return ec.fieldContext_TeamMember_role(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TeamMember", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMember_id(ctx context.Context, field graphql.CollectedField, obj *organization.TeamMember) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TeamMember_id,
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		ec.marshalNID2int64,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TeamMember_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMember",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.CollectedField, obj *organization.TeamMember) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TeamMember_user,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.TeamMember().User(ctx, obj)
-		},
-		nil,
-		ec.marshalNUser2ᚖgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋuserᚐUser,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TeamMember_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMember",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "username":
-				return ec.fieldContext_User_username(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "avatarURL":
-				return ec.fieldContext_User_avatarURL(ctx, field)
-			case "isActive":
-				return ec.fieldContext_User_isActive(ctx, field)
-			case "lastLoginAt":
-				return ec.fieldContext_User_lastLoginAt(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_User_updatedAt(ctx, field)
-			case "organizations":
-				return ec.fieldContext_User_organizations(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMember_role(ctx context.Context, field graphql.CollectedField, obj *organization.TeamMember) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TeamMember_role,
-		func(ctx context.Context) (any, error) {
-			return obj.Role, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TeamMember_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMember",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Ticket_id(ctx context.Context, field graphql.CollectedField, obj *ticket.Ticket) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -10744,8 +10135,6 @@ func (ec *executionContext) fieldContext_User_organizations(_ context.Context, f
 				return ec.fieldContext_Organization_updatedAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Organization_members(ctx, field)
-			case "teams":
-				return ec.fieldContext_Organization_teams(ctx, field)
 			case "runners":
 				return ec.fieldContext_Organization_runners(ctx, field)
 			}
@@ -12208,7 +11597,7 @@ func (ec *executionContext) unmarshalInputCreateChannelInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "description", "document", "teamID", "repositoryID", "ticketID"}
+	fieldsInOrder := [...]string{"name", "description", "document", "repositoryID", "ticketID"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -12236,13 +11625,6 @@ func (ec *executionContext) unmarshalInputCreateChannelInput(ctx context.Context
 				return it, err
 			}
 			it.Document = data
-		case "teamID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
-			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TeamID = data
 		case "repositoryID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repositoryID"))
 			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
@@ -12270,7 +11652,7 @@ func (ec *executionContext) unmarshalInputCreateSessionInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"runnerID", "agentTypeID", "customAgentTypeID", "teamID", "repositoryID", "ticketID", "initialPrompt", "branchName"}
+	fieldsInOrder := [...]string{"runnerID", "agentTypeID", "customAgentTypeID", "repositoryID", "ticketID", "initialPrompt", "branchName"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -12298,13 +11680,6 @@ func (ec *executionContext) unmarshalInputCreateSessionInput(ctx context.Context
 				return it, err
 			}
 			it.CustomAgentTypeID = data
-		case "teamID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
-			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TeamID = data
 		case "repositoryID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repositoryID"))
 			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
@@ -12346,7 +11721,7 @@ func (ec *executionContext) unmarshalInputCreateTicketInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"repositoryID", "teamID", "type", "title", "description", "content", "priority", "assigneeIDs", "labels", "parentID", "dueDate"}
+	fieldsInOrder := [...]string{"repositoryID", "type", "title", "description", "content", "priority", "assigneeIDs", "labels", "parentID", "dueDate"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -12360,13 +11735,6 @@ func (ec *executionContext) unmarshalInputCreateTicketInput(ctx context.Context,
 				return it, err
 			}
 			it.RepositoryID = data
-		case "teamID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
-			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TeamID = data
 		case "type":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
 			data, err := ec.unmarshalNTicketType2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋapiᚋgraphqlᚋgeneratedᚐTicketType(ctx, v)
@@ -12443,20 +11811,13 @@ func (ec *executionContext) unmarshalInputSessionFilter(ctx context.Context, obj
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"teamID", "runnerID", "status", "ticketID"}
+	fieldsInOrder := [...]string{"runnerID", "status", "ticketID"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "teamID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
-			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TeamID = data
 		case "runnerID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("runnerID"))
 			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
@@ -12491,20 +11852,13 @@ func (ec *executionContext) unmarshalInputTicketFilter(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"teamID", "repositoryID", "status", "priority", "type", "assigneeID", "labels", "search"}
+	fieldsInOrder := [...]string{"repositoryID", "status", "priority", "type", "assigneeID", "labels", "search"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "teamID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
-			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TeamID = data
 		case "repositoryID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repositoryID"))
 			data, err := ec.unmarshalOID2ᚖint64(ctx, v)
@@ -13537,11 +12891,6 @@ func (ec *executionContext) _Organization(ctx context.Context, sel ast.Selection
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "teams":
-			out.Values[i] = ec._Organization_teams(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "runners":
 			field := field
 
@@ -13792,47 +13141,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_myOrganizations(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "team":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_team(ctx, field)
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "teams":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_teams(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -14792,147 +14100,6 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
-}
-
-var teamImplementors = []string{"Team"}
-
-func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj *organization.Team) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Team")
-		case "id":
-			out.Values[i] = ec._Team_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "name":
-			out.Values[i] = ec._Team_name(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "description":
-			out.Values[i] = ec._Team_description(ctx, field, obj)
-		case "createdAt":
-			out.Values[i] = ec._Team_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "updatedAt":
-			out.Values[i] = ec._Team_updatedAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "members":
-			out.Values[i] = ec._Team_members(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var teamMemberImplementors = []string{"TeamMember"}
-
-func (ec *executionContext) _TeamMember(ctx context.Context, sel ast.SelectionSet, obj *organization.TeamMember) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamMemberImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TeamMember")
-		case "id":
-			out.Values[i] = ec._TeamMember_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "user":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._TeamMember_user(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "role":
-			out.Values[i] = ec._TeamMember_role(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
 }
 
 var ticketImplementors = []string{"Ticket"}
@@ -16645,102 +15812,6 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNTeam2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeam(ctx context.Context, sel ast.SelectionSet, v organization.Team) graphql.Marshaler {
-	return ec._Team(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeam2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamᚄ(ctx context.Context, sel ast.SelectionSet, v []organization.Team) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTeam2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeam(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTeamMember2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamMember(ctx context.Context, sel ast.SelectionSet, v organization.TeamMember) graphql.Marshaler {
-	return ec._TeamMember(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeamMember2ᚕgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamMemberᚄ(ctx context.Context, sel ast.SelectionSet, v []organization.TeamMember) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTeamMember2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeamMember(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) marshalNTicket2githubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋticketᚐTicket(ctx context.Context, sel ast.SelectionSet, v ticket.Ticket) graphql.Marshaler {
 	return ec._Ticket(ctx, sel, &v)
 }
@@ -17494,13 +16565,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	_ = ctx
 	res := graphql.MarshalString(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOTeam2ᚖgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋorganizationᚐTeam(ctx context.Context, sel ast.SelectionSet, v *organization.Team) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Team(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOTicket2ᚖgithubᚗcomᚋanthropicsᚋagentmeshᚋbackendᚋinternalᚋdomainᚋticketᚐTicket(ctx context.Context, sel ast.SelectionSet, v *ticket.Ticket) graphql.Marshaler {

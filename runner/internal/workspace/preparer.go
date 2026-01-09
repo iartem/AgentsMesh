@@ -1,3 +1,5 @@
+// Deprecated: The Preparer functionality has been moved to sandbox/plugins/initscript.go.
+// This file is kept for backward compatibility with legacy session_builder code.
 package workspace
 
 import (

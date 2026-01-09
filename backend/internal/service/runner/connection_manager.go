@@ -107,11 +107,15 @@ type CreateSessionRequest struct {
 	InitialCommand    string             `json:"initial_command,omitempty"`    // Command to run (e.g., "claude")
 	InitialPrompt     string             `json:"initial_prompt,omitempty"`     // Prompt to send after command starts
 	PermissionMode    string             `json:"permission_mode,omitempty"`    // Permission mode (plan/default)
-	WorkingDir        string             `json:"working_dir,omitempty"`        // Working directory
-	TicketIdentifier  string             `json:"ticket_identifier,omitempty"`  // For worktree creation
+	WorkingDir        string             `json:"working_dir,omitempty"`        // Working directory (deprecated, use PluginConfig)
+	TicketIdentifier  string             `json:"ticket_identifier,omitempty"`  // For worktree creation (deprecated, use PluginConfig)
 	WorktreeSuffix    string             `json:"worktree_suffix,omitempty"`    // Suffix for multiple worktrees per ticket
-	EnvVars           map[string]string  `json:"env_vars,omitempty"`           // Environment variables
-	PreparationConfig *PreparationConfig `json:"preparation_config,omitempty"` // Workspace preparation config
+	EnvVars           map[string]string  `json:"env_vars,omitempty"`           // Environment variables (deprecated, use PluginConfig)
+	PreparationConfig *PreparationConfig `json:"preparation_config,omitempty"` // Workspace preparation config (deprecated, use PluginConfig)
+
+	// PluginConfig is the unified configuration passed to Runner's Sandbox plugins
+	// Contains: repository_url, branch, ticket_identifier, git_token, init_script, init_timeout, env_vars
+	PluginConfig map[string]interface{} `json:"plugin_config,omitempty"`
 }
 
 // TerminalInputRequest represents terminal input to send

@@ -150,16 +150,6 @@ func (r *queryResolver) MyOrganizations(ctx context.Context) ([]organization.Org
 	panic(fmt.Errorf("not implemented: MyOrganizations - myOrganizations"))
 }
 
-// Team is the resolver for the team field.
-func (r *queryResolver) Team(ctx context.Context, id int64) (*organization.Team, error) {
-	panic(fmt.Errorf("not implemented: Team - team"))
-}
-
-// Teams is the resolver for the teams field.
-func (r *queryResolver) Teams(ctx context.Context) ([]organization.Team, error) {
-	panic(fmt.Errorf("not implemented: Teams - teams"))
-}
-
 // Runner is the resolver for the runner field.
 func (r *queryResolver) Runner(ctx context.Context, id int64) (*runner.Runner, error) {
 	panic(fmt.Errorf("not implemented: Runner - runner"))
@@ -206,7 +196,7 @@ func (r *queryResolver) Repository(ctx context.Context, id int64) (*gitprovider.
 }
 
 // Repositories is the resolver for the repositories field.
-func (r *queryResolver) Repositories(ctx context.Context, teamID *int64) ([]gitprovider.Repository, error) {
+func (r *queryResolver) Repositories(ctx context.Context) ([]gitprovider.Repository, error) {
 	panic(fmt.Errorf("not implemented: Repositories - repositories"))
 }
 
@@ -231,7 +221,7 @@ func (r *queryResolver) Channel(ctx context.Context, id int64) (*channel.Channel
 }
 
 // Channels is the resolver for the channels field.
-func (r *queryResolver) Channels(ctx context.Context, teamID *int64, includeArchived *bool) ([]channel.Channel, error) {
+func (r *queryResolver) Channels(ctx context.Context, includeArchived *bool) ([]channel.Channel, error) {
 	panic(fmt.Errorf("not implemented: Channels - channels"))
 }
 
@@ -288,11 +278,6 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context, channelID in
 // RunnerStatusChanged is the resolver for the runnerStatusChanged field.
 func (r *subscriptionResolver) RunnerStatusChanged(ctx context.Context) (<-chan *runner.Runner, error) {
 	panic(fmt.Errorf("not implemented: RunnerStatusChanged - runnerStatusChanged"))
-}
-
-// User is the resolver for the user field.
-func (r *teamMemberResolver) User(ctx context.Context, obj *organization.TeamMember) (*user.User, error) {
-	panic(fmt.Errorf("not implemented: User - user"))
 }
 
 // Type is the resolver for the type field.
@@ -369,9 +354,6 @@ func (r *Resolver) Session() generated.SessionResolver { return &sessionResolver
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
-// TeamMember returns generated.TeamMemberResolver implementation.
-func (r *Resolver) TeamMember() generated.TeamMemberResolver { return &teamMemberResolver{r} }
-
 // Ticket returns generated.TicketResolver implementation.
 func (r *Resolver) Ticket() generated.TicketResolver { return &ticketResolver{r} }
 
@@ -387,6 +369,5 @@ type queryResolver struct{ *Resolver }
 type runnerResolver struct{ *Resolver }
 type sessionResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-type teamMemberResolver struct{ *Resolver }
 type ticketResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }

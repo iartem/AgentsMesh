@@ -83,9 +83,38 @@ func (sc *SessionCoordinator) handleHeartbeat(runnerID int64, data *HeartbeatDat
 	sc.reconcileSessions(ctx, runnerID, reportedSessionIDs)
 }
 
-// reconcileSessions marks sessions not reported by runner as orphaned
+// reconcileSessions syncs session status between runner heartbeat and database
 func (sc *SessionCoordinator) reconcileSessions(ctx context.Context, runnerID int64, reportedSessions map[string]bool) {
-	// Get active sessions for this runner
+	now := time.Now()
+
+	// First, ensure all reported sessions are registered with terminal router
+	// and restore any orphaned sessions that runner reports as active
+	for sessionKey := range reportedSessions {
+		// Always register session with terminal router (idempotent operation)
+		// This ensures routing works even after backend restart
+		sc.terminalRouter.RegisterSession(sessionKey, runnerID)
+
+		// Try to restore if session is orphaned
+		result := sc.db.WithContext(ctx).
+			Model(&session.Session{}).
+			Where("session_key = ? AND runner_id = ? AND status = ?", sessionKey, runnerID, session.StatusOrphaned).
+			Updates(map[string]interface{}{
+				"status":        session.StatusRunning,
+				"finished_at":   nil,
+				"last_activity": now,
+			})
+		if result.Error != nil {
+			sc.logger.Error("failed to restore orphaned session",
+				"session_key", sessionKey,
+				"error", result.Error)
+		} else if result.RowsAffected > 0 {
+			sc.logger.Info("restored orphaned session reported by runner",
+				"session_key", sessionKey,
+				"runner_id", runnerID)
+		}
+	}
+
+	// Get active sessions for this runner from database
 	var sessions []session.Session
 	if err := sc.db.WithContext(ctx).
 		Where("runner_id = ? AND status IN ?", runnerID, []string{session.StatusRunning, session.StatusInitializing}).
@@ -96,8 +125,7 @@ func (sc *SessionCoordinator) reconcileSessions(ctx context.Context, runnerID in
 		return
 	}
 
-	// Mark unreported sessions as orphaned
-	now := time.Now()
+	// Mark sessions that are in DB but not reported by runner as orphaned
 	for _, s := range sessions {
 		if !reportedSessions[s.SessionKey] {
 			if err := sc.db.WithContext(ctx).
@@ -110,9 +138,11 @@ func (sc *SessionCoordinator) reconcileSessions(ctx context.Context, runnerID in
 					"session_key", s.SessionKey,
 					"error", err)
 			} else {
-				sc.logger.Warn("session marked as orphaned",
+				sc.logger.Warn("session marked as orphaned (not reported by runner)",
 					"session_key", s.SessionKey,
 					"runner_id", runnerID)
+				// Unregister from terminal router
+				sc.terminalRouter.UnregisterSession(s.SessionKey)
 			}
 		}
 	}
@@ -236,7 +266,9 @@ func (sc *SessionCoordinator) handleAgentStatus(runnerID int64, data *AgentStatu
 func (sc *SessionCoordinator) handleRunnerDisconnect(runnerID int64) {
 	ctx := context.Background()
 
-	// Mark runner as offline
+	// Mark runner as offline, but don't immediately orphan sessions
+	// Sessions will be orphaned by reconcileSessions if runner doesn't reconnect
+	// and report them in heartbeat
 	if err := sc.db.WithContext(ctx).
 		Table("runners").
 		Where("id = ?", runnerID).
@@ -246,25 +278,14 @@ func (sc *SessionCoordinator) handleRunnerDisconnect(runnerID int64) {
 			"error", err)
 	}
 
-	// Mark all sessions on this runner as orphaned
-	now := time.Now()
-	result := sc.db.WithContext(ctx).
-		Model(&session.Session{}).
-		Where("runner_id = ? AND status IN ?", runnerID, []string{session.StatusRunning, session.StatusInitializing}).
-		Updates(map[string]interface{}{
-			"status":      session.StatusOrphaned,
-			"finished_at": now,
-		})
+	sc.logger.Info("runner disconnected, sessions will be reconciled on reconnect",
+		"runner_id", runnerID)
 
-	if result.Error != nil {
-		sc.logger.Error("failed to mark sessions as orphaned on runner disconnect",
-			"runner_id", runnerID,
-			"error", result.Error)
-	} else if result.RowsAffected > 0 {
-		sc.logger.Warn("marked sessions as orphaned on runner disconnect",
-			"runner_id", runnerID,
-			"count", result.RowsAffected)
-	}
+	// Note: We intentionally don't mark sessions as orphaned here
+	// The runner might reconnect quickly (network glitch) and sessions are still running
+	// Sessions will be properly reconciled when:
+	// 1. Runner reconnects and sends heartbeat - reconcileSessions will handle it
+	// 2. Session cleanup task runs and finds stale sessions
 }
 
 // IncrementSessions increments session count for a runner

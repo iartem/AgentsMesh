@@ -371,14 +371,59 @@ func TestSessionCoordinatorHandleRunnerDisconnect(t *testing.T) {
 		t.Errorf("expected runner status offline, got %s", runnerStatus)
 	}
 
-	// Check sessions are orphaned
+	// Note: Sessions are intentionally NOT marked as orphaned immediately on disconnect.
+	// This is by design to handle temporary network glitches - sessions remain in their
+	// current state and will be reconciled when:
+	// 1. Runner reconnects and sends heartbeat (reconcileSessions handles it)
+	// 2. Session cleanup task runs and finds stale sessions
+	// The previous behavior of immediately marking sessions as orphaned caused issues
+	// with quick reconnects where sessions were still actually running.
 	var s1Status, s2Status string
 	db.Raw("SELECT status FROM sessions WHERE session_key = 'session-1'").Scan(&s1Status)
 	db.Raw("SELECT status FROM sessions WHERE session_key = 'session-2'").Scan(&s2Status)
 
-	if s1Status != session.StatusOrphaned {
-		t.Errorf("expected session-1 status orphaned, got %s", s1Status)
+	// Sessions should retain their original status (not orphaned)
+	if s1Status != session.StatusRunning {
+		t.Errorf("expected session-1 status running (retained), got %s", s1Status)
 	}
+	if s2Status != session.StatusInitializing {
+		t.Errorf("expected session-2 status initializing (retained), got %s", s2Status)
+	}
+}
+
+// TestSessionCoordinatorReconcileOrphansOnReconnect tests that sessions are properly
+// orphaned when runner reconnects but doesn't report them in heartbeat
+func TestSessionCoordinatorReconcileOrphansOnReconnect(t *testing.T) {
+	db := setupCoordinatorTestDB(t)
+	cm := NewConnectionManager(newTestLogger())
+	tr := NewTerminalRouter(cm, newTestLogger())
+	sc := NewSessionCoordinator(db, cm, tr, newTestLogger())
+
+	// Create a runner and sessions
+	db.Exec(`INSERT INTO runners (organization_id, node_id, auth_token_hash, status) VALUES (1, 'test', 'hash', 'online')`)
+	db.Exec(`INSERT INTO sessions (session_key, runner_id, status) VALUES ('session-1', 1, ?)`, session.StatusRunning)
+	db.Exec(`INSERT INTO sessions (session_key, runner_id, status) VALUES ('session-2', 1, ?)`, session.StatusRunning)
+
+	// Simulate runner disconnect
+	sc.handleRunnerDisconnect(1)
+
+	// Simulate runner reconnect with heartbeat - only reporting session-1
+	hbData := &HeartbeatData{
+		RunnerVersion: "1.0.0",
+		Sessions:      []HeartbeatSession{{SessionKey: "session-1"}},
+	}
+	sc.handleHeartbeat(1, hbData)
+
+	// session-1 should still be running (reported in heartbeat)
+	var s1Status string
+	db.Raw("SELECT status FROM sessions WHERE session_key = 'session-1'").Scan(&s1Status)
+	if s1Status != session.StatusRunning {
+		t.Errorf("expected session-1 status running, got %s", s1Status)
+	}
+
+	// session-2 should be orphaned (not reported in heartbeat)
+	var s2Status string
+	db.Raw("SELECT status FROM sessions WHERE session_key = 'session-2'").Scan(&s2Status)
 	if s2Status != session.StatusOrphaned {
 		t.Errorf("expected session-2 status orphaned, got %s", s2Status)
 	}
@@ -465,10 +510,13 @@ func TestSessionCoordinatorCreateSession(t *testing.T) {
 	db.Exec(`INSERT INTO runners (organization_id, node_id, auth_token_hash, current_sessions) VALUES (1, 'test', 'hash', 0)`)
 
 	req := &CreateSessionRequest{
-		SessionID:     "new-session",
-		RepoPath:      "/path/to/repo",
-		BranchName:    "main",
-		InitialPrompt: "hello",
+		SessionID:      "new-session",
+		InitialCommand: "claude",
+		InitialPrompt:  "hello",
+		PluginConfig: map[string]interface{}{
+			"repository_url": "https://github.com/org/repo.git",
+			"branch":         "main",
+		},
 	}
 
 	// This will fail because runner is not connected, but we can still test the session count increment

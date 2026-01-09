@@ -177,7 +177,7 @@ func (s *Service) GetTicketByIdentifier(ctx context.Context, identifier string) 
 // ListTicketsFilter represents filters for listing tickets
 type ListTicketsFilter struct {
 	OrganizationID int64
-	TeamID         *int64
+	TeamID         *int64 // Deprecated: kept for backward compatibility
 	RepositoryID   *int64
 	Status         string
 	Type           string
@@ -187,8 +187,7 @@ type ListTicketsFilter struct {
 	LabelIDs       []int64
 	ParentTicketID *int64
 	Query          string
-	TeamIDs        []int64 // For access control
-	UserRole       string  // For access control
+	UserRole       string // Kept for future use, all org members can access all resources
 	Limit          int
 	Offset         int
 }
@@ -230,10 +229,7 @@ func (s *Service) ListTickets(ctx context.Context, filter *ListTicketsFilter) ([
 			Where("ticket_labels.label_id IN ?", filter.LabelIDs)
 	}
 
-	// Team-based access control
-	if filter.UserRole == "member" && len(filter.TeamIDs) > 0 {
-		query = query.Where("team_id IS NULL OR team_id IN ?", filter.TeamIDs)
-	}
+	// Team-based access control removed: all organization members can access all resources
 
 	var total int64
 	query.Count(&total)

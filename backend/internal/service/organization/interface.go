@@ -35,7 +35,6 @@ type Interface interface {
 	IsMember(ctx context.Context, orgID, userID int64) (bool, error)
 	GetUserRole(ctx context.Context, orgID, userID int64) (string, error)
 	GetMemberRole(ctx context.Context, orgID, userID int64) (string, error)
-	GetUserTeams(ctx context.Context, orgID, userID int64) ([]int64, error)
 }
 
 // Ensure Service implements Interface

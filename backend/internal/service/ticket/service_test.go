@@ -638,11 +638,7 @@ func TestListTickets_Filters(t *testing.T) {
 			filter:    &ListTicketsFilter{OrganizationID: 1, ReporterID: func() *int64 { v := int64(1); return &v }(), Limit: 10},
 			wantCount: 2,
 		},
-		{
-			name:      "team access control",
-			filter:    &ListTicketsFilter{OrganizationID: 1, UserRole: "member", TeamIDs: []int64{1}, Limit: 10},
-			wantCount: 3, // 2 with team + 1 without team (null)
-		},
+		// Team access control test removed - all organization members can now access all resources
 	}
 
 	for _, tt := range tests {

@@ -757,6 +757,21 @@ type LoginResult struct {
 	ExpiresIn    int64
 }
 
+// GenerateTokens generates tokens for a user (used after email verification)
+func (s *Service) GenerateTokens(ctx context.Context, u *user.User) (*LoginResult, error) {
+	tokens, err := s.GenerateTokenPairWithContext(ctx, u, 0, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResult{
+		User:         u,
+		Token:        tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    int64(s.config.JWTExpiration.Seconds()),
+	}, nil
+}
+
 // OAuthLoginRequest represents OAuth login request
 type OAuthLoginRequest struct {
 	Provider       string

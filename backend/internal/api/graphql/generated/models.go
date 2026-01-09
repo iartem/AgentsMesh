@@ -28,7 +28,6 @@ type CreateChannelInput struct {
 	Name         string  `json:"name"`
 	Description  *string `json:"description,omitempty"`
 	Document     *string `json:"document,omitempty"`
-	TeamID       *int64  `json:"teamID,omitempty"`
 	RepositoryID *int64  `json:"repositoryID,omitempty"`
 	TicketID     *int64  `json:"ticketID,omitempty"`
 }
@@ -37,7 +36,6 @@ type CreateSessionInput struct {
 	RunnerID          int64   `json:"runnerID"`
 	AgentTypeID       *int64  `json:"agentTypeID,omitempty"`
 	CustomAgentTypeID *int64  `json:"customAgentTypeID,omitempty"`
-	TeamID            *int64  `json:"teamID,omitempty"`
 	RepositoryID      *int64  `json:"repositoryID,omitempty"`
 	TicketID          *int64  `json:"ticketID,omitempty"`
 	InitialPrompt     *string `json:"initialPrompt,omitempty"`
@@ -46,7 +44,6 @@ type CreateSessionInput struct {
 
 type CreateTicketInput struct {
 	RepositoryID int64           `json:"repositoryID"`
-	TeamID       *int64          `json:"teamID,omitempty"`
 	Type         TicketType      `json:"type"`
 	Title        string          `json:"title"`
 	Description  *string         `json:"description,omitempty"`
@@ -90,7 +87,6 @@ type SessionEdge struct {
 }
 
 type SessionFilter struct {
-	TeamID   *int64         `json:"teamID,omitempty"`
 	RunnerID *int64         `json:"runnerID,omitempty"`
 	Status   *SessionStatus `json:"status,omitempty"`
 	TicketID *int64         `json:"ticketID,omitempty"`
@@ -108,7 +104,6 @@ type TicketEdge struct {
 }
 
 type TicketFilter struct {
-	TeamID       *int64          `json:"teamID,omitempty"`
 	RepositoryID *int64          `json:"repositoryID,omitempty"`
 	Status       *TicketStatus   `json:"status,omitempty"`
 	Priority     *TicketPriority `json:"priority,omitempty"`

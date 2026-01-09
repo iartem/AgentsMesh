@@ -16,6 +16,15 @@ type User struct {
 	IsActive    bool       `gorm:"not null;default:true" json:"is_active"`
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
 
+	// Email verification fields
+	IsEmailVerified            bool       `gorm:"not null;default:false" json:"is_email_verified"`
+	EmailVerificationToken     *string    `gorm:"size:255" json:"-"`
+	EmailVerificationExpiresAt *time.Time `json:"-"`
+
+	// Password reset fields
+	PasswordResetToken     *string    `gorm:"size:255" json:"-"`
+	PasswordResetExpiresAt *time.Time `json:"-"`
+
 	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
 

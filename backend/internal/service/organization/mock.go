@@ -35,7 +35,6 @@ type MockService struct {
 	IsOwnerErr          error
 	IsMemberErr         error
 	GetUserRoleErr      error
-	GetUserTeamsErr     error
 
 	// Captured calls for verification
 	CreatedOrgs    []*CreateRequest
@@ -374,14 +373,6 @@ func (m *MockService) GetUserRole(ctx context.Context, orgID, userID int64) (str
 // GetMemberRole implements Interface.
 func (m *MockService) GetMemberRole(ctx context.Context, orgID, userID int64) (string, error) {
 	return m.GetUserRole(ctx, orgID, userID)
-}
-
-// GetUserTeams implements Interface.
-func (m *MockService) GetUserTeams(ctx context.Context, orgID, userID int64) ([]int64, error) {
-	if m.GetUserTeamsErr != nil {
-		return nil, m.GetUserTeamsErr
-	}
-	return []int64{}, nil
 }
 
 // --- Test Helper Methods ---

@@ -16,6 +16,15 @@ type Config struct {
 	OAuth    OAuthConfig
 	Webhook  WebhookConfig
 	Log      LogConfig
+	Email    EmailConfig
+}
+
+// EmailConfig holds email service configuration
+type EmailConfig struct {
+	Provider    string // "resend" or "console"
+	ResendKey   string
+	FromAddress string
+	BaseURL     string // Frontend base URL
 }
 
 // LogConfig holds logging configuration
@@ -152,6 +161,12 @@ func Load() (*Config, error) {
 			FilePath:   getEnv("LOG_FILE", "logs/agentmesh.log"),
 			MaxSizeMB:  getEnvInt("LOG_MAX_SIZE_MB", 100),
 			MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
+		},
+		Email: EmailConfig{
+			Provider:    getEnv("EMAIL_PROVIDER", "console"),
+			ResendKey:   getEnv("RESEND_API_KEY", ""),
+			FromAddress: getEnv("EMAIL_FROM_ADDRESS", "AgentMesh <noreply@agentmesh.dev>"),
+			BaseURL:     getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
 		},
 	}, nil
 }

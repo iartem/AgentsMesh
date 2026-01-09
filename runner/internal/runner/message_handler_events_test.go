@@ -209,76 +209,8 @@ func TestCreateExitHandler(t *testing.T) {
 	}
 }
 
-// --- Test runPreparationScript ---
-
-func TestRunPreparationScript(t *testing.T) {
-	store := NewInMemorySessionStore()
-	mockConn := client.NewMockConnection()
-
-	runner := &Runner{cfg: &config.Config{}}
-
-	handler := NewRunnerMessageHandler(runner, store, mockConn)
-
-	// Currently returns nil (not implemented)
-	err := handler.runPreparationScript(nil, "/tmp", "echo hello", 10)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-}
-
-// --- Test helper methods ---
-
-func TestMergeEnvVars(t *testing.T) {
-	store := NewInMemorySessionStore()
-	mockConn := client.NewMockConnection()
-
-	runner := &Runner{
-		cfg: &config.Config{
-			AgentEnvVars: map[string]string{
-				"CONFIG_VAR": "config_value",
-				"SHARED":     "from_config",
-			},
-		},
-	}
-
-	handler := NewRunnerMessageHandler(runner, store, mockConn)
-
-	result := handler.mergeEnvVars(map[string]string{
-		"SESSION_VAR": "session_value",
-		"SHARED":      "from_session",
-	})
-
-	if result["CONFIG_VAR"] != "config_value" {
-		t.Errorf("CONFIG_VAR = %s, want config_value", result["CONFIG_VAR"])
-	}
-	if result["SESSION_VAR"] != "session_value" {
-		t.Errorf("SESSION_VAR = %s, want session_value", result["SESSION_VAR"])
-	}
-	// Session should override config
-	if result["SHARED"] != "from_session" {
-		t.Errorf("SHARED = %s, want from_session", result["SHARED"])
-	}
-}
-
-func TestMergeEnvVarsEmpty(t *testing.T) {
-	store := NewInMemorySessionStore()
-	mockConn := client.NewMockConnection()
-
-	runner := &Runner{
-		cfg: &config.Config{
-			AgentEnvVars: map[string]string{
-				"CONFIG_VAR": "config_value",
-			},
-		},
-	}
-
-	handler := NewRunnerMessageHandler(runner, store, mockConn)
-
-	result := handler.mergeEnvVars(nil)
-	if result["CONFIG_VAR"] != "config_value" {
-		t.Errorf("CONFIG_VAR = %s, want config_value", result["CONFIG_VAR"])
-	}
-}
+// Note: runPreparationScript and mergeEnvVars have been moved to SessionBuilder.
+// Tests for these functions are in session_builder_test.go.
 
 // --- Benchmark tests ---
 
@@ -304,29 +236,4 @@ func BenchmarkOnListSessions(b *testing.B) {
 	}
 }
 
-func BenchmarkMergeEnvVars(b *testing.B) {
-	store := NewInMemorySessionStore()
-	mockConn := client.NewMockConnection()
-
-	runner := &Runner{
-		cfg: &config.Config{
-			AgentEnvVars: map[string]string{
-				"VAR1": "value1",
-				"VAR2": "value2",
-				"VAR3": "value3",
-			},
-		},
-	}
-
-	handler := NewRunnerMessageHandler(runner, store, mockConn)
-
-	sessionVars := map[string]string{
-		"SESSION1": "session_value1",
-		"SESSION2": "session_value2",
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler.mergeEnvVars(sessionVars)
-	}
-}
+// Note: BenchmarkMergeEnvVars moved to session_builder_test.go since the method is now on SessionBuilder.

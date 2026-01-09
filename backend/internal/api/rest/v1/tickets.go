@@ -49,14 +49,14 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 		limit = 20
 	}
 
+	// TeamID is deprecated - all resources are visible to organization members
 	tickets, total, err := h.ticketService.ListTickets(c.Request.Context(), &ticket.ListTicketsFilter{
 		OrganizationID: tenant.OrganizationID,
-		TeamID:         req.TeamID,
+		TeamID:         req.TeamID, // Kept for backward compatibility, may be nil
 		RepositoryID:   req.RepositoryID,
 		Status:         req.Status,
 		Type:           req.Type,
 		AssigneeID:     req.AssigneeID,
-		TeamIDs:        tenant.TeamIDs,
 		UserRole:       tenant.UserRole,
 		Limit:          limit,
 		Offset:         req.Offset,
@@ -598,11 +598,11 @@ func (h *TicketHandler) GetBoard(c *gin.Context) {
 		}
 	}
 
+	// TeamID is deprecated - all resources are visible to organization members
 	board, err := h.ticketService.GetBoard(c.Request.Context(), &ticket.ListTicketsFilter{
 		OrganizationID: tenant.OrganizationID,
 		RepositoryID:   repoID,
-		TeamID:         teamID,
-		TeamIDs:        tenant.TeamIDs,
+		TeamID:         teamID, // Kept for backward compatibility, may be nil
 		UserRole:       tenant.UserRole,
 		Limit:          50,
 	})

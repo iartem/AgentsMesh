@@ -209,21 +209,3 @@ func (s *Service) GetUserRole(ctx context.Context, orgID, userID int64) (string,
 func (s *Service) GetMemberRole(ctx context.Context, orgID, userID int64) (string, error) {
 	return s.GetUserRole(ctx, orgID, userID)
 }
-
-// GetUserTeams returns the team IDs that a user belongs to within an organization
-func (s *Service) GetUserTeams(ctx context.Context, orgID, userID int64) ([]int64, error) {
-	var teamMembers []organization.TeamMember
-	err := s.db.WithContext(ctx).
-		Joins("JOIN teams ON teams.id = team_members.team_id").
-		Where("teams.organization_id = ? AND team_members.user_id = ?", orgID, userID).
-		Find(&teamMembers).Error
-	if err != nil {
-		return nil, err
-	}
-
-	teamIDs := make([]int64, len(teamMembers))
-	for i, tm := range teamMembers {
-		teamIDs[i] = tm.TeamID
-	}
-	return teamIDs, nil
-}

@@ -354,6 +354,84 @@ func TestCreateSessionRequest(t *testing.T) {
 	}
 }
 
+func TestCreateSessionRequestWithPluginConfig(t *testing.T) {
+	req := CreateSessionRequest{
+		SessionID:      "session-2",
+		InitialCommand: "claude",
+		PluginConfig: map[string]interface{}{
+			"repository_url":    "https://github.com/org/repo.git",
+			"branch":            "develop",
+			"ticket_identifier": "TICKET-456",
+			"git_token":         "ghp_token",
+			"init_script":       "npm install && npm run build",
+			"init_timeout":      300,
+			"env_vars": map[string]string{
+				"NODE_ENV": "development",
+			},
+		},
+	}
+
+	if req.SessionID != "session-2" {
+		t.Errorf("SessionID: got %v, want session-2", req.SessionID)
+	}
+	if req.PluginConfig == nil {
+		t.Fatal("PluginConfig should not be nil")
+	}
+	if req.PluginConfig["repository_url"] != "https://github.com/org/repo.git" {
+		t.Errorf("repository_url: got %v, want https://github.com/org/repo.git", req.PluginConfig["repository_url"])
+	}
+	if req.PluginConfig["branch"] != "develop" {
+		t.Errorf("branch: got %v, want develop", req.PluginConfig["branch"])
+	}
+	if req.PluginConfig["ticket_identifier"] != "TICKET-456" {
+		t.Errorf("ticket_identifier: got %v, want TICKET-456", req.PluginConfig["ticket_identifier"])
+	}
+	if req.PluginConfig["git_token"] != "ghp_token" {
+		t.Errorf("git_token: got %v, want ghp_token", req.PluginConfig["git_token"])
+	}
+	if req.PluginConfig["init_script"] != "npm install && npm run build" {
+		t.Errorf("init_script: got %v, want npm install && npm run build", req.PluginConfig["init_script"])
+	}
+	if req.PluginConfig["init_timeout"] != 300 {
+		t.Errorf("init_timeout: got %v, want 300", req.PluginConfig["init_timeout"])
+	}
+}
+
+func TestCreateSessionRequestPluginConfigJSON(t *testing.T) {
+	// Test that PluginConfig serializes correctly to JSON
+	req := CreateSessionRequest{
+		SessionID: "session-json",
+		PluginConfig: map[string]interface{}{
+			"repository_url": "https://github.com/test/repo.git",
+			"nested": map[string]interface{}{
+				"key": "value",
+			},
+		},
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var parsed CreateSessionRequest
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	if parsed.PluginConfig["repository_url"] != "https://github.com/test/repo.git" {
+		t.Errorf("repository_url after roundtrip: got %v, want https://github.com/test/repo.git", parsed.PluginConfig["repository_url"])
+	}
+
+	nested, ok := parsed.PluginConfig["nested"].(map[string]interface{})
+	if !ok {
+		t.Fatal("nested should be a map")
+	}
+	if nested["key"] != "value" {
+		t.Errorf("nested.key: got %v, want value", nested["key"])
+	}
+}
+
 func TestTerminateSessionRequest(t *testing.T) {
 	req := TerminateSessionRequest{
 		SessionID: "session-1",

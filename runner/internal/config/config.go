@@ -35,6 +35,10 @@ type Config struct {
 
 	// MCP settings
 	MCPConfigPath string `mapstructure:"mcp_config_path"` // Path to MCP servers config file
+	MCPPort       int    `mapstructure:"mcp_port"`        // MCP HTTP Server port (default: 19000)
+
+	// Sandbox settings
+	Workspace string `mapstructure:"workspace"` // Workspace root for sandboxes and repos cache
 
 	// Agent settings
 	DefaultAgent string            `mapstructure:"default_agent"`
@@ -57,6 +61,7 @@ func Load(configFile string) (*Config, error) {
 	v.SetDefault("server_url", "https://api.agentmesh.dev")
 	v.SetDefault("max_concurrent_sessions", 5)
 	v.SetDefault("workspace_root", "/workspace")
+	v.SetDefault("mcp_port", 19000)
 	v.SetDefault("health_check_port", 9090)
 	v.SetDefault("log_level", "info")
 	v.SetDefault("default_agent", "claude-code")
@@ -168,4 +173,39 @@ func (c *Config) LoadAuthToken() error {
 
 	c.AuthToken = string(data)
 	return nil
+}
+
+// GetWorkspace returns the workspace directory path.
+// Falls back to WorkspaceRoot if Workspace is not set.
+func (c *Config) GetWorkspace() string {
+	if c.Workspace != "" {
+		return c.Workspace
+	}
+	if c.WorkspaceRoot != "" {
+		return c.WorkspaceRoot
+	}
+	// Default to user's home directory
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/agentmesh"
+	}
+	return filepath.Join(home, ".agentmesh")
+}
+
+// GetSandboxesDir returns the sandboxes directory path.
+func (c *Config) GetSandboxesDir() string {
+	return filepath.Join(c.GetWorkspace(), "sandboxes")
+}
+
+// GetReposDir returns the repository cache directory path.
+func (c *Config) GetReposDir() string {
+	return filepath.Join(c.GetWorkspace(), "repos")
+}
+
+// GetMCPPort returns the MCP HTTP Server port.
+func (c *Config) GetMCPPort() int {
+	if c.MCPPort > 0 {
+		return c.MCPPort
+	}
+	return 19000 // Default port
 }

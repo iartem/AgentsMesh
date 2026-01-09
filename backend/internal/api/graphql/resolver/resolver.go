@@ -8,7 +8,6 @@ import (
 	"github.com/anthropics/agentmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentmesh/backend/internal/service/session"
-	"github.com/anthropics/agentmesh/backend/internal/service/team"
 	"github.com/anthropics/agentmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentmesh/backend/internal/service/user"
 )
@@ -17,7 +16,6 @@ import (
 type Resolver struct {
 	userService         *user.Service
 	organizationService *organization.Service
-	teamService         *team.Service
 	runnerService       *runner.Service
 	sessionService      *session.Service
 	agentService        *agent.Service
@@ -31,7 +29,6 @@ type Resolver struct {
 func NewResolver(
 	userSvc *user.Service,
 	orgSvc *organization.Service,
-	teamSvc *team.Service,
 	runnerSvc *runner.Service,
 	sessionSvc *session.Service,
 	agentSvc *agent.Service,
@@ -43,7 +40,6 @@ func NewResolver(
 	return &Resolver{
 		userService:         userSvc,
 		organizationService: orgSvc,
-		teamService:         teamSvc,
 		runnerService:       runnerSvc,
 		sessionService:      sessionSvc,
 		agentService:        agentSvc,

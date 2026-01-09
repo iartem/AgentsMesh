@@ -7,8 +7,12 @@ import (
 
 	"github.com/anthropics/agentmesh/backend/internal/middleware"
 	"github.com/anthropics/agentmesh/backend/internal/service/agent"
+	"github.com/anthropics/agentmesh/backend/internal/service/gitprovider"
+	"github.com/anthropics/agentmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentmesh/backend/internal/service/session"
+	"github.com/anthropics/agentmesh/backend/internal/service/sshkey"
+	"github.com/anthropics/agentmesh/backend/internal/service/ticket"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,6 +21,10 @@ type SessionHandler struct {
 	sessionService     *session.Service
 	runnerService      *runner.Service
 	agentService       *agent.Service
+	repositoryService  *repository.Service
+	ticketService      *ticket.Service
+	gitProviderService *gitprovider.Service
+	sshKeyService      *sshkey.Service
 	runnerConnMgr      *runner.ConnectionManager
 	sessionCoordinator *runner.SessionCoordinator
 	terminalRouter     interface{} // *runner.TerminalRouter, optional
@@ -46,6 +54,26 @@ func (h *SessionHandler) SetTerminalRouter(tr interface{}) {
 	h.terminalRouter = tr
 }
 
+// SetRepositoryService sets the repository service for repository lookups
+func (h *SessionHandler) SetRepositoryService(rs *repository.Service) {
+	h.repositoryService = rs
+}
+
+// SetTicketService sets the ticket service for ticket lookups
+func (h *SessionHandler) SetTicketService(ts *ticket.Service) {
+	h.ticketService = ts
+}
+
+// SetGitProviderService sets the git provider service for git token lookups
+func (h *SessionHandler) SetGitProviderService(gps *gitprovider.Service) {
+	h.gitProviderService = gps
+}
+
+// SetSSHKeyService sets the SSH key service for SSH private key lookups
+func (h *SessionHandler) SetSSHKeyService(sks *sshkey.Service) {
+	h.sshKeyService = sks
+}
+
 // ListSessionsRequest represents session list request
 type ListSessionsRequest struct {
 	TeamID *int64 `form:"team_id"`
@@ -70,23 +98,11 @@ func (h *SessionHandler) ListSessions(c *gin.Context) {
 		limit = 20
 	}
 
-	// If not admin, filter by user's teams
-	var teamID *int64
-	if tenant.UserRole == "member" {
-		// Use first team ID or req.TeamID if specified
-		if req.TeamID != nil {
-			teamID = req.TeamID
-		} else if len(tenant.TeamIDs) > 0 {
-			teamID = &tenant.TeamIDs[0]
-		}
-	} else {
-		teamID = req.TeamID
-	}
-
+	// TeamID is deprecated - all resources are visible to organization members
 	sessions, total, err := h.sessionService.ListSessions(
 		c.Request.Context(),
 		tenant.OrganizationID,
-		teamID,
+		req.TeamID, // Kept for backward compatibility, may be nil
 		req.Status,
 		limit,
 		req.Offset,
@@ -111,9 +127,16 @@ type CreateSessionRequest struct {
 	CustomAgentTypeID *int64  `json:"custom_agent_type_id"`
 	TeamID            *int64  `json:"team_id"`
 	RepositoryID      *int64  `json:"repository_id"`
+	RepositoryURL     *string `json:"repository_url"`      // Direct repository URL (takes precedence over repository_id)
 	TicketID          *int64  `json:"ticket_id"`
+	TicketIdentifier  *string `json:"ticket_identifier"`   // Direct ticket identifier (takes precedence over ticket_id)
 	InitialPrompt     string  `json:"initial_prompt"`
 	BranchName        *string `json:"branch_name"`
+	PermissionMode    *string `json:"permission_mode"`     // "plan", "default", or "bypassPermissions"
+
+	// PluginConfig allows advanced users to pass additional configuration to sandbox plugins
+	// Fields: init_script, init_timeout, env_vars
+	PluginConfig map[string]interface{} `json:"plugin_config"`
 }
 
 // CreateSession creates a new session
@@ -127,20 +150,7 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 
-	// Check team membership if team is specified
-	if req.TeamID != nil {
-		found := false
-		for _, tid := range tenant.TeamIDs {
-			if tid == *req.TeamID {
-				found = true
-				break
-			}
-		}
-		if !found && tenant.UserRole == "member" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this team"})
-			return
-		}
-	}
+	// TeamID is deprecated - all resources are visible to organization members
 
 	// Create session record in database
 	sess, err := h.sessionService.CreateSession(c.Request.Context(), &session.CreateSessionRequest{
@@ -162,33 +172,28 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
 
 	// Send create_session command to runner via SessionCoordinator
 	if h.sessionCoordinator != nil {
-		// Get permission mode from session settings (default to "plan" for plan mode)
+		// Get permission mode from request or session settings (default to "plan")
 		permissionMode := "plan"
-		if sess.PermissionMode != nil {
+		if req.PermissionMode != nil {
+			permissionMode = *req.PermissionMode
+		} else if sess.PermissionMode != nil {
 			permissionMode = *sess.PermissionMode
 		}
+
+		// Build PluginConfig for Runner's Sandbox plugins
+		pluginConfig := h.buildPluginConfig(c, &req)
 
 		createReq := &runner.CreateSessionRequest{
 			SessionID:      sess.SessionKey,
 			InitialCommand: "claude", // Default command to run Claude Code CLI
 			InitialPrompt:  req.InitialPrompt,
 			PermissionMode: permissionMode,
-			WorkingDir:     "", // Runner will use default workspace
-		}
-
-		// Set ticket identifier if ticket is specified (for worktree creation)
-		if req.TicketID != nil {
-			// TODO: Fetch ticket identifier from database
-			createReq.TicketIdentifier = ""
-		}
-
-		// Get repository path if specified
-		if req.RepositoryID != nil {
-			// TODO: Fetch repository path from database and set as WorkingDir
+			PluginConfig:   pluginConfig,
 		}
 
 		// Log the request
-		log.Printf("[sessions] Sending create_session to runner %d for session %s", req.RunnerID, sess.SessionKey)
+		log.Printf("[sessions] Sending create_session to runner %d for session %s with plugin_config: %v",
+			req.RunnerID, sess.SessionKey, pluginConfig)
 
 		if err := h.sessionCoordinator.CreateSession(c.Request.Context(), req.RunnerID, createReq); err != nil {
 			// Log the error but don't fail - session is created, runner might be offline
@@ -224,21 +229,7 @@ func (h *SessionHandler) GetSession(c *gin.Context) {
 		return
 	}
 
-	// Check team access if member
-	if tenant.UserRole == "member" && sess.TeamID != nil {
-		found := false
-		for _, tid := range tenant.TeamIDs {
-			if tid == *sess.TeamID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this session"})
-			return
-		}
-	}
-
+	// All organization members can access sessions (Team-based access control removed)
 	c.JSON(http.StatusOK, gin.H{"session": sess})
 }
 
@@ -406,20 +397,7 @@ func (h *SessionHandler) ObserveTerminal(c *gin.Context) {
 		return
 	}
 
-	// Check team access if member
-	if tenant.UserRole == "member" && sess.TeamID != nil {
-		found := false
-		for _, tid := range tenant.TeamIDs {
-			if tid == *sess.TeamID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this session"})
-			return
-		}
-	}
+	// All organization members can access sessions (Team-based access control removed)
 
 	// Get terminal output from router if available
 	if h.terminalRouter == nil {
@@ -486,20 +464,7 @@ func (h *SessionHandler) SendTerminalInput(c *gin.Context) {
 		return
 	}
 
-	// Check team access if member
-	if tenant.UserRole == "member" && sess.TeamID != nil {
-		found := false
-		for _, tid := range tenant.TeamIDs {
-			if tid == *sess.TeamID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this session"})
-			return
-		}
-	}
+	// All organization members can access sessions (Team-based access control removed)
 
 	if h.terminalRouter == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router not available"})
@@ -571,4 +536,83 @@ func (h *SessionHandler) ResizeTerminal(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Terminal resized"})
+}
+
+// buildPluginConfig builds the PluginConfig map for Runner's Sandbox plugins
+// It resolves repository_id -> repository_url, ticket_id -> ticket_identifier,
+// and fetches git_token or ssh_private_key from the associated GitProvider
+func (h *SessionHandler) buildPluginConfig(c *gin.Context, req *CreateSessionRequest) map[string]interface{} {
+	config := make(map[string]interface{})
+
+	// 1. Resolve Repository URL
+	// Priority: repository_url > repository_id
+	if req.RepositoryURL != nil && *req.RepositoryURL != "" {
+		config["repository_url"] = *req.RepositoryURL
+	} else if req.RepositoryID != nil && h.repositoryService != nil {
+		repo, err := h.repositoryService.GetByID(c.Request.Context(), *req.RepositoryID)
+		if err == nil && repo != nil {
+			// Get clone URL from repository
+			cloneURL, err := h.repositoryService.GetCloneURL(c.Request.Context(), *req.RepositoryID)
+			if err == nil {
+				config["repository_url"] = cloneURL
+			}
+
+			// Get credentials from GitProvider (if available)
+			if h.gitProviderService != nil && repo.GitProviderID > 0 {
+				provider, err := h.gitProviderService.GetByID(c.Request.Context(), repo.GitProviderID)
+				if err == nil && provider != nil {
+					// Check if this is an SSH Provider
+					if provider.IsSSHProvider() {
+						// Get SSH private key for authentication
+						if provider.SSHKeyID != nil && h.sshKeyService != nil {
+							privateKey, err := h.sshKeyService.GetPrivateKey(c.Request.Context(), *provider.SSHKeyID)
+							if err == nil && privateKey != "" {
+								config["ssh_private_key"] = privateKey
+							}
+						}
+					} else {
+						// HTTPS-based provider: use bot token
+						if provider.BotTokenEncrypted != nil {
+							// Note: Token is encrypted, Runner should handle decryption or
+							// we need to decrypt here if encryption service is available
+							// For now, we'll pass the encrypted token and let Runner handle it
+							// TODO: Implement proper token decryption
+							config["git_token"] = *provider.BotTokenEncrypted
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Resolve Branch Name
+	if req.BranchName != nil && *req.BranchName != "" {
+		config["branch"] = *req.BranchName
+	} else if req.RepositoryID != nil && h.repositoryService != nil {
+		// Use repository's default branch if not specified
+		repo, err := h.repositoryService.GetByID(c.Request.Context(), *req.RepositoryID)
+		if err == nil && repo != nil && repo.DefaultBranch != "" {
+			config["branch"] = repo.DefaultBranch
+		}
+	}
+
+	// 3. Resolve Ticket Identifier
+	// Priority: ticket_identifier > ticket_id
+	if req.TicketIdentifier != nil && *req.TicketIdentifier != "" {
+		config["ticket_identifier"] = *req.TicketIdentifier
+	} else if req.TicketID != nil && h.ticketService != nil {
+		t, err := h.ticketService.GetTicket(c.Request.Context(), *req.TicketID)
+		if err == nil && t != nil {
+			config["ticket_identifier"] = t.Identifier
+		}
+	}
+
+	// 4. Merge user-provided PluginConfig (can override above values)
+	if req.PluginConfig != nil {
+		for k, v := range req.PluginConfig {
+			config[k] = v
+		}
+	}
+
+	return config
 }

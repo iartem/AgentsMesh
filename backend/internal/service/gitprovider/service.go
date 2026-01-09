@@ -33,6 +33,7 @@ type CreateRequest struct {
 	ClientID            *string
 	ClientSecretEncrypt *string
 	BotTokenEncrypt     *string
+	SSHKeyID            *int64 // For SSH type providers
 	IsDefault           bool
 }
 
@@ -52,6 +53,7 @@ func (s *Service) Create(ctx context.Context, req *CreateRequest) (*gitprovider.
 		ClientID:              req.ClientID,
 		ClientSecretEncrypted: req.ClientSecretEncrypt,
 		BotTokenEncrypted:     req.BotTokenEncrypt,
+		SSHKeyID:              req.SSHKeyID,
 		IsDefault:             req.IsDefault,
 		IsActive:              true,
 	}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/anthropics/agentmesh/runner/internal/sandbox"
 	"github.com/anthropics/agentmesh/runner/internal/terminal"
 	"github.com/anthropics/agentmesh/runner/internal/workspace"
 )
@@ -31,9 +32,13 @@ type SessionBuilder struct {
 	prepScript       string
 	prepTimeout      int
 
-	// MCP configuration
+	// MCP configuration (legacy - now handled by sandbox plugin)
 	mcpEnabled bool
 	mcpServers []string
+
+	// Sandbox mode - use new plugin-based sandbox system
+	useSandbox   bool
+	pluginConfig map[string]interface{}
 }
 
 // NewSessionBuilder creates a new session builder.
@@ -117,10 +122,27 @@ func (b *SessionBuilder) WithPreparationScript(script string, timeoutSeconds int
 	return b
 }
 
-// WithMCP enables MCP with specified servers.
+// WithMCP enables MCP with specified servers (legacy - use WithSandbox instead).
 func (b *SessionBuilder) WithMCP(serverNames ...string) *SessionBuilder {
 	b.mcpEnabled = true
 	b.mcpServers = serverNames
+	return b
+}
+
+// WithSandbox enables sandbox mode with plugin configuration.
+// This is the recommended way to configure session environments.
+func (b *SessionBuilder) WithSandbox(pluginConfig map[string]interface{}) *SessionBuilder {
+	b.useSandbox = true
+	b.pluginConfig = pluginConfig
+	return b
+}
+
+// WithPluginConfig adds or updates plugin configuration.
+func (b *SessionBuilder) WithPluginConfig(key string, value interface{}) *SessionBuilder {
+	if b.pluginConfig == nil {
+		b.pluginConfig = make(map[string]interface{})
+	}
+	b.pluginConfig[key] = value
 	return b
 }
 
@@ -130,29 +152,58 @@ func (b *SessionBuilder) Build(ctx context.Context) (*Session, error) {
 		return nil, fmt.Errorf("session key is required")
 	}
 
-	log.Printf("[session_builder] Building session: session_key=%s, agent=%s",
-		b.sessionKey, b.agentType)
+	log.Printf("[session_builder] Building session: session_key=%s, agent=%s, use_sandbox=%v",
+		b.sessionKey, b.agentType, b.useSandbox)
 
-	// Determine working directory
-	workingDir, worktreePath, branchName, err := b.resolveWorkingDirectory(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve working directory: %w", err)
-	}
+	var workingDir, worktreePath, branchName string
+	var sb *sandbox.Sandbox
+	var launchArgs []string
+	var err error
 
-	// Run preparation script if specified
-	if b.prepScript != "" {
-		if err := b.runPreparation(ctx, workingDir, worktreePath, branchName); err != nil {
-			return nil, fmt.Errorf("preparation failed: %w", err)
+	// Use sandbox system if enabled and sandbox manager is available
+	if b.useSandbox && b.runner.sandboxManager != nil {
+		sb, err = b.buildWithSandbox(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create sandbox: %w", err)
 		}
+		workingDir = sb.WorkDir
+		if wt, ok := sb.Metadata["worktree_path"].(string); ok {
+			worktreePath = wt
+		}
+		if bn, ok := sb.Metadata["branch_name"].(string); ok {
+			branchName = bn
+		}
+		launchArgs = append(b.launchArgs, sb.LaunchArgs...)
+	} else {
+		// Legacy mode: use old working directory resolution
+		workingDir, worktreePath, branchName, err = b.resolveWorkingDirectory(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve working directory: %w", err)
+		}
+
+		// Run preparation script if specified (legacy mode)
+		if b.prepScript != "" {
+			if err := b.runPreparation(ctx, workingDir, worktreePath, branchName); err != nil {
+				return nil, fmt.Errorf("preparation failed: %w", err)
+			}
+		}
+		launchArgs = b.launchArgs
 	}
 
 	// Merge environment variables
 	envVars := b.mergeEnvVars()
 
+	// Add sandbox env vars if available
+	if sb != nil {
+		for k, v := range sb.EnvVars {
+			envVars[k] = v
+		}
+	}
+
 	// Create terminal
 	term, err := terminal.New(terminal.Options{
 		Command:  b.launchCommand,
-		Args:     b.launchArgs,
+		Args:     launchArgs,
 		WorkDir:  workingDir,
 		Env:      envVars,
 		Rows:     b.rows,
@@ -161,6 +212,10 @@ func (b *SessionBuilder) Build(ctx context.Context) (*Session, error) {
 		OnExit:   nil, // Will be set by caller
 	})
 	if err != nil {
+		// Cleanup sandbox on failure
+		if sb != nil && b.runner.sandboxManager != nil {
+			b.runner.sandboxManager.Cleanup(b.sessionKey)
+		}
 		return nil, fmt.Errorf("failed to create terminal: %w", err)
 	}
 
@@ -170,7 +225,7 @@ func (b *SessionBuilder) Build(ctx context.Context) (*Session, error) {
 		SessionKey:       b.sessionKey,
 		AgentType:        b.agentType,
 		RepositoryURL:    b.repositoryURL,
-		Branch:           b.branch,
+		Branch:           branchName,
 		WorktreePath:     worktreePath,
 		InitialPrompt:    b.initialPrompt,
 		Terminal:         term,
@@ -179,25 +234,56 @@ func (b *SessionBuilder) Build(ctx context.Context) (*Session, error) {
 		TicketIdentifier: b.ticketIdentifier,
 	}
 
-	log.Printf("[session_builder] Session built: session_key=%s, working_dir=%s",
-		b.sessionKey, workingDir)
+	log.Printf("[session_builder] Session built: session_key=%s, working_dir=%s, sandbox=%v",
+		b.sessionKey, workingDir, sb != nil)
 
 	return session, nil
 }
 
-// resolveWorkingDirectory determines the working directory for the session.
-// Returns (workingDir, worktreePath, branchName, error).
-func (b *SessionBuilder) resolveWorkingDirectory(ctx context.Context) (string, string, string, error) {
-	// Priority 1: Use worktree service if available and ticket is specified
-	if b.useWorktree && b.ticketIdentifier != "" && b.runner.worktreeService != nil {
-		worktreePath, branchName, err := b.runner.worktreeService.Create(b.ticketIdentifier, b.sessionKey)
-		if err != nil {
-			return "", "", "", fmt.Errorf("failed to create worktree: %w", err)
+// buildWithSandbox creates a sandbox using the plugin system.
+func (b *SessionBuilder) buildWithSandbox(ctx context.Context) (*sandbox.Sandbox, error) {
+	// Build plugin config from builder fields
+	config := make(map[string]interface{})
+
+	// Copy explicit builder fields
+	if b.repositoryURL != "" {
+		config["repository_url"] = b.repositoryURL
+	}
+	if b.branch != "" {
+		config["branch"] = b.branch
+	}
+	if b.ticketIdentifier != "" {
+		config["ticket_identifier"] = b.ticketIdentifier
+	}
+	if b.prepScript != "" {
+		config["init_script"] = b.prepScript
+	}
+	if b.prepTimeout > 0 {
+		config["init_timeout"] = b.prepTimeout
+	}
+	if len(b.envVars) > 0 {
+		envMap := make(map[string]interface{})
+		for k, v := range b.envVars {
+			envMap[k] = v
 		}
-		return worktreePath, worktreePath, branchName, nil
+		config["env_vars"] = envMap
 	}
 
-	// Priority 2: Use workspace manager with repository URL
+	// Merge explicit plugin config (can override above values)
+	for k, v := range b.pluginConfig {
+		config[k] = v
+	}
+
+	// Create sandbox
+	return b.runner.sandboxManager.Create(ctx, b.sessionKey, config)
+}
+
+// resolveWorkingDirectory determines the working directory for the session.
+// Returns (workingDir, worktreePath, branchName, error).
+// Note: This method is only used in non-sandbox mode. For sandbox mode,
+// the working directory is set by the SandboxManager plugins.
+func (b *SessionBuilder) resolveWorkingDirectory(ctx context.Context) (string, string, string, error) {
+	// Priority 1: Use workspace manager with repository URL
 	if b.repositoryURL != "" && b.runner.workspace != nil {
 		worktreePath, err := b.runner.workspace.CreateWorktree(ctx, b.repositoryURL, b.branch, b.sessionKey)
 		if err != nil {
@@ -206,13 +292,13 @@ func (b *SessionBuilder) resolveWorkingDirectory(ctx context.Context) (string, s
 		return worktreePath, worktreePath, b.branch, nil
 	}
 
-	// Priority 3: Use temporary workspace
+	// Priority 2: Use temporary workspace
 	if b.runner.workspace != nil {
 		tempPath := b.runner.workspace.TempWorkspace(b.sessionKey)
 		return tempPath, "", "", nil
 	}
 
-	// Priority 4: Use workspace root from config
+	// Priority 3: Use workspace root from config
 	return b.runner.cfg.WorkspaceRoot, "", "", nil
 }
 
@@ -230,11 +316,6 @@ func (b *SessionBuilder) runPreparation(ctx context.Context, workingDir, worktre
 		WorkingDir:       workingDir,
 		WorktreeDir:      worktreePath,
 		BaseEnvVars:      b.envVars,
-	}
-
-	// Add main repo dir if using worktree service
-	if b.runner.worktreeService != nil {
-		prepCtx.MainRepoDir = b.runner.worktreeService.GetRepositoryPath()
 	}
 
 	log.Printf("[session_builder] Running preparation script: session_key=%s", b.sessionKey)

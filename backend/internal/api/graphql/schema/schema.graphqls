@@ -30,7 +30,6 @@ type Organization {
   createdAt: Time!
   updatedAt: Time!
   members: [OrganizationMember!]!
-  teams: [Team!]!
   runners: [Runner!]!
 }
 
@@ -39,21 +38,6 @@ type OrganizationMember {
   user: User!
   role: String!
   joinedAt: Time!
-}
-
-type Team {
-  id: ID!
-  name: String!
-  description: String
-  createdAt: Time!
-  updatedAt: Time!
-  members: [TeamMember!]!
-}
-
-type TeamMember {
-  id: ID!
-  user: User!
-  role: String!
 }
 
 type AgentType {
@@ -274,7 +258,6 @@ type SessionEdge {
 
 input CreateTicketInput {
   repositoryID: ID!
-  teamID: ID
   type: TicketType!
   title: String!
   description: String
@@ -302,7 +285,6 @@ input CreateSessionInput {
   runnerID: ID!
   agentTypeID: ID
   customAgentTypeID: ID
-  teamID: ID
   repositoryID: ID
   ticketID: ID
   initialPrompt: String
@@ -313,7 +295,6 @@ input CreateChannelInput {
   name: String!
   description: String
   document: String
-  teamID: ID
   repositoryID: ID
   ticketID: ID
 }
@@ -325,7 +306,6 @@ input UpdateChannelInput {
 }
 
 input TicketFilter {
-  teamID: ID
   repositoryID: ID
   status: TicketStatus
   priority: TicketPriority
@@ -336,7 +316,6 @@ input TicketFilter {
 }
 
 input SessionFilter {
-  teamID: ID
   runnerID: ID
   status: SessionStatus
   ticketID: ID
@@ -355,10 +334,6 @@ type Query {
   organization(slug: String!): Organization
   myOrganizations: [Organization!]!
 
-  # Teams
-  team(id: ID!): Team
-  teams: [Team!]!
-
   # Runners
   runner(id: ID!): Runner
   runners(status: RunnerStatus): [Runner!]!
@@ -375,7 +350,7 @@ type Query {
 
   # Repositories
   repository(id: ID!): Repository
-  repositories(teamID: ID): [Repository!]!
+  repositories: [Repository!]!
 
   # Tickets
   ticket(identifier: String!): Ticket
@@ -386,7 +361,7 @@ type Query {
 
   # Channels
   channel(id: ID!): Channel
-  channels(teamID: ID, includeArchived: Boolean): [Channel!]!
+  channels(includeArchived: Boolean): [Channel!]!
 
   # Git Providers
   gitProviders: [GitProvider!]!

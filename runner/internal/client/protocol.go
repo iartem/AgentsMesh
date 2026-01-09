@@ -62,11 +62,15 @@ type CreateSessionRequest struct {
 	InitialCommand    string             `json:"initial_command,omitempty"`
 	InitialPrompt     string             `json:"initial_prompt,omitempty"`     // Prompt to send after command starts (for interactive mode)
 	PermissionMode    string             `json:"permission_mode,omitempty"`    // Permission mode (plan/default/etc). If "plan", will send Shift+Tab to enter Plan Mode
-	WorkingDir        string             `json:"working_dir,omitempty"`
-	TicketIdentifier  string             `json:"ticket_identifier,omitempty"`  // For worktree creation
+	WorkingDir        string             `json:"working_dir,omitempty"`        // Deprecated: use PluginConfig
+	TicketIdentifier  string             `json:"ticket_identifier,omitempty"`  // Deprecated: use PluginConfig
 	WorktreeSuffix    string             `json:"worktree_suffix,omitempty"`    // Suffix for worktree path to support multiple instances per ticket
-	EnvVars           map[string]string  `json:"env_vars,omitempty"`           // Extra environment variables (e.g., AI provider credentials)
-	PreparationConfig *PreparationConfig `json:"preparation_config,omitempty"` // Workspace preparation config
+	EnvVars           map[string]string  `json:"env_vars,omitempty"`           // Deprecated: use PluginConfig
+	PreparationConfig *PreparationConfig `json:"preparation_config,omitempty"` // Deprecated: use PluginConfig
+
+	// PluginConfig is the unified configuration passed to Sandbox plugins
+	// Fields: repository_url, branch, ticket_identifier, git_token, init_script, init_timeout, env_vars
+	PluginConfig map[string]interface{} `json:"plugin_config,omitempty"`
 }
 
 // TerminateSessionRequest contains session termination request data.

@@ -509,17 +509,21 @@ func TestDataStructs(t *testing.T) {
 
 	t.Run("CreateSessionRequest", func(t *testing.T) {
 		req := CreateSessionRequest{
-			SessionID:     "s1",
-			RepoPath:      "/path/to/repo",
-			BranchName:    "main",
-			InitialPrompt: "hello",
-			AgentType:     "claude",
-			EnvVars:       map[string]string{"KEY": "VALUE"},
-			Cols:          80,
-			Rows:          24,
+			SessionID:      "s1",
+			InitialCommand: "claude",
+			InitialPrompt:  "hello",
+			PermissionMode: "plan",
+			EnvVars:        map[string]string{"KEY": "VALUE"},
+			PluginConfig: map[string]interface{}{
+				"repository_url": "https://github.com/org/repo.git",
+				"branch":         "main",
+			},
 		}
-		if req.AgentType != "claude" {
-			t.Error("AgentType not set correctly")
+		if req.InitialCommand != "claude" {
+			t.Error("InitialCommand not set correctly")
+		}
+		if req.PluginConfig["repository_url"] != "https://github.com/org/repo.git" {
+			t.Error("PluginConfig repository_url not set correctly")
 		}
 	})
 

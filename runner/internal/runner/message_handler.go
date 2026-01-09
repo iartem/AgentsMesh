@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/anthropics/agentmesh/runner/internal/client"
-	"github.com/anthropics/agentmesh/runner/internal/terminal"
 )
 
 // RunnerMessageHandler implements client.MessageHandler interface.
@@ -31,9 +30,10 @@ func NewRunnerMessageHandler(runner *Runner, store SessionStore, conn client.Con
 
 // OnCreateSession handles create session requests from server.
 // Implements client.MessageHandler interface.
+// Uses the Sandbox plugin system for environment configuration.
 func (h *RunnerMessageHandler) OnCreateSession(req client.CreateSessionRequest) error {
-	log.Printf("[message_handler] Creating session: session_id=%s, command=%s, permission_mode=%s",
-		req.SessionID, req.InitialCommand, req.PermissionMode)
+	log.Printf("[message_handler] Creating session: session_id=%s, command=%s, permission_mode=%s, plugin_config=%v",
+		req.SessionID, req.InitialCommand, req.PermissionMode, req.PluginConfig)
 
 	ctx := context.Background()
 
@@ -43,75 +43,33 @@ func (h *RunnerMessageHandler) OnCreateSession(req client.CreateSessionRequest) 
 		return fmt.Errorf("max concurrent sessions reached")
 	}
 
-	// Determine working directory
-	workDir := req.WorkingDir
-	var worktreePath, branchName string
+	// Build PluginConfig from both legacy fields and new PluginConfig
+	pluginConfig := h.buildPluginConfig(&req)
 
-	// Create worktree if ticket identifier is specified
-	if req.TicketIdentifier != "" && h.runner.worktreeService != nil {
-		suffix := req.WorktreeSuffix
-		if suffix == "" {
-			suffix = "default"
-		}
-		path, branch, err := h.runner.worktreeService.Create(req.TicketIdentifier, suffix)
-		if err != nil {
-			h.sendSessionError(req.SessionID, fmt.Sprintf("failed to create worktree: %v", err))
-			return fmt.Errorf("failed to create worktree: %w", err)
-		}
-		workDir = path
-		worktreePath = path
-		branchName = branch
-		log.Printf("[message_handler] Created worktree: path=%s, branch=%s", path, branch)
-	}
+	// Use SessionBuilder with Sandbox mode
+	builder := NewSessionBuilder(h.runner).
+		WithSessionKey(req.SessionID).
+		WithLaunchCommand(req.InitialCommand, nil).
+		WithInitialPrompt(req.InitialPrompt).
+		WithSandbox(pluginConfig)
 
-	// Run preparation script if specified
-	if req.PreparationConfig != nil && req.PreparationConfig.Script != "" {
-		timeout := req.PreparationConfig.TimeoutSeconds
-		if timeout <= 0 {
-			timeout = 300 // Default 5 minutes
-		}
-		log.Printf("[message_handler] Running preparation script (timeout=%ds)", timeout)
-		if err := h.runPreparationScript(ctx, workDir, req.PreparationConfig.Script, timeout); err != nil {
-			h.sendSessionError(req.SessionID, fmt.Sprintf("preparation script failed: %v", err))
-			return fmt.Errorf("preparation script failed: %w", err)
-		}
-	}
-
-	// Merge environment variables
-	envVars := h.mergeEnvVars(req.EnvVars)
-
-	// Create terminal options
-	termOpts := terminal.Options{
-		Command:  req.InitialCommand,
-		WorkDir:  workDir,
-		Env:      envVars,
-		Rows:     24,
-		Cols:     80,
-		OnOutput: h.createOutputHandler(req.SessionID),
-		OnExit:   h.createExitHandler(req.SessionID),
-	}
-
-	// Create terminal
-	term, err := terminal.New(termOpts)
+	// Build session
+	session, err := builder.Build(ctx)
 	if err != nil {
-		h.sendSessionError(req.SessionID, fmt.Sprintf("failed to create terminal: %v", err))
-		return fmt.Errorf("failed to create terminal: %w", err)
+		h.sendSessionError(req.SessionID, fmt.Sprintf("failed to build session: %v", err))
+		return fmt.Errorf("failed to build session: %w", err)
 	}
 
-	// Create session
-	session := &Session{
-		ID:               req.SessionID,
-		SessionKey:       req.SessionID,
-		WorktreePath:     worktreePath,
-		InitialPrompt:    req.InitialPrompt,
-		Terminal:         term,
-		StartedAt:        time.Now(),
-		Status:           SessionStatusInitializing,
-		TicketIdentifier: req.TicketIdentifier,
-	}
+	// Set output/exit handlers
+	session.Terminal.SetOutputHandler(h.createOutputHandler(req.SessionID))
+	session.Terminal.SetExitHandler(h.createExitHandler(req.SessionID))
 
 	// Start terminal
-	if err := term.Start(); err != nil {
+	if err := session.Terminal.Start(); err != nil {
+		// Cleanup sandbox on failure
+		if h.runner.sandboxManager != nil {
+			h.runner.sandboxManager.Cleanup(req.SessionID)
+		}
 		h.sendSessionError(req.SessionID, fmt.Sprintf("failed to start terminal: %v", err))
 		return fmt.Errorf("failed to start terminal: %w", err)
 	}
@@ -124,7 +82,7 @@ func (h *RunnerMessageHandler) OnCreateSession(req client.CreateSessionRequest) 
 	if req.PermissionMode == "plan" {
 		time.AfterFunc(1*time.Second, func() {
 			// Shift+Tab escape sequence
-			if err := term.Write([]byte("\x1b[Z")); err != nil {
+			if err := session.Terminal.Write([]byte("\x1b[Z")); err != nil {
 				log.Printf("[message_handler] Failed to send Shift+Tab: %v", err)
 			}
 		})
@@ -137,18 +95,53 @@ func (h *RunnerMessageHandler) OnCreateSession(req client.CreateSessionRequest) 
 			delay = 2500 * time.Millisecond // Give time for plan mode to activate
 		}
 		time.AfterFunc(delay, func() {
-			if err := term.Write([]byte(req.InitialPrompt + "\n")); err != nil {
+			if err := session.Terminal.Write([]byte(req.InitialPrompt + "\n")); err != nil {
 				log.Printf("[message_handler] Failed to send initial prompt: %v", err)
 			}
 		})
 	}
 
 	// Notify server that session is created
-	// Use default PTY size since Terminal doesn't track current size
-	h.sendSessionCreated(req.SessionID, term.PID(), worktreePath, branchName, 80, 24)
+	h.sendSessionCreated(req.SessionID, session.Terminal.PID(), session.WorktreePath, session.Branch, 80, 24)
 
-	log.Printf("[message_handler] Session created: session_id=%s, pid=%d", req.SessionID, term.PID())
+	log.Printf("[message_handler] Session created: session_id=%s, pid=%d, worktree=%s, branch=%s",
+		req.SessionID, session.Terminal.PID(), session.WorktreePath, session.Branch)
 	return nil
+}
+
+// buildPluginConfig merges legacy fields with PluginConfig for backward compatibility.
+func (h *RunnerMessageHandler) buildPluginConfig(req *client.CreateSessionRequest) map[string]interface{} {
+	config := make(map[string]interface{})
+
+	// Copy legacy fields to PluginConfig for backward compatibility
+	if req.TicketIdentifier != "" {
+		config["ticket_identifier"] = req.TicketIdentifier
+	}
+	if req.WorkingDir != "" {
+		config["working_dir"] = req.WorkingDir
+	}
+	if len(req.EnvVars) > 0 {
+		envMap := make(map[string]interface{})
+		for k, v := range req.EnvVars {
+			envMap[k] = v
+		}
+		config["env_vars"] = envMap
+	}
+	if req.PreparationConfig != nil {
+		if req.PreparationConfig.Script != "" {
+			config["init_script"] = req.PreparationConfig.Script
+		}
+		if req.PreparationConfig.TimeoutSeconds > 0 {
+			config["init_timeout"] = req.PreparationConfig.TimeoutSeconds
+		}
+	}
+
+	// Merge PluginConfig (overrides legacy fields)
+	for k, v := range req.PluginConfig {
+		config[k] = v
+	}
+
+	return config
 }
 
 // OnTerminateSession handles terminate session requests from server.
@@ -166,10 +159,11 @@ func (h *RunnerMessageHandler) OnTerminateSession(req client.TerminateSessionReq
 		session.Terminal.Stop()
 	}
 
-	// Clean up worktree if applicable
-	if session.WorktreePath != "" && h.runner.worktreeService != nil {
-		// Note: We might want to keep worktrees for ticket-based sessions
-		log.Printf("[message_handler] Worktree preserved: %s", session.WorktreePath)
+	// Clean up sandbox
+	if h.runner.sandboxManager != nil {
+		if err := h.runner.sandboxManager.Cleanup(req.SessionID); err != nil {
+			log.Printf("[message_handler] Warning: failed to cleanup sandbox: %v", err)
+		}
 	}
 
 	// Notify server
@@ -253,28 +247,6 @@ func (h *RunnerMessageHandler) createExitHandler(sessionID string) func(int) {
 
 		h.sendSessionTerminated(sessionID)
 	}
-}
-
-func (h *RunnerMessageHandler) mergeEnvVars(envVars map[string]string) map[string]string {
-	result := make(map[string]string)
-
-	// Add config env vars first
-	for k, v := range h.runner.cfg.AgentEnvVars {
-		result[k] = v
-	}
-
-	// Override with session-specific env vars
-	for k, v := range envVars {
-		result[k] = v
-	}
-
-	return result
-}
-
-func (h *RunnerMessageHandler) runPreparationScript(ctx context.Context, workDir, script string, timeout int) error {
-	// TODO: Implement preparation script execution
-	log.Printf("[message_handler] Preparation script execution not implemented")
-	return nil
 }
 
 // Event sending methods

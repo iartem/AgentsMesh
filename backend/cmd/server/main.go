@@ -14,6 +14,7 @@ import (
 	v1 "github.com/anthropics/agentmesh/backend/internal/api/rest/v1"
 	"github.com/anthropics/agentmesh/backend/internal/config"
 	"github.com/anthropics/agentmesh/backend/internal/infra/database"
+	"github.com/anthropics/agentmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentmesh/backend/internal/infra/logger"
 	"github.com/anthropics/agentmesh/backend/internal/infra/websocket"
 	"github.com/anthropics/agentmesh/backend/internal/service/agent"
@@ -23,11 +24,12 @@ import (
 	"github.com/anthropics/agentmesh/backend/internal/service/channel"
 	"github.com/anthropics/agentmesh/backend/internal/service/devmesh"
 	"github.com/anthropics/agentmesh/backend/internal/service/gitprovider"
+	"github.com/anthropics/agentmesh/backend/internal/service/invitation"
 	"github.com/anthropics/agentmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentmesh/backend/internal/service/session"
-	"github.com/anthropics/agentmesh/backend/internal/service/team"
+	"github.com/anthropics/agentmesh/backend/internal/service/sshkey"
 	"github.com/anthropics/agentmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentmesh/backend/internal/service/user"
 )
@@ -73,7 +75,6 @@ func main() {
 	}
 	authSvc := auth.NewService(authCfg, userSvc)
 	orgSvc := organization.NewService(db)
-	teamSvc := team.NewService(db)
 	agentSvc := agent.NewService(db)
 	gitProviderSvc := gitprovider.NewService(db)
 	repoSvc := repository.NewService(db, gitProviderSvc)
@@ -81,9 +82,19 @@ func main() {
 	sessionSvc := session.NewService(db)
 	channelSvc := channel.NewService(db)
 	ticketSvc := ticket.NewService(db)
+	sshKeySvc := sshkey.NewService(db)
 	billingSvc := billing.NewService(db, "") // Empty stripe key for now
 	bindingSvc := binding.NewService(db, nil) // nil sessionQuerier - auto-approve will return pending
 	devmeshSvc := devmesh.NewService(db, sessionSvc, channelSvc, bindingSvc)
+
+	// Initialize email service for invitations
+	emailSvc := email.NewService(email.Config{
+		Provider:    cfg.Email.Provider,
+		ResendKey:   cfg.Email.ResendKey,
+		FromAddress: cfg.Email.FromAddress,
+		BaseURL:     cfg.Email.BaseURL,
+	})
+	invitationSvc := invitation.NewService(db, emailSvc)
 
 	// Initialize WebSocket hub
 	hub := websocket.NewHub()
@@ -103,7 +114,6 @@ func main() {
 		Auth:               authSvc,
 		User:               userSvc,
 		Org:                orgSvc,
-		Team:               teamSvc,
 		Agent:              agentSvc,
 		GitProvider:        gitProviderSvc,
 		Repository:         repoSvc,
@@ -115,9 +125,11 @@ func main() {
 		Channel:            channelSvc,
 		Binding:            bindingSvc,
 		Ticket:             ticketSvc,
+		SSHKey:             sshKeySvc,
 		DevMesh:            devmeshSvc,
 		Billing:            billingSvc,
 		Hub:                hub,
+		Invitation:         invitationSvc,
 	}
 
 	// Initialize router

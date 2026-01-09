@@ -2,97 +2,14 @@ package runner
 
 import (
 	"context"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/anthropics/agentmesh/runner/internal/config"
 	"github.com/anthropics/agentmesh/runner/internal/workspace"
-	"github.com/anthropics/agentmesh/runner/internal/worktree"
 )
 
-// --- Test resolveWorkingDirectory with worktree service ---
-
-func TestSessionBuilderResolveWithWorktreeServiceAndTicket(t *testing.T) {
-	// Create a real git repo for testing
-	tempDir := t.TempDir()
-	repoDir := filepath.Join(tempDir, "repo")
-	worktreesDir := filepath.Join(tempDir, "worktrees")
-
-	// Initialize git repo
-	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Skipf("Could not create repo dir: %v", err)
-	}
-
-	// Run git init
-	cmd := exec.Command("git", "init")
-	cmd.Dir = repoDir
-	if err := cmd.Run(); err != nil {
-		t.Skipf("Could not init git repo: %v", err)
-	}
-
-	// Create initial commit
-	testFile := filepath.Join(repoDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Skipf("Could not create test file: %v", err)
-	}
-
-	cmd = exec.Command("git", "add", ".")
-	cmd.Dir = repoDir
-	cmd.Run()
-
-	cmd = exec.Command("git", "config", "user.email", "test@test.com")
-	cmd.Dir = repoDir
-	cmd.Run()
-	cmd = exec.Command("git", "config", "user.name", "Test User")
-	cmd.Dir = repoDir
-	cmd.Run()
-
-	cmd = exec.Command("git", "commit", "-m", "initial")
-	cmd.Dir = repoDir
-	if err := cmd.Run(); err != nil {
-		t.Skipf("Could not create initial commit: %v", err)
-	}
-
-	// Create worktrees directory
-	if err := os.MkdirAll(worktreesDir, 0755); err != nil {
-		t.Skipf("Could not create worktrees dir: %v", err)
-	}
-
-	// Create worktree service
-	wtService := worktree.New(repoDir, worktreesDir, "main")
-	if wtService == nil {
-		t.Skip("Worktree service not available")
-	}
-
-	runner := &Runner{
-		cfg: &config.Config{
-			WorkspaceRoot: tempDir,
-		},
-		worktreeService: wtService,
-	}
-
-	builder := NewSessionBuilder(runner).
-		WithSessionKey("worktree-session").
-		WithWorktree("TICKET-123")
-
-	workDir, worktreePath, branchName, err := builder.resolveWorkingDirectory(context.Background())
-	if err != nil {
-		t.Logf("Worktree creation failed (expected in some environments): %v", err)
-	} else {
-		if worktreePath == "" {
-			t.Error("worktreePath should not be empty")
-		}
-		if branchName == "" {
-			t.Error("branchName should not be empty")
-		}
-		t.Logf("workDir=%s, worktreePath=%s, branchName=%s", workDir, worktreePath, branchName)
-
-		// Clean up
-		wtService.Remove(branchName)
-	}
-}
+// Note: Worktree functionality is now handled by sandbox plugins (WorktreePlugin)
+// Tests for worktree are in internal/sandbox/plugins/worktree_test.go
 
 func TestSessionBuilderBuildWithEmptySessionKey(t *testing.T) {
 	runner := &Runner{

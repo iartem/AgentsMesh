@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +19,6 @@ type OrganizationService interface {
 	GetBySlug(ctx context.Context, slug string) (OrganizationGetter, error)
 	IsMember(ctx context.Context, orgID, userID int64) (bool, error)
 	GetMemberRole(ctx context.Context, orgID, userID int64) (string, error)
-	GetUserTeams(ctx context.Context, orgID, userID int64) ([]int64, error)
 }
 
 // TenantContext holds tenant information for the current request
@@ -28,8 +26,7 @@ type TenantContext struct {
 	OrganizationID   int64
 	OrganizationSlug string
 	UserID           int64
-	UserRole         string  // 'owner', 'admin', 'member'
-	TeamIDs          []int64 // Teams the user belongs to
+	UserRole         string // 'owner', 'admin', 'member'
 }
 
 type tenantContextKey struct{}
@@ -130,19 +127,12 @@ func TenantMiddleware(orgService OrganizationService) gin.HandlerFunc {
 			role = "member" // Default to member if role lookup fails
 		}
 
-		// Get user's team IDs
-		teamIDs, err := orgService.GetUserTeams(c.Request.Context(), org.GetID(), userID)
-		if err != nil {
-			teamIDs = []int64{} // Empty slice if lookup fails
-		}
-
 		// Create tenant context
 		tc := &TenantContext{
 			OrganizationID:   org.GetID(),
 			OrganizationSlug: org.GetSlug(),
 			UserID:           userID,
 			UserRole:         role,
-			TeamIDs:          teamIDs,
 		}
 
 		// Set tenant context in both gin context and request context
@@ -195,59 +185,4 @@ func RequireOwner() gin.HandlerFunc {
 // RequireAdmin is a convenience middleware for requiring admin or owner role
 func RequireAdmin() gin.HandlerFunc {
 	return RequireRole("owner", "admin")
-}
-
-// RequireTeamMember middleware checks if the user is a member of a specific team
-func RequireTeamMember(teamIDParam string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tc := GetTenant(c)
-		if tc == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Tenant context not found",
-			})
-			c.Abort()
-			return
-		}
-
-		// Owners and admins can access any team
-		if tc.UserRole == "owner" || tc.UserRole == "admin" {
-			c.Next()
-			return
-		}
-
-		// Get team ID from URL parameter
-		teamIDStr := c.Param(teamIDParam)
-		if teamIDStr == "" {
-			c.Next()
-			return
-		}
-
-		// Parse team ID from string
-		var teamID int64
-		for _, id := range tc.TeamIDs {
-			if fmt.Sprintf("%d", id) == teamIDStr {
-				teamID = id
-				break
-			}
-		}
-
-		// Check if user is a member of the team
-		isMember := false
-		for _, id := range tc.TeamIDs {
-			if id == teamID {
-				isMember = true
-				break
-			}
-		}
-
-		if !isMember {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "You are not a member of this team",
-			})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
 }

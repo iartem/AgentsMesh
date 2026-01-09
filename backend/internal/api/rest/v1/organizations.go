@@ -2,32 +2,34 @@ package v1
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/anthropics/agentmesh/backend/internal/middleware"
 	"github.com/anthropics/agentmesh/backend/internal/service/organization"
-	"github.com/anthropics/agentmesh/backend/internal/service/team"
 	"github.com/gin-gonic/gin"
 )
 
+// slugRegex validates organization slug: lowercase letters, numbers, and hyphens
+// Must start and end with alphanumeric, no consecutive hyphens
+var slugRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
 // OrganizationHandler handles organization-related requests
 type OrganizationHandler struct {
-	orgService  *organization.Service
-	teamService *team.Service
+	orgService *organization.Service
 }
 
 // NewOrganizationHandler creates a new organization handler
-func NewOrganizationHandler(orgService *organization.Service, teamService *team.Service) *OrganizationHandler {
+func NewOrganizationHandler(orgService *organization.Service) *OrganizationHandler {
 	return &OrganizationHandler{
-		orgService:  orgService,
-		teamService: teamService,
+		orgService: orgService,
 	}
 }
 
 // CreateOrganizationRequest represents organization creation request
 type CreateOrganizationRequest struct {
 	Name    string `json:"name" binding:"required,min=2,max=100"`
-	Slug    string `json:"slug" binding:"required,min=2,max=100,alphanum"`
+	Slug    string `json:"slug" binding:"required,min=2,max=100"`
 	LogoURL string `json:"logo_url"`
 }
 
@@ -51,6 +53,12 @@ func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
 	var req CreateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate slug format: lowercase alphanumeric with hyphens
+	if !slugRegex.MatchString(req.Slug) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Slug must contain only lowercase letters, numbers, and hyphens, and must start and end with alphanumeric characters"})
 		return
 	}
 
