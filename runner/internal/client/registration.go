@@ -23,6 +23,7 @@ type RegistrationRequest struct {
 type RegistrationResponse struct {
 	AuthToken string `json:"auth_token"`
 	RunnerID  int64  `json:"runner_id"`
+	OrgSlug   string `json:"org_slug"`
 }
 
 // Register registers a runner with the server.

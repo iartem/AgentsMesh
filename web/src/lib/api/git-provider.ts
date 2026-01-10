@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Git Provider types
 export interface GitProviderData {
@@ -17,10 +17,10 @@ export interface GitProviderData {
 // Git Provider API
 export const gitProviderApi = {
   list: () =>
-    request<{ git_providers: GitProviderData[] }>("/api/v1/org/git-providers"),
+    request<{ git_providers: GitProviderData[] }>(orgPath("/git-providers")),
 
   get: (id: number) =>
-    request<{ git_provider: GitProviderData }>(`/api/v1/org/git-providers/${id}`),
+    request<{ git_provider: GitProviderData }>(`${orgPath("/git-providers")}/${id}`),
 
   create: (data: {
     provider_type: string;
@@ -32,7 +32,7 @@ export const gitProviderApi = {
     ssh_key_id?: number;
     is_default?: boolean;
   }) =>
-    request<{ git_provider: GitProviderData }>("/api/v1/org/git-providers", {
+    request<{ git_provider: GitProviderData }>(orgPath("/git-providers"), {
       method: "POST",
       body: data,
     }),
@@ -47,18 +47,18 @@ export const gitProviderApi = {
     is_default?: boolean;
     is_active?: boolean;
   }) =>
-    request<{ git_provider: GitProviderData }>(`/api/v1/org/git-providers/${id}`, {
+    request<{ git_provider: GitProviderData }>(`${orgPath("/git-providers")}/${id}`, {
       method: "PUT",
       body: data,
     }),
 
   delete: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/git-providers/${id}`, {
+    request<{ message: string }>(`${orgPath("/git-providers")}/${id}`, {
       method: "DELETE",
     }),
 
   testConnection: (id: number) =>
-    request<{ success: boolean; message: string }>(`/api/v1/org/git-providers/${id}/test`, {
+    request<{ success: boolean; message: string }>(`${orgPath("/git-providers")}/${id}/test`, {
       method: "POST",
     }),
 };

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentmesh/backend/internal/middleware"
+	"github.com/anthropics/agentmesh/backend/internal/service/organization"
 	runner "github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,7 @@ import (
 // RunnerHandler handles runner-related requests
 type RunnerHandler struct {
 	runnerService *runner.Service
+	orgService    organization.Interface
 }
 
 // NewRunnerHandler creates a new runner handler
@@ -20,6 +22,11 @@ func NewRunnerHandler(runnerService *runner.Service) *RunnerHandler {
 	return &RunnerHandler{
 		runnerService: runnerService,
 	}
+}
+
+// SetOrgService sets the organization service for looking up org slug during registration
+func (h *RunnerHandler) SetOrgService(orgService organization.Interface) {
+	h.orgService = orgService
 }
 
 // ListRunners lists runners in organization
@@ -149,6 +156,7 @@ type RegisterRunnerRequest struct {
 
 // RegisterRunner registers a new runner
 // POST /api/v1/runners/register
+// Response includes org_slug for the runner to use in subsequent API calls
 func (h *RunnerHandler) RegisterRunner(c *gin.Context) {
 	var req RegisterRunnerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -184,9 +192,19 @@ func (h *RunnerHandler) RegisterRunner(c *gin.Context) {
 		return
 	}
 
+	// Lookup org slug for the runner to use in org-scoped API paths
+	var orgSlug string
+	if h.orgService != nil {
+		org, err := h.orgService.GetByID(c.Request.Context(), r.OrganizationID)
+		if err == nil {
+			orgSlug = org.Slug
+		}
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"runner_id":  r.ID,
 		"auth_token": authToken,
+		"org_slug":   orgSlug,
 	})
 }
 

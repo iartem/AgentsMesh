@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // DevMesh types
 export interface DevMeshNodeData {
@@ -42,7 +42,7 @@ export interface DevMeshTopologyData {
 export const devmeshApi = {
   // Get topology
   getTopology: () => {
-    return request<{ topology: DevMeshTopologyData }>(`/api/v1/org/devmesh/topology`);
+    return request<{ topology: DevMeshTopologyData }>(orgPath("/devmesh/topology"));
   },
 
   // For channel operations, use channelApi.joinPod() and channelApi.leavePod()

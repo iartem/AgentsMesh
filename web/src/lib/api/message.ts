@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Agent Message types
 export interface AgentMessage {
@@ -39,7 +39,7 @@ export const messageApi = {
     correlation_id?: string;
     reply_to_id?: number;
   }, podKey?: string) =>
-    request<{ message: AgentMessage }>("/api/v1/org/messages", {
+    request<{ message: AgentMessage }>(orgPath("/messages"), {
       method: "POST",
       body: data,
       headers: podKey ? { "X-Pod-Key": podKey } : undefined,
@@ -61,26 +61,26 @@ export const messageApi = {
     if (params?.offset) searchParams.append("offset", String(params.offset));
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
     return request<{ messages: AgentMessage[]; total: number; unread_count: number }>(
-      `/api/v1/org/messages${query}`,
+      `${orgPath("/messages")}${query}`,
       { headers: podKey ? { "X-Pod-Key": podKey } : undefined }
     );
   },
 
   // Get count of unread messages
   getUnreadCount: (podKey?: string) =>
-    request<{ count: number }>("/api/v1/org/messages/unread-count", {
+    request<{ count: number }>(orgPath("/messages/unread-count"), {
       headers: podKey ? { "X-Pod-Key": podKey } : undefined,
     }),
 
   // Get a specific message by ID
   getMessage: (id: number, podKey?: string) =>
-    request<{ message: AgentMessage }>(`/api/v1/org/messages/${id}`, {
+    request<{ message: AgentMessage }>(`${orgPath("/messages")}/${id}`, {
       headers: podKey ? { "X-Pod-Key": podKey } : undefined,
     }),
 
   // Mark messages as read
   markRead: (messageIds: number[], podKey?: string) =>
-    request<{ marked_count: number }>("/api/v1/org/messages/mark-read", {
+    request<{ marked_count: number }>(orgPath("/messages/mark-read"), {
       method: "POST",
       body: { message_ids: messageIds },
       headers: podKey ? { "X-Pod-Key": podKey } : undefined,
@@ -88,7 +88,7 @@ export const messageApi = {
 
   // Mark all messages as read
   markAllRead: (podKey?: string) =>
-    request<{ marked_count: number }>("/api/v1/org/messages/mark-all-read", {
+    request<{ marked_count: number }>(orgPath("/messages/mark-all-read"), {
       method: "POST",
       headers: podKey ? { "X-Pod-Key": podKey } : undefined,
     }),
@@ -97,7 +97,7 @@ export const messageApi = {
   getConversation: (correlationId: string, limit?: number, podKey?: string) => {
     const params = limit ? `?limit=${limit}` : "";
     return request<{ messages: AgentMessage[]; total: number }>(
-      `/api/v1/org/messages/conversation/${correlationId}${params}`,
+      `${orgPath("/messages/conversation")}/${correlationId}${params}`,
       { headers: podKey ? { "X-Pod-Key": podKey } : undefined }
     );
   },
@@ -109,7 +109,7 @@ export const messageApi = {
     if (params?.offset) searchParams.append("offset", String(params.offset));
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
     return request<{ messages: AgentMessage[]; total: number }>(
-      `/api/v1/org/messages/sent${query}`,
+      `${orgPath("/messages/sent")}${query}`,
       { headers: podKey ? { "X-Pod-Key": podKey } : undefined }
     );
   },
@@ -120,13 +120,13 @@ export const messageApi = {
     if (params?.limit) searchParams.append("limit", String(params.limit));
     if (params?.offset) searchParams.append("offset", String(params.offset));
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
-    return request<{ entries: DeadLetterEntry[]; total: number }>(`/api/v1/org/messages/dlq${query}`);
+    return request<{ entries: DeadLetterEntry[]; total: number }>(`${orgPath("/messages/dlq")}${query}`);
   },
 
   // Replay a dead letter message
   replayDeadLetter: (entryId: number) =>
     request<{ message: string; replayed_message: AgentMessage }>(
-      `/api/v1/org/messages/dlq/${entryId}/replay`,
+      `${orgPath("/messages/dlq")}/${entryId}/replay`,
       { method: "POST" }
     ),
 };

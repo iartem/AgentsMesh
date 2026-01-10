@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Pod interface matching the store
 export interface PodData {
@@ -47,11 +47,11 @@ export const podApi = {
     if (filters?.status) params.append("status", filters.status);
     if (filters?.runnerId) params.append("runner_id", String(filters.runnerId));
     const query = params.toString() ? `?${params.toString()}` : "";
-    return request<{ pods: PodData[]; total: number }>(`/api/v1/org/pods${query}`);
+    return request<{ pods: PodData[]; total: number }>(`${orgPath("/pods")}${query}`);
   },
 
   get: (key: string) =>
-    request<{ pod: PodData }>(`/api/v1/org/pods/${key}`),
+    request<{ pod: PodData }>(`${orgPath("/pods")}/${key}`),
 
   create: (data: {
     agent_type_id: number;
@@ -62,7 +62,7 @@ export const podApi = {
     branch_name?: string;
   }) =>
     request<{ message: string; pod: PodData }>(
-      "/api/v1/org/pods",
+      orgPath("/pods"),
       {
         method: "POST",
         body: data,
@@ -70,14 +70,14 @@ export const podApi = {
     ),
 
   terminate: (key: string) =>
-    request<{ message: string }>(`/api/v1/org/pods/${key}/terminate`, {
+    request<{ message: string }>(`${orgPath("/pods")}/${key}/terminate`, {
       method: "POST",
     }),
 
   // Get connection info for WebSocket terminal
   getConnectionInfo: (key: string) =>
     request<{ pod_key: string; ws_url: string; status: string }>(
-      `/api/v1/org/pods/${key}/connect`
+      `${orgPath("/pods")}/${key}/connect`
     ),
 
   // Terminal control - observe terminal output
@@ -88,26 +88,26 @@ export const podApi = {
       output: string;
       status: string;
       agent_status: string;
-    }>(`/api/v1/org/pods/${key}/terminal/observe${params}`);
+    }>(`${orgPath("/pods")}/${key}/terminal/observe${params}`);
   },
 
   // Terminal control - send input
   sendTerminalInput: (key: string, input: string) =>
-    request<{ message: string }>(`/api/v1/org/pods/${key}/terminal/input`, {
+    request<{ message: string }>(`${orgPath("/pods")}/${key}/terminal/input`, {
       method: "POST",
       body: { input },
     }),
 
   // Terminal control - resize terminal
   resizeTerminal: (key: string, cols: number, rows: number) =>
-    request<{ message: string }>(`/api/v1/org/pods/${key}/terminal/resize`, {
+    request<{ message: string }>(`${orgPath("/pods")}/${key}/terminal/resize`, {
       method: "POST",
       body: { cols, rows },
     }),
 
   // Send prompt to pod
   sendPrompt: (key: string, prompt: string) =>
-    request<{ message: string }>(`/api/v1/org/pods/${key}/send-prompt`, {
+    request<{ message: string }>(`${orgPath("/pods")}/${key}/send-prompt`, {
       method: "POST",
       body: { prompt },
     }),

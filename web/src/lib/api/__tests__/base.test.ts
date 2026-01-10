@@ -259,7 +259,7 @@ describe("orgPath", () => {
 
     const path = orgPath("/pods");
 
-    expect(path).toBe("/api/v1/organizations/my-org/pods");
+    expect(path).toBe("/api/v1/orgs/my-org/pods");
   });
 
   it("should throw error when no organization selected", () => {

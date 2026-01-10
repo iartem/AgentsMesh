@@ -13,10 +13,11 @@ import (
 // TestNewRunnerWithMockConnection tests Runner creation with new Connection interface
 func TestNewRunnerWithMockConnection(t *testing.T) {
 	cfg := &config.Config{
-		ServerURL:             "http://localhost:8080",
-		NodeID:                "test-runner",
-		AuthToken:             "test-token",
-		WorkspaceRoot:         t.TempDir(),
+		ServerURL:         "http://localhost:8080",
+		NodeID:            "test-runner",
+		AuthToken:         "test-token",
+		OrgSlug:           "test-org",
+		WorkspaceRoot:     t.TempDir(),
 		MaxConcurrentPods: 5,
 	}
 
@@ -41,10 +42,11 @@ func TestNewRunnerWithMockConnection(t *testing.T) {
 // TestRunnerWithConnection tests WithConnection method
 func TestRunnerWithConnection(t *testing.T) {
 	cfg := &config.Config{
-		ServerURL:             "http://localhost:8080",
-		NodeID:                "test-runner",
-		AuthToken:             "test-token",
-		WorkspaceRoot:         t.TempDir(),
+		ServerURL:         "http://localhost:8080",
+		NodeID:            "test-runner",
+		AuthToken:         "test-token",
+		OrgSlug:           "test-org",
+		WorkspaceRoot:     t.TempDir(),
 		MaxConcurrentPods: 5,
 	}
 
@@ -67,10 +69,11 @@ func TestRunnerWithConnection(t *testing.T) {
 // TestRunnerMessageHandlerOnListPods tests the MessageHandler interface
 func TestRunnerMessageHandlerOnListPods(t *testing.T) {
 	cfg := &config.Config{
-		ServerURL:             "http://localhost:8080",
-		NodeID:                "test-runner",
-		AuthToken:             "test-token",
-		WorkspaceRoot:         t.TempDir(),
+		ServerURL:         "http://localhost:8080",
+		NodeID:            "test-runner",
+		AuthToken:         "test-token",
+		OrgSlug:           "test-org",
+		WorkspaceRoot:     t.TempDir(),
 		MaxConcurrentPods: 5,
 	}
 
@@ -89,21 +92,21 @@ func TestRunnerMessageHandlerOnListPods(t *testing.T) {
 	}
 }
 
-// TestBuildWebSocketURL tests URL conversion
-func TestBuildWebSocketURL(t *testing.T) {
+// TestBuildWebSocketBaseURL tests URL conversion (base URL without path)
+func TestBuildWebSocketBaseURL(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
 	}{
-		{"http://localhost:8080", "ws://localhost:8080/api/v1/runners/ws"},
-		{"https://api.example.com", "wss://api.example.com/api/v1/runners/ws"},
-		{"http://localhost:8080/", "ws://localhost:8080//api/v1/runners/ws"},
+		{"http://localhost:8080", "ws://localhost:8080"},
+		{"https://api.example.com", "wss://api.example.com"},
+		{"http://localhost:8080/", "ws://localhost:8080/"},
 	}
 
 	for _, tt := range tests {
-		result := buildWebSocketURL(tt.input)
+		result := buildWebSocketBaseURL(tt.input)
 		if result != tt.expected {
-			t.Errorf("buildWebSocketURL(%q) = %q, want %q", tt.input, result, tt.expected)
+			t.Errorf("buildWebSocketBaseURL(%q) = %q, want %q", tt.input, result, tt.expected)
 		}
 	}
 }
@@ -344,13 +347,13 @@ func TestStopAllPodsWithTerminals(t *testing.T) {
 	}
 }
 
-// --- Test buildWebSocketURL edge cases ---
+// --- Test buildWebSocketBaseURL edge cases ---
 
-func TestBuildWebSocketURLPlainURL(t *testing.T) {
-	result := buildWebSocketURL("localhost:8080")
-	expected := "localhost:8080/api/v1/runners/ws"
+func TestBuildWebSocketBaseURLPlainURL(t *testing.T) {
+	result := buildWebSocketBaseURL("localhost:8080")
+	expected := "localhost:8080"
 	if result != expected {
-		t.Errorf("buildWebSocketURL(plain) = %s, want %s", result, expected)
+		t.Errorf("buildWebSocketBaseURL(plain) = %s, want %s", result, expected)
 	}
 }
 

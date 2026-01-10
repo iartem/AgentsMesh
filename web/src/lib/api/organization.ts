@@ -31,22 +31,22 @@ export interface OrganizationData {
 export const organizationApi = {
   list: () =>
     request<{ organizations: OrganizationData[] }>(
-      "/api/v1/organizations"
+      "/api/v1/orgs"
     ),
 
   get: (slug: string) =>
     request<{ organization: OrganizationData }>(
-      `/api/v1/organizations/${slug}`
+      `/api/v1/orgs/${slug}`
     ),
 
   create: (data: { name: string; slug: string }) =>
-    request<{ message: string }>("/api/v1/organizations", {
+    request<{ message: string }>("/api/v1/orgs", {
       method: "POST",
       body: data,
     }),
 
   update: (slug: string, data: { name?: string }) =>
-    request<{ message: string }>(`/api/v1/organizations/${slug}`, {
+    request<{ message: string }>(`/api/v1/orgs/${slug}`, {
       method: "PUT",
       body: data,
     }),
@@ -54,12 +54,12 @@ export const organizationApi = {
   // Member management
   listMembers: (slug: string) =>
     request<{ members: OrganizationMember[]; total: number }>(
-      `/api/v1/organizations/${slug}/members`
+      `/api/v1/orgs/${slug}/members`
     ),
 
   inviteMember: (slug: string, email: string, role?: string) =>
     request<{ message: string; member?: OrganizationMember }>(
-      `/api/v1/organizations/${slug}/members`,
+      `/api/v1/orgs/${slug}/members`,
       {
         method: "POST",
         body: { email, role: role || "member" },
@@ -68,7 +68,7 @@ export const organizationApi = {
 
   removeMember: (slug: string, userId: number) =>
     request<{ message: string }>(
-      `/api/v1/organizations/${slug}/members/${userId}`,
+      `/api/v1/orgs/${slug}/members/${userId}`,
       {
         method: "DELETE",
       }
@@ -76,7 +76,7 @@ export const organizationApi = {
 
   updateMemberRole: (slug: string, userId: number, role: string) =>
     request<{ message: string }>(
-      `/api/v1/organizations/${slug}/members/${userId}`,
+      `/api/v1/orgs/${slug}/members/${userId}`,
       {
         method: "PUT",
         body: { role },

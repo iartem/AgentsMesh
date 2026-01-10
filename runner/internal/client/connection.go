@@ -18,6 +18,7 @@ type ServerConnection struct {
 	serverURL string
 	nodeID    string
 	authToken string
+	orgSlug   string // Organization slug for org-scoped API paths
 
 	conn    WebSocketConn
 	dialer  WebSocketDialer
@@ -40,11 +41,14 @@ type ServerConnection struct {
 }
 
 // NewServerConnection creates a new server connection.
-func NewServerConnection(serverURL, nodeID, authToken string) *ServerConnection {
+// serverURL should be the WebSocket base URL (e.g., ws://localhost:8080)
+// The actual connection URL will be: {serverURL}/api/v1/orgs/{orgSlug}/ws/runners?node_id=xxx&token=xxx
+func NewServerConnection(serverURL, nodeID, authToken, orgSlug string) *ServerConnection {
 	conn := &ServerConnection{
 		serverURL:         serverURL,
 		nodeID:            nodeID,
 		authToken:         authToken,
+		orgSlug:           orgSlug,
 		dialer:            NewGorillaDialer(), // Default dialer
 		heartbeatInterval: 30 * time.Second,
 		reconnectStrategy: NewReconnectStrategy(5*time.Second, 5*time.Minute),
@@ -80,11 +84,27 @@ func (c *ServerConnection) SetAuthToken(token string) {
 	c.mu.Unlock()
 }
 
+// SetOrgSlug sets the organization slug.
+// This should be called after registration to update the org slug before connecting.
+func (c *ServerConnection) SetOrgSlug(orgSlug string) {
+	c.mu.Lock()
+	c.orgSlug = orgSlug
+	c.mu.Unlock()
+}
+
+// GetOrgSlug returns the organization slug.
+func (c *ServerConnection) GetOrgSlug() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.orgSlug
+}
+
 // Connect establishes a connection to the server.
 func (c *ServerConnection) Connect() error {
-	// Build URL with query parameters for authentication
-	// Server expects: ?node_id=xxx&token=xxx
-	connectURL := fmt.Sprintf("%s?node_id=%s&token=%s", c.serverURL, c.nodeID, c.authToken)
+	// Build org-scoped URL with query parameters for authentication
+	// New format: {serverURL}/api/v1/orgs/{orgSlug}/ws/runners?node_id=xxx&token=xxx
+	connectURL := fmt.Sprintf("%s/api/v1/orgs/%s/ws/runners?node_id=%s&token=%s",
+		c.serverURL, c.orgSlug, c.nodeID, c.authToken)
 
 	conn, _, err := c.dialer.Dial(connectURL, nil)
 	if err != nil {
@@ -95,7 +115,7 @@ func (c *ServerConnection) Connect() error {
 	c.conn = conn
 	c.mu.Unlock()
 
-	log.Printf("[connection] Connected to server: %s", c.serverURL)
+	log.Printf("[connection] Connected to server: %s (org: %s)", c.serverURL, c.orgSlug)
 	return nil
 }
 

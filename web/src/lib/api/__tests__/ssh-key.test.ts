@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { sshKeyApi, SSHKeyData } from "../ssh-key";
 
-// Mock the base module
-vi.mock("../base", () => ({
-  request: vi.fn(),
+// Mock useAuthStore first
+const mockGetState = vi.fn();
+vi.mock("@/stores/auth", () => ({
+  useAuthStore: {
+    getState: () => mockGetState(),
+  },
 }));
+
+// Mock the request function from base module
+vi.mock("../base", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../base")>();
+  return {
+    ...actual,
+    request: vi.fn(),
+  };
+});
 
 // Import the mocked request
 import { request } from "../base";
@@ -13,6 +25,11 @@ const mockRequest = vi.mocked(request);
 describe("sshKeyApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Setup org for orgPath to work correctly
+    mockGetState.mockReturnValue({
+      token: "test-token",
+      currentOrg: { slug: "test-org" },
+    });
   });
 
   afterEach(() => {
@@ -46,7 +63,7 @@ describe("sshKeyApi", () => {
 
       const result = await sshKeyApi.list();
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys");
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys");
       expect(result.ssh_keys).toEqual(mockSSHKeys);
       expect(result.ssh_keys).toHaveLength(2);
     });
@@ -76,7 +93,7 @@ describe("sshKeyApi", () => {
 
       const result = await sshKeyApi.get(1);
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys/1");
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys/1");
       expect(result.ssh_key).toEqual(mockSSHKey);
     });
   });
@@ -96,7 +113,7 @@ describe("sshKeyApi", () => {
 
       const result = await sshKeyApi.create({ name: "generated-key" });
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys", {
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys", {
         method: "POST",
         body: { name: "generated-key" },
       });
@@ -121,7 +138,7 @@ describe("sshKeyApi", () => {
         private_key: privateKey,
       });
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys", {
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys", {
         method: "POST",
         body: { name: "imported-key", private_key: privateKey },
       });
@@ -144,7 +161,7 @@ describe("sshKeyApi", () => {
 
       const result = await sshKeyApi.update(1, "renamed-key");
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys/1", {
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys/1", {
         method: "PUT",
         body: { name: "renamed-key" },
       });
@@ -158,7 +175,7 @@ describe("sshKeyApi", () => {
 
       const result = await sshKeyApi.delete(1);
 
-      expect(mockRequest).toHaveBeenCalledWith("/api/v1/org/ssh-keys/1", {
+      expect(mockRequest).toHaveBeenCalledWith("/api/v1/orgs/test-org/ssh-keys/1", {
         method: "DELETE",
       });
       expect(result.message).toBe("SSH key deleted");

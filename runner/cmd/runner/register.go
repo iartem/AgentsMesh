@@ -20,28 +20,35 @@ type registrationClient struct {
 	nodeID    string
 }
 
-// register registers the runner with the server and returns the auth token
-func (c *registrationClient) register(ctx context.Context, registrationToken, description string, maxPods int) (string, error) {
+// registrationResult holds the result of runner registration
+type registrationResult struct {
+	AuthToken string
+	RunnerID  int64
+	OrgSlug   string
+}
+
+// register registers the runner with the server and returns the auth token and org slug
+func (c *registrationClient) register(ctx context.Context, registrationToken, description string, maxPods int) (*registrationResult, error) {
 	// Build registration URL
 	registerURL := fmt.Sprintf("%s/api/v1/runners/register", c.serverURL)
 
 	// Build request body
 	body := map[string]interface{}{
-		"node_id":              c.nodeID,
-		"description":          description,
-		"registration_token":   registrationToken,
-		"max_concurrent_pods":  maxPods,
+		"node_id":             c.nodeID,
+		"description":         description,
+		"registration_token":  registrationToken,
+		"max_concurrent_pods": maxPods,
 	}
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal registration body: %w", err)
+		return nil, fmt.Errorf("failed to marshal registration body: %w", err)
 	}
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "POST", registerURL, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return "", fmt.Errorf("failed to create registration request: %w", err)
+		return nil, fmt.Errorf("failed to create registration request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -50,47 +57,57 @@ func (c *registrationClient) register(ctx context.Context, registrationToken, de
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("registration request failed: %w", err)
+		return nil, fmt.Errorf("registration request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("registration failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("registration failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	// Parse response
 	var result struct {
 		AuthToken string `json:"auth_token"`
 		RunnerID  int64  `json:"runner_id"`
+		OrgSlug   string `json:"org_slug"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode registration response: %w", err)
+		return nil, fmt.Errorf("failed to decode registration response: %w", err)
 	}
 
 	if result.AuthToken == "" {
-		return "", fmt.Errorf("server returned empty auth token")
+		return nil, fmt.Errorf("server returned empty auth token")
 	}
 
-	return result.AuthToken, nil
+	if result.OrgSlug == "" {
+		return nil, fmt.Errorf("server returned empty org_slug")
+	}
+
+	return &registrationResult{
+		AuthToken: result.AuthToken,
+		RunnerID:  result.RunnerID,
+		OrgSlug:   result.OrgSlug,
+	}, nil
 }
 
 // savedConfig represents the configuration saved to ~/.agentmesh/config.yaml
 type savedConfig struct {
-	ServerURL          string `yaml:"server_url"`
-	NodeID             string `yaml:"node_id"`
-	Description        string `yaml:"description"`
-	MaxConcurrentPods  int    `yaml:"max_concurrent_pods"`
-	WorkspaceRoot      string `yaml:"workspace_root"`
-	DefaultAgent       string `yaml:"default_agent"`
-	DefaultShell       string `yaml:"default_shell"`
-	HealthCheckPort    int    `yaml:"health_check_port"`
-	LogLevel           string `yaml:"log_level"`
+	ServerURL         string `yaml:"server_url"`
+	NodeID            string `yaml:"node_id"`
+	Description       string `yaml:"description"`
+	MaxConcurrentPods int    `yaml:"max_concurrent_pods"`
+	OrgSlug           string `yaml:"org_slug"` // Organization slug for org-scoped API paths
+	WorkspaceRoot     string `yaml:"workspace_root"`
+	DefaultAgent      string `yaml:"default_agent"`
+	DefaultShell      string `yaml:"default_shell"`
+	HealthCheckPort   int    `yaml:"health_check_port"`
+	LogLevel          string `yaml:"log_level"`
 }
 
 // saveConfig saves the registration result to ~/.agentmesh/
-func saveConfig(nodeID, serverURL, authToken, description string, maxPods int) error {
+func saveConfig(nodeID, serverURL, authToken, orgSlug, description string, maxPods int) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get home directory: %w", err)
@@ -107,12 +124,19 @@ func saveConfig(nodeID, serverURL, authToken, description string, maxPods int) e
 		return fmt.Errorf("failed to save auth token: %w", err)
 	}
 
+	// Save org slug
+	orgSlugFile := filepath.Join(configDir, "org_slug")
+	if err := os.WriteFile(orgSlugFile, []byte(orgSlug), 0600); err != nil {
+		return fmt.Errorf("failed to save org_slug: %w", err)
+	}
+
 	// Save config
 	cfg := savedConfig{
 		ServerURL:         serverURL,
 		NodeID:            nodeID,
 		Description:       description,
 		MaxConcurrentPods: maxPods,
+		OrgSlug:           orgSlug,
 		WorkspaceRoot:     "/tmp/agentmesh-workspace",
 		DefaultAgent:      "claude-code",
 		DefaultShell:      getDefaultShell(),

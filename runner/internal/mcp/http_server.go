@@ -26,6 +26,7 @@ type HTTPServer struct {
 // PodInfo holds information about a registered pod.
 type PodInfo struct {
 	PodKey       string
+	OrgSlug      string
 	TicketID     *int
 	ProjectID    *int
 	AgentType    string
@@ -135,20 +136,21 @@ func (s *HTTPServer) Stop() error {
 }
 
 // RegisterPod registers a pod with the MCP server.
-func (s *HTTPServer) RegisterPod(podKey string, ticketID, projectID *int, agentType string) {
+func (s *HTTPServer) RegisterPod(podKey, orgSlug string, ticketID, projectID *int, agentType string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.pods[podKey] = &PodInfo{
 		PodKey:       podKey,
+		OrgSlug:      orgSlug,
 		TicketID:     ticketID,
 		ProjectID:    projectID,
 		AgentType:    agentType,
 		RegisteredAt: time.Now(),
-		Client:       NewBackendClient(s.backendURL, podKey),
+		Client:       NewBackendClient(s.backendURL, orgSlug, podKey),
 	}
 
-	log.Printf("[mcp_http_server] Registered pod: %s", podKey)
+	log.Printf("[mcp_http_server] Registered pod: %s (org: %s)", podKey, orgSlug)
 }
 
 // UnregisterPod removes a pod from the MCP server.

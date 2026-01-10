@@ -64,7 +64,7 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		v1.RegisterAuthRoutes(apiV1.Group("/auth"), cfg, svc.Auth, svc.User, emailSvc)
 
 		// Runner registration (uses token-based auth, not JWT)
-		RegisterRunnerAuthRoutes(apiV1.Group("/runners"), svc, logger)
+		RegisterRunnerAuthRoutes(apiV1.Group("/runners"), svc)
 
 		// Webhook endpoints (no auth required, use token verification)
 		webhookRouter := webhooks.NewWebhookRouter(db, cfg, logger)
@@ -88,116 +88,120 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			gitConnHandler.RegisterRoutes(protected)
 
 			// Organization routes (authenticated, some require org context)
-			v1.RegisterOrganizationRoutes(protected.Group("/organizations"), svc.Org)
+			// Path changed: /organizations → /orgs
+			v1.RegisterOrganizationRoutes(protected.Group("/orgs"), svc.Org)
 
 			// Organization-scoped routes (require tenant context)
-			orgScoped := protected.Group("/organizations/:slug")
+			// Path changed: /organizations/:slug → /orgs/:slug
+			orgScoped := protected.Group("/orgs/:slug")
 			orgScoped.Use(middleware.TenantMiddleware(svc.Org))
 			{
 				v1.RegisterOrgScopedRoutes(orgScoped, svc)
+
+				// WebSocket endpoints (moved from /ws to /orgs/:slug/ws)
+				wsGroup := orgScoped.Group("/ws")
+				{
+					terminalHandler := ws.NewTerminalHandler(svc.Hub, svc.Pod)
+					if svc.TerminalRouter != nil {
+						terminalHandler.SetTerminalRouter(svc.TerminalRouter)
+					}
+					wsGroup.GET("/terminal/:pod_key", terminalHandler.HandleTerminal)
+
+					eventHandler := ws.NewEventsHandler(svc.Hub)
+					wsGroup.GET("/events", eventHandler.HandleEvents)
+				}
 			}
 
-			// Alias route /api/v1/org/* that uses X-Organization-Slug header
-			// This is for backward compatibility with frontend that uses /api/v1/org/
-			orgAlias := protected.Group("/org")
-			orgAlias.Use(middleware.TenantMiddleware(svc.Org))
+			// Note: /org alias route removed - all org-scoped requests must use /orgs/:slug/*
+		}
+
+		// Runner org-scoped routes (using RunnerTenantMiddleware, not JWT)
+		// Path: /api/v1/orgs/:slug/runners/heartbeat, /api/v1/orgs/:slug/ws/runners
+		if svc.Runner != nil && svc.RunnerConnMgr != nil {
+			runnerOrgScoped := apiV1.Group("/orgs/:slug")
+			runnerOrgScoped.Use(middleware.RunnerTenantMiddleware(svc.Runner, svc.Org))
 			{
-				v1.RegisterOrgScopedRoutes(orgAlias, svc)
+				runnerHandler := v1.NewRunnerHandler(svc.Runner)
+				runnerOrgScoped.POST("/runners/heartbeat", runnerHandler.Heartbeat)
+
+				runnerWsHandler := ws.NewRunnerHandler(svc.Runner, svc.RunnerConnMgr, logger)
+				runnerOrgScoped.GET("/ws/runners", runnerWsHandler.HandleRunnerWS)
 			}
 		}
-	}
 
-	// Pod-based API routes (for MCP tools)
-	// These routes use X-Pod-Key header for authentication instead of JWT
-	// The pod key identifies both the pod and its organization
-	podAPI := apiV1.Group("/pod")
-	podAPI.Use(middleware.PodAuthMiddleware(svc.Pod, svc.Org))
-	{
-		// Channel routes for MCP tools
-		channelHandler := v1.NewChannelHandler(svc.Channel)
-		podAPI.GET("/channels", channelHandler.ListChannels)
-		podAPI.POST("/channels", channelHandler.CreateChannel)
-		podAPI.GET("/channels/:id", channelHandler.GetChannel)
-		podAPI.GET("/channels/:id/messages", channelHandler.ListMessages)
-		podAPI.POST("/channels/:id/messages", channelHandler.SendMessage)
-		podAPI.POST("/channels/:id/pods", channelHandler.JoinPod)
-		podAPI.GET("/channels/:id/document", channelHandler.GetDocument)
-		podAPI.PUT("/channels/:id/document", channelHandler.UpdateDocument)
+		// Pod-based API routes (for MCP tools) - moved under org-scoped
+		// Path changed: /api/v1/pod → /api/v1/orgs/:slug/pod
+		podOrgScoped := apiV1.Group("/orgs/:slug/pod")
+		podOrgScoped.Use(middleware.PodAuthMiddleware(svc.Pod, svc.Org))
+		{
+			// Channel routes for MCP tools
+			channelHandler := v1.NewChannelHandler(svc.Channel)
+			podOrgScoped.GET("/channels", channelHandler.ListChannels)
+			podOrgScoped.POST("/channels", channelHandler.CreateChannel)
+			podOrgScoped.GET("/channels/:id", channelHandler.GetChannel)
+			podOrgScoped.GET("/channels/:id/messages", channelHandler.ListMessages)
+			podOrgScoped.POST("/channels/:id/messages", channelHandler.SendMessage)
+			podOrgScoped.POST("/channels/:id/pods", channelHandler.JoinPod)
+			podOrgScoped.GET("/channels/:id/document", channelHandler.GetDocument)
+			podOrgScoped.PUT("/channels/:id/document", channelHandler.UpdateDocument)
 
-		// Pod routes for MCP tools
-		podHandler := v1.NewPodHandler(svc.Pod, svc.Runner, svc.Agent)
-		if svc.PodCoordinator != nil {
-			podHandler.SetPodCoordinator(svc.PodCoordinator)
+			// Pod routes for MCP tools
+			podHandler := v1.NewPodHandler(svc.Pod, svc.Runner, svc.Agent)
+			if svc.PodCoordinator != nil {
+				podHandler.SetPodCoordinator(svc.PodCoordinator)
+			}
+			if svc.TerminalRouter != nil {
+				podHandler.SetTerminalRouter(svc.TerminalRouter)
+			}
+			if svc.Repository != nil {
+				podHandler.SetRepositoryService(svc.Repository)
+			}
+			if svc.Ticket != nil {
+				podHandler.SetTicketService(svc.Ticket)
+			}
+			if svc.User != nil {
+				podHandler.SetUserService(svc.User)
+			}
+			podOrgScoped.GET("/pods", podHandler.ListPods)
+			podOrgScoped.POST("/pods", podHandler.CreatePod)
+			podOrgScoped.GET("/pods/:key/terminal/observe", podHandler.ObserveTerminal)
+			podOrgScoped.POST("/pods/:key/terminal/input", podHandler.SendTerminalInput)
+
+			// Ticket routes for MCP tools
+			ticketHandler := v1.NewTicketHandler(svc.Ticket)
+			podOrgScoped.GET("/tickets", ticketHandler.ListTickets)
+			podOrgScoped.GET("/tickets/:identifier", ticketHandler.GetTicket)
+			podOrgScoped.POST("/tickets", ticketHandler.CreateTicket)
+			podOrgScoped.PUT("/tickets/:identifier", ticketHandler.UpdateTicket)
+
+			// Binding routes for MCP tools
+			bindingHandler := v1.NewBindingHandler(svc.Binding)
+			podOrgScoped.POST("/bindings", bindingHandler.RequestBinding)
+			podOrgScoped.GET("/bindings", bindingHandler.ListBindings)
+			podOrgScoped.POST("/bindings/accept", bindingHandler.AcceptBinding)
+			podOrgScoped.POST("/bindings/reject", bindingHandler.RejectBinding)
+			podOrgScoped.POST("/bindings/unbind", bindingHandler.Unbind)
+			podOrgScoped.GET("/bindings/pods", bindingHandler.GetBoundPods)
+
+			// Runner routes for MCP tools (discovery)
+			runnerHandler := v1.NewRunnerHandler(svc.Runner)
+			podOrgScoped.GET("/runners", runnerHandler.ListRunners)
+
+			// Repository routes for MCP tools (discovery)
+			repositoryHandler := v1.NewRepositoryHandler(svc.Repository)
+			podOrgScoped.GET("/repositories", repositoryHandler.ListRepositories)
 		}
-		if svc.TerminalRouter != nil {
-			podHandler.SetTerminalRouter(svc.TerminalRouter)
-		}
-		if svc.Repository != nil {
-			podHandler.SetRepositoryService(svc.Repository)
-		}
-		if svc.Ticket != nil {
-			podHandler.SetTicketService(svc.Ticket)
-		}
-		if svc.User != nil {
-			podHandler.SetUserService(svc.User)
-		}
-		podAPI.GET("/pods", podHandler.ListPods)
-		podAPI.POST("/pods", podHandler.CreatePod)
-		podAPI.GET("/pods/:key/terminal/observe", podHandler.ObserveTerminal)
-		podAPI.POST("/pods/:key/terminal/input", podHandler.SendTerminalInput)
-
-		// Ticket routes for MCP tools
-		ticketHandler := v1.NewTicketHandler(svc.Ticket)
-		podAPI.GET("/tickets", ticketHandler.ListTickets)
-		podAPI.GET("/tickets/:identifier", ticketHandler.GetTicket)
-		podAPI.POST("/tickets", ticketHandler.CreateTicket)
-		podAPI.PUT("/tickets/:identifier", ticketHandler.UpdateTicket)
-
-		// Binding routes for MCP tools
-		bindingHandler := v1.NewBindingHandler(svc.Binding)
-		podAPI.POST("/bindings", bindingHandler.RequestBinding)
-		podAPI.GET("/bindings", bindingHandler.ListBindings)
-		podAPI.POST("/bindings/accept", bindingHandler.AcceptBinding)
-		podAPI.POST("/bindings/reject", bindingHandler.RejectBinding)
-		podAPI.POST("/bindings/unbind", bindingHandler.Unbind)
-		podAPI.GET("/bindings/pods", bindingHandler.GetBoundPods)
-
-		// Runner routes for MCP tools (discovery)
-		runnerHandler := v1.NewRunnerHandler(svc.Runner)
-		podAPI.GET("/runners", runnerHandler.ListRunners)
-
-		// Repository routes for MCP tools (discovery)
-		repositoryHandler := v1.NewRepositoryHandler(svc.Repository)
-		podAPI.GET("/repositories", repositoryHandler.ListRepositories)
-	}
-
-	// WebSocket endpoints
-	wsGroup := r.Group("/ws")
-	wsGroup.Use(middleware.AuthMiddleware(cfg.JWT.Secret))
-	wsGroup.Use(middleware.TenantMiddleware(svc.Org))
-	{
-		terminalHandler := ws.NewTerminalHandler(svc.Hub, svc.Pod)
-		if svc.TerminalRouter != nil {
-			terminalHandler.SetTerminalRouter(svc.TerminalRouter)
-		}
-		wsGroup.GET("/terminal/:pod_key", terminalHandler.HandleTerminal)
-
-		eventHandler := ws.NewEventsHandler(svc.Hub)
-		wsGroup.GET("/events", eventHandler.HandleEvents)
 	}
 
 	return r
 }
 
 // RegisterRunnerAuthRoutes registers runner-specific authentication routes
-func RegisterRunnerAuthRoutes(rg *gin.RouterGroup, svc *v1.Services, logger *slog.Logger) {
+// Note: Only registration is here. Heartbeat and WebSocket are now org-scoped at:
+//   - POST /api/v1/orgs/:slug/runners/heartbeat
+//   - GET  /api/v1/orgs/:slug/ws/runners
+func RegisterRunnerAuthRoutes(rg *gin.RouterGroup, svc *v1.Services) {
 	runnerHandler := v1.NewRunnerHandler(svc.Runner)
+	runnerHandler.SetOrgService(svc.Org)
 	rg.POST("/register", runnerHandler.RegisterRunner)
-	rg.POST("/heartbeat", runnerHandler.Heartbeat)
-
-	// Runner WebSocket endpoint (no JWT auth, uses runner auth token)
-	if svc.RunnerConnMgr != nil {
-		runnerWsHandler := ws.NewRunnerHandler(svc.Runner, svc.RunnerConnMgr, logger)
-		rg.GET("/ws", runnerWsHandler.HandleRunnerWS)
-	}
 }

@@ -182,7 +182,7 @@ export function useTerminal(podKey: string) {
     } catch (e) {
       console.error("Failed to parse auth data:", e);
     }
-    const ws = new WebSocket(`${wsUrl}/ws/terminal/${podKey}?token=${token}&org=${orgSlug}`);
+    const ws = new WebSocket(`${wsUrl}/api/v1/orgs/${orgSlug}/ws/terminal/${podKey}?token=${token}`);
 
     ws.binaryType = "arraybuffer";
 

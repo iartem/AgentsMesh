@@ -992,14 +992,14 @@ func (m *mockWebSocketDialer) Dial(urlStr string, requestHeader http.Header) (We
 }
 
 func TestNewServerConnection(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	if conn == nil {
 		t.Fatal("NewServerConnection returned nil")
 	}
 
-	if conn.serverURL != "ws://localhost:8080/ws" {
-		t.Errorf("serverURL: got %v, want ws://localhost:8080/ws", conn.serverURL)
+	if conn.serverURL != "ws://localhost:8080" {
+		t.Errorf("serverURL: got %v, want ws://localhost:8080", conn.serverURL)
 	}
 
 	if conn.nodeID != "test-node" {
@@ -1008,6 +1008,10 @@ func TestNewServerConnection(t *testing.T) {
 
 	if conn.authToken != "test-token" {
 		t.Errorf("authToken: got %v, want test-token", conn.authToken)
+	}
+
+	if conn.orgSlug != "test-org" {
+		t.Errorf("orgSlug: got %v, want test-org", conn.orgSlug)
 	}
 
 	if conn.sendCh == nil {
@@ -1024,7 +1028,7 @@ func TestNewServerConnection(t *testing.T) {
 }
 
 func TestServerConnectionWithDialer(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	dialer := &mockWebSocketDialer{}
 
 	result := conn.WithDialer(dialer)
@@ -1039,7 +1043,7 @@ func TestServerConnectionWithDialer(t *testing.T) {
 }
 
 func TestServerConnectionSetHandler(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	handler := &mockHandler{}
 
 	conn.SetHandler(handler)
@@ -1054,7 +1058,7 @@ func TestServerConnectionSetHandler(t *testing.T) {
 }
 
 func TestServerConnectionSetHeartbeatInterval(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	conn.SetHeartbeatInterval(10 * time.Second)
 
@@ -1067,7 +1071,7 @@ func TestServerConnectionConnect(t *testing.T) {
 	mockConn := &mockWebSocketConn{}
 	mockDialer := &mockWebSocketDialer{conn: mockConn}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 
 	err := conn.Connect()
@@ -1090,7 +1094,7 @@ func TestServerConnectionConnectError(t *testing.T) {
 		dialError: websocket.ErrBadHandshake,
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 
 	err := conn.Connect()
@@ -1101,7 +1105,7 @@ func TestServerConnectionConnectError(t *testing.T) {
 }
 
 func TestServerConnectionSend(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	msg := ProtocolMessage{
 		Type: MsgTypeHeartbeat,
@@ -1124,7 +1128,7 @@ func TestServerConnectionSend(t *testing.T) {
 }
 
 func TestServerConnectionSendWithBackpressure(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	msg := ProtocolMessage{
 		Type: MsgTypeHeartbeat,
@@ -1138,7 +1142,7 @@ func TestServerConnectionSendWithBackpressure(t *testing.T) {
 }
 
 func TestServerConnectionSendEvent(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	data := map[string]interface{}{"key": "value"}
 	err := conn.SendEvent(MsgTypeHeartbeat, data)
@@ -1159,7 +1163,7 @@ func TestServerConnectionSendEvent(t *testing.T) {
 }
 
 func TestServerConnectionQueueMethods(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	// Initial state
 	if conn.QueueLength() != 0 {
@@ -1182,7 +1186,7 @@ func TestServerConnectionStop(t *testing.T) {
 	mockConn := &mockWebSocketConn{}
 	mockDialer := &mockWebSocketDialer{conn: mockConn}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 	conn.Connect()
 
@@ -1195,7 +1199,7 @@ func TestServerConnectionStop(t *testing.T) {
 }
 
 func TestServerConnectionStopTwice(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	// Should not panic when called twice
 	conn.Stop()
@@ -1256,7 +1260,7 @@ func BenchmarkMessageRouterRoute(b *testing.B) {
 }
 
 func BenchmarkServerConnectionSend(b *testing.B) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 
 	msg := ProtocolMessage{
 		Type: MsgTypeHeartbeat,

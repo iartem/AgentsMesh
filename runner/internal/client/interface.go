@@ -35,6 +35,13 @@ type Connection interface {
 	// SetAuthToken sets the authentication token.
 	// This should be called after registration to update the token before connecting.
 	SetAuthToken(token string)
+
+	// SetOrgSlug sets the organization slug.
+	// This should be called after registration to update the org slug before connecting.
+	SetOrgSlug(orgSlug string)
+
+	// GetOrgSlug returns the organization slug.
+	GetOrgSlug() string
 }
 
 // Ensure ServerConnection implements Connection interface.

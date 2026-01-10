@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Runner interface matching the store
 export interface RunnerData {
@@ -42,43 +42,43 @@ export interface RegistrationToken {
 export const runnerApi = {
   list: (status?: string) => {
     const params = status ? `?status=${status}` : "";
-    return request<{ runners: RunnerData[] }>(`/api/v1/org/runners${params}`);
+    return request<{ runners: RunnerData[] }>(`${orgPath("/runners")}${params}`);
   },
 
   listAvailable: () =>
-    request<{ runners: RunnerData[] }>("/api/v1/org/runners/available"),
+    request<{ runners: RunnerData[] }>(orgPath("/runners/available")),
 
   get: (id: number) =>
-    request<{ runner: RunnerData }>(`/api/v1/org/runners/${id}`),
+    request<{ runner: RunnerData }>(`${orgPath("/runners")}/${id}`),
 
   update: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean }) =>
-    request<{ runner: RunnerData }>(`/api/v1/org/runners/${id}`, {
+    request<{ runner: RunnerData }>(`${orgPath("/runners")}/${id}`, {
       method: "PUT",
       body: data,
     }),
 
   delete: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/runners/${id}`, {
+    request<{ message: string }>(`${orgPath("/runners")}/${id}`, {
       method: "DELETE",
     }),
 
   regenerateAuthToken: (id: number) =>
-    request<{ auth_token: string; message: string }>(`/api/v1/org/runners/${id}/regenerate-token`, {
+    request<{ auth_token: string; message: string }>(`${orgPath("/runners")}/${id}/regenerate-token`, {
       method: "POST",
     }),
 
   // Registration token management
   listTokens: () =>
-    request<{ tokens: RegistrationToken[] }>("/api/v1/org/runners/tokens"),
+    request<{ tokens: RegistrationToken[] }>(orgPath("/runners/tokens")),
 
   createToken: (description?: string, maxUses?: number, expiresAt?: string) =>
-    request<{ token: string; message: string }>("/api/v1/org/runners/tokens", {
+    request<{ token: string; message: string }>(orgPath("/runners/tokens"), {
       method: "POST",
       body: { description, max_uses: maxUses, expires_at: expiresAt },
     }),
 
   revokeToken: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/runners/tokens/${id}`, {
+    request<{ message: string }>(`${orgPath("/runners/tokens")}/${id}`, {
       method: "DELETE",
     }),
 };

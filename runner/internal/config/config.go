@@ -21,6 +21,9 @@ type Config struct {
 	AuthToken         string `mapstructure:"auth_token"`
 	RegistrationToken string `mapstructure:"registration_token"`
 
+	// Organization (set during registration, used for org-scoped API paths)
+	OrgSlug string `mapstructure:"org_slug"`
+
 	// Capacity
 	MaxConcurrentPods int `mapstructure:"max_concurrent_pods"`
 
@@ -154,6 +157,24 @@ func (c *Config) SaveAuthToken(token string) error {
 	return os.WriteFile(tokenFile, []byte(token), 0600)
 }
 
+// SaveOrgSlug saves the organization slug to a file for persistence
+func (c *Config) SaveOrgSlug(orgSlug string) error {
+	c.OrgSlug = orgSlug
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	configDir := filepath.Join(home, ".agentmesh")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		return err
+	}
+
+	orgSlugFile := filepath.Join(configDir, "org_slug")
+	return os.WriteFile(orgSlugFile, []byte(orgSlug), 0600)
+}
+
 // LoadAuthToken loads the auth token from file if not in config
 func (c *Config) LoadAuthToken() error {
 	if c.AuthToken != "" {
@@ -172,6 +193,27 @@ func (c *Config) LoadAuthToken() error {
 	}
 
 	c.AuthToken = string(data)
+	return nil
+}
+
+// LoadOrgSlug loads the organization slug from file if not in config
+func (c *Config) LoadOrgSlug() error {
+	if c.OrgSlug != "" {
+		return nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil // Not an error
+	}
+
+	orgSlugFile := filepath.Join(home, ".agentmesh", "org_slug")
+	data, err := os.ReadFile(orgSlugFile)
+	if err != nil {
+		return nil // Not an error
+	}
+
+	c.OrgSlug = string(data)
 	return nil
 }
 

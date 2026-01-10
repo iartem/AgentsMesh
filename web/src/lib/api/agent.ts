@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Agent type interface
 interface AgentTypeResponse {
@@ -17,7 +17,7 @@ export const agentApi = {
     const response = await request<{
       builtin_types: AgentTypeResponse[];
       custom_types: AgentTypeResponse[];
-    }>("/api/v1/org/agents/types");
+    }>(orgPath("/agents/types"));
     // Combine builtin and custom types for frontend compatibility
     return {
       agent_types: [...(response.builtin_types || []), ...(response.custom_types || [])],
@@ -25,19 +25,19 @@ export const agentApi = {
   },
 
   getConfig: () =>
-    request<{ config: unknown }>("/api/v1/org/agents/config"),
+    request<{ config: unknown }>(orgPath("/agents/config")),
 
   updateConfig: (data: unknown) =>
-    request<{ message: string }>("/api/v1/org/agents/config", {
+    request<{ message: string }>(orgPath("/agents/config"), {
       method: "PUT",
       body: data,
     }),
 
   listCredentials: () =>
-    request<{ credentials: unknown[] }>("/api/v1/org/agents/credentials"),
+    request<{ credentials: unknown[] }>(orgPath("/agents/credentials")),
 
   updateCredentials: (agentType: string, credentials: Record<string, string>) =>
-    request<{ message: string }>(`/api/v1/org/agents/credentials/${agentType}`, {
+    request<{ message: string }>(`${orgPath("/agents/credentials")}/${agentType}`, {
       method: "PUT",
       body: { credentials },
     }),

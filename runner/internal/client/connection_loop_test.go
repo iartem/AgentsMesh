@@ -138,7 +138,7 @@ func TestServerConnectionStartStop(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	mockDialer := &mockWebSocketDialerWithControl{conn: mockConn}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 	conn.SetHeartbeatInterval(50 * time.Millisecond)
 
@@ -162,7 +162,7 @@ func TestServerConnectionConnectionLoopWithDialError(t *testing.T) {
 		dialError: errors.New("connection refused"),
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 	// Use very short reconnect strategy for testing
 	conn.reconnectStrategy = NewReconnectStrategy(10*time.Millisecond, 50*time.Millisecond)
@@ -189,7 +189,7 @@ func TestServerConnectionConnectionLoopReconnectOnError(t *testing.T) {
 		connSequence: []WebSocketConn{mockConn1, mockConn2},
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 	conn.SetHeartbeatInterval(50 * time.Millisecond)
 	conn.reconnectStrategy = NewReconnectStrategy(10*time.Millisecond, 50*time.Millisecond)
@@ -217,7 +217,7 @@ func TestServerConnectionReadLoop(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	handler := &mockHandler{}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 	conn.SetHandler(handler)
 
@@ -267,7 +267,7 @@ func TestServerConnectionReadLoopInvalidJSON(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	handler := &mockHandler{}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 	conn.SetHandler(handler)
 
@@ -301,7 +301,7 @@ func TestServerConnectionReadLoopInvalidJSON(t *testing.T) {
 func TestServerConnectionWriteLoop(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 
 	done := make(chan struct{})
@@ -331,7 +331,7 @@ func TestServerConnectionWriteLoop(t *testing.T) {
 func TestServerConnectionWriteLoopStopChannel(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 
 	done := make(chan struct{})
@@ -358,7 +358,7 @@ func TestServerConnectionWriteLoopWriteError(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	mockConn.writeError = errors.New("write error")
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 
 	done := make(chan struct{})
@@ -387,7 +387,7 @@ func TestServerConnectionWriteLoopWriteError(t *testing.T) {
 }
 
 func TestServerConnectionWriteLoopNilConnection(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	// conn.conn is nil
 
 	done := make(chan struct{})
@@ -424,7 +424,7 @@ func TestServerConnectionHeartbeatLoop(t *testing.T) {
 		},
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 	conn.SetHandler(handler)
 	conn.SetHeartbeatInterval(30 * time.Millisecond)
@@ -460,7 +460,7 @@ done:
 }
 
 func TestServerConnectionHeartbeatLoopStopChannel(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.SetHeartbeatInterval(100 * time.Millisecond)
 
 	done := make(chan struct{})
@@ -490,7 +490,7 @@ func TestServerConnectionSendHeartbeat(t *testing.T) {
 		},
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.SetHandler(handler)
 
 	conn.sendHeartbeat()
@@ -520,7 +520,7 @@ func TestServerConnectionSendHeartbeat(t *testing.T) {
 }
 
 func TestServerConnectionSendHeartbeatNilHandler(t *testing.T) {
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	// handler is nil
 
 	// Should not panic
@@ -547,7 +547,7 @@ func TestServerConnectionRunConnection(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	handler := &mockHandler{}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 	conn.SetHandler(handler)
 	conn.SetHeartbeatInterval(20 * time.Millisecond)
@@ -657,7 +657,7 @@ func TestServerConnectionIntegration(t *testing.T) {
 		},
 	}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.WithDialer(mockDialer)
 	conn.SetHandler(handler)
 	conn.SetHeartbeatInterval(30 * time.Millisecond)
@@ -687,7 +687,7 @@ func TestServerConnectionMultipleMessageTypes(t *testing.T) {
 	mockConn := newMockWebSocketConnWithControl()
 	handler := &mockHandler{}
 
-	conn := NewServerConnection("ws://localhost:8080/ws", "test-node", "test-token")
+	conn := NewServerConnection("ws://localhost:8080", "test-node", "test-token", "test-org")
 	conn.conn = mockConn
 	conn.SetHandler(handler)
 

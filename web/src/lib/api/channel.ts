@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Channel types
 export interface ChannelData {
@@ -52,12 +52,12 @@ export const channelApi = {
     if (filters?.ticket_id) params.append("ticket_id", String(filters.ticket_id));
     if (filters?.include_archived) params.append("include_archived", "true");
     const query = params.toString() ? `?${params.toString()}` : "";
-    return request<{ channels: ChannelData[]; total: number }>(`/api/v1/org/channels${query}`);
+    return request<{ channels: ChannelData[]; total: number }>(`${orgPath("/channels")}${query}`);
   },
 
   // Get a single channel
   get: (id: number) =>
-    request<{ channel: ChannelData }>(`/api/v1/org/channels/${id}`),
+    request<{ channel: ChannelData }>(`${orgPath("/channels")}/${id}`),
 
   // Create a new channel
   create: (data: {
@@ -67,27 +67,27 @@ export const channelApi = {
     repository_id?: number;
     ticket_id?: number;
   }) =>
-    request<{ channel: ChannelData }>("/api/v1/org/channels", {
+    request<{ channel: ChannelData }>(orgPath("/channels"), {
       method: "POST",
       body: data,
     }),
 
   // Update a channel
   update: (id: number, data: { name?: string; description?: string; document?: string }) =>
-    request<{ channel: ChannelData }>(`/api/v1/org/channels/${id}`, {
+    request<{ channel: ChannelData }>(`${orgPath("/channels")}/${id}`, {
       method: "PUT",
       body: data,
     }),
 
   // Archive a channel
   archive: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/channels/${id}/archive`, {
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/archive`, {
       method: "POST",
     }),
 
   // Unarchive a channel
   unarchive: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/channels/${id}/unarchive`, {
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/unarchive`, {
       method: "POST",
     }),
 
@@ -97,12 +97,12 @@ export const channelApi = {
     if (limit) params.append("limit", String(limit));
     if (offset) params.append("offset", String(offset));
     const query = params.toString() ? `?${params.toString()}` : "";
-    return request<{ messages: ChannelMessage[] }>(`/api/v1/org/channels/${id}/messages${query}`);
+    return request<{ messages: ChannelMessage[] }>(`${orgPath("/channels")}/${id}/messages${query}`);
   },
 
   // Send a message to a channel
   sendMessage: (id: number, content: string, podKey?: string, messageType?: string) =>
-    request<{ message: ChannelMessage }>(`/api/v1/org/channels/${id}/messages`, {
+    request<{ message: ChannelMessage }>(`${orgPath("/channels")}/${id}/messages`, {
       method: "POST",
       body: { content, pod_key: podKey, message_type: messageType || "text" },
     }),
@@ -117,18 +117,18 @@ export const channelApi = {
         agent_status: string;
       }>;
       total: number;
-    }>(`/api/v1/org/channels/${id}/pods`),
+    }>(`${orgPath("/channels")}/${id}/pods`),
 
   // Join a pod to a channel
   joinPod: (id: number, podKey: string) =>
-    request<{ message: string }>(`/api/v1/org/channels/${id}/pods`, {
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods`, {
       method: "POST",
       body: { pod_key: podKey },
     }),
 
   // Remove a pod from a channel
   leavePod: (id: number, podKey: string) =>
-    request<{ message: string }>(`/api/v1/org/channels/${id}/pods/${podKey}`, {
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods/${podKey}`, {
       method: "DELETE",
     }),
 };

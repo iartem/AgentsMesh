@@ -61,7 +61,8 @@ func RegisterAllRoutes(rg *gin.RouterGroup, cfg *config.Config, svc *Services) {
 	RegisterUserRoutes(rg.Group("/users"), svc.User, svc.Org, svc.Agent, svc.AgentPodSettings, svc.AgentPodAIProvider)
 
 	// Organization routes (authenticated, some require org context)
-	RegisterOrganizationRoutes(rg.Group("/organizations"), svc.Org)
+	// Path changed: /organizations → /orgs
+	RegisterOrganizationRoutes(rg.Group("/orgs"), svc.Org)
 }
 
 // RegisterOrgScopedRoutes registers organization-scoped routes (require tenant context)

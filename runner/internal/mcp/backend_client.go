@@ -17,14 +17,17 @@ import (
 // BackendClient calls the AgentMesh Backend API for collaboration operations.
 type BackendClient struct {
 	baseURL    string
+	orgSlug    string // Organization slug for org-scoped API paths
 	podKey     string
 	httpClient *http.Client
 }
 
 // NewBackendClient creates a new backend API client.
-func NewBackendClient(baseURL, podKey string) *BackendClient {
+// orgSlug is required for org-scoped API paths (/api/v1/orgs/:slug/pod/*)
+func NewBackendClient(baseURL, orgSlug, podKey string) *BackendClient {
 	return &BackendClient{
 		baseURL: baseURL,
+		orgSlug: orgSlug,
 		podKey:  podKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -40,6 +43,21 @@ func (c *BackendClient) SetPodKey(podKey string) {
 // GetPodKey returns the current pod key.
 func (c *BackendClient) GetPodKey() string {
 	return c.podKey
+}
+
+// SetOrgSlug updates the organization slug for the client.
+func (c *BackendClient) SetOrgSlug(orgSlug string) {
+	c.orgSlug = orgSlug
+}
+
+// GetOrgSlug returns the current organization slug.
+func (c *BackendClient) GetOrgSlug() string {
+	return c.orgSlug
+}
+
+// podAPIPath returns the org-scoped pod API path prefix.
+func (c *BackendClient) podAPIPath() string {
+	return fmt.Sprintf("/api/v1/orgs/%s/pod", c.orgSlug)
 }
 
 // request makes an HTTP request to the backend.
@@ -96,7 +114,7 @@ func (c *BackendClient) ObserveTerminal(ctx context.Context, podKey string, line
 	params.Set("raw", strconv.FormatBool(raw))
 	params.Set("include_screen", strconv.FormatBool(includeScreen))
 
-	path := fmt.Sprintf("/api/v1/pod/pods/%s/terminal/observe?%s", url.PathEscape(podKey), params.Encode())
+	path := fmt.Sprintf("%s/pods/%s/terminal/observe?%s", c.podAPIPath(), url.PathEscape(podKey), params.Encode())
 
 	var result tools.TerminalOutput
 	err := c.request(ctx, http.MethodGet, path, nil, &result)
@@ -111,7 +129,7 @@ func (c *BackendClient) SendTerminalText(ctx context.Context, podKey string, tex
 	body := map[string]interface{}{
 		"input": text,
 	}
-	return c.request(ctx, http.MethodPost, fmt.Sprintf("/api/v1/pod/pods/%s/terminal/input", url.PathEscape(podKey)), body, nil)
+	return c.request(ctx, http.MethodPost, fmt.Sprintf("%s/pods/%s/terminal/input", c.podAPIPath(), url.PathEscape(podKey)), body, nil)
 }
 
 // SendTerminalKey sends special keys to a terminal.
@@ -121,7 +139,7 @@ func (c *BackendClient) SendTerminalKey(ctx context.Context, podKey string, keys
 	body := map[string]interface{}{
 		"input": input,
 	}
-	return c.request(ctx, http.MethodPost, fmt.Sprintf("/api/v1/pod/pods/%s/terminal/input", url.PathEscape(podKey)), body, nil)
+	return c.request(ctx, http.MethodPost, fmt.Sprintf("%s/pods/%s/terminal/input", c.podAPIPath(), url.PathEscape(podKey)), body, nil)
 }
 
 // convertKeysToInput converts key names to terminal escape sequences.
@@ -193,7 +211,7 @@ func (c *BackendClient) ListAvailablePods(ctx context.Context) ([]tools.Availabl
 		Pods []tools.AvailablePod `json:"pods"`
 	}
 	// Use pods endpoint with status filter
-	err := c.request(ctx, http.MethodGet, "/api/v1/pod/pods?status=running", nil, &result)
+	err := c.request(ctx, http.MethodGet, c.podAPIPath()+"/pods?status=running", nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +223,7 @@ func (c *BackendClient) ListRunners(ctx context.Context) ([]tools.Runner, error)
 	var result struct {
 		Runners []tools.Runner `json:"runners"`
 	}
-	err := c.request(ctx, http.MethodGet, "/api/v1/pod/runners", nil, &result)
+	err := c.request(ctx, http.MethodGet, c.podAPIPath()+"/runners", nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +235,7 @@ func (c *BackendClient) ListRepositories(ctx context.Context) ([]tools.Repositor
 	var result struct {
 		Repositories []tools.Repository `json:"repositories"`
 	}
-	err := c.request(ctx, http.MethodGet, "/api/v1/pod/repositories", nil, &result)
+	err := c.request(ctx, http.MethodGet, c.podAPIPath()+"/repositories", nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +254,7 @@ func (c *BackendClient) RequestBinding(ctx context.Context, targetPod string, sc
 	var result struct {
 		Binding tools.Binding `json:"binding"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/bindings", body, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/bindings", body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +270,7 @@ func (c *BackendClient) AcceptBinding(ctx context.Context, bindingID int) (*tool
 	var result struct {
 		Binding tools.Binding `json:"binding"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/bindings/accept", body, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/bindings/accept", body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +287,7 @@ func (c *BackendClient) RejectBinding(ctx context.Context, bindingID int, reason
 	var result struct {
 		Binding tools.Binding `json:"binding"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/bindings/reject", body, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/bindings/reject", body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -281,12 +299,12 @@ func (c *BackendClient) UnbindPod(ctx context.Context, targetPod string) error {
 	body := map[string]interface{}{
 		"target_pod": targetPod,
 	}
-	return c.request(ctx, http.MethodPost, "/api/v1/pod/bindings/unbind", body, nil)
+	return c.request(ctx, http.MethodPost, c.podAPIPath()+"/bindings/unbind", body, nil)
 }
 
 // GetBindings gets all bindings for the current pod.
 func (c *BackendClient) GetBindings(ctx context.Context, status *tools.BindingStatus) ([]tools.Binding, error) {
-	path := "/api/v1/pod/bindings"
+	path := c.podAPIPath() + "/bindings"
 	if status != nil {
 		path += "?status=" + url.QueryEscape(string(*status))
 	}
@@ -306,7 +324,7 @@ func (c *BackendClient) GetBoundPods(ctx context.Context) ([]tools.AvailablePod,
 	var result struct {
 		Pods []tools.AvailablePod `json:"pods"`
 	}
-	err := c.request(ctx, http.MethodGet, "/api/v1/pod/bindings/pods", nil, &result)
+	err := c.request(ctx, http.MethodGet, c.podAPIPath()+"/bindings/pods", nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +351,7 @@ func (c *BackendClient) SearchChannels(ctx context.Context, name string, project
 	params.Set("offset", strconv.Itoa(offset))
 	params.Set("limit", strconv.Itoa(limit))
 
-	path := "/api/v1/pod/channels?" + params.Encode()
+	path := c.podAPIPath() + "/channels?" + params.Encode()
 
 	var result struct {
 		Channels []tools.Channel `json:"channels"`
@@ -361,7 +379,7 @@ func (c *BackendClient) CreateChannel(ctx context.Context, name, description str
 	var result struct {
 		Channel tools.Channel `json:"channel"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/channels", body, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/channels", body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +391,7 @@ func (c *BackendClient) GetChannel(ctx context.Context, channelID int) (*tools.C
 	var result struct {
 		Channel tools.Channel `json:"channel"`
 	}
-	err := c.request(ctx, http.MethodGet, fmt.Sprintf("/api/v1/pod/channels/%d", channelID), nil, &result)
+	err := c.request(ctx, http.MethodGet, fmt.Sprintf("%s/channels/%d", c.podAPIPath(), channelID), nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +414,7 @@ func (c *BackendClient) SendMessage(ctx context.Context, channelID int, content 
 	var result struct {
 		Message tools.ChannelMessage `json:"message"`
 	}
-	err := c.request(ctx, http.MethodPost, fmt.Sprintf("/api/v1/pod/channels/%d/messages", channelID), body, &result)
+	err := c.request(ctx, http.MethodPost, fmt.Sprintf("%s/channels/%d/messages", c.podAPIPath(), channelID), body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +435,7 @@ func (c *BackendClient) GetMessages(ctx context.Context, channelID int, beforeTi
 	}
 	params.Set("limit", strconv.Itoa(limit))
 
-	path := fmt.Sprintf("/api/v1/pod/channels/%d/messages?%s", channelID, params.Encode())
+	path := fmt.Sprintf("%s/channels/%d/messages?%s", c.podAPIPath(), channelID, params.Encode())
 
 	var result struct {
 		Messages []tools.ChannelMessage `json:"messages"`
@@ -434,7 +452,7 @@ func (c *BackendClient) GetDocument(ctx context.Context, channelID int) (string,
 	var result struct {
 		Document string `json:"document"`
 	}
-	err := c.request(ctx, http.MethodGet, fmt.Sprintf("/api/v1/pod/channels/%d/document", channelID), nil, &result)
+	err := c.request(ctx, http.MethodGet, fmt.Sprintf("%s/channels/%d/document", c.podAPIPath(), channelID), nil, &result)
 	if err != nil {
 		return "", err
 	}
@@ -446,7 +464,7 @@ func (c *BackendClient) UpdateDocument(ctx context.Context, channelID int, docum
 	body := map[string]interface{}{
 		"document": document,
 	}
-	return c.request(ctx, http.MethodPut, fmt.Sprintf("/api/v1/pod/channels/%d/document", channelID), body, nil)
+	return c.request(ctx, http.MethodPut, fmt.Sprintf("%s/channels/%d/document", c.podAPIPath(), channelID), body, nil)
 }
 
 // Ticket Operations
@@ -479,7 +497,7 @@ func (c *BackendClient) SearchTickets(ctx context.Context, productID *int, statu
 		params.Set("query", query)
 	}
 
-	path := "/api/v1/pod/tickets?" + params.Encode()
+	path := c.podAPIPath() + "/tickets?" + params.Encode()
 
 	var result struct {
 		Tickets []tools.Ticket `json:"tickets"`
@@ -496,7 +514,7 @@ func (c *BackendClient) GetTicket(ctx context.Context, ticketID string) (*tools.
 	var result struct {
 		Ticket tools.Ticket `json:"ticket"`
 	}
-	err := c.request(ctx, http.MethodGet, fmt.Sprintf("/api/v1/pod/tickets/%s", url.PathEscape(ticketID)), nil, &result)
+	err := c.request(ctx, http.MethodGet, fmt.Sprintf("%s/tickets/%s", c.podAPIPath(), url.PathEscape(ticketID)), nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +537,7 @@ func (c *BackendClient) CreateTicket(ctx context.Context, productID int, title, 
 	var result struct {
 		Ticket tools.Ticket `json:"ticket"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/tickets", body, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/tickets", body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -548,7 +566,7 @@ func (c *BackendClient) UpdateTicket(ctx context.Context, ticketID string, title
 	var result struct {
 		Ticket tools.Ticket `json:"ticket"`
 	}
-	err := c.request(ctx, http.MethodPut, fmt.Sprintf("/api/v1/pod/tickets/%s", url.PathEscape(ticketID)), body, &result)
+	err := c.request(ctx, http.MethodPut, fmt.Sprintf("%s/tickets/%s", c.podAPIPath(), url.PathEscape(ticketID)), body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -565,7 +583,7 @@ func (c *BackendClient) CreatePod(ctx context.Context, req *tools.PodCreateReque
 			Status string `json:"status"`
 		} `json:"pod"`
 	}
-	err := c.request(ctx, http.MethodPost, "/api/v1/pod/pods", req, &result)
+	err := c.request(ctx, http.MethodPost, c.podAPIPath()+"/pods", req, &result)
 	if err != nil {
 		return nil, err
 	}

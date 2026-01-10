@@ -289,7 +289,7 @@ X-Organization-Slug: <org-slug>`}</pre>
               <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-mono">
                 WS
               </span>
-              <code className="text-sm">/ws/terminal/:podKey</code>
+              <code className="text-sm">/api/v1/orgs/:slug/ws/terminal/:podKey</code>
             </div>
             <p className="text-sm text-muted-foreground">
               Connect to Pod terminal for real-time interaction
@@ -301,7 +301,7 @@ X-Organization-Slug: <org-slug>`}</pre>
               <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-mono">
                 WS
               </span>
-              <code className="text-sm">/ws/events</code>
+              <code className="text-sm">/api/v1/orgs/:slug/ws/events</code>
             </div>
             <p className="text-sm text-muted-foreground">
               Subscribe to real-time events (Pod updates, messages, etc.)

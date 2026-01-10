@@ -145,10 +145,11 @@ export async function request<T>(
 }
 
 // Helper function to get org-scoped API path
+// Path format: /api/v1/orgs/:slug/*
 export function orgPath(path: string): string {
   const { currentOrg } = useAuthStore.getState();
   if (!currentOrg) {
     throw new Error("No organization selected");
   }
-  return `/api/v1/organizations/${currentOrg.slug}${path}`;
+  return `/api/v1/orgs/${currentOrg.slug}${path}`;
 }

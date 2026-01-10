@@ -1,4 +1,4 @@
-import { request } from "./base";
+import { request, orgPath } from "./base";
 
 // Invitation types
 export interface Invitation {
@@ -37,21 +37,21 @@ export interface PendingInvitation {
 export const invitationApi = {
   // Organization-scoped routes (require org context via X-Organization-Slug header)
   list: () =>
-    request<{ invitations: Invitation[] }>("/api/v1/org/invitations"),
+    request<{ invitations: Invitation[] }>(orgPath("/invitations")),
 
   create: (email: string, role: "admin" | "member") =>
-    request<{ message: string; invitation: Invitation }>("/api/v1/org/invitations", {
+    request<{ message: string; invitation: Invitation }>(orgPath("/invitations"), {
       method: "POST",
       body: { email, role },
     }),
 
   revoke: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/invitations/${id}`, {
+    request<{ message: string }>(`${orgPath("/invitations")}/${id}`, {
       method: "DELETE",
     }),
 
   resend: (id: number) =>
-    request<{ message: string }>(`/api/v1/org/invitations/${id}/resend`, {
+    request<{ message: string }>(`${orgPath("/invitations")}/${id}/resend`, {
       method: "POST",
     }),
 

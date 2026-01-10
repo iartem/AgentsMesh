@@ -35,7 +35,7 @@ func TestHTTPServerRegisterPod(t *testing.T) {
 	ticketID := 123
 	projectID := 456
 
-	server.RegisterPod("test-pod", &ticketID, &projectID, "claude")
+	server.RegisterPod("test-pod", "test-org", &ticketID, &projectID, "claude")
 
 	pod, ok := server.GetPod("test-pod")
 	if !ok {
@@ -58,7 +58,7 @@ func TestHTTPServerRegisterPod(t *testing.T) {
 func TestHTTPServerUnregisterPod(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
 
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	_, ok := server.GetPod("test-pod")
 	if !ok {
@@ -80,12 +80,12 @@ func TestHTTPServerPodCount(t *testing.T) {
 		t.Errorf("initial count should be 0, got %v", server.PodCount())
 	}
 
-	server.RegisterPod("pod-1", nil, nil, "claude")
+	server.RegisterPod("pod-1", "test-org", nil, nil, "claude")
 	if server.PodCount() != 1 {
 		t.Errorf("count should be 1, got %v", server.PodCount())
 	}
 
-	server.RegisterPod("pod-2", nil, nil, "claude")
+	server.RegisterPod("pod-2", "test-org", nil, nil, "claude")
 	if server.PodCount() != 2 {
 		t.Errorf("count should be 2, got %v", server.PodCount())
 	}
@@ -146,7 +146,7 @@ func TestHTTPServerHealth(t *testing.T) {
 
 func TestHTTPServerPods(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("pod-1", nil, nil, "claude")
+	server.RegisterPod("pod-1", "test-org", nil, nil, "claude")
 
 	req := httptest.NewRequest(http.MethodGet, "/pods", nil)
 	rec := httptest.NewRecorder()
@@ -212,7 +212,7 @@ func TestHTTPServerMCPUnregisteredPod(t *testing.T) {
 
 func TestHTTPServerMCPInitialize(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", body)
@@ -246,7 +246,7 @@ func TestHTTPServerMCPInitialize(t *testing.T) {
 
 func TestHTTPServerMCPToolsList(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", body)
@@ -282,7 +282,7 @@ func TestHTTPServerMCPToolsList(t *testing.T) {
 
 func TestHTTPServerMCPMethodNotFound(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,"method":"unknown/method"}`)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", body)
@@ -307,7 +307,7 @@ func TestHTTPServerMCPMethodNotFound(t *testing.T) {
 
 func TestHTTPServerMCPInvalidJSON(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`invalid json`)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", body)
@@ -348,12 +348,13 @@ func TestPodInfoStruct(t *testing.T) {
 	projectID := 456
 
 	info := PodInfo{
-		PodKey:   "test-pod",
+		PodKey:       "test-pod",
+		OrgSlug:      "test-org",
 		TicketID:     &ticketID,
 		ProjectID:    &projectID,
 		AgentType:    "claude",
 		RegisteredAt: time.Now(),
-		Client:       NewBackendClient("http://localhost:8080", "test-pod"),
+		Client:       NewBackendClient("http://localhost:8080", "test-org", "test-pod"),
 	}
 
 	if info.PodKey != "test-pod" {
@@ -486,7 +487,7 @@ func TestHelperFunctions(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallObserveTerminal(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -521,7 +522,7 @@ func TestHTTPServerMCPToolsCallObserveTerminal(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallSendTerminalText(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -555,7 +556,7 @@ func TestHTTPServerMCPToolsCallSendTerminalText(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallMissingArgs(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -591,7 +592,7 @@ func TestHTTPServerMCPToolsCallMissingArgs(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallListAvailablePods(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -622,7 +623,7 @@ func TestHTTPServerMCPToolsCallListAvailablePods(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallBindPod(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -656,7 +657,7 @@ func TestHTTPServerMCPToolsCallBindPod(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallSearchChannels(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -689,7 +690,7 @@ func TestHTTPServerMCPToolsCallSearchChannels(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallSearchTickets(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -722,7 +723,7 @@ func TestHTTPServerMCPToolsCallSearchTickets(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallCreateChannel(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -756,7 +757,7 @@ func TestHTTPServerMCPToolsCallCreateChannel(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallGetTicket(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -789,7 +790,7 @@ func TestHTTPServerMCPToolsCallGetTicket(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallCreateTicket(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -824,7 +825,7 @@ func TestHTTPServerMCPToolsCallCreateTicket(t *testing.T) {
 
 func TestHTTPServerMCPNotificationsInitialized(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -854,7 +855,7 @@ func TestHTTPServerMCPNotificationsInitialized(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallInvalidParams(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -885,7 +886,7 @@ func TestHTTPServerMCPToolsCallInvalidParams(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallToolNotFound(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -919,7 +920,7 @@ func TestHTTPServerMCPToolsCallToolNotFound(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallWithIntArgs(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	// Test with int argument to cover getIntArg path
 	body := bytes.NewBufferString(`{
@@ -948,7 +949,7 @@ func TestHTTPServerMCPToolsCallWithIntArgs(t *testing.T) {
 
 func TestHTTPServerMCPToolsCallCreateTicketWithPriority(t *testing.T) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	body := bytes.NewBufferString(`{
 		"jsonrpc": "2.0",
@@ -998,7 +999,7 @@ func TestGetIntArgInvalidType(t *testing.T) {
 
 func BenchmarkHTTPServerHandleMCP(b *testing.B) {
 	server := NewHTTPServer("http://localhost:8080", 9090)
-	server.RegisterPod("test-pod", nil, nil, "claude")
+	server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 
 	bodyStr := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 
@@ -1018,6 +1019,6 @@ func BenchmarkHTTPServerRegisterPod(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		server.RegisterPod("test-pod", nil, nil, "claude")
+		server.RegisterPod("test-pod", "test-org", nil, nil, "claude")
 	}
 }

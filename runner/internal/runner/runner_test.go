@@ -312,21 +312,21 @@ func TestRunnerStopAllPodsWithNilTerminal(t *testing.T) {
 	}
 }
 
-// --- Test buildWebSocketURL ---
+// --- Test buildWebSocketBaseURL ---
 
-func TestBuildWebSocketURLHTTP(t *testing.T) {
-	result := buildWebSocketURL("http://localhost:8080")
-	expected := "ws://localhost:8080/api/v1/runners/ws"
+func TestBuildWebSocketBaseURLHTTP(t *testing.T) {
+	result := buildWebSocketBaseURL("http://localhost:8080")
+	expected := "ws://localhost:8080"
 	if result != expected {
-		t.Errorf("buildWebSocketURL(http): got %v, want %v", result, expected)
+		t.Errorf("buildWebSocketBaseURL(http): got %v, want %v", result, expected)
 	}
 }
 
-func TestBuildWebSocketURLHTTPS(t *testing.T) {
-	result := buildWebSocketURL("https://api.example.com")
-	expected := "wss://api.example.com/api/v1/runners/ws"
+func TestBuildWebSocketBaseURLHTTPS(t *testing.T) {
+	result := buildWebSocketBaseURL("https://api.example.com")
+	expected := "wss://api.example.com"
 	if result != expected {
-		t.Errorf("buildWebSocketURL(https): got %v, want %v", result, expected)
+		t.Errorf("buildWebSocketBaseURL(https): got %v, want %v", result, expected)
 	}
 }
 
@@ -370,7 +370,7 @@ func BenchmarkPodStartPayloadUnmarshal(b *testing.B) {
 	}
 }
 
-func BenchmarkBuildWebSocketURL(b *testing.B) {
+func BenchmarkBuildWebSocketBaseURL(b *testing.B) {
 	urls := []string{
 		"http://localhost:8080",
 		"https://api.example.com",
@@ -379,6 +379,6 @@ func BenchmarkBuildWebSocketURL(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buildWebSocketURL(urls[i%len(urls)])
+		buildWebSocketBaseURL(urls[i%len(urls)])
 	}
 }

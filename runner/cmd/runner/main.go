@@ -112,17 +112,18 @@ After successful registration, the auth token and config will be saved to ~/.age
 
 	fmt.Printf("Registering runner '%s' with server %s...\n", nID, *serverURL)
 
-	authToken, err := client.register(ctx, *token, *description, *maxPods)
+	result, err := client.register(ctx, *token, *description, *maxPods)
 	if err != nil {
 		log.Fatalf("Registration failed: %v", err)
 	}
 
 	// Save configuration to ~/.agentmesh/
-	if err := saveConfig(nID, *serverURL, authToken, *description, *maxPods); err != nil {
+	if err := saveConfig(nID, *serverURL, result.AuthToken, result.OrgSlug, *description, *maxPods); err != nil {
 		log.Fatalf("Failed to save configuration: %v", err)
 	}
 
 	fmt.Println("✓ Registration successful!")
+	fmt.Printf("✓ Organization: %s\n", result.OrgSlug)
 	fmt.Printf("✓ Configuration saved to ~/.agentmesh/\n")
 	fmt.Println("\nYou can now start the runner with:")
 	fmt.Println("  runner run")

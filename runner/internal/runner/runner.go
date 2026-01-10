@@ -75,28 +75,38 @@ func New(cfg *config.Config) (*Runner, error) {
 		log.Printf("Warning: failed to load auth token: %v", err)
 	}
 
+	// Load org slug from file if not in config
+	if err := cfg.LoadOrgSlug(); err != nil {
+		log.Printf("Warning: failed to load org slug: %v", err)
+	}
+
+	// Validate org slug is present
+	if cfg.OrgSlug == "" {
+		return nil, fmt.Errorf("org_slug is required - please re-register the runner")
+	}
+
 	// Create workspace manager
 	ws, err := workspace.NewManager(cfg.WorkspaceRoot, cfg.GitConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	// Build WebSocket URL from server URL
-	wsURL := buildWebSocketURL(cfg.ServerURL)
+	// Build WebSocket base URL from server URL (just convert http to ws, no path)
+	wsURL := buildWebSocketBaseURL(cfg.ServerURL)
 
-	// Create new ServerConnection
-	conn := client.NewServerConnection(wsURL, cfg.NodeID, cfg.AuthToken)
+	// Create new ServerConnection with org slug
+	conn := client.NewServerConnection(wsURL, cfg.NodeID, cfg.AuthToken, cfg.OrgSlug)
 
 	// Create pod store
 	podStore := NewInMemoryPodStore()
 
 	r := &Runner{
-		cfg:      cfg,
-		conn:     conn,
+		cfg:       cfg,
+		conn:      conn,
 		workspace: ws,
-		pods:     make(map[string]*Pod),
-		podStore: podStore,
-		stopChan: make(chan struct{}),
+		pods:      make(map[string]*Pod),
+		podStore:  podStore,
+		stopChan:  make(chan struct{}),
 	}
 
 	// Create message handler and set it on connection
@@ -109,16 +119,17 @@ func New(cfg *config.Config) (*Runner, error) {
 	return r, nil
 }
 
-// buildWebSocketURL converts HTTP URL to WebSocket URL
-func buildWebSocketURL(serverURL string) string {
+// buildWebSocketBaseURL converts HTTP URL to WebSocket base URL (no path).
+// The ServerConnection will append the org-scoped path.
+func buildWebSocketBaseURL(serverURL string) string {
 	// Parse and convert http(s) to ws(s)
 	if len(serverURL) > 5 && serverURL[:5] == "https" {
-		return "wss" + serverURL[5:] + "/api/v1/runners/ws"
+		return "wss" + serverURL[5:]
 	}
 	if len(serverURL) > 4 && serverURL[:4] == "http" {
-		return "ws" + serverURL[4:] + "/api/v1/runners/ws"
+		return "ws" + serverURL[4:]
 	}
-	return serverURL + "/api/v1/runners/ws"
+	return serverURL
 }
 
 // WithConnection sets a custom connection implementation (useful for testing).
@@ -185,7 +196,7 @@ func (r *Runner) GetSandboxManager() *sandbox.Manager {
 
 // Run starts the runner and blocks until context is cancelled
 func (r *Runner) Run(ctx context.Context) error {
-	log.Printf("Runner starting with node_id: %s", r.cfg.NodeID)
+	log.Printf("Runner starting with node_id: %s (org: %s)", r.cfg.NodeID, r.cfg.OrgSlug)
 
 	// Register with server if needed
 	if r.cfg.AuthToken == "" {
@@ -194,20 +205,25 @@ func (r *Runner) Run(ctx context.Context) error {
 		}
 
 		log.Println("Registering runner with server...")
-		token, err := r.register(ctx)
+		resp, err := r.register(ctx)
 		if err != nil {
 			return fmt.Errorf("registration failed: %w", err)
 		}
 
-		// Update connection with new auth token
-		r.conn.SetAuthToken(token)
-		r.cfg.AuthToken = token
+		// Update connection with new auth token and org slug
+		r.conn.SetAuthToken(resp.AuthToken)
+		r.conn.SetOrgSlug(resp.OrgSlug)
+		r.cfg.AuthToken = resp.AuthToken
+		r.cfg.OrgSlug = resp.OrgSlug
 
-		if err := r.cfg.SaveAuthToken(token); err != nil {
+		if err := r.cfg.SaveAuthToken(resp.AuthToken); err != nil {
 			log.Printf("Warning: failed to save auth token: %v", err)
 		}
+		if err := r.cfg.SaveOrgSlug(resp.OrgSlug); err != nil {
+			log.Printf("Warning: failed to save org slug: %v", err)
+		}
 
-		log.Println("Registration successful")
+		log.Printf("Registration successful (org: %s)", resp.OrgSlug)
 	}
 
 	// Start connection (includes connect, heartbeat, reconnect loop)
@@ -225,7 +241,7 @@ func (r *Runner) Run(ctx context.Context) error {
 }
 
 // register registers this runner with the server
-func (r *Runner) register(ctx context.Context) (string, error) {
+func (r *Runner) register(ctx context.Context) (*client.RegistrationResponse, error) {
 	req := client.RegistrationRequest{
 		ServerURL:         r.cfg.ServerURL,
 		NodeID:            r.cfg.NodeID,
@@ -233,11 +249,7 @@ func (r *Runner) register(ctx context.Context) (string, error) {
 		Description:       r.cfg.Description,
 		MaxPods:           r.cfg.MaxConcurrentPods,
 	}
-	resp, err := client.Register(ctx, req)
-	if err != nil {
-		return "", err
-	}
-	return resp.AuthToken, nil
+	return client.Register(ctx, req)
 }
 
 // PodStartPayload represents the payload for pod start

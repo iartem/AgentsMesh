@@ -80,8 +80,9 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 
 	// Register pod with MCP HTTP Server for tool access (backend communication)
 	if h.runner.mcpServer != nil {
-		h.runner.mcpServer.RegisterPod(req.PodKey, nil, nil, req.InitialCommand)
-		log.Printf("[message_handler] Registered pod %s with MCP server", req.PodKey)
+		orgSlug := h.conn.GetOrgSlug()
+		h.runner.mcpServer.RegisterPod(req.PodKey, orgSlug, nil, nil, req.InitialCommand)
+		log.Printf("[message_handler] Registered pod %s with MCP server (org: %s)", req.PodKey, orgSlug)
 	}
 
 	// Send Shift+Tab if plan mode is requested

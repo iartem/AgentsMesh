@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewBackendClient(t *testing.T) {
-	client := NewBackendClient("http://localhost:8080", "test-pod")
+	client := NewBackendClient("http://localhost:8080", "test-org", "test-pod")
 
 	if client == nil {
 		t.Fatal("NewBackendClient returned nil")
@@ -19,6 +19,10 @@ func TestNewBackendClient(t *testing.T) {
 
 	if client.baseURL != "http://localhost:8080" {
 		t.Errorf("baseURL: got %v, want %v", client.baseURL, "http://localhost:8080")
+	}
+
+	if client.orgSlug != "test-org" {
+		t.Errorf("orgSlug: got %v, want %v", client.orgSlug, "test-org")
 	}
 
 	if client.podKey != "test-pod" {
@@ -31,7 +35,7 @@ func TestNewBackendClient(t *testing.T) {
 }
 
 func TestSetPodKey(t *testing.T) {
-	client := NewBackendClient("http://localhost:8080", "old-pod")
+	client := NewBackendClient("http://localhost:8080", "test-org", "old-pod")
 	client.SetPodKey("new-pod")
 
 	if client.podKey != "new-pod" {
@@ -63,7 +67,7 @@ func TestObserveTerminal(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	result, err := client.ObserveTerminal(context.Background(), "target-pod", 50, false, true)
 
 	if err != nil {
@@ -96,7 +100,7 @@ func TestSendTerminalText(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	err := client.SendTerminalText(context.Background(), "target-pod", "hello world")
 
 	if err != nil {
@@ -119,7 +123,7 @@ func TestSendTerminalKey(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	err := client.SendTerminalKey(context.Background(), "target-pod", []string{"ctrl+c", "enter"})
 
 	if err != nil {
@@ -141,7 +145,7 @@ func TestListAvailablePods(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	pods, err := client.ListAvailablePods(context.Background())
 
 	if err != nil {
@@ -176,7 +180,7 @@ func TestRequestBinding(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	binding, err := client.RequestBinding(context.Background(), "target-pod", []tools.BindingScope{tools.ScopeTerminalRead})
 
 	if err != nil {
@@ -209,7 +213,7 @@ func TestAcceptBinding(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	binding, err := client.AcceptBinding(context.Background(), 1)
 
 	if err != nil {
@@ -242,7 +246,7 @@ func TestRejectBinding(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	binding, err := client.RejectBinding(context.Background(), 1, "not allowed")
 
 	if err != nil {
@@ -260,7 +264,7 @@ func TestUnbindPod(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	err := client.UnbindPod(context.Background(), "target-pod")
 
 	if err != nil {
@@ -281,7 +285,7 @@ func TestGetBindings(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	bindings, err := client.GetBindings(context.Background(), nil)
 
 	if err != nil {
@@ -308,7 +312,7 @@ func TestGetBindingsWithStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	status := tools.BindingStatusActive
 	_, err := client.GetBindings(context.Background(), &status)
 
@@ -330,7 +334,7 @@ func TestGetBoundPods(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	pods, err := client.GetBoundPods(context.Background())
 
 	if err != nil {
@@ -359,7 +363,7 @@ func TestSearchChannels(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	channels, err := client.SearchChannels(context.Background(), "test", nil, nil, nil, 0, 20)
 
 	if err != nil {
@@ -392,7 +396,7 @@ func TestCreateChannel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	channel, err := client.CreateChannel(context.Background(), "new-channel", "description", nil, nil)
 
 	if err != nil {
@@ -418,7 +422,7 @@ func TestGetChannel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	channel, err := client.GetChannel(context.Background(), 1)
 
 	if err != nil {
@@ -451,7 +455,7 @@ func TestSendMessage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	msg, err := client.SendMessage(context.Background(), 1, "Hello", tools.ChannelMessageTypeText, nil, nil)
 
 	if err != nil {
@@ -477,7 +481,7 @@ func TestGetMessages(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	messages, err := client.GetMessages(context.Background(), 1, nil, nil, nil, 50)
 
 	if err != nil {
@@ -500,7 +504,7 @@ func TestGetDocument(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	doc, err := client.GetDocument(context.Background(), 1)
 
 	if err != nil {
@@ -525,7 +529,7 @@ func TestUpdateDocument(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	err := client.UpdateDocument(context.Background(), 1, "updated content")
 
 	if err != nil {
@@ -546,7 +550,7 @@ func TestSearchTickets(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	tickets, err := client.SearchTickets(context.Background(), nil, nil, nil, nil, nil, nil, "", 20, 1)
 
 	if err != nil {
@@ -573,7 +577,7 @@ func TestGetTicket(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	ticket, err := client.GetTicket(context.Background(), "AM-123")
 
 	if err != nil {
@@ -607,7 +611,7 @@ func TestCreateTicket(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	ticket, err := client.CreateTicket(context.Background(), 1, "New Ticket", "Description", tools.TicketTypeTask, tools.TicketPriorityMedium, nil)
 
 	if err != nil {
@@ -640,7 +644,7 @@ func TestUpdateTicket(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	title := "Updated Title"
 	ticket, err := client.UpdateTicket(context.Background(), "AM-1", &title, nil, nil, nil, nil)
 
@@ -674,7 +678,7 @@ func TestCreatePod(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	resp, err := client.CreatePod(context.Background(), &tools.PodCreateRequest{
 		InitialPrompt: "Hello",
 	})
@@ -695,7 +699,7 @@ func TestRequestError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewBackendClient(server.URL, "test-pod")
+	client := NewBackendClient(server.URL, "test-org", "test-pod")
 	_, err := client.GetTicket(context.Background(), "AM-1")
 
 	if err == nil {

@@ -122,6 +122,16 @@ func (m *MockConnection) SetAuthToken(token string) {
 	// No-op for mock
 }
 
+// SetOrgSlug implements Connection.
+func (m *MockConnection) SetOrgSlug(orgSlug string) {
+	// No-op for mock
+}
+
+// GetOrgSlug implements Connection.
+func (m *MockConnection) GetOrgSlug() string {
+	return ""
+}
+
 // --- Test helper methods ---
 
 // SimulateCreatePod simulates server sending a create_pod message.
