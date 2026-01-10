@@ -194,6 +194,10 @@ interface TerminalConnection {
   listeners: Set<(data: Uint8Array | string) => void>;
   reconnectAttempts: number;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
+  // Pending resize when WebSocket is not ready
+  pendingResize?: { rows: number; cols: number };
+  // Current PTY size (from backend broadcast)
+  ptySize?: { rows: number; cols: number };
 }
 
 class TerminalConnectionPool {
@@ -201,6 +205,8 @@ class TerminalConnectionPool {
   private maxBufferSize = 100; // Keep last 100 messages for reconnection
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 1000;
+  private resizeDebounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private resizeDebounceMs = 150;
 
   getConnection(podKey: string): TerminalConnection | undefined {
     return this.connections.get(podKey);
@@ -283,6 +289,12 @@ class TerminalConnectionPool {
         c.status = "connected";
         c.lastActivity = Date.now();
         c.reconnectAttempts = 0; // Reset on successful connection
+
+        // Send pending resize if any
+        if (c.pendingResize) {
+          this.doSendResize(podKey, c.pendingResize.rows, c.pendingResize.cols);
+          c.pendingResize = undefined;
+        }
       }
     };
 
@@ -296,6 +308,20 @@ class TerminalConnectionPool {
           data = new Uint8Array(event.data);
         } else {
           data = event.data;
+        }
+
+        // Try to parse JSON messages (e.g., pty_resized)
+        if (typeof data === "string") {
+          try {
+            const msg = JSON.parse(data);
+            if (msg.type === "pty_resized" && typeof msg.cols === "number" && typeof msg.rows === "number") {
+              c.ptySize = { rows: msg.rows, cols: msg.cols };
+              // Don't pass pty_resized to terminal output listeners
+              return;
+            }
+          } catch {
+            // Not JSON, continue as terminal output
+          }
         }
 
         // Buffer the message
@@ -351,11 +377,68 @@ class TerminalConnectionPool {
     }
   }
 
+  /**
+   * Send resize with 150ms debounce to reduce network requests during window dragging
+   */
   sendResize(podKey: string, rows: number, cols: number) {
+    // Ignore invalid sizes
+    if (rows <= 0 || cols <= 0) return;
+
+    // Clear existing debounce timer
+    const existingTimer = this.resizeDebounceTimers.get(podKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set new debounce timer
+    const timer = setTimeout(() => {
+      this.doSendResize(podKey, rows, cols);
+      this.resizeDebounceTimers.delete(podKey);
+    }, this.resizeDebounceMs);
+
+    this.resizeDebounceTimers.set(podKey, timer);
+  }
+
+  /**
+   * Internal method to actually send resize
+   */
+  private doSendResize(podKey: string, rows: number, cols: number) {
+    const conn = this.connections.get(podKey);
+    if (!conn) return;
+
+    if (conn.ws.readyState === WebSocket.OPEN) {
+      conn.ws.send(JSON.stringify({ type: "resize", rows, cols }));
+    } else if (conn.ws.readyState === WebSocket.CONNECTING) {
+      // Store pending resize for when connection opens
+      conn.pendingResize = { rows, cols };
+    }
+  }
+
+  /**
+   * Force resize immediately without debounce (for sync button)
+   */
+  forceResize(podKey: string, rows: number, cols: number) {
+    // Ignore invalid sizes
+    if (rows <= 0 || cols <= 0) return;
+
+    // Clear any pending debounce timer
+    const existingTimer = this.resizeDebounceTimers.get(podKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.resizeDebounceTimers.delete(podKey);
+    }
+
     const conn = this.connections.get(podKey);
     if (conn && conn.ws.readyState === WebSocket.OPEN) {
       conn.ws.send(JSON.stringify({ type: "resize", rows, cols }));
     }
+  }
+
+  /**
+   * Get current PTY size (from backend broadcast)
+   */
+  getPtySize(podKey: string): { rows: number; cols: number } | undefined {
+    return this.connections.get(podKey)?.ptySize;
   }
 
   removeListener(podKey: string, listener: (data: Uint8Array | string) => void) {

@@ -122,7 +122,7 @@ func (h *TerminalHandler) writePump(client *runner.TerminalClient) {
 
 	for {
 		select {
-		case data, ok := <-client.Send:
+		case msg, ok := <-client.Send:
 			if !ok {
 				// Channel closed
 				client.Conn.WriteMessage(gorillaws.CloseMessage, []byte{})
@@ -130,7 +130,14 @@ func (h *TerminalHandler) writePump(client *runner.TerminalClient) {
 			}
 
 			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := client.Conn.WriteMessage(gorillaws.BinaryMessage, data); err != nil {
+
+			// Use TextMessage for JSON control messages, BinaryMessage for terminal output
+			msgType := gorillaws.BinaryMessage
+			if msg.IsJSON {
+				msgType = gorillaws.TextMessage
+			}
+
+			if err := client.Conn.WriteMessage(msgType, msg.Data); err != nil {
 				log.Printf("[terminal_ws] Failed to write to client: %v", err)
 				return
 			}

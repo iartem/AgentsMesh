@@ -321,7 +321,7 @@ func TestTerminalRouterHandleTerminalOutput(t *testing.T) {
 func TestTerminalClientStruct(t *testing.T) {
 	client := &TerminalClient{
 		PodKey: "pod-1",
-		Send:      make(chan []byte, 256),
+		Send:   make(chan TerminalMessage, 256),
 	}
 
 	if client.PodKey != "pod-1" {

@@ -5,7 +5,8 @@ import { useDrag } from "@use-gesture/react";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { TerminalPane } from "./TerminalPane";
-import { Terminal as TerminalIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Terminal as TerminalIcon, Plus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { terminalPool } from "@/stores/workspace";
 import { Button } from "@/components/ui/button";
 
 interface TerminalSwiperProps {
@@ -15,6 +16,7 @@ interface TerminalSwiperProps {
 
 export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const terminalPaneRef = useRef<{ syncSize: () => void } | null>(null);
   const {
     panes,
     activePane,
@@ -83,6 +85,29 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
 
   const currentPane = panes[mobileActiveIndex];
 
+  // Sync terminal size handler - we need to get xterm instance from TerminalPane
+  // Since TerminalPane doesn't expose xterm ref, we'll use terminalPool.forceResize
+  // with a reasonable default size based on container
+  const handleSyncSize = () => {
+    if (currentPane && containerRef.current) {
+      // Get container dimensions and estimate terminal size
+      // This is a fallback - ideally we'd get the actual xterm size
+      // For now, just trigger a resize with the current stored size or estimate
+      const ptySize = terminalPool.getPtySize(currentPane.podKey);
+      if (ptySize) {
+        terminalPool.forceResize(currentPane.podKey, ptySize.rows, ptySize.cols);
+      } else {
+        // Estimate based on container - using typical terminal font metrics
+        const container = containerRef.current;
+        const cols = Math.floor(container.clientWidth / 9); // ~9px per char at 14px font
+        const rows = Math.floor(container.clientHeight / 17); // ~17px per line at 14px font
+        if (cols > 0 && rows > 0) {
+          terminalPool.forceResize(currentPane.podKey, rows, cols);
+        }
+      }
+    }
+  };
+
   if (panes.length === 0) {
     return (
       <div className={cn("flex-1 flex items-center justify-center bg-[#1e1e1e]", className)}>
@@ -126,15 +151,26 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
           </span>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 text-[#808080]"
-          onClick={goToNext}
-          disabled={mobileActiveIndex === panes.length - 1}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-[#808080]"
+            onClick={handleSyncSize}
+            title="Sync terminal size"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-[#808080]"
+            onClick={goToNext}
+            disabled={mobileActiveIndex === panes.length - 1}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Dots indicator */}

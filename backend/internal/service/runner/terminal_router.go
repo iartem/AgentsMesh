@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bytes"
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"unicode/utf8"
@@ -15,11 +16,23 @@ const (
 	DefaultScrollbackSize = 100 * 1024
 )
 
+// TerminalMessage represents a message to send to the frontend client
+type TerminalMessage struct {
+	Data   []byte
+	IsJSON bool // true for JSON control messages, false for binary terminal output
+}
+
 // TerminalClient represents a frontend WebSocket client connected to a terminal
 type TerminalClient struct {
 	Conn   *websocket.Conn
 	PodKey string
-	Send   chan []byte
+	Send   chan TerminalMessage
+}
+
+// PtySize represents the current PTY terminal size
+type PtySize struct {
+	Cols int
+	Rows int
 }
 
 // TerminalRouter routes terminal data between frontend clients and runners
@@ -42,6 +55,10 @@ type TerminalRouter struct {
 	// Virtual terminals for agent observation (processed output)
 	virtualTerminals map[string]*terminal.VirtualTerminal
 	virtualTermMu    sync.RWMutex
+
+	// Current PTY size for each pod (for broadcasting to clients)
+	ptySize   map[string]*PtySize
+	ptySizeMu sync.RWMutex
 
 	// Buffer size configuration
 	scrollbackSize int
@@ -151,6 +168,7 @@ func NewTerminalRouter(cm *ConnectionManager, logger *slog.Logger) *TerminalRout
 		terminalClients:   make(map[string]map[*TerminalClient]bool),
 		scrollbackBuffers: make(map[string]*ScrollbackBuffer),
 		virtualTerminals:  make(map[string]*terminal.VirtualTerminal),
+		ptySize:           make(map[string]*PtySize),
 		scrollbackSize:    DefaultScrollbackSize,
 	}
 
@@ -220,6 +238,11 @@ func (tr *TerminalRouter) UnregisterPod(podKey string) {
 	delete(tr.virtualTerminals, podKey)
 	tr.virtualTermMu.Unlock()
 
+	// Clean up PTY size record
+	tr.ptySizeMu.Lock()
+	delete(tr.ptySize, podKey)
+	tr.ptySizeMu.Unlock()
+
 	// Disconnect all clients
 	tr.terminalClientsMu.Lock()
 	clients := tr.terminalClients[podKey]
@@ -240,7 +263,7 @@ func (tr *TerminalRouter) ConnectClient(podKey string, conn *websocket.Conn) (*T
 	client := &TerminalClient{
 		Conn:   conn,
 		PodKey: podKey,
-		Send:   make(chan []byte, 256),
+		Send:   make(chan TerminalMessage, 256),
 	}
 
 	tr.terminalClientsMu.Lock()
@@ -252,6 +275,15 @@ func (tr *TerminalRouter) ConnectClient(podKey string, conn *websocket.Conn) (*T
 
 	tr.logger.Info("terminal client connected", "pod_key", podKey)
 
+	// Send current PTY size to the newly connected client
+	tr.ptySizeMu.RLock()
+	currentSize := tr.ptySize[podKey]
+	tr.ptySizeMu.RUnlock()
+
+	if currentSize != nil {
+		tr.sendPtyResizedToClient(client, currentSize.Cols, currentSize.Rows)
+	}
+
 	// Send scrollback data to the newly connected client
 	tr.scrollbackMu.RLock()
 	buffer := tr.scrollbackBuffers[podKey]
@@ -261,7 +293,7 @@ func (tr *TerminalRouter) ConnectClient(podKey string, conn *websocket.Conn) (*T
 		data := buffer.GetData()
 		if len(data) > 0 {
 			select {
-			case client.Send <- data:
+			case client.Send <- TerminalMessage{Data: data, IsJSON: false}:
 				tr.logger.Debug("sent scrollback to client",
 					"pod_key", podKey,
 					"size", len(data))
@@ -325,7 +357,7 @@ func (tr *TerminalRouter) handleTerminalOutput(runnerID int64, data *TerminalOut
 	var deadClients []*TerminalClient
 	for client := range clients {
 		select {
-		case client.Send <- data.Data:
+		case client.Send <- TerminalMessage{Data: data.Data, IsJSON: false}:
 		default:
 			// Client buffer full, mark for removal
 			deadClients = append(deadClients, client)
@@ -346,6 +378,11 @@ func (tr *TerminalRouter) handleTerminalOutput(runnerID int64, data *TerminalOut
 func (tr *TerminalRouter) handlePtyResized(runnerID int64, data *PtyResizedData) {
 	podKey := data.PodKey
 
+	// Update local PTY size record
+	tr.ptySizeMu.Lock()
+	tr.ptySize[podKey] = &PtySize{Cols: data.Cols, Rows: data.Rows}
+	tr.ptySizeMu.Unlock()
+
 	// Update virtual terminal size
 	tr.virtualTermMu.Lock()
 	if vt, exists := tr.virtualTerminals[podKey]; exists {
@@ -356,6 +393,43 @@ func (tr *TerminalRouter) handlePtyResized(runnerID int64, data *PtyResizedData)
 			"rows", data.Rows)
 	}
 	tr.virtualTermMu.Unlock()
+
+	// Broadcast pty_resized to all connected frontend clients
+	tr.broadcastPtyResized(podKey, data.Cols, data.Rows)
+}
+
+// broadcastPtyResized sends pty_resized message to all connected clients for a pod
+func (tr *TerminalRouter) broadcastPtyResized(podKey string, cols, rows int) {
+	tr.terminalClientsMu.RLock()
+	clients := tr.terminalClients[podKey]
+	tr.terminalClientsMu.RUnlock()
+
+	for client := range clients {
+		tr.sendPtyResizedToClient(client, cols, rows)
+	}
+}
+
+// sendPtyResizedToClient sends pty_resized message to a single client
+func (tr *TerminalRouter) sendPtyResizedToClient(client *TerminalClient, cols, rows int) {
+	msg, err := json.Marshal(map[string]interface{}{
+		"type": "pty_resized",
+		"cols": cols,
+		"rows": rows,
+	})
+	if err != nil {
+		tr.logger.Error("failed to marshal pty_resized message", "error", err)
+		return
+	}
+
+	select {
+	case client.Send <- TerminalMessage{Data: msg, IsJSON: true}:
+		tr.logger.Debug("sent pty_resized to client",
+			"pod_key", client.PodKey,
+			"cols", cols,
+			"rows", rows)
+	default:
+		tr.logger.Warn("failed to send pty_resized, channel full", "pod_key", client.PodKey)
+	}
 }
 
 // RouteInput routes terminal input from frontend to runner

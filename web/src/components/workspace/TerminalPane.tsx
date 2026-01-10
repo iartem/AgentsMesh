@@ -20,6 +20,7 @@ import {
   Circle,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 interface TerminalPaneProps {
@@ -254,6 +255,13 @@ export function TerminalPane({
     }, 100);
   }, [isMaximized, onMaximize]);
 
+  // Sync terminal size to PTY
+  const handleSyncSize = useCallback(() => {
+    if (xtermRef.current) {
+      terminalPool.forceResize(podKey, xtermRef.current.rows, xtermRef.current.cols);
+    }
+  }, [podKey]);
+
   const getStatusColor = () => {
     switch (connectionStatus) {
       case "connected":
@@ -290,6 +298,18 @@ export function TerminalPane({
             </code>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 w-5 p-0 hover:bg-[#3c3c3c] text-[#cccccc]"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSyncSize();
+              }}
+              title="Sync terminal size"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </Button>
             {onPopout && (
               <Button
                 variant="ghost"
