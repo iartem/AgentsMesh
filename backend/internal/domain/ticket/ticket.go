@@ -6,10 +6,11 @@ import (
 
 // Ticket type constants
 const (
-	TicketTypeTask    = "task"
-	TicketTypeBug     = "bug"
-	TicketTypeFeature = "feature"
-	TicketTypeEpic    = "epic"
+	TicketTypeTask        = "task"
+	TicketTypeBug         = "bug"
+	TicketTypeFeature     = "feature"
+	TicketTypeImprovement = "improvement"
+	TicketTypeEpic        = "epic"
 )
 
 // Ticket status constants

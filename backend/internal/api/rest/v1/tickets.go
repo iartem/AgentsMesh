@@ -74,7 +74,7 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 // CreateTicketRequest represents ticket creation request
 type CreateTicketRequest struct {
 	RepositoryID   *int64   `json:"repository_id"`
-	Type           string   `json:"type" binding:"required,oneof=task bug feature epic"`
+	Type           string   `json:"type" binding:"required,oneof=task bug feature improvement epic subtask story"`
 	Title          string   `json:"title" binding:"required,min=1,max=500"`
 	Description    string   `json:"description"`
 	Content        string   `json:"content"`

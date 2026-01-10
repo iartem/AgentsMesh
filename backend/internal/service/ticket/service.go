@@ -2,6 +2,7 @@ package ticket
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -48,26 +49,36 @@ type CreateTicketRequest struct {
 
 // CreateTicket creates a new ticket
 func (s *Service) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*ticket.Ticket, error) {
-	// Generate ticket number and identifier
-	var maxNumber int
-	s.db.WithContext(ctx).Model(&ticket.Ticket{}).
-		Where("repository_id = ?", req.RepositoryID).
-		Select("COALESCE(MAX(number), 0)").
-		Scan(&maxNumber)
+	var number int
+	var identifier string
 
-	number := maxNumber + 1
-	identifier := fmt.Sprintf("TICKET-%d", number)
-
-	// If repository has a prefix, use it
+	// Check if repository has a ticket_prefix
+	var prefix sql.NullString
 	if req.RepositoryID != nil {
-		var prefix string
 		s.db.WithContext(ctx).Table("repositories").
 			Where("id = ?", *req.RepositoryID).
 			Select("ticket_prefix").
 			Scan(&prefix)
-		if prefix != "" {
-			identifier = fmt.Sprintf("%s-%d", prefix, number)
-		}
+	}
+
+	if prefix.Valid && prefix.String != "" {
+		// Repository has a prefix: generate number scoped to repository
+		var maxNumber int
+		s.db.WithContext(ctx).Model(&ticket.Ticket{}).
+			Where("repository_id = ?", req.RepositoryID).
+			Select("COALESCE(MAX(number), 0)").
+			Scan(&maxNumber)
+		number = maxNumber + 1
+		identifier = fmt.Sprintf("%s-%d", prefix.String, number)
+	} else {
+		// No prefix: generate number scoped to organization with TICKET- prefix
+		var maxNumber int
+		s.db.WithContext(ctx).Model(&ticket.Ticket{}).
+			Where("organization_id = ? AND identifier LIKE 'TICKET-%'", req.OrganizationID).
+			Select("COALESCE(MAX(number), 0)").
+			Scan(&maxNumber)
+		number = maxNumber + 1
+		identifier = fmt.Sprintf("TICKET-%d", number)
 	}
 
 	status := req.Status
