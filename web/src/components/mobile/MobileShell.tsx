@@ -6,6 +6,7 @@ import { MobileHeader } from "./MobileHeader";
 import { MobileTabBar } from "./MobileTabBar";
 import { MobileDrawer } from "./MobileDrawer";
 import { MobileMoreMenu } from "./MobileMoreMenu";
+import { MobileSidebar } from "./MobileSidebar";
 import { useIDEStore } from "@/stores/ide";
 
 interface MobileShellProps {
@@ -49,7 +50,7 @@ export function MobileShell({
   }
 
   return (
-    <div className={cn("flex flex-col h-screen bg-background", className)}>
+    <div className={cn("flex flex-col h-screen bg-background overflow-hidden", className)} style={{ height: '100dvh' }}>
       {/* Header */}
       <MobileHeader title={title} actions={headerActions} />
 
@@ -59,8 +60,11 @@ export function MobileShell({
       {/* Bottom Tab Bar */}
       {!hideTabBar && <MobileTabBar />}
 
-      {/* Drawer */}
+      {/* Drawer (left side navigation) */}
       <MobileDrawer />
+
+      {/* Sidebar (right side content panel) */}
+      <MobileSidebar />
 
       {/* More Menu */}
       <MobileMoreMenu />

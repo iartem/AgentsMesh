@@ -44,8 +44,10 @@ interface IDEState {
   // Mobile specific state
   mobileDrawerOpen: boolean;
   mobileMoreMenuOpen: boolean;
+  mobileSidebarOpen: boolean;
   setMobileDrawerOpen: (open: boolean) => void;
   setMobileMoreMenuOpen: (open: boolean) => void;
+  setMobileSidebarOpen: (open: boolean) => void;
 
   // Hydration state for SSR
   _hasHydrated: boolean;
@@ -79,8 +81,10 @@ export const useIDEStore = create<IDEState>()(
       // Mobile specific
       mobileDrawerOpen: false,
       mobileMoreMenuOpen: false,
+      mobileSidebarOpen: false,
       setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
       setMobileMoreMenuOpen: (open) => set({ mobileMoreMenuOpen: open }),
+      setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
 
       // Hydration
       _hasHydrated: false,

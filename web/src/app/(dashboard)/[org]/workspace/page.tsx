@@ -35,7 +35,7 @@ interface AgentType {
 }
 
 export default function WorkspacePage() {
-  const { panes, addPane } = useWorkspaceStore();
+  const { panes, addPane, _hasHydrated } = useWorkspaceStore();
   const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const [runners, setRunners] = useState<Runner[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -74,6 +74,15 @@ export default function WorkspacePage() {
   const handleOpenPod = (podKey: string, title?: string) => {
     addPane(podKey, title || `Pod ${podKey.substring(0, 8)}`);
   };
+
+  // Show loading while hydrating
+  if (!_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // Empty state when no terminals are open
   if (panes.length === 0) {

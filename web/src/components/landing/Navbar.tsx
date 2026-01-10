@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/stores/auth";
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -13,6 +14,8 @@ const navLinks = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { token, _hasHydrated } = useAuthStore();
+  const isLoggedIn = _hasHydrated && !!token;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,16 +70,26 @@ export function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Get Started
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/mesh">
+                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  Console
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -111,7 +124,7 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div className="md:hidden py-4 border-t border-border bg-background">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <Link
@@ -124,16 +137,26 @@ export function Navbar() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="w-full">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="w-full bg-primary text-primary-foreground">
-                    Get Started
-                  </Button>
-                </Link>
+                {isLoggedIn ? (
+                  <Link href="/mesh" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button size="sm" className="w-full bg-primary text-primary-foreground">
+                      Console
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="ghost" size="sm" className="w-full">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button size="sm" className="w-full bg-primary text-primary-foreground">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

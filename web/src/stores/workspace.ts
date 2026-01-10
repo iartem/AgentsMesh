@@ -173,6 +173,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         panes: state.panes,
         activePane: state.activePane,
         gridLayout: state.gridLayout,
+        mobileActiveIndex: state.mobileActiveIndex,
         terminalFontSize: state.terminalFontSize,
       }),
       onRehydrateStorage: () => (state) => {

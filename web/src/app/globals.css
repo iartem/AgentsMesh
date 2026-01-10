@@ -49,10 +49,21 @@
   --radius-sm: calc(var(--radius-lg) - 4px);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fix for iOS Safari viewport height */
+@supports (-webkit-touch-callout: none) {
+  html,
+  body {
+    height: -webkit-fill-available;
+  }
 }
 
 /* Custom scrollbar */
@@ -72,4 +83,14 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+}
+
+/* xterm.js touch scrolling support */
+.xterm-viewport {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.xterm-screen {
+  touch-action: pan-y pinch-zoom;
 }

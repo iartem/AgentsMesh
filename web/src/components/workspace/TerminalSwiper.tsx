@@ -28,10 +28,21 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Handle swipe gesture
+  // Handle swipe gesture for switching between terminals
+  // Uses "lock" axis mode to detect swipe direction first, then lock to that axis
+  // This allows vertical scrolling in terminal while still supporting horizontal swipe to switch
   const bind = useDrag(
-    ({ movement: [mx], direction: [dx], velocity: [vx], last, cancel }) => {
+    ({ movement: [mx, my], direction: [dx], velocity: [vx], last, cancel }) => {
       if (panes.length <= 1) return;
+
+      // If vertical movement is greater than horizontal, cancel the gesture
+      // This allows touch events to pass through to terminal for scrolling
+      if (!last && Math.abs(my) > Math.abs(mx) * 1.2) {
+        cancel();
+        setTranslateX(0);
+        setIsDragging(false);
+        return;
+      }
 
       setIsDragging(!last);
 
@@ -57,9 +68,10 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
       }
     },
     {
-      axis: "x",
+      axis: "lock", // Lock to first detected axis direction
       filterTaps: true,
       rubberband: true,
+      threshold: 10, // Require 10px movement before starting gesture
     }
   );
 
@@ -76,10 +88,14 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
     }
   };
 
-  // Ensure index is valid
+  // Ensure index is valid after hydration or panes change
   useEffect(() => {
-    if (mobileActiveIndex >= panes.length && panes.length > 0) {
+    if (panes.length === 0) return;
+
+    if (mobileActiveIndex >= panes.length) {
       setMobileActiveIndex(panes.length - 1);
+    } else if (mobileActiveIndex < 0) {
+      setMobileActiveIndex(0);
     }
   }, [panes.length, mobileActiveIndex, setMobileActiveIndex]);
 
@@ -195,10 +211,11 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
       <div
         ref={containerRef}
         {...bind()}
-        className="flex-1 touch-pan-y overflow-hidden"
+        className="flex-1 overflow-hidden"
         style={{
           transform: isDragging ? `translateX(${translateX}px)` : "none",
           transition: isDragging ? "none" : "transform 0.2s ease-out",
+          touchAction: "pan-y", // Allow vertical scrolling, capture horizontal for swipe
         }}
       >
         {currentPane && (

@@ -242,6 +242,51 @@ export function TerminalPane({
     }
   }, [terminalFontSize]);
 
+  // Mobile touch scrolling support
+  // xterm.js doesn't natively support touch scrolling, so we implement it manually
+  // Reference: https://github.com/xtermjs/xterm.js/issues/5377
+  useEffect(() => {
+    if (!terminalRef.current || !xtermRef.current) return;
+
+    let lastTouchY: number | null = null;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        lastTouchY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      lastTouchY = null;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1 || lastTouchY === null || !xtermRef.current) return;
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = lastTouchY - currentY;
+      lastTouchY = currentY;
+
+      // Calculate lines to scroll (divide by ~10 for smooth scrolling)
+      const linesToScroll = Math.round(deltaY / 10);
+      if (linesToScroll !== 0) {
+        xtermRef.current.scrollLines(linesToScroll);
+        e.preventDefault();
+      }
+    };
+
+    const container = terminalRef.current;
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [isPodReady]);
+
   const handleFocus = useCallback(() => {
     setActivePane(paneId);
   }, [paneId, setActivePane]);
@@ -384,8 +429,11 @@ export function TerminalPane({
       ) : (
         <div
           ref={terminalRef}
-          className="flex-1 min-h-0"
-          style={{ minHeight: showHeader ? "calc(100% - 32px)" : "100%" }}
+          className="flex-1 min-h-0 overflow-auto"
+          style={{
+            minHeight: showHeader ? "calc(100% - 32px)" : "100%",
+            touchAction: "pan-y pinch-zoom", // Enable touch scrolling and zoom
+          }}
         />
       )}
     </div>

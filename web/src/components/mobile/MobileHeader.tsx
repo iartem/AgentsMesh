@@ -5,7 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useIDEStore, type ActivityType } from "@/stores/ide";
 import { Button } from "@/components/ui/button";
-import { Menu, Network } from "lucide-react";
+import { Menu, Network, PanelRight } from "lucide-react";
 
 interface MobileHeaderProps {
   className?: string;
@@ -36,7 +36,7 @@ function getActivityTitle(activity: ActivityType): string {
 }
 
 export function MobileHeader({ className, title, actions }: MobileHeaderProps) {
-  const { activeActivity, setMobileDrawerOpen } = useIDEStore();
+  const { activeActivity, setMobileDrawerOpen, setMobileSidebarOpen } = useIDEStore();
 
   const displayTitle = title || getActivityTitle(activeActivity);
 
@@ -65,8 +65,18 @@ export function MobileHeader({ className, title, actions }: MobileHeaderProps) {
         <span className="font-semibold truncate">{displayTitle}</span>
       </Link>
 
-      {/* Custom actions */}
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {/* Custom actions and sidebar toggle */}
+      <div className="flex items-center gap-1">
+        {actions}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="p-2"
+          onClick={() => setMobileSidebarOpen(true)}
+        >
+          <PanelRight className="w-5 h-5" />
+        </Button>
+      </div>
     </header>
   );
 }
