@@ -85,7 +85,7 @@ function calculateLayout(
   // Create binding edges between pods
   edges.forEach((edge) => {
     flowEdges.push({
-      id: `binding-${edge.id}`,
+      id: `binding-${edge.id}-${edge.source}-${edge.target}`,
       source: edge.source,
       target: edge.target,
       type: "binding",

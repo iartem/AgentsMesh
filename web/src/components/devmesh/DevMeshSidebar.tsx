@@ -166,7 +166,7 @@ function PodDetails({ node }: { node: DevMeshNode }) {
           <div className="space-y-2">
             {edges.map((edge) => (
               <div
-                key={edge.id}
+                key={`${edge.id}-${edge.source}-${edge.target}`}
                 className="p-2 border border-border rounded-md text-xs"
               >
                 <div className="flex items-center justify-between mb-1">
