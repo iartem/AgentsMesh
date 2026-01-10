@@ -141,7 +141,15 @@ export default function LoginPage() {
 
         {/* OAuth */}
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" type="button">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => {
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+              const redirectUrl = encodeURIComponent(window.location.origin + "/auth/callback");
+              window.location.href = `${apiUrl}/api/v1/auth/oauth/github?redirect=${redirectUrl}`;
+            }}
+          >
             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -150,7 +158,7 @@ export default function LoginPage() {
             </svg>
             GitHub
           </Button>
-          <Button variant="outline" type="button">
+          <Button variant="outline" type="button" disabled>
             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
