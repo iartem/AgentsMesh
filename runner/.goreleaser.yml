@@ -1,5 +1,8 @@
 # GoReleaser configuration for AgentMesh Runner
 # https://goreleaser.com
+#
+# Release repository: https://github.com/AgentsMesh/AgentsMeshRunner
+# This is a dedicated release repository for distributing pre-built binaries.
 
 version: 2
 
@@ -10,7 +13,7 @@ before:
     - go mod tidy
 
 builds:
-  # CLI build (headless mode for servers)
+  # CLI build (headless mode for servers) - no CGO required
   - id: runner-cli
     main: ./cmd/runner
     binary: runner
@@ -28,57 +31,26 @@ builds:
       - -X main.version={{.Version}}
       - -X main.buildTime={{.Date}}
     tags:
-      - cli
-
-  # Desktop build (with system tray, requires CGO)
-  - id: runner-desktop
-    main: ./cmd/runner
-    binary: runner-desktop
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.buildTime={{.Date}}
-    ignore:
-      # CGO cross-compilation is complex, build only for native platform
-      - goos: linux
-        goarch: arm64
-      - goos: windows
-        goarch: arm64
+      - nocgo
 
 archives:
   - id: cli-archive
     builds:
       - runner-cli
-    name_template: "{{ .ProjectName }}-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - README.md
+      - LICENSE*
 
-  - id: desktop-archive
-    builds:
-      - runner-desktop
-    name_template: "{{ .ProjectName }}-desktop_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
-
-# macOS DMG packaging
-# Note: This requires create-dmg to be installed
-# brew install create-dmg
+# macOS universal binary (amd64 + arm64)
 universal_binaries:
-  - id: runner-cli-universal
+  - id: runner-universal
     ids:
       - runner-cli
-    replace: false
+    replace: true
     name_template: "runner"
 
 # Linux packages using nfpm
@@ -90,11 +62,16 @@ nfpms:
     vendor: AgentMesh
     homepage: https://agentmesh.dev
     maintainer: AgentMesh Team <support@agentmesh.dev>
-    description: AgentMesh Runner - executes AI agent tasks
+    description: |
+      AgentMesh Runner - AI Agent Task Executor
+
+      Connects to AgentMesh server and executes AI agent tasks
+      in isolated terminal environments.
     license: MIT
     formats:
       - deb
       - rpm
+      - apk
     bindir: /usr/local/bin
     contents:
       # Systemd service file
@@ -113,33 +90,166 @@ nfpms:
       deb:
         dependencies:
           - systemd
+        recommends:
+          - git
       rpm:
         dependencies:
           - systemd
-
-# Windows MSI installer
-# Note: This requires WiX Toolset to be installed
-# Or use NSIS as an alternative
+        recommends:
+          - git
+      apk:
+        dependencies:
+          - openrc
 
 checksum:
   name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+
+signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - "^docs:"
       - "^test:"
       - "^chore:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: "New Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Other"
+      order: 999
 
+# Release to AgentsMesh/AgentsMeshRunner repository
 release:
   github:
-    owner: anthropics
-    name: agentmesh
-  draft: true
+    owner: AgentsMesh
+    name: AgentsMeshRunner
+
+  # Draft release for review before publishing
+  draft: false
+
+  # Auto-detect prerelease from tag (v1.0.0-beta.1)
   prerelease: auto
+
+  # Release title
   name_template: "AgentMesh Runner v{{.Version}}"
 
-# Announce release
+  # Release notes header
+  header: |
+    ## AgentMesh Runner v{{.Version}}
+
+    ### Installation
+
+    **macOS (Homebrew):**
+    ```bash
+    brew install agentsmesh/tap/agentmesh-runner
+    ```
+
+    **macOS/Linux (Direct download):**
+    ```bash
+    curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v{{.Version}}/agentmesh-runner_{{.Version}}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m).tar.gz | tar xz
+    sudo mv runner /usr/local/bin/
+    ```
+
+    **Linux (Debian/Ubuntu):**
+    ```bash
+    wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v{{.Version}}/agentmesh-runner_{{.Version}}_amd64.deb
+    sudo dpkg -i agentmesh-runner_{{.Version}}_amd64.deb
+    ```
+
+    **Linux (RHEL/CentOS/Fedora):**
+    ```bash
+    wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v{{.Version}}/agentmesh-runner_{{.Version}}_amd64.rpm
+    sudo rpm -i agentmesh-runner_{{.Version}}_amd64.rpm
+    ```
+
+    **Windows:**
+    Download `agentmesh-runner_{{.Version}}_windows_amd64.zip` and extract to your PATH.
+
+    ### Quick Start
+
+    ```bash
+    # Register runner with server
+    runner register --server https://api.agentmesh.dev --token YOUR_TOKEN
+
+    # Start runner
+    runner run
+    ```
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/AgentsMesh/AgentsMeshRunner/compare/v{{.PreviousTag}}...v{{.Tag}}
+
+    **Documentation**: https://agentmesh.dev/docs/runner
+
+  # Extra files to upload
+  extra_files:
+    - glob: ./build/darwin/Info.plist
+
+# Homebrew tap (optional - requires separate tap repo)
+brews:
+  - name: agentmesh-runner
+    repository:
+      owner: AgentsMesh
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: AgentMesh Bot
+      email: bot@agentmesh.dev
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Formula
+    homepage: https://agentmesh.dev
+    description: "AgentMesh Runner - AI Agent Task Executor"
+    license: MIT
+    install: |
+      bin.install "runner"
+    test: |
+      system "#{bin}/runner", "version"
+    skip_upload: auto
+
+# Scoop bucket for Windows (optional)
+scoops:
+  - repository:
+      owner: AgentsMesh
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    commit_author:
+      name: AgentMesh Bot
+      email: bot@agentmesh.dev
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: https://agentmesh.dev
+    description: "AgentMesh Runner - AI Agent Task Executor"
+    license: MIT
+    skip_upload: auto
+
+# Announce release (optional)
 announce:
   skip: true
