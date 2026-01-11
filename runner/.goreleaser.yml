@@ -1,0 +1,145 @@
+# GoReleaser configuration for AgentMesh Runner
+# https://goreleaser.com
+
+version: 2
+
+project_name: agentmesh-runner
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  # CLI build (headless mode for servers)
+  - id: runner-cli
+    main: ./cmd/runner
+    binary: runner
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+    tags:
+      - cli
+
+  # Desktop build (with system tray, requires CGO)
+  - id: runner-desktop
+    main: ./cmd/runner
+    binary: runner-desktop
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+    ignore:
+      # CGO cross-compilation is complex, build only for native platform
+      - goos: linux
+        goarch: arm64
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: cli-archive
+    builds:
+      - runner-cli
+    name_template: "{{ .ProjectName }}-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: desktop-archive
+    builds:
+      - runner-desktop
+    name_template: "{{ .ProjectName }}-desktop_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+# macOS DMG packaging
+# Note: This requires create-dmg to be installed
+# brew install create-dmg
+universal_binaries:
+  - id: runner-cli-universal
+    ids:
+      - runner-cli
+    replace: false
+    name_template: "runner"
+
+# Linux packages using nfpm
+nfpms:
+  - id: runner-deb-rpm
+    package_name: agentmesh-runner
+    builds:
+      - runner-cli
+    vendor: AgentMesh
+    homepage: https://agentmesh.dev
+    maintainer: AgentMesh Team <support@agentmesh.dev>
+    description: AgentMesh Runner - executes AI agent tasks
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/local/bin
+    contents:
+      # Systemd service file
+      - src: ./build/linux/runner.service
+        dst: /etc/systemd/system/agentmesh-runner.service
+        type: config
+      # Config directory
+      - dst: /etc/agentmesh
+        type: dir
+        file_info:
+          mode: 0755
+    scripts:
+      postinstall: ./build/linux/postinst.sh
+      preremove: ./build/linux/prerm.sh
+    overrides:
+      deb:
+        dependencies:
+          - systemd
+      rpm:
+        dependencies:
+          - systemd
+
+# Windows MSI installer
+# Note: This requires WiX Toolset to be installed
+# Or use NSIS as an alternative
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: anthropics
+    name: agentmesh
+  draft: true
+  prerelease: auto
+  name_template: "AgentMesh Runner v{{.Version}}"
+
+# Announce release
+announce:
+  skip: true

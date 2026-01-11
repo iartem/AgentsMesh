@@ -31,6 +31,10 @@ func main() {
 		runRegister(os.Args[2:])
 	case "run", "start":
 		runRunner(os.Args[2:])
+	case "service":
+		runService(os.Args[2:])
+	case "desktop":
+		runDesktop(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Printf("AgentMesh Runner %s (built %s)\n", version, buildTime)
 	case "help", "-h", "--help":
@@ -49,7 +53,9 @@ Usage:
 
 Commands:
   register    Register this runner with the AgentMesh server
-  run         Start the runner (requires prior registration)
+  run         Start the runner in CLI mode (requires prior registration)
+  service     Manage runner as a system service (install/start/stop)
+  desktop     Start runner in desktop mode with system tray
   version     Show version information
   help        Show this help message
 

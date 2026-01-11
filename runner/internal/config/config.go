@@ -268,3 +268,16 @@ func (c *Config) GetPluginsDir() string {
 	}
 	return filepath.Join(home, ".agentmesh", "plugins")
 }
+
+// GetLogPath returns the log file path.
+func (c *Config) GetLogPath() string {
+	if c.LogFile != "" {
+		return os.ExpandEnv(c.LogFile)
+	}
+	// Default to ~/.agentmesh/logs/runner.log
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".agentmesh", "logs", "runner.log")
+}
