@@ -431,6 +431,66 @@
       "noCreditCard": "无需信用卡",
       "selfHostedOption": "可自托管部署"
     },
+    "heroDemo": {
+      "podTopology": "Pod 拓扑",
+      "live": "实时",
+      "initializingPod": "正在初始化 Pod...",
+      "typeMessage": "输入消息...",
+      "connecting": "正在连接 AgentMesh...",
+      "connected": "已连接到 AgentMesh 服务器",
+      "workspace": "工作区：/projects/e-commerce",
+      "monitorPod": "监控 pod beta-dev 并协助协调身份验证实现",
+      "bindingPod": "我将绑定到 pod beta-dev 进行观察和协调...",
+      "boundToPod": "已绑定到 beta-dev (Codex CLI)",
+      "observingHeader": "正在观察 beta-dev",
+      "analyzing": "正在分析 src/auth/handlers.ts...",
+      "creatingOAuth": "正在创建 OAuth2 提供商集成",
+      "writingOAuth": "正在写入：src/auth/oauth.ts",
+      "noticedOAuth": "我注意到 beta-dev 正在实现 OAuth。我建议添加速率限制...",
+      "messageSent": "「建议在 /auth/* 端点添加速率限制」",
+      "receivedSuggestion": "beta-dev：收到建议，正在实现速率限制器...",
+      "writingRateLimit": "beta-dev：正在写入 src/middleware/rateLimit.ts",
+      "rateLimitAdded": "beta-dev：已为认证路由添加速率限制",
+      "reviewChanges": "很好！beta-dev 已实现速率限制。现在我来审查更改...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ 智能体: Claude Code │ 状态: 初始化中",
+        "running": "Pod: alpha-dev │ 智能体: Claude Code │ 状态: 运行中",
+        "observing": "Pod: alpha-dev │ 智能体: Claude Code │ 观察中: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "AgentPod 终端",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count} 个成员",
+      "kanban": {
+        "backlog": "待办池",
+        "inProgress": "进行中",
+        "review": "待审核",
+        "done": "已完成",
+        "authFeature": "认证功能",
+        "empty": "空"
+      },
+      "architecture": {
+        "yourInfrastructure": "你的基础设施",
+        "runner": "Runner",
+        "agent": "智能体",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMesh 云"
+      }
+    },
+    "agentLogos": {
+      "title": "支持所有主流终端编程智能体",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "开源",
+        "community": "社区",
+        "yourOwn": "自定义"
+      }
+    },
     "footer": {
       "tagline": "基于终端的编程智能体协作平台",
       "copyright": "AgentMesh. 保留所有权利。",

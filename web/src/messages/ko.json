@@ -60,9 +60,6 @@
       "pods": "10K+ Pod",
       "openSource": "오픈 소스"
     },
-    "agentLogos": {
-      "title": "모든 주요 터미널 기반 코딩 에이전트 지원"
-    },
     "whyTerminal": {
       "title": "왜",
       "titleHighlight": "터미널 기반",
@@ -288,6 +285,66 @@
       "freeTier": "무료 등급 제공",
       "noCreditCard": "신용카드 불필요",
       "selfHostedOption": "셀프 호스트 옵션"
+    },
+    "heroDemo": {
+      "podTopology": "Pod 토폴로지",
+      "live": "실시간",
+      "initializingPod": "Pod 초기화 중...",
+      "typeMessage": "메시지 입력...",
+      "connecting": "AgentMesh에 연결 중...",
+      "connected": "AgentMesh 서버에 연결됨",
+      "workspace": "작업 공간: /projects/e-commerce",
+      "monitorPod": "pod beta-dev를 모니터링하고 인증 구현 조정 지원",
+      "bindingPod": "beta-dev에 바인딩하여 관찰 및 조정합니다...",
+      "boundToPod": "beta-dev (Codex CLI)에 바인딩됨",
+      "observingHeader": "beta-dev 관찰 중",
+      "analyzing": "src/auth/handlers.ts 분석 중...",
+      "creatingOAuth": "OAuth2 제공자 통합 생성 중",
+      "writingOAuth": "작성 중: src/auth/oauth.ts",
+      "noticedOAuth": "beta-dev가 OAuth를 구현 중인 것을 확인. 속도 제한 추가를 제안합니다...",
+      "messageSent": "「/auth/* 엔드포인트에 속도 제한 추가 고려」",
+      "receivedSuggestion": "beta-dev: 제안 수신, 속도 제한기 구현 중...",
+      "writingRateLimit": "beta-dev: src/middleware/rateLimit.ts 작성 중",
+      "rateLimitAdded": "beta-dev: 인증 라우트에 속도 제한 추가됨",
+      "reviewChanges": "좋습니다! beta-dev가 속도 제한을 구현했습니다. 변경 사항을 검토합니다...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ 에이전트: Claude Code │ 상태: 초기화 중",
+        "running": "Pod: alpha-dev │ 에이전트: Claude Code │ 상태: 실행 중",
+        "observing": "Pod: alpha-dev │ 에이전트: Claude Code │ 관찰 중: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "AgentPod 터미널",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count}명의 멤버",
+      "kanban": {
+        "backlog": "백로그",
+        "inProgress": "진행 중",
+        "review": "검토",
+        "done": "완료",
+        "authFeature": "인증 기능",
+        "empty": "비어 있음"
+      },
+      "architecture": {
+        "yourInfrastructure": "당신의 인프라",
+        "runner": "Runner",
+        "agent": "에이전트",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMesh 클라우드"
+      }
+    },
+    "agentLogos": {
+      "title": "모든 주요 터미널 코딩 에이전트 지원",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "오픈소스",
+        "community": "커뮤니티",
+        "yourOwn": "커스텀"
+      }
     },
     "footer": {
       "tagline": "터미널 기반 코딩 에이전트 협업 플랫폼",

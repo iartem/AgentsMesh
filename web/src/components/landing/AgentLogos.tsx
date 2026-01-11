@@ -2,10 +2,10 @@
 
 import { useTranslations } from "@/lib/i18n/client";
 
-const agents = [
+const agentConfigs = [
   {
     name: "Claude Code",
-    description: "Anthropic",
+    descriptionKey: "landing.agentLogos.descriptions.anthropic",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -14,7 +14,7 @@ const agents = [
   },
   {
     name: "Codex CLI",
-    description: "OpenAI",
+    descriptionKey: "landing.agentLogos.descriptions.openai",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -24,7 +24,7 @@ const agents = [
   },
   {
     name: "Gemini CLI",
-    description: "Google",
+    descriptionKey: "landing.agentLogos.descriptions.google",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -33,7 +33,7 @@ const agents = [
   },
   {
     name: "Aider",
-    description: "Open Source",
+    descriptionKey: "landing.agentLogos.descriptions.openSource",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -43,7 +43,7 @@ const agents = [
   },
   {
     name: "OpenCode",
-    description: "Community",
+    descriptionKey: "landing.agentLogos.descriptions.community",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <path d="M12 2a10 10 0 110 20 10 10 0 010-20z" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -53,7 +53,7 @@ const agents = [
   },
   {
     name: "Custom Agent",
-    description: "Your Own",
+    descriptionKey: "landing.agentLogos.descriptions.yourOwn",
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
         <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" />
@@ -80,7 +80,7 @@ export function AgentLogos() {
           {/* Scrolling container */}
           <div className="flex animate-scroll gap-8">
             {/* First set */}
-            {agents.map((agent, index) => (
+            {agentConfigs.map((agent, index) => (
               <div
                 key={`first-${index}`}
                 className="flex-shrink-0 flex items-center gap-4 px-6 py-4 bg-secondary/30 rounded-xl border border-border hover:border-primary/50 transition-colors cursor-pointer group"
@@ -90,12 +90,12 @@ export function AgentLogos() {
                 </div>
                 <div>
                   <div className="font-semibold text-sm">{agent.name}</div>
-                  <div className="text-xs text-muted-foreground">{agent.description}</div>
+                  <div className="text-xs text-muted-foreground">{t(agent.descriptionKey)}</div>
                 </div>
               </div>
             ))}
             {/* Duplicate for seamless loop */}
-            {agents.map((agent, index) => (
+            {agentConfigs.map((agent, index) => (
               <div
                 key={`second-${index}`}
                 className="flex-shrink-0 flex items-center gap-4 px-6 py-4 bg-secondary/30 rounded-xl border border-border hover:border-primary/50 transition-colors cursor-pointer group"
@@ -105,7 +105,7 @@ export function AgentLogos() {
                 </div>
                 <div>
                   <div className="font-semibold text-sm">{agent.name}</div>
-                  <div className="text-xs text-muted-foreground">{agent.description}</div>
+                  <div className="text-xs text-muted-foreground">{t(agent.descriptionKey)}</div>
                 </div>
               </div>
             ))}

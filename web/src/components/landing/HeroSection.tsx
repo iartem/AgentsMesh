@@ -1,19 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/client";
 
-// Claude Code TUI style animation - showing pod supervision workflow
-const tuiFrames = [
+interface TuiFrame {
+  time: number;
+  content: {
+    header: string;
+    podInfoKey: "initializing" | "running" | "observing";
+    mainContent: { type: string; textKey?: string; text?: string }[];
+    input: string;
+    topology: {
+      nodes: { id: string; label: string; agent: string; status: string; x: number; y: number }[];
+      connections: { from: string; to: string; label: string; type?: string; animated?: boolean }[];
+    };
+  };
+}
+
+// Frame template - text will be filled from translations
+const getTuiFrames = (t: (key: string) => string): TuiFrame[] => [
   {
     time: 0,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Status: Initializing",
+      podInfoKey: "initializing",
       mainContent: [
-        { type: "system", text: "Connecting to AgentMesh..." },
+        { type: "system", textKey: "landing.heroDemo.connecting" },
       ],
       input: "",
       topology: { nodes: [], connections: [] }
@@ -23,12 +37,12 @@ const tuiFrames = [
     time: 1500,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Status: Running",
+      podInfoKey: "running",
       mainContent: [
-        { type: "system", text: "✓ Connected to AgentMesh server" },
-        { type: "system", text: "✓ Workspace: /projects/e-commerce" },
+        { type: "system", text: "✓ " + t("landing.heroDemo.connected") },
+        { type: "system", text: "✓ " + t("landing.heroDemo.workspace") },
         { type: "system", text: "" },
-        { type: "user", text: "Monitor pod beta-dev and help coordinate the auth implementation" },
+        { type: "user", textKey: "landing.heroDemo.monitorPod" },
       ],
       input: "",
       topology: {
@@ -41,14 +55,14 @@ const tuiFrames = [
     time: 3500,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Status: Running",
+      podInfoKey: "running",
       mainContent: [
-        { type: "system", text: "✓ Connected to AgentMesh server" },
-        { type: "system", text: "✓ Workspace: /projects/e-commerce" },
+        { type: "system", text: "✓ " + t("landing.heroDemo.connected") },
+        { type: "system", text: "✓ " + t("landing.heroDemo.workspace") },
         { type: "system", text: "" },
-        { type: "user", text: "Monitor pod beta-dev and help coordinate the auth implementation" },
+        { type: "user", textKey: "landing.heroDemo.monitorPod" },
         { type: "system", text: "" },
-        { type: "assistant", text: "I'll bind to pod beta-dev to observe and coordinate..." },
+        { type: "assistant", textKey: "landing.heroDemo.bindingPod" },
         { type: "tool", text: "⚡ mesh_bind_pod beta-dev --scopes observe,message" },
       ],
       input: "",
@@ -65,16 +79,16 @@ const tuiFrames = [
     time: 5500,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Observing: beta-dev",
+      podInfoKey: "observing",
       mainContent: [
-        { type: "user", text: "Monitor pod beta-dev and help coordinate the auth implementation" },
+        { type: "user", textKey: "landing.heroDemo.monitorPod" },
         { type: "system", text: "" },
-        { type: "assistant", text: "I'll bind to pod beta-dev to observe and coordinate..." },
+        { type: "assistant", textKey: "landing.heroDemo.bindingPod" },
         { type: "tool", text: "⚡ mesh_bind_pod beta-dev --scopes observe,message" },
-        { type: "success", text: "✓ Bound to beta-dev (Codex CLI)" },
+        { type: "success", text: "✓ " + t("landing.heroDemo.boundToPod") },
         { type: "system", text: "" },
-        { type: "observe-header", text: "━━━ Observing beta-dev ━━━" },
-        { type: "observe", text: "│ Analyzing src/auth/handlers.ts..." },
+        { type: "observe-header", text: "━━━ " + t("landing.heroDemo.observingHeader") + " ━━━" },
+        { type: "observe", text: "│ " + t("landing.heroDemo.analyzing") },
       ],
       input: "",
       topology: {
@@ -92,17 +106,17 @@ const tuiFrames = [
     time: 7500,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Observing: beta-dev",
+      podInfoKey: "observing",
       mainContent: [
         { type: "tool", text: "⚡ mesh_bind_pod beta-dev --scopes observe,message" },
-        { type: "success", text: "✓ Bound to beta-dev (Codex CLI)" },
+        { type: "success", text: "✓ " + t("landing.heroDemo.boundToPod") },
         { type: "system", text: "" },
-        { type: "observe-header", text: "━━━ Observing beta-dev ━━━" },
-        { type: "observe", text: "│ Analyzing src/auth/handlers.ts..." },
-        { type: "observe", text: "│ Creating OAuth2 provider integration" },
-        { type: "observe", text: "│ Writing: src/auth/oauth.ts" },
+        { type: "observe-header", text: "━━━ " + t("landing.heroDemo.observingHeader") + " ━━━" },
+        { type: "observe", text: "│ " + t("landing.heroDemo.analyzing") },
+        { type: "observe", text: "│ " + t("landing.heroDemo.creatingOAuth") },
+        { type: "observe", text: "│ " + t("landing.heroDemo.writingOAuth") },
         { type: "system", text: "" },
-        { type: "assistant", text: "I notice beta-dev is implementing OAuth. I'll suggest adding rate limiting..." },
+        { type: "assistant", textKey: "landing.heroDemo.noticedOAuth" },
       ],
       input: "",
       topology: {
@@ -120,17 +134,17 @@ const tuiFrames = [
     time: 9500,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Observing: beta-dev",
+      podInfoKey: "observing",
       mainContent: [
-        { type: "observe-header", text: "━━━ Observing beta-dev ━━━" },
-        { type: "observe", text: "│ Creating OAuth2 provider integration" },
-        { type: "observe", text: "│ Writing: src/auth/oauth.ts" },
+        { type: "observe-header", text: "━━━ " + t("landing.heroDemo.observingHeader") + " ━━━" },
+        { type: "observe", text: "│ " + t("landing.heroDemo.creatingOAuth") },
+        { type: "observe", text: "│ " + t("landing.heroDemo.writingOAuth") },
         { type: "system", text: "" },
-        { type: "assistant", text: "I notice beta-dev is implementing OAuth. I'll suggest adding rate limiting..." },
+        { type: "assistant", textKey: "landing.heroDemo.noticedOAuth" },
         { type: "tool", text: "⚡ mesh_send_message beta-dev" },
-        { type: "message-sent", text: "📤 \"Consider adding rate limiting to /auth/* endpoints\"" },
+        { type: "message-sent", text: "📤 " + t("landing.heroDemo.messageSent") },
         { type: "system", text: "" },
-        { type: "observe", text: "│ beta-dev: Received suggestion, implementing rate limiter..." },
+        { type: "observe", text: "│ " + t("landing.heroDemo.receivedSuggestion") },
       ],
       input: "",
       topology: {
@@ -149,16 +163,16 @@ const tuiFrames = [
     time: 12000,
     content: {
       header: "Claude Code",
-      podInfo: "Pod: alpha-dev │ Agent: Claude Code │ Observing: beta-dev",
+      podInfoKey: "observing",
       mainContent: [
         { type: "tool", text: "⚡ mesh_send_message beta-dev" },
-        { type: "message-sent", text: "📤 \"Consider adding rate limiting to /auth/* endpoints\"" },
+        { type: "message-sent", text: "📤 " + t("landing.heroDemo.messageSent") },
         { type: "system", text: "" },
-        { type: "observe", text: "│ beta-dev: Received suggestion, implementing rate limiter..." },
-        { type: "observe", text: "│ beta-dev: Writing src/middleware/rateLimit.ts" },
-        { type: "observe", text: "│ beta-dev: ✓ Rate limiting added to auth routes" },
+        { type: "observe", text: "│ " + t("landing.heroDemo.receivedSuggestion") },
+        { type: "observe", text: "│ " + t("landing.heroDemo.writingRateLimit") },
+        { type: "observe", text: "│ ✓ " + t("landing.heroDemo.rateLimitAdded") },
         { type: "system", text: "" },
-        { type: "assistant", text: "Great! beta-dev implemented rate limiting. Now I'll review the changes..." },
+        { type: "assistant", textKey: "landing.heroDemo.reviewChanges" },
         { type: "tool", text: "⚡ mesh_read_file beta-dev:src/middleware/rateLimit.ts" },
       ],
       input: "",
@@ -180,6 +194,9 @@ export function HeroSection() {
   const [displayedLines, setDisplayedLines] = useState<number>(0);
   const t = useTranslations();
 
+  // Memoize the translated frames
+  const tuiFrames = useMemo(() => getTuiFrames(t), [t]);
+
   // Cycle through frames
   useEffect(() => {
     const frame = tuiFrames[currentFrameIndex];
@@ -200,7 +217,7 @@ export function HeroSection() {
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [currentFrameIndex]);
+  }, [currentFrameIndex, tuiFrames]);
 
   // Animate lines appearing
   useEffect(() => {
@@ -213,7 +230,7 @@ export function HeroSection() {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [currentFrameIndex, displayedLines]);
+  }, [currentFrameIndex, displayedLines, tuiFrames]);
 
   const currentFrame = tuiFrames[currentFrameIndex];
   const topology = currentFrame.content.topology;
@@ -322,21 +339,24 @@ export function HeroSection() {
 
               {/* Pod Info Bar */}
               <div className="px-4 py-1.5 bg-[#141414] border-b border-border text-xs font-mono text-muted-foreground">
-                {currentFrame.content.podInfo}
+                {t(`landing.heroDemo.podInfo.${currentFrame.content.podInfoKey}`)}
               </div>
 
               {/* Main Content Area */}
               <div className="p-4 font-mono text-sm h-[260px] overflow-hidden">
-                {currentFrame.content.mainContent.slice(0, displayedLines).map((line, index) => (
-                  <div
-                    key={`${currentFrameIndex}-${index}`}
-                    className={`${getLineStyle(line.type)} ${line.text ? '' : 'h-4'}`}
-                  >
-                    {line.type === "user" && <span className="text-blue-500 mr-2">❯</span>}
-                    {line.type === "assistant" && <span className="text-primary mr-2">●</span>}
-                    {line.text}
-                  </div>
-                ))}
+                {currentFrame.content.mainContent.slice(0, displayedLines).map((line, index) => {
+                  const lineText = line.textKey ? t(line.textKey) : line.text;
+                  return (
+                    <div
+                      key={`${currentFrameIndex}-${index}`}
+                      className={`${getLineStyle(line.type)} ${lineText ? '' : 'h-4'}`}
+                    >
+                      {line.type === "user" && <span className="text-blue-500 mr-2">❯</span>}
+                      {line.type === "assistant" && <span className="text-primary mr-2">●</span>}
+                      {lineText}
+                    </div>
+                  );
+                })}
                 {displayedLines < currentFrame.content.mainContent.length && (
                   <span className="animate-pulse text-primary">▋</span>
                 )}
@@ -346,7 +366,7 @@ export function HeroSection() {
               <div className="px-4 py-2 bg-[#141414] border-t border-border">
                 <div className="flex items-center gap-2 text-sm font-mono">
                   <span className="text-primary">❯</span>
-                  <span className="text-muted-foreground">Type a message...</span>
+                  <span className="text-muted-foreground">{t("landing.heroDemo.typeMessage")}</span>
                   <span className="animate-pulse text-primary">▋</span>
                 </div>
               </div>
@@ -355,9 +375,9 @@ export function HeroSection() {
             {/* Topology visualization */}
             <div className="relative bg-[#0d0d0d] rounded-xl border border-border overflow-hidden">
               <div className="px-4 py-2 bg-[#1a1a1a] border-b border-border flex items-center justify-between">
-                <span className="text-xs font-mono text-muted-foreground">Pod Topology</span>
+                <span className="text-xs font-mono text-muted-foreground">{t("landing.heroDemo.podTopology")}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-green-400">● Live</span>
+                  <span className="text-xs text-green-400">● {t("landing.heroDemo.live")}</span>
                 </div>
               </div>
 
@@ -426,7 +446,7 @@ export function HeroSection() {
                 {/* Empty state */}
                 {topology.nodes.length === 0 && (
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    <span className="animate-pulse">Initializing pod...</span>
+                    <span className="animate-pulse">{t("landing.heroDemo.initializingPod")}</span>
                   </div>
                 )}
               </div>

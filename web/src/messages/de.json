@@ -289,6 +289,66 @@
       "noCreditCard": "Keine Kreditkarte erforderlich",
       "selfHostedOption": "Selbst gehostete Option"
     },
+    "heroDemo": {
+      "podTopology": "Pod-Topologie",
+      "live": "Live",
+      "initializingPod": "Pod wird initialisiert...",
+      "typeMessage": "Nachricht eingeben...",
+      "connecting": "Verbindung zu AgentMesh...",
+      "connected": "Mit AgentMesh-Server verbunden",
+      "workspace": "Arbeitsbereich: /projects/e-commerce",
+      "monitorPod": "Pod beta-dev überwachen und bei der Koordination der Auth-Implementierung helfen",
+      "bindingPod": "Ich binde mich an pod beta-dev zur Beobachtung und Koordination...",
+      "boundToPod": "An beta-dev (Codex CLI) gebunden",
+      "observingHeader": "Beobachte beta-dev",
+      "analyzing": "Analysiere src/auth/handlers.ts...",
+      "creatingOAuth": "Erstelle OAuth2-Provider-Integration",
+      "writingOAuth": "Schreibe: src/auth/oauth.ts",
+      "noticedOAuth": "Ich bemerke, dass beta-dev OAuth implementiert. Ich schlage vor, Rate-Limiting hinzuzufügen...",
+      "messageSent": "\"Rate-Limiting für /auth/* Endpoints in Betracht ziehen\"",
+      "receivedSuggestion": "beta-dev: Vorschlag erhalten, implementiere Rate-Limiter...",
+      "writingRateLimit": "beta-dev: Schreibe src/middleware/rateLimit.ts",
+      "rateLimitAdded": "beta-dev: Rate-Limiting zu Auth-Routen hinzugefügt",
+      "reviewChanges": "Großartig! beta-dev hat Rate-Limiting implementiert. Ich werde die Änderungen überprüfen...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ Agent: Claude Code │ Status: Initialisierung",
+        "running": "Pod: alpha-dev │ Agent: Claude Code │ Status: Läuft",
+        "observing": "Pod: alpha-dev │ Agent: Claude Code │ Beobachtet: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "AgentPod-Terminal",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count} Mitglieder",
+      "kanban": {
+        "backlog": "Backlog",
+        "inProgress": "In Bearbeitung",
+        "review": "Überprüfung",
+        "done": "Erledigt",
+        "authFeature": "Auth-Feature",
+        "empty": "Leer"
+      },
+      "architecture": {
+        "yourInfrastructure": "Ihre Infrastruktur",
+        "runner": "Runner",
+        "agent": "Agent",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMesh Cloud"
+      }
+    },
+    "agentLogos": {
+      "title": "Unterstützt alle wichtigen Terminal-Coding-Agenten",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "Open Source",
+        "community": "Community",
+        "yourOwn": "Eigene"
+      }
+    },
     "footer": {
       "tagline": "Terminal-basierte Coding-Agent-Kollaborationsplattform",
       "copyright": "AgentMesh. Alle Rechte vorbehalten.",

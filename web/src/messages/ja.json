@@ -60,9 +60,6 @@
       "pods": "10K以上のPod",
       "openSource": "オープンソース"
     },
-    "agentLogos": {
-      "title": "すべての主要なターミナルベースコーディングエージェントをサポート"
-    },
     "whyTerminal": {
       "title": "なぜ",
       "titleHighlight": "ターミナルベース",
@@ -288,6 +285,66 @@
       "freeTier": "無料プランあり",
       "noCreditCard": "クレジットカード不要",
       "selfHostedOption": "セルフホストオプション"
+    },
+    "heroDemo": {
+      "podTopology": "Podトポロジー",
+      "live": "ライブ",
+      "initializingPod": "Pod を初期化中...",
+      "typeMessage": "メッセージを入力...",
+      "connecting": "AgentMeshに接続中...",
+      "connected": "AgentMeshサーバーに接続しました",
+      "workspace": "ワークスペース：/projects/e-commerce",
+      "monitorPod": "pod beta-devを監視し、認証実装の調整を支援",
+      "bindingPod": "beta-devにバインドして観察・調整します...",
+      "boundToPod": "beta-dev (Codex CLI) にバインドしました",
+      "observingHeader": "beta-devを観察中",
+      "analyzing": "src/auth/handlers.tsを分析中...",
+      "creatingOAuth": "OAuth2プロバイダー統合を作成中",
+      "writingOAuth": "書き込み中：src/auth/oauth.ts",
+      "noticedOAuth": "beta-devがOAuthを実装しているのを確認。レート制限を提案します...",
+      "messageSent": "「/auth/*エンドポイントにレート制限を追加することを検討」",
+      "receivedSuggestion": "beta-dev：提案を受信、レートリミッターを実装中...",
+      "writingRateLimit": "beta-dev：src/middleware/rateLimit.tsを書き込み中",
+      "rateLimitAdded": "beta-dev：認証ルートにレート制限を追加しました",
+      "reviewChanges": "素晴らしい！beta-devがレート制限を実装しました。変更を確認します...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ エージェント: Claude Code │ ステータス: 初期化中",
+        "running": "Pod: alpha-dev │ エージェント: Claude Code │ ステータス: 実行中",
+        "observing": "Pod: alpha-dev │ エージェント: Claude Code │ 観察中: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "AgentPodターミナル",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count}人のメンバー",
+      "kanban": {
+        "backlog": "バックログ",
+        "inProgress": "進行中",
+        "review": "レビュー",
+        "done": "完了",
+        "authFeature": "認証機能",
+        "empty": "空"
+      },
+      "architecture": {
+        "yourInfrastructure": "あなたのインフラ",
+        "runner": "Runner",
+        "agent": "エージェント",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMeshクラウド"
+      }
+    },
+    "agentLogos": {
+      "title": "すべての主要なターミナルコーディングエージェントをサポート",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "オープンソース",
+        "community": "コミュニティ",
+        "yourOwn": "カスタム"
+      }
     },
     "footer": {
       "tagline": "ターミナルベースコーディングエージェントコラボレーションプラットフォーム",

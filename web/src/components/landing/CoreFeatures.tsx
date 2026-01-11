@@ -18,7 +18,7 @@ export function CoreFeatures() {
         t("landing.coreFeatures.agentpod.highlights.3"),
       ],
       terminal: {
-        title: "AgentPod Terminal",
+        titleKey: "landing.coreDemo.terminalTitle",
         lines: [
           "$ claude-code --pod dev-42",
           "> Workspace: /projects/my-app",
@@ -72,10 +72,10 @@ export function CoreFeatures() {
       ],
       kanban: {
         columns: [
-          { title: "Backlog", cards: ["AUTH-1", "AUTH-3"] },
-          { title: "In Progress", cards: ["AUTH-2"] },
-          { title: "Review", cards: ["AUTH-4"] },
-          { title: "Done", cards: [] },
+          { titleKey: "landing.coreDemo.kanban.backlog", cards: ["AUTH-1", "AUTH-3"] },
+          { titleKey: "landing.coreDemo.kanban.inProgress", cards: ["AUTH-2"] },
+          { titleKey: "landing.coreDemo.kanban.review", cards: ["AUTH-4"] },
+          { titleKey: "landing.coreDemo.kanban.done", cards: [] },
         ],
       },
       align: "left",
@@ -163,7 +163,7 @@ export function CoreFeatures() {
                         <div className="w-3 h-3 rounded-full bg-green-500/80" />
                       </div>
                       <span className="text-xs text-muted-foreground font-mono ml-2">
-                        {feature.terminal.title}
+                        {t(feature.terminal.titleKey)}
                       </span>
                     </div>
                     <div className="p-4 font-mono text-sm">
@@ -191,16 +191,16 @@ export function CoreFeatures() {
                       {/* Agent nodes */}
                       <div className="absolute left-[10%] top-[20%] px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
                         <div className="text-sm font-medium text-primary">Claude Code</div>
-                        <div className="text-xs text-muted-foreground">Pod A</div>
+                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.podA")}</div>
                       </div>
                       <div className="absolute right-[10%] top-[20%] px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
                         <div className="text-sm font-medium text-primary">Codex CLI</div>
-                        <div className="text-xs text-muted-foreground">Pod B</div>
+                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.podB")}</div>
                       </div>
                       {/* Channel */}
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-[20%] px-6 py-3 bg-secondary/50 border border-border rounded-lg">
-                        <div className="text-sm font-medium">#dev-channel</div>
-                        <div className="text-xs text-muted-foreground">3 members</div>
+                        <div className="text-sm font-medium">{t("landing.coreDemo.devChannel")}</div>
+                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.members", { count: 3 })}</div>
                       </div>
                       {/* Connection lines */}
                       <svg className="absolute inset-0 w-full h-full" style={{ zIndex: -1 }}>
@@ -218,7 +218,7 @@ export function CoreFeatures() {
                       {feature.kanban.columns.map((col, i) => (
                         <div key={i} className="bg-secondary/20 rounded-lg p-3">
                           <div className="text-xs font-medium text-muted-foreground mb-3">
-                            {col.title}
+                            {t(col.titleKey)}
                           </div>
                           <div className="space-y-2">
                             {col.cards.map((card, j) => (
@@ -227,12 +227,12 @@ export function CoreFeatures() {
                                 className="bg-[#1a1a1a] border border-border rounded p-2 text-xs"
                               >
                                 <div className="font-mono text-primary">{card}</div>
-                                <div className="text-muted-foreground mt-1">Auth feature</div>
+                                <div className="text-muted-foreground mt-1">{t("landing.coreDemo.kanban.authFeature")}</div>
                               </div>
                             ))}
                             {col.cards.length === 0 && (
                               <div className="text-xs text-muted-foreground/50 text-center py-4">
-                                Empty
+                                {t("landing.coreDemo.kanban.empty")}
                               </div>
                             )}
                           </div>
@@ -247,7 +247,7 @@ export function CoreFeatures() {
                     <div className="relative">
                       {/* Your Infrastructure box */}
                       <div className="border-2 border-dashed border-primary/30 rounded-xl p-6">
-                        <div className="text-xs text-primary mb-4">Your Infrastructure</div>
+                        <div className="text-xs text-primary mb-4">{t("landing.coreDemo.architecture.yourInfrastructure")}</div>
                         <div className="flex items-center justify-center gap-8">
                           {/* Runner */}
                           <div className="text-center">
@@ -256,7 +256,7 @@ export function CoreFeatures() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
                               </svg>
                             </div>
-                            <div className="text-sm font-medium">Runner</div>
+                            <div className="text-sm font-medium">{t("landing.coreDemo.architecture.runner")}</div>
                           </div>
                           {/* Arrow */}
                           <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,14 +269,14 @@ export function CoreFeatures() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             </div>
-                            <div className="text-sm font-medium">Agent</div>
+                            <div className="text-sm font-medium">{t("landing.coreDemo.architecture.agent")}</div>
                           </div>
                         </div>
                       </div>
                       {/* Cloud connection */}
                       <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
                         <div className="w-px h-6 bg-border" />
-                        <div className="text-xs text-muted-foreground">WebSocket</div>
+                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.architecture.websocket")}</div>
                       </div>
                     </div>
                     <div className="mt-12 text-center">
@@ -284,7 +284,7 @@ export function CoreFeatures() {
                         <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                         </svg>
-                        <span className="text-sm">AgentMesh Cloud</span>
+                        <span className="text-sm">{t("landing.coreDemo.architecture.agentmeshCloud")}</span>
                       </div>
                     </div>
                   </div>

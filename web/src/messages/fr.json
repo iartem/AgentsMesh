@@ -289,6 +289,66 @@
       "noCreditCard": "Aucune carte de crédit requise",
       "selfHostedOption": "Option auto-hébergée"
     },
+    "heroDemo": {
+      "podTopology": "Topologie des Pods",
+      "live": "En direct",
+      "initializingPod": "Initialisation du pod...",
+      "typeMessage": "Tapez un message...",
+      "connecting": "Connexion à AgentMesh...",
+      "connected": "Connecté au serveur AgentMesh",
+      "workspace": "Espace de travail : /projects/e-commerce",
+      "monitorPod": "Surveiller le pod beta-dev et aider à coordonner l'implémentation de l'authentification",
+      "bindingPod": "Je vais me lier au pod beta-dev pour observer et coordonner...",
+      "boundToPod": "Lié à beta-dev (Codex CLI)",
+      "observingHeader": "Observation de beta-dev",
+      "analyzing": "Analyse de src/auth/handlers.ts...",
+      "creatingOAuth": "Création de l'intégration du fournisseur OAuth2",
+      "writingOAuth": "Écriture : src/auth/oauth.ts",
+      "noticedOAuth": "Je remarque que beta-dev implémente OAuth. Je suggère d'ajouter une limitation de débit...",
+      "messageSent": "\"Envisager d'ajouter une limitation de débit aux endpoints /auth/*\"",
+      "receivedSuggestion": "beta-dev : Suggestion reçue, implémentation du limiteur de débit...",
+      "writingRateLimit": "beta-dev : Écriture de src/middleware/rateLimit.ts",
+      "rateLimitAdded": "beta-dev : Limitation de débit ajoutée aux routes d'authentification",
+      "reviewChanges": "Super ! beta-dev a implémenté la limitation de débit. Je vais examiner les modifications...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ Agent: Claude Code │ Statut: Initialisation",
+        "running": "Pod: alpha-dev │ Agent: Claude Code │ Statut: En cours",
+        "observing": "Pod: alpha-dev │ Agent: Claude Code │ Observation: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "Terminal AgentPod",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count} membres",
+      "kanban": {
+        "backlog": "En attente",
+        "inProgress": "En cours",
+        "review": "Révision",
+        "done": "Terminé",
+        "authFeature": "Fonctionnalité d'authentification",
+        "empty": "Vide"
+      },
+      "architecture": {
+        "yourInfrastructure": "Votre Infrastructure",
+        "runner": "Runner",
+        "agent": "Agent",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMesh Cloud"
+      }
+    },
+    "agentLogos": {
+      "title": "Prend en charge tous les principaux agents de codage terminal",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "Open Source",
+        "community": "Communauté",
+        "yourOwn": "Personnalisé"
+      }
+    },
     "footer": {
       "tagline": "Plateforme de Collaboration d'Agents de Code Basés sur Terminal",
       "copyright": "AgentMesh. Tous droits réservés.",

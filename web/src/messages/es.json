@@ -61,7 +61,15 @@
       "openSource": "Código Abierto"
     },
     "agentLogos": {
-      "title": "Soporta todos los principales Agentes de Código basados en Terminal"
+      "title": "Soporta todos los principales agentes de código en terminal",
+      "descriptions": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "google": "Google",
+        "openSource": "Código Abierto",
+        "community": "Comunidad",
+        "yourOwn": "Personalizado"
+      }
     },
     "whyTerminal": {
       "title": "¿Por qué Agentes",
@@ -288,6 +296,55 @@
       "freeTier": "Nivel gratuito disponible",
       "noCreditCard": "No se requiere tarjeta de crédito",
       "selfHostedOption": "Opción auto-alojada"
+    },
+    "heroDemo": {
+      "podTopology": "Topología de Pods",
+      "live": "En vivo",
+      "initializingPod": "Inicializando pod...",
+      "typeMessage": "Escribe un mensaje...",
+      "connecting": "Conectando a AgentMesh...",
+      "connected": "Conectado al servidor AgentMesh",
+      "workspace": "Espacio de trabajo: /projects/e-commerce",
+      "monitorPod": "Monitorear pod beta-dev y ayudar a coordinar la implementación de autenticación",
+      "bindingPod": "Me vincularé a pod beta-dev para observar y coordinar...",
+      "boundToPod": "Vinculado a beta-dev (Codex CLI)",
+      "observingHeader": "Observando beta-dev",
+      "analyzing": "Analizando src/auth/handlers.ts...",
+      "creatingOAuth": "Creando integración de proveedor OAuth2",
+      "writingOAuth": "Escribiendo: src/auth/oauth.ts",
+      "noticedOAuth": "Noto que beta-dev está implementando OAuth. Sugeriré agregar limitación de velocidad...",
+      "messageSent": "\"Considerar agregar limitación de velocidad a endpoints /auth/*\"",
+      "receivedSuggestion": "beta-dev: Sugerencia recibida, implementando limitador de velocidad...",
+      "writingRateLimit": "beta-dev: Escribiendo src/middleware/rateLimit.ts",
+      "rateLimitAdded": "beta-dev: Limitación de velocidad agregada a rutas de autenticación",
+      "reviewChanges": "¡Excelente! beta-dev implementó limitación de velocidad. Revisaré los cambios...",
+      "podInfo": {
+        "initializing": "Pod: alpha-dev │ Agente: Claude Code │ Estado: Inicializando",
+        "running": "Pod: alpha-dev │ Agente: Claude Code │ Estado: Ejecutando",
+        "observing": "Pod: alpha-dev │ Agente: Claude Code │ Observando: beta-dev"
+      }
+    },
+    "coreDemo": {
+      "terminalTitle": "Terminal AgentPod",
+      "podA": "Pod A",
+      "podB": "Pod B",
+      "devChannel": "#dev-channel",
+      "members": "{count} miembros",
+      "kanban": {
+        "backlog": "Pendiente",
+        "inProgress": "En progreso",
+        "review": "Revisión",
+        "done": "Completado",
+        "authFeature": "Característica de autenticación",
+        "empty": "Vacío"
+      },
+      "architecture": {
+        "yourInfrastructure": "Tu Infraestructura",
+        "runner": "Runner",
+        "agent": "Agente",
+        "websocket": "WebSocket",
+        "agentmeshCloud": "AgentMesh Cloud"
+      }
     },
     "footer": {
       "tagline": "Plataforma de Colaboración de Agentes de Código Basados en Terminal",
