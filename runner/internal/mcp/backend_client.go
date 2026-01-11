@@ -55,7 +55,8 @@ func (c *BackendClient) GetOrgSlug() string {
 	return c.orgSlug
 }
 
-// podAPIPath returns the org-scoped pod API path prefix.
+// podAPIPath returns the org-scoped pod API path prefix for MCP tools.
+// MCP tools use /api/v1/orgs/:slug/pod/* with X-Pod-Key authentication.
 func (c *BackendClient) podAPIPath() string {
 	return fmt.Sprintf("/api/v1/orgs/%s/pod", c.orgSlug)
 }

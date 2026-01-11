@@ -46,10 +46,15 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
 
         if (runnersRes.status === "fulfilled") {
           // Only online runners
-          setRunners((runnersRes.value.runners || []).filter(r => r.status === "online"));
+          const allRunners = runnersRes.value.runners || [];
+          const onlineRunners = allRunners.filter(r => r.status === "online");
+          console.log("[usePodCreationData] Runners loaded:", allRunners.length, "total,", onlineRunners.length, "online", allRunners.map(r => ({ id: r.id, node_id: r.node_id, status: r.status })));
+          setRunners(onlineRunners);
         }
         if (agentsRes.status === "fulfilled") {
-          setAgentTypes(agentsRes.value.agent_types || []);
+          const agents = agentsRes.value.agent_types || [];
+          console.log("[usePodCreationData] Agent types loaded:", agents.length, agents.map(a => ({ id: a.id, slug: a.slug })));
+          setAgentTypes(agents);
         }
         if (reposRes.status === "fulfilled") {
           setRepositories(reposRes.value.repositories || []);

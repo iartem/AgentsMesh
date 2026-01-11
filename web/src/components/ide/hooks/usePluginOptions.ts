@@ -25,8 +25,11 @@ export function usePluginOptions(
   useEffect(() => {
     let cancelled = false;
 
+    console.log("[usePluginOptions] runnerId:", runnerId, "agentSlug:", agentSlug);
+
     const loadOptions = async () => {
       if (!runnerId || !agentSlug) {
+        console.log("[usePluginOptions] Skipping - missing runnerId or agentSlug");
         setPlugins([]);
         setConfig({});
         return;

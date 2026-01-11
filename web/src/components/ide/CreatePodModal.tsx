@@ -33,6 +33,8 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
   const form = useCreatePodForm(agentTypes, repositories, onCreated);
 
   // Plugin options management
+  console.log("[CreatePodModal] form.selectedRunner:", form.selectedRunner, "form.selectedAgentSlug:", form.selectedAgentSlug);
+
   const {
     plugins: pluginOptions,
     loading: loadingPlugins,
@@ -98,7 +100,10 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
                   form.validationErrors.agent ? "border-destructive" : "border-border"
                 }`}
                 value={form.selectedAgent || ""}
-                onChange={(e) => form.setSelectedAgent(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) => {
+                  console.log("[CreatePodModal] Agent selected:", e.target.value, "agentTypes:", agentTypes);
+                  form.setSelectedAgent(e.target.value ? Number(e.target.value) : null);
+                }}
                 aria-required="true"
                 aria-invalid={!!form.validationErrors.agent}
                 aria-describedby={form.validationErrors.agent ? "agent-error" : undefined}
@@ -128,7 +133,10 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
                   form.validationErrors.runner ? "border-destructive" : "border-border"
                 }`}
                 value={form.selectedRunner || ""}
-                onChange={(e) => form.setSelectedRunner(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) => {
+                  console.log("[CreatePodModal] Runner selected:", e.target.value, "runners:", runners);
+                  form.setSelectedRunner(e.target.value ? Number(e.target.value) : null);
+                }}
                 aria-required="true"
                 aria-invalid={!!form.validationErrors.runner}
                 aria-describedby={

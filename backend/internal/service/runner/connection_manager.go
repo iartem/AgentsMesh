@@ -199,7 +199,16 @@ func (cm *ConnectionManager) HandleMessage(runnerID int64, msgType int, data []b
 	switch msg.Type {
 	case MsgTypeHeartbeat:
 		var hbData HeartbeatData
-		if err := json.Unmarshal(msg.Data, &hbData); err == nil {
+		if err := json.Unmarshal(msg.Data, &hbData); err != nil {
+			cm.logger.Error("failed to unmarshal heartbeat data",
+				"runner_id", runnerID,
+				"error", err,
+				"data", string(msg.Data))
+		} else {
+			cm.logger.Debug("received heartbeat",
+				"runner_id", runnerID,
+				"pods", len(hbData.Pods),
+				"capabilities", len(hbData.Capabilities))
 			cm.UpdateHeartbeat(runnerID)
 			if cm.onHeartbeat != nil {
 				cm.onHeartbeat(runnerID, &hbData)
