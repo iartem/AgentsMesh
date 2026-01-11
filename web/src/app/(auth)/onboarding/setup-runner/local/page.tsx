@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { runnerApi, RunnerData } from "@/lib/api/runner";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function LocalRunnerSetupPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { currentOrg } = useAuthStore();
   const [token, setToken] = useState<string | null>(null);
   const [tokenCopied, setTokenCopied] = useState(false);
@@ -30,7 +32,7 @@ export default function LocalRunnerSetupPage() {
         );
         setToken(newToken);
       } catch {
-        setError("Failed to generate runner token. Please try again.");
+        setError(t("auth.onboarding.localRunner.tokenGenerationFailed"));
       } finally {
         setLoading(false);
       }
@@ -162,10 +164,10 @@ export default function LocalRunnerSetupPage() {
           {/* Content */}
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-foreground">
-              Runner Connected!
+              {t("auth.onboarding.localRunner.runnerConnected")}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Your runner is now online and ready to execute tasks.
+              {t("auth.onboarding.localRunner.runnerConnectedDescription")}
             </p>
           </div>
 
@@ -173,26 +175,26 @@ export default function LocalRunnerSetupPage() {
           <div className="p-4 bg-muted rounded-lg text-left">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Runner ID:</span>
+                <span className="text-muted-foreground">{t("auth.onboarding.localRunner.runnerId")}:</span>
                 <span className="font-mono text-foreground">{connectedRunner.node_id}</span>
               </div>
               {connectedRunner.host_info?.os && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">System:</span>
+                  <span className="text-muted-foreground">{t("auth.onboarding.localRunner.system")}:</span>
                   <span className="text-foreground">
                     {connectedRunner.host_info.os} {connectedRunner.host_info.arch}
                   </span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Status:</span>
-                <span className="text-green-600 font-medium">Online</span>
+                <span className="text-muted-foreground">{t("auth.onboarding.localRunner.status")}:</span>
+                <span className="text-green-600 font-medium">{t("auth.onboarding.localRunner.online")}</span>
               </div>
             </div>
           </div>
 
           <Button className="w-full" onClick={handleComplete}>
-            Go to Dashboard
+            {t("auth.onboarding.localRunner.goToDashboard")}
           </Button>
         </div>
       </div>
@@ -223,10 +225,10 @@ export default function LocalRunnerSetupPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Set Up Local Runner
+            {t("auth.onboarding.localRunner.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Follow the steps below to connect your local machine as a Runner.
+            {t("auth.onboarding.localRunner.subtitle")}
           </p>
         </div>
 
@@ -245,12 +247,12 @@ export default function LocalRunnerSetupPage() {
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 1
               </div>
-              <h3 className="font-medium text-foreground">Get Your Runner Token</h3>
+              <h3 className="font-medium text-foreground">{t("auth.onboarding.localRunner.step1Title")}</h3>
             </div>
             <div className="ml-8">
               {loading ? (
                 <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
-                  Generating token...
+                  {t("auth.onboarding.localRunner.generatingToken")}
                 </div>
               ) : token ? (
                 <div className="space-y-2">
@@ -276,12 +278,12 @@ export default function LocalRunnerSetupPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-amber-600">
-                    ⚠️ Keep this token safe. It will only be shown once.
+                    {t("auth.onboarding.localRunner.tokenWarning")}
                   </p>
                 </div>
               ) : (
                 <div className="p-3 bg-destructive/10 rounded-md text-sm text-destructive">
-                  Failed to generate token
+                  {t("auth.onboarding.localRunner.tokenGenerationFailedShort")}
                 </div>
               )}
             </div>
@@ -293,7 +295,7 @@ export default function LocalRunnerSetupPage() {
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 2
               </div>
-              <h3 className="font-medium text-foreground">Install and Start Runner</h3>
+              <h3 className="font-medium text-foreground">{t("auth.onboarding.localRunner.step2Title")}</h3>
             </div>
             <div className="ml-8 space-y-3">
               <div className="p-4 bg-muted rounded-md">
@@ -303,7 +305,7 @@ export default function LocalRunnerSetupPage() {
                 </code>
               </div>
               <div className="p-4 bg-muted rounded-md">
-                <p className="text-xs text-muted-foreground mb-2"># Start Runner with your token</p>
+                <p className="text-xs text-muted-foreground mb-2"># {t("auth.onboarding.localRunner.startRunnerComment")}</p>
                 <code className="text-sm font-mono text-foreground block">
                   agentmesh-runner start --token &lt;your-token&gt;
                 </code>
@@ -317,7 +319,7 @@ export default function LocalRunnerSetupPage() {
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 3
               </div>
-              <h3 className="font-medium text-foreground">Waiting for Connection</h3>
+              <h3 className="font-medium text-foreground">{t("auth.onboarding.localRunner.step3Title")}</h3>
             </div>
             <div className="ml-8">
               {connectionStatus === "waiting" && (
@@ -325,8 +327,8 @@ export default function LocalRunnerSetupPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <div>
-                      <p className="text-sm text-foreground">Waiting for runner to connect...</p>
-                      <p className="text-xs text-muted-foreground">Elapsed: {formatTime(waitTime)}</p>
+                      <p className="text-sm text-foreground">{t("auth.onboarding.localRunner.waitingForConnection")}</p>
+                      <p className="text-xs text-muted-foreground">{t("auth.onboarding.localRunner.elapsed")}: {formatTime(waitTime)}</p>
                     </div>
                   </div>
                 </div>
@@ -334,7 +336,7 @@ export default function LocalRunnerSetupPage() {
               {connectionStatus === "timeout" && (
                 <div className="p-4 border border-amber-500/50 bg-amber-50 rounded-md">
                   <p className="text-sm text-amber-800">
-                    No runner connected yet. Make sure you&apos;ve started the runner with the correct token.
+                    {t("auth.onboarding.localRunner.connectionTimeout")}
                   </p>
                   <Button
                     variant="outline"
@@ -345,7 +347,7 @@ export default function LocalRunnerSetupPage() {
                       setWaitTime(0);
                     }}
                   >
-                    Retry
+                    {t("auth.onboarding.localRunner.retry")}
                   </Button>
                 </div>
               )}
@@ -359,10 +361,10 @@ export default function LocalRunnerSetupPage() {
             href="/onboarding/setup-runner"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            ← Back
+            {t("auth.onboarding.localRunner.back")}
           </Link>
           <Button variant="ghost" onClick={handleComplete}>
-            Skip for now
+            {t("auth.onboarding.localRunner.skipForNow")}
           </Button>
         </div>
       </div>

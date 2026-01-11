@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme";
 import { PWAProvider } from "@/components/pwa";
 import { ApolloProvider } from "@/components/providers";
+import { I18nProviderWrapper } from "@/components/providers/I18nProviderWrapper";
+import { getLocale } from "@/lib/i18n/server";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -41,13 +43,15 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
@@ -57,11 +61,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ApolloProvider>
-            <PWAProvider>
-              {children}
-            </PWAProvider>
-          </ApolloProvider>
+          <I18nProviderWrapper>
+            <ApolloProvider>
+              <PWAProvider>
+                {children}
+              </PWAProvider>
+            </ApolloProvider>
+          </I18nProviderWrapper>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

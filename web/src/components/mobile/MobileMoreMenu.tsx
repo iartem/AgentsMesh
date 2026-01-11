@@ -7,6 +7,7 @@ import { Drawer } from "vaul";
 import { cn } from "@/lib/utils";
 import { useIDEStore, getMoreMenuActivities, type ActivityType } from "@/stores/ide";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   Server,
   Settings,
@@ -33,6 +34,7 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
   const { setActiveActivity, mobileMoreMenuOpen, setMobileMoreMenuOpen } =
     useIDEStore();
   const { currentOrg } = useAuthStore();
+  const t = useTranslations();
   const orgSlug = currentOrg?.slug || "";
 
   const moreActivities = getMoreMenuActivities();
@@ -75,13 +77,13 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
   const additionalItems = [
     {
       id: "git-connections",
-      label: "Git Connections",
+      labelKey: "mobile.menu.gitConnections",
       icon: GitBranch,
       route: "/settings/git-connections",
     },
     {
       id: "profile",
-      label: "Profile",
+      labelKey: "mobile.menu.profile",
       icon: User,
       route: "/settings/profile",
     },
@@ -108,7 +110,7 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
 
           {/* Title - Required for accessibility */}
           <div className="px-4 pb-2">
-            <Drawer.Title className="text-lg font-semibold">More</Drawer.Title>
+            <Drawer.Title className="text-lg font-semibold">{t("mobile.more")}</Drawer.Title>
           </div>
 
           {/* Menu items */}
@@ -126,7 +128,7 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-medium">{activity.label}</span>
+                  <span className="text-sm font-medium">{t(`ide.activities.${activity.id}`)}</span>
                 </button>
               );
             })}
@@ -150,7 +152,7 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-sm font-medium">{t(item.labelKey)}</span>
                 </button>
               );
             })}
@@ -167,10 +169,10 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
                 <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                   {getThemeIcon()}
                 </div>
-                <span className="text-sm font-medium">Theme</span>
+                <span className="text-sm font-medium">{t("mobile.menu.theme")}</span>
               </div>
               <span className="text-xs text-muted-foreground capitalize">
-                {theme || "system"}
+                {t(`mobile.menu.theme_${theme || "system"}`)}
               </span>
             </button>
           </div>

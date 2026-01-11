@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -21,7 +23,7 @@ export default function ForgotPasswordPage() {
       await authApi.forgotPassword(email);
       setSubmitted(true);
     } catch {
-      setError("Failed to send reset email. Please try again.");
+      setError(t("auth.forgotPasswordPage.sendFailed"));
     } finally {
       setLoading(false);
     }
@@ -75,11 +77,10 @@ export default function ForgotPasswordPage() {
           {/* Content */}
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-foreground">
-              Check your email
+              {t("auth.forgotPasswordPage.checkEmail")}
             </h1>
             <p className="text-sm text-muted-foreground">
-              If an account exists for <span className="font-medium text-foreground">{email}</span>,
-              you will receive a password reset link shortly.
+              {t("auth.forgotPasswordPage.emailSentDescription", { email })}
             </p>
           </div>
 
@@ -87,7 +88,7 @@ export default function ForgotPasswordPage() {
           <div className="space-y-3 pt-4">
             <Link href="/login">
               <Button variant="outline" className="w-full">
-                Back to sign in
+                {t("auth.forgotPasswordPage.backToSignIn")}
               </Button>
             </Link>
           </div>
@@ -120,10 +121,10 @@ export default function ForgotPasswordPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Reset your password
+            {t("auth.forgotPasswordPage.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Enter your email address and we&apos;ll send you a link to reset your password.
+            {t("auth.forgotPasswordPage.subtitle")}
           </p>
         </div>
 
@@ -137,12 +138,12 @@ export default function ForgotPasswordPage() {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
+              {t("auth.forgotPasswordPage.emailLabel")}
             </label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("auth.forgotPasswordPage.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -150,15 +151,15 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sending..." : "Send reset link"}
+            {loading ? t("auth.forgotPasswordPage.sending") : t("auth.forgotPasswordPage.sendResetLink")}
           </Button>
         </form>
 
         {/* Back link */}
         <p className="text-center text-sm text-muted-foreground">
-          Remember your password?{" "}
+          {t("auth.forgotPasswordPage.rememberPassword")}{" "}
           <Link href="/login" className="text-primary hover:underline">
-            Sign in
+            {t("auth.forgotPasswordPage.signIn")}
           </Link>
         </p>
       </div>

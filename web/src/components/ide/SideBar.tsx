@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useIDEStore, type ActivityType } from "@/stores/ide";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import {
   ChevronDown,
@@ -23,6 +24,7 @@ interface SideBarProps {
 
 export function SideBar({ className, children }: SideBarProps) {
   const router = useRouter();
+  const t = useTranslations();
   const {
     activeActivity,
     sidebarOpen,
@@ -77,17 +79,17 @@ export function SideBar({ className, children }: SideBarProps) {
   const getActivityTitle = (activity: ActivityType): string => {
     switch (activity) {
       case "workspace":
-        return "Workspace";
+        return t("ide.activities.workspace");
       case "tickets":
-        return "Tickets";
+        return t("ide.activities.tickets");
       case "mesh":
-        return "AgentMesh";
+        return t("ide.activities.mesh");
       case "repositories":
-        return "Repositories";
+        return t("ide.activities.repositories");
       case "runners":
-        return "Runners";
+        return t("ide.activities.runners");
       case "settings":
-        return "Settings";
+        return t("ide.activities.settings");
       default:
         return "";
     }

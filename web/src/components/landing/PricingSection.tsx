@@ -2,73 +2,76 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for individual developers getting started.",
-    features: [
-      "1 Runner",
-      "3 concurrent pods",
-      "1 organization member",
-      "Community support",
-      "Basic integrations",
-    ],
-    cta: "Get Started",
-    href: "/register",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: "$29",
-    period: "per user/month",
-    description: "For teams that need more power and collaboration.",
-    features: [
-      "Unlimited Runners",
-      "Unlimited pods",
-      "Up to 10 team members",
-      "Priority email support",
-      "API access",
-      "Advanced analytics",
-      "Custom integrations",
-    ],
-    cta: "Start Pro Trial",
-    href: "/register?plan=pro",
-    highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    period: "contact us",
-    description: "For organizations with advanced security needs.",
-    features: [
-      "Everything in Pro",
-      "SAML/LDAP SSO",
-      "Audit logs",
-      "Dedicated support",
-      "Private deployment",
-      "SLA guarantee",
-      "Custom contracts",
-    ],
-    cta: "Contact Sales",
-    href: "/contact",
-    highlighted: false,
-  },
-];
+import { useTranslations } from "@/lib/i18n/client";
 
 export function PricingSection() {
+  const t = useTranslations();
+
+  const plans = [
+    {
+      name: t("landing.pricing.free.name"),
+      price: t("landing.pricing.free.price"),
+      period: t("landing.pricing.free.period"),
+      description: t("landing.pricing.free.description"),
+      features: [
+        t("landing.pricing.free.features.0"),
+        t("landing.pricing.free.features.1"),
+        t("landing.pricing.free.features.2"),
+        t("landing.pricing.free.features.3"),
+        t("landing.pricing.free.features.4"),
+      ],
+      cta: t("landing.pricing.free.cta"),
+      href: "/register",
+      highlighted: false,
+    },
+    {
+      name: t("landing.pricing.pro.name"),
+      price: t("landing.pricing.pro.price"),
+      period: t("landing.pricing.pro.period"),
+      description: t("landing.pricing.pro.description"),
+      features: [
+        t("landing.pricing.pro.features.0"),
+        t("landing.pricing.pro.features.1"),
+        t("landing.pricing.pro.features.2"),
+        t("landing.pricing.pro.features.3"),
+        t("landing.pricing.pro.features.4"),
+        t("landing.pricing.pro.features.5"),
+        t("landing.pricing.pro.features.6"),
+      ],
+      cta: t("landing.pricing.pro.cta"),
+      href: "/register?plan=pro",
+      highlighted: true,
+    },
+    {
+      name: t("landing.pricing.enterprise.name"),
+      price: t("landing.pricing.enterprise.price"),
+      period: t("landing.pricing.enterprise.period"),
+      description: t("landing.pricing.enterprise.description"),
+      features: [
+        t("landing.pricing.enterprise.features.0"),
+        t("landing.pricing.enterprise.features.1"),
+        t("landing.pricing.enterprise.features.2"),
+        t("landing.pricing.enterprise.features.3"),
+        t("landing.pricing.enterprise.features.4"),
+        t("landing.pricing.enterprise.features.5"),
+        t("landing.pricing.enterprise.features.6"),
+      ],
+      cta: t("landing.pricing.enterprise.cta"),
+      href: "/contact",
+      highlighted: false,
+    },
+  ];
+
   return (
     <section className="py-24" id="pricing">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Simple, Transparent <span className="text-primary">Pricing</span>
+            {t("landing.pricing.title")} <span className="text-primary">{t("landing.pricing.titleHighlight")}</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start free and scale as you grow. No hidden fees.
+            {t("landing.pricing.description")}
           </p>
         </div>
 
@@ -85,7 +88,7 @@ export function PricingSection() {
             >
               {plan.highlighted && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-medium rounded-full">
-                  Most Popular
+                  {t("landing.pricing.mostPopular")}
                 </div>
               )}
 
@@ -140,12 +143,12 @@ export function PricingSection() {
         {/* FAQ or additional info */}
         <div className="mt-16 text-center">
           <p className="text-muted-foreground">
-            All plans include SSL encryption, 99.9% uptime SLA, and regular backups.
+            {t("landing.pricing.footer")}
           </p>
           <p className="text-muted-foreground mt-2">
-            Need a custom plan?{" "}
+            {t("landing.pricing.customPlan")}{" "}
             <Link href="/contact" className="text-primary hover:underline">
-              Contact us
+              {t("landing.pricing.contactUs")}
             </Link>
           </p>
         </div>

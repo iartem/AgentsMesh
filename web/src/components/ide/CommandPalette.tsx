@@ -26,6 +26,7 @@ import {
   ArrowRight,
   Keyboard,
 } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -46,6 +47,7 @@ interface CommandItem {
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
+  const t = useTranslations();
   const { currentOrg, logout } = useAuthStore();
   const { setActiveActivity } = useIDEStore();
   const { addPane } = useWorkspaceStore();
@@ -115,8 +117,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-workspace",
         category: "navigation",
-        label: "Go to Workspace",
-        description: "Terminal workspace",
+        label: t("commandPalette.goToWorkspace"),
+        description: t("commandPalette.workspaceDescription"),
         icon: <Terminal className="w-4 h-4" />,
         keywords: ["terminal", "pods", "workspace"],
         action: () => {
@@ -127,8 +129,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-tickets",
         category: "navigation",
-        label: "Go to Tickets",
-        description: "View and manage tickets",
+        label: t("commandPalette.goToTickets"),
+        description: t("commandPalette.ticketsDescription"),
         icon: <Ticket className="w-4 h-4" />,
         keywords: ["issues", "tasks", "kanban"],
         action: () => {
@@ -139,8 +141,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-mesh",
         category: "navigation",
-        label: "Go to AgentMesh",
-        description: "Network topology",
+        label: t("commandPalette.goToMesh"),
+        description: t("commandPalette.meshDescription"),
         icon: <Network className="w-4 h-4" />,
         keywords: ["topology", "network", "agents"],
         action: () => {
@@ -151,8 +153,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-repositories",
         category: "navigation",
-        label: "Go to Repositories",
-        description: "Manage repositories",
+        label: t("commandPalette.goToRepositories"),
+        description: t("commandPalette.repositoriesDescription"),
         icon: <FolderGit2 className="w-4 h-4" />,
         keywords: ["git", "repos", "code"],
         action: () => {
@@ -163,8 +165,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-runners",
         category: "navigation",
-        label: "Go to Runners",
-        description: "Manage compute resources",
+        label: t("commandPalette.goToRunners"),
+        description: t("commandPalette.runnersDescription"),
         icon: <Server className="w-4 h-4" />,
         keywords: ["compute", "resources", "agents"],
         action: () => {
@@ -175,8 +177,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "nav-settings",
         category: "navigation",
-        label: "Go to Settings",
-        description: "Organization settings",
+        label: t("commandPalette.goToSettings"),
+        description: t("commandPalette.settingsDescription"),
         icon: <Settings className="w-4 h-4" />,
         keywords: ["config", "preferences"],
         action: () => {
@@ -185,7 +187,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         },
       },
     ],
-    [orgSlug, router, setActiveActivity]
+    [orgSlug, router, setActiveActivity, t]
   );
 
   // Action commands
@@ -194,8 +196,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "action-new-pod",
         category: "actions",
-        label: "Create New Pod",
-        description: "Start a new agent pod",
+        label: t("commandPalette.createNewPod"),
+        description: t("commandPalette.createPodDescription"),
         icon: <Plus className="w-4 h-4" />,
         keywords: ["new", "create", "pod", "terminal"],
         action: () => {
@@ -206,8 +208,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "action-new-ticket",
         category: "actions",
-        label: "Create New Ticket",
-        description: "Create a new task or issue",
+        label: t("commandPalette.createNewTicket"),
+        description: t("commandPalette.createTicketDescription"),
         icon: <Plus className="w-4 h-4" />,
         keywords: ["new", "create", "ticket", "issue"],
         action: () => {
@@ -217,8 +219,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       {
         id: "action-logout",
         category: "actions",
-        label: "Sign Out",
-        description: "Log out of your account",
+        label: t("commandPalette.signOut"),
+        description: t("commandPalette.signOutDescription"),
         icon: <LogOut className="w-4 h-4" />,
         keywords: ["logout", "signout", "exit"],
         action: () => {
@@ -227,7 +229,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         },
       },
     ],
-    [orgSlug, router, logout]
+    [orgSlug, router, logout, t]
   );
 
   // All static commands
@@ -289,7 +291,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <div className="flex items-center px-4 border-b border-border">
             <Search className="w-4 h-4 text-muted-foreground mr-2" />
             <Command.Input
-              placeholder="Type a command or search..."
+              placeholder={t("commandPalette.placeholder")}
               className="flex-1 py-3 bg-transparent text-foreground placeholder:text-muted-foreground outline-none"
               value={search}
               onValueChange={setSearch}
@@ -303,12 +305,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <Command.List className="max-h-80 overflow-y-auto p-2">
             {loading && (
               <Command.Loading className="px-4 py-2 text-sm text-muted-foreground">
-                Searching...
+                {t("commandPalette.searching")}
               </Command.Loading>
             )}
 
             <Command.Empty className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No results found.
+              {t("commandPalette.noResults")}
             </Command.Empty>
 
             {/* Search Results - Pods */}
@@ -386,7 +388,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             )}
 
             {/* Navigation */}
-            <Command.Group heading="Navigation">
+            <Command.Group heading={t("commandPalette.navigation")}>
               {navigationCommands.map((cmd) => (
                 <Command.Item
                   key={cmd.id}
@@ -407,7 +409,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             </Command.Group>
 
             {/* Actions */}
-            <Command.Group heading="Actions">
+            <Command.Group heading={t("commandPalette.actions")}>
               {actionCommands.map((cmd) => (
                 <Command.Item
                   key={cmd.id}
@@ -433,15 +435,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-muted rounded">↑↓</kbd>
-                Navigate
+                {t("commandPalette.navigate")}
               </span>
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-muted rounded">↵</kbd>
-                Select
+                {t("commandPalette.select")}
               </span>
             </div>
             <span className="flex items-center gap-1">
-              <CommandIcon className="w-3 h-3" />K to open
+              <CommandIcon className="w-3 h-3" />K {t("commandPalette.toOpen")}
             </span>
           </div>
         </Command>

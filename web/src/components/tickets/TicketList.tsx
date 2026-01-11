@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface Label {
   id: number;
@@ -66,6 +67,8 @@ const priorityConfig: Record<string, { icon: string; color: string; label: strin
 };
 
 export function TicketList({ tickets, loading, onTicketClick }: TicketListProps) {
+  const t = useTranslations();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
@@ -97,7 +100,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <p className="text-sm">No tickets found</p>
+        <p className="text-sm">{t("tickets.list.noTickets")}</p>
       </div>
     );
   }
@@ -107,12 +110,12 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
       <table className="w-full">
         <thead>
           <tr className="border-b text-left text-sm text-muted-foreground">
-            <th className="pb-3 font-medium">Ticket</th>
-            <th className="pb-3 font-medium">Status</th>
-            <th className="pb-3 font-medium">Priority</th>
-            <th className="pb-3 font-medium">Assignees</th>
-            <th className="pb-3 font-medium">Due Date</th>
-            <th className="pb-3 font-medium">Updated</th>
+            <th className="pb-3 font-medium">{t("tickets.list.ticket")}</th>
+            <th className="pb-3 font-medium">{t("tickets.filters.status")}</th>
+            <th className="pb-3 font-medium">{t("tickets.filters.priority")}</th>
+            <th className="pb-3 font-medium">{t("tickets.list.assignees")}</th>
+            <th className="pb-3 font-medium">{t("tickets.list.dueDate")}</th>
+            <th className="pb-3 font-medium">{t("tickets.list.updated")}</th>
           </tr>
         </thead>
         <tbody className="text-sm">
@@ -130,7 +133,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                 {/* Ticket Info */}
                 <td className="py-3">
                   <div className="flex items-center gap-3">
-                    <span className={typeStyle.color} title={typeStyle.label}>
+                    <span className={typeStyle.color} title={t(`tickets.type.${ticket.type}`)}>
                       {typeStyle.icon}
                     </span>
                     <div>
@@ -165,7 +168,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.color}`}
                   >
-                    {statusStyle.label}
+                    {t(`tickets.status.${ticket.status}`)}
                   </span>
                 </td>
 
@@ -173,10 +176,10 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                 <td className="py-3">
                   <span
                     className={`inline-flex items-center gap-1 ${priorityStyle.color}`}
-                    title={priorityStyle.label}
+                    title={t(`tickets.priority.${ticket.priority}`)}
                   >
                     {priorityStyle.icon}
-                    <span className="text-xs">{priorityStyle.label}</span>
+                    <span className="text-xs">{t(`tickets.priority.${ticket.priority}`)}</span>
                   </span>
                 </td>
 

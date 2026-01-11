@@ -20,8 +20,10 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function RunnersPage() {
+  const t = useTranslations();
   const [runners, setRunners] = useState<RunnerData[]>([]);
   const [tokens, setTokens] = useState<RegistrationToken[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export default function RunnersPage() {
   };
 
   const handleDeleteRunner = async (runner: RunnerData) => {
-    if (!confirm(`Are you sure you want to delete runner "${runner.node_id}"?`)) {
+    if (!confirm(t("runners.page.confirmDelete", { nodeId: runner.node_id }))) {
       return;
     }
     try {
@@ -115,19 +117,19 @@ export default function RunnersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Runners</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">{t("runners.page.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your compute resources
+            {t("runners.page.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadData}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+            {t("runners.page.refresh")}
           </Button>
           <Button onClick={() => setShowTokenModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Runner
+            {t("runners.page.addRunner")}
           </Button>
         </div>
       </div>
@@ -135,23 +137,23 @@ export default function RunnersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <StatCard
-          title="Total Runners"
+          title={t("runners.page.totalRunners")}
           value={runners.length}
           icon={<Server className="w-5 h-5" />}
         />
         <StatCard
-          title="Online"
+          title={t("runners.page.online")}
           value={onlineCount}
           icon={<Power className="w-5 h-5" />}
           variant="success"
         />
         <StatCard
-          title="Active Pods"
+          title={t("runners.page.activePods")}
           value={totalPods}
           icon={<Cpu className="w-5 h-5" />}
         />
         <StatCard
-          title="Total Capacity"
+          title={t("runners.page.totalCapacity")}
           value={totalCapacity}
           icon={<HardDrive className="w-5 h-5" />}
         />
@@ -159,7 +161,7 @@ export default function RunnersPage() {
 
       {/* Runners List */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Active Runners</h2>
+        <h2 className="text-lg font-semibold">{t("runners.page.activeRunners")}</h2>
 
         {/* Mobile: Card view */}
         <div className="block md:hidden space-y-3">
@@ -185,7 +187,7 @@ export default function RunnersPage() {
 
               <div className="space-y-2 text-sm text-muted-foreground mb-3">
                 <div className="flex justify-between">
-                  <span>Pods:</span>
+                  <span>{t("runners.page.mobilePodsLabel")}</span>
                   <span>
                     {runner.current_pods} / {runner.max_concurrent_pods}
                   </span>
@@ -193,17 +195,17 @@ export default function RunnersPage() {
                 {runner.host_info && (
                   <>
                     <div className="flex justify-between">
-                      <span>OS:</span>
+                      <span>{t("runners.page.mobileOsLabel")}</span>
                       <span>{runner.host_info.os || "-"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>CPU:</span>
-                      <span>{runner.host_info.cpu_cores || "-"} cores</span>
+                      <span>{t("runners.page.mobileCpuLabel")}</span>
+                      <span>{runner.host_info.cpu_cores || "-"} {t("runners.page.cores")}</span>
                     </div>
                   </>
                 )}
                 <div className="flex justify-between">
-                  <span>Version:</span>
+                  <span>{t("runners.page.mobileVersionLabel")}</span>
                   <span>{runner.runner_version || "-"}</span>
                 </div>
               </div>
@@ -216,7 +218,7 @@ export default function RunnersPage() {
                   onClick={() => setSelectedRunner(runner)}
                 >
                   <Settings2 className="w-4 h-4 mr-1" />
-                  Configure
+                  {t("runners.page.configure")}
                 </Button>
                 <Button
                   size="sm"
@@ -242,8 +244,8 @@ export default function RunnersPage() {
           {runners.length === 0 && (
             <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
               <Server className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No runners registered.</p>
-              <p className="text-sm mt-1">Add a runner to start deploying pods.</p>
+              <p>{t("runners.page.noRunners")}</p>
+              <p className="text-sm mt-1">{t("runners.page.noRunnersHint")}</p>
             </div>
           )}
         </div>
@@ -253,12 +255,12 @@ export default function RunnersPage() {
           <table className="w-full">
             <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">Runner</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Pods</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Host Info</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Version</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.page.runnerColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.page.statusColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.page.podsColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.page.hostInfoColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.page.versionColumn")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium">{t("runners.page.actionsColumn")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -288,7 +290,7 @@ export default function RunnersPage() {
                   <td className="px-4 py-3 text-muted-foreground text-sm">
                     {runner.host_info ? (
                       <span>
-                        {runner.host_info.os} · {runner.host_info.cpu_cores} cores
+                        {runner.host_info.os} · {runner.host_info.cpu_cores} {t("runners.page.cores")}
                       </span>
                     ) : (
                       "-"
@@ -304,7 +306,7 @@ export default function RunnersPage() {
                       className="mr-2"
                       onClick={() => setSelectedRunner(runner)}
                     >
-                      Configure
+                      {t("runners.page.configure")}
                     </Button>
                     <Button
                       size="sm"
@@ -312,14 +314,14 @@ export default function RunnersPage() {
                       className="mr-2"
                       onClick={() => handleToggleEnabled(runner)}
                     >
-                      {runner.is_enabled ? "Disable" : "Enable"}
+                      {runner.is_enabled ? t("runners.page.disable") : t("runners.page.enable")}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDeleteRunner(runner)}
                     >
-                      Delete
+                      {t("runners.page.delete")}
                     </Button>
                   </td>
                 </tr>
@@ -327,7 +329,7 @@ export default function RunnersPage() {
               {runners.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    No runners registered. Add a runner to start deploying pods.
+                    {t("runners.page.noRunners")} {t("runners.page.noRunnersHint")}
                   </td>
                 </tr>
               )}
@@ -339,10 +341,10 @@ export default function RunnersPage() {
       {/* Registration Tokens Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Registration Tokens</h2>
+          <h2 className="text-lg font-semibold">{t("runners.registrationTokens.title")}</h2>
           <Button size="sm" variant="outline" onClick={() => setShowTokenModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            New Token
+            {t("runners.registrationTokens.newToken")}
           </Button>
         </div>
 
@@ -350,17 +352,17 @@ export default function RunnersPage() {
           <table className="w-full">
             <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Usage</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.registrationTokens.descriptionColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.registrationTokens.usageColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.registrationTokens.statusColumn")}</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">{t("runners.registrationTokens.createdColumn")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium">{t("runners.registrationTokens.actionsColumn")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {tokens.map((token) => (
                 <tr key={token.id} className="hover:bg-muted/50">
-                  <td className="px-4 py-3">{token.description || "No description"}</td>
+                  <td className="px-4 py-3">{token.description || t("runners.registrationTokens.noDescription")}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {token.used_count} / {token.max_uses || "∞"}
                   </td>
@@ -373,7 +375,7 @@ export default function RunnersPage() {
                           : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
                       )}
                     >
-                      {token.is_active ? "Active" : "Revoked"}
+                      {token.is_active ? t("runners.token.active") : t("runners.registrationTokens.revoked")}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
@@ -389,7 +391,7 @@ export default function RunnersPage() {
                           loadData();
                         }}
                       >
-                        Revoke
+                        {t("runners.registrationTokens.revoke")}
                       </Button>
                     )}
                   </td>
@@ -398,7 +400,7 @@ export default function RunnersPage() {
               {tokens.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                    No registration tokens. Create one to add runners.
+                    {t("runners.registrationTokens.noTokens")}
                   </td>
                 </tr>
               )}
@@ -410,6 +412,7 @@ export default function RunnersPage() {
       {/* Token Modal */}
       {showTokenModal && (
         <CreateTokenModal
+          t={t}
           onClose={() => setShowTokenModal(false)}
           onCreated={() => {
             setShowTokenModal(false);
@@ -421,6 +424,7 @@ export default function RunnersPage() {
       {/* Runner Config Modal */}
       {selectedRunner && (
         <RunnerConfigModal
+          t={t}
           runner={selectedRunner}
           onClose={() => setSelectedRunner(null)}
           onUpdated={() => {
@@ -471,9 +475,11 @@ function StatCard({
 }
 
 function CreateTokenModal({
+  t,
   onClose,
   onCreated,
 }: {
+  t: (key: string, params?: Record<string, string | number>) => string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -504,13 +510,13 @@ function CreateTokenModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background border border-border rounded-lg w-full max-w-md p-4 md:p-6">
         <h2 className="text-lg md:text-xl font-semibold mb-4">
-          {generatedToken ? "Token Created" : "Create Registration Token"}
+          {generatedToken ? t("runners.createTokenModal.tokenCreated") : t("runners.createTokenModal.title")}
         </h2>
 
         {generatedToken ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Copy this token and use it to register a new runner. This token will only be shown once.
+              {t("runners.createTokenModal.tokenHint")}
             </p>
             <div className="flex gap-2">
               <code className="flex-1 p-3 bg-muted rounded text-sm break-all">
@@ -521,31 +527,31 @@ function CreateTokenModal({
               </Button>
             </div>
             <div className="flex justify-end">
-              <Button onClick={onCreated}>Done</Button>
+              <Button onClick={onCreated}>{t("runners.createTokenModal.done")}</Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Description (optional)
+                {t("runners.createTokenModal.descriptionLabel")}
               </label>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                placeholder="e.g., Production runner"
+                placeholder={t("runners.createTokenModal.descriptionPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Max Uses (optional)
+                {t("runners.createTokenModal.maxUsesLabel")}
               </label>
               <input
                 type="number"
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                placeholder="Unlimited"
+                placeholder={t("runners.createTokenModal.maxUsesPlaceholder")}
                 value={maxUses || ""}
                 onChange={(e) =>
                   setMaxUses(e.target.value ? parseInt(e.target.value) : undefined)
@@ -556,10 +562,10 @@ function CreateTokenModal({
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t("runners.createTokenModal.cancel")}
               </Button>
               <Button onClick={handleCreate} disabled={loading}>
-                {loading ? "Creating..." : "Create Token"}
+                {loading ? t("runners.createTokenModal.creating") : t("runners.createTokenModal.createToken")}
               </Button>
             </div>
           </div>
@@ -570,10 +576,12 @@ function CreateTokenModal({
 }
 
 function RunnerConfigModal({
+  t,
   runner,
   onClose,
   onUpdated,
 }: {
+  t: (key: string, params?: Record<string, string | number>) => string;
   runner: RunnerData;
   onClose: () => void;
   onUpdated: () => void;
@@ -601,29 +609,29 @@ function RunnerConfigModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background border border-border rounded-lg w-full max-w-md p-4 md:p-6">
         <h2 className="text-lg md:text-xl font-semibold mb-4">
-          Configure Runner
+          {t("runners.configModal.title")}
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Node ID</label>
+            <label className="block text-sm font-medium mb-2">{t("runners.configModal.nodeIdLabel")}</label>
             <code className="block w-full p-3 bg-muted rounded text-sm">
               {runner.node_id}
             </code>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-2">{t("runners.configModal.descriptionLabel")}</label>
             <input
               type="text"
               className="w-full px-3 py-2 border border-border rounded-md bg-background"
-              placeholder="Add a description..."
+              placeholder={t("runners.configModal.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Max Concurrent Pods
+              {t("runners.configModal.maxPodsLabel")}
             </label>
             <input
               type="number"
@@ -638,7 +646,7 @@ function RunnerConfigModal({
           {runner.active_pods && runner.active_pods.length > 0 && (
             <div>
               <label className="block text-sm font-medium mb-2">
-                Active Pods ({runner.active_pods.length})
+                {t("runners.configModal.activePodsLabel", { count: runner.active_pods.length })}
               </label>
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {runner.active_pods.map((pod) => (
@@ -656,10 +664,10 @@ function RunnerConfigModal({
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              {t("runners.configModal.cancel")}
             </Button>
             <Button onClick={handleUpdate} disabled={loading}>
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? t("runners.configModal.saving") : t("runners.configModal.save")}
             </Button>
           </div>
         </div>

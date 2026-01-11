@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/lib/i18n/client";
 
 export function SelfHostedCTA() {
+  const t = useTranslations();
+
   return (
     <section className="py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,11 +39,10 @@ export function SelfHostedCTA() {
               {/* Text */}
               <div className="flex-grow text-center lg:text-left">
                 <h3 className="text-2xl sm:text-3xl font-bold mb-4">
-                  Need Complete <span className="text-primary">Self-Hosted</span> Deployment?
+                  {t("landing.selfHosted.title")} <span className="text-primary">{t("landing.selfHosted.titleHighlight")}</span> {t("landing.selfHosted.titleEnd")}
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  AgentMesh supports fully self-hosted deployment. Your code and data never leave
-                  your infrastructure. Perfect for enterprises with strict security and compliance requirements.
+                  {t("landing.selfHosted.description")}
                 </p>
 
                 {/* Features */}
@@ -49,19 +51,19 @@ export function SelfHostedCTA() {
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Docker Compose
+                    {t("landing.selfHosted.dockerCompose")}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Kubernetes Helm
+                    {t("landing.selfHosted.kubernetesHelm")}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Air-gapped Support
+                    {t("landing.selfHosted.airGappedSupport")}
                   </div>
                 </div>
 
@@ -69,12 +71,12 @@ export function SelfHostedCTA() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                   <Link href="/docs/self-hosted">
                     <Button variant="outline" className="w-full sm:w-auto">
-                      View Deployment Docs
+                      {t("landing.selfHosted.viewDocs")}
                     </Button>
                   </Link>
                   <Link href="/contact">
                     <Button className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90">
-                      Contact Enterprise Sales
+                      {t("landing.selfHosted.contactSales")}
                     </Button>
                   </Link>
                 </div>

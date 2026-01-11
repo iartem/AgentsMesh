@@ -3,6 +3,7 @@
 import { useState, DragEvent } from "react";
 import { TicketCard } from "./TicketCard";
 import { Ticket, TicketStatus } from "@/stores/ticket";
+import { useTranslations } from "@/lib/i18n/client";
 
 type Status = TicketStatus;
 
@@ -13,12 +14,12 @@ interface KanbanBoardProps {
   excludeStatuses?: Status[];
 }
 
-const statusConfig: { status: Status; label: string; color: string }[] = [
-  { status: "backlog", label: "Backlog", color: "border-gray-300" },
-  { status: "todo", label: "To Do", color: "border-blue-300" },
-  { status: "in_progress", label: "In Progress", color: "border-yellow-300" },
-  { status: "in_review", label: "In Review", color: "border-purple-300" },
-  { status: "done", label: "Done", color: "border-green-300" },
+const statusConfig: { status: Status; labelKey: string; color: string }[] = [
+  { status: "backlog", labelKey: "tickets.status.backlog", color: "border-gray-300" },
+  { status: "todo", labelKey: "tickets.status.todo", color: "border-blue-300" },
+  { status: "in_progress", labelKey: "tickets.status.in_progress", color: "border-yellow-300" },
+  { status: "in_review", labelKey: "tickets.status.in_review", color: "border-purple-300" },
+  { status: "done", labelKey: "tickets.status.done", color: "border-green-300" },
 ];
 
 export function KanbanBoard({
@@ -27,6 +28,7 @@ export function KanbanBoard({
   onTicketClick,
   excludeStatuses = ["cancelled"],
 }: KanbanBoardProps) {
+  const t = useTranslations();
   const [draggedTicket, setDraggedTicket] = useState<Ticket | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<Status | null>(null);
 
@@ -68,7 +70,7 @@ export function KanbanBoard({
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 h-full">
-      {columns.map(({ status, label, color }) => {
+      {columns.map(({ status, labelKey, color }) => {
         const columnTickets = getTicketsByStatus(status);
         const isDropTarget = dragOverStatus === status;
 
@@ -86,7 +88,7 @@ export function KanbanBoard({
             <div
               className={`flex items-center justify-between p-3 border-b-2 ${color}`}
             >
-              <h3 className="font-medium text-sm">{label}</h3>
+              <h3 className="font-medium text-sm">{t(labelKey)}</h3>
               <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
                 {columnTickets.length}
               </span>
@@ -115,7 +117,7 @@ export function KanbanBoard({
               {/* Empty State */}
               {columnTickets.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  No tickets
+                  {t("tickets.kanban.noTickets")}
                 </div>
               )}
             </div>

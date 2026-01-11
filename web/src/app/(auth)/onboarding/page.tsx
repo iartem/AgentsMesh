@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api/organization";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { user, setOrganizations, setCurrentOrg } = useAuthStore();
   const [inviteCode, setInviteCode] = useState("");
   const [showInviteInput, setShowInviteInput] = useState(false);
@@ -58,7 +60,7 @@ export default function OnboardingPage() {
       // Go to runner setup
       router.push("/onboarding/setup-runner");
     } catch {
-      setError("Failed to create workspace. The name might already be taken.");
+      setError(t("auth.onboarding.createWorkspaceFailed"));
     } finally {
       setLoading(false);
     }
@@ -66,7 +68,7 @@ export default function OnboardingPage() {
 
   const handleJoinWithInvite = async () => {
     if (!inviteCode.trim()) {
-      setError("Please enter an invite code");
+      setError(t("auth.onboarding.enterInviteCode"));
       return;
     }
 
@@ -78,9 +80,9 @@ export default function OnboardingPage() {
       // await inviteApi.accept(inviteCode);
 
       // For now, show not implemented message
-      setError("Invite code feature is coming soon");
+      setError(t("auth.onboarding.inviteCodeComingSoon"));
     } catch {
-      setError("Invalid or expired invite code");
+      setError(t("auth.onboarding.invalidInviteCode"));
     } finally {
       setLoading(false);
     }
@@ -110,10 +112,10 @@ export default function OnboardingPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Welcome{user?.name ? `, ${user.name}` : ""}!
+            {user?.name ? t("auth.onboarding.welcomeWithName", { name: user.name }) : t("auth.onboarding.welcome")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Let&apos;s set up your workspace to get started.
+            {t("auth.onboarding.setupWorkspace")}
           </p>
         </div>
 
@@ -145,16 +147,16 @@ export default function OnboardingPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Quick Start</h3>
+                <h3 className="font-semibold text-foreground">{t("auth.onboarding.quickStart")}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Create a personal workspace and start using AgentMesh immediately.
+                  {t("auth.onboarding.quickStartDescription")}
                 </p>
                 <Button
                   className="mt-4 w-full"
                   onClick={handleQuickStart}
                   disabled={loading}
                 >
-                  {loading ? "Creating..." : "Create Personal Workspace"}
+                  {loading ? t("auth.onboarding.creating") : t("auth.onboarding.createPersonalWorkspace")}
                 </Button>
               </div>
             </div>
@@ -179,13 +181,13 @@ export default function OnboardingPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Create Team Workspace</h3>
+                <h3 className="font-semibold text-foreground">{t("auth.onboarding.createTeamWorkspace")}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Set up a workspace for your team with a custom name and invite members.
+                  {t("auth.onboarding.createTeamWorkspaceDescription")}
                 </p>
                 <Link href="/onboarding/create-org">
                   <Button variant="outline" className="mt-4 w-full">
-                    Create Team Workspace
+                    {t("auth.onboarding.createTeamWorkspace")}
                   </Button>
                 </Link>
               </div>
@@ -200,7 +202,7 @@ export default function OnboardingPage() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              Or join an existing workspace
+              {t("auth.onboarding.orJoinExisting")}
             </span>
           </div>
         </div>
@@ -209,7 +211,7 @@ export default function OnboardingPage() {
         {showInviteInput ? (
           <div className="space-y-3">
             <Input
-              placeholder="Enter invite code"
+              placeholder={t("auth.onboarding.enterInviteCodePlaceholder")}
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
             />
@@ -223,14 +225,14 @@ export default function OnboardingPage() {
                   setError("");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 className="flex-1"
                 onClick={handleJoinWithInvite}
                 disabled={loading || !inviteCode.trim()}
               >
-                {loading ? "Joining..." : "Join"}
+                {loading ? t("auth.onboarding.joining") : t("auth.onboarding.join")}
               </Button>
             </div>
           </div>
@@ -240,7 +242,7 @@ export default function OnboardingPage() {
             className="w-full"
             onClick={() => setShowInviteInput(true)}
           >
-            Have an invite code?
+            {t("auth.onboarding.haveInviteCode")}
           </Button>
         )}
       </div>

@@ -7,6 +7,7 @@ import { useWorkspaceStore } from "@/stores/workspace";
 import { WorkspaceManager } from "@/components/workspace";
 import { Button } from "@/components/ui/button";
 import { Terminal, Plus } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface Pod {
   id: number;
@@ -35,6 +36,7 @@ interface AgentType {
 }
 
 export default function WorkspacePage() {
+  const t = useTranslations();
   const { panes, addPane, _hasHydrated } = useWorkspaceStore();
   const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const [runners, setRunners] = useState<Runner[]>([]);
@@ -89,13 +91,13 @@ export default function WorkspacePage() {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <Terminal className="w-16 h-16 mb-4 text-muted-foreground/30" />
-        <h2 className="text-xl font-semibold mb-2">No terminals open</h2>
+        <h2 className="text-xl font-semibold mb-2">{t("workspace.noTerminalsOpen")}</h2>
         <p className="text-muted-foreground text-center mb-6 max-w-md">
-          Click on a pod in the sidebar to open its terminal, or create a new pod to get started.
+          {t("workspace.noTerminalsDescription")}
         </p>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Create New Pod
+          {t("workspace.createNewPod")}
         </Button>
 
         {/* Create Modal */}
@@ -108,7 +110,7 @@ export default function WorkspacePage() {
               setShowCreateModal(false);
               loadData();
               if (pod?.pod_key) {
-                toast.info("Pod created! Waiting for it to start...", {
+                toast.info(t("workspace.podCreated"), {
                   description: `Pod: ${pod.pod_key.substring(0, 8)}`,
                 });
                 handleOpenPod(pod.pod_key);
@@ -135,7 +137,7 @@ export default function WorkspacePage() {
             setShowCreateModal(false);
             loadData();
             if (pod?.pod_key) {
-              toast.info("Pod created! Waiting for it to start...", {
+              toast.info(t("workspace.podCreated"), {
                 description: `Pod: ${pod.pod_key.substring(0, 8)}`,
               });
               handleOpenPod(pod.pod_key);
@@ -158,6 +160,7 @@ function CreatePodModal({
   onClose: () => void;
   onCreated: (pod?: Pod) => void;
 }) {
+  const t = useTranslations();
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
   const [selectedRunner, setSelectedRunner] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -220,17 +223,17 @@ function CreatePodModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background border border-border rounded-lg w-full max-w-md p-4 md:p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg md:text-xl font-semibold mb-4">Create New Pod</h2>
+        <h2 className="text-lg md:text-xl font-semibold mb-4">{t("workspace.modal.title")}</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Agent Type</label>
+            <label className="block text-sm font-medium mb-2">{t("workspace.modal.agentType")}</label>
             <select
               className="w-full px-3 py-2 border border-border rounded-md bg-background"
               value={selectedAgent || ""}
               onChange={(e) => setSelectedAgent(Number(e.target.value))}
             >
-              <option value="">Select an agent...</option>
+              <option value="">{t("workspace.modal.selectAgent")}</option>
               {agentTypes.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
@@ -246,7 +249,7 @@ function CreatePodModal({
               value={selectedRunner || ""}
               onChange={(e) => setSelectedRunner(Number(e.target.value))}
             >
-              <option value="">Select a runner...</option>
+              <option value="">{t("workspace.modal.selectRunner")}</option>
               {runners.map((runner) => (
                 <option key={runner.id} value={runner.id}>
                   {runner.node_id} ({runner.current_pods}/{runner.max_concurrent_pods})
@@ -256,7 +259,7 @@ function CreatePodModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Repository (optional)</label>
+            <label className="block text-sm font-medium mb-2">{t("workspace.modal.repositoryOptional")}</label>
             <select
               className="w-full px-3 py-2 border border-border rounded-md bg-background"
               value={selectedRepository || ""}
@@ -264,7 +267,7 @@ function CreatePodModal({
               disabled={loadingRepos}
             >
               <option value="">
-                {loadingRepos ? "Loading..." : "Select a repository..."}
+                {loadingRepos ? t("common.loading") : t("workspace.modal.selectRepository")}
               </option>
               {repositories.map((repo) => (
                 <option key={repo.id} value={repo.id}>
@@ -276,11 +279,11 @@ function CreatePodModal({
 
           {selectedRepository && (
             <div>
-              <label className="block text-sm font-medium mb-2">Branch</label>
+              <label className="block text-sm font-medium mb-2">{t("workspace.modal.branch")}</label>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                placeholder="Enter branch name (e.g., main)"
+                placeholder={t("workspace.modal.branchPlaceholder")}
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
               />
@@ -288,11 +291,11 @@ function CreatePodModal({
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Initial Prompt (optional)</label>
+            <label className="block text-sm font-medium mb-2">{t("workspace.modal.initialPromptOptional")}</label>
             <textarea
               className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none"
               rows={3}
-              placeholder="Enter an initial prompt for the agent..."
+              placeholder={t("workspace.modal.initialPromptPlaceholder")}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
@@ -301,14 +304,14 @@ function CreatePodModal({
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleCreate}
             disabled={!selectedAgent || !selectedRunner || loading}
             className="w-full sm:w-auto"
           >
-            {loading ? "Creating..." : "Create Pod"}
+            {loading ? t("workspace.modal.creating") : t("workspace.modal.createPod")}
           </Button>
         </div>
       </div>

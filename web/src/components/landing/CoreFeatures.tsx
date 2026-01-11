@@ -1,111 +1,111 @@
 "use client";
 
-const features = [
-  {
-    number: "01",
-    title: "AgentPod",
-    subtitle: "Remote AI Workstation",
-    description:
-      "Run AI agents in the cloud, access a complete development environment through your browser. Each AgentPod runs on isolated Git worktrees with real-time terminal access.",
-    highlights: [
-      "Web Terminal with real-time interaction",
-      "Git Worktree isolation per AgentPod",
-      "Multiple concurrent AgentPods",
-      "Auto-cleanup on completion",
-    ],
-    terminal: {
-      title: "AgentPod Terminal",
-      lines: [
-        "$ claude-code --pod dev-42",
-        "> Workspace: /projects/my-app",
-        "> Branch: feature/auth-system",
-        "> Status: Running",
-        "",
-        "$ git status",
-        "On branch feature/auth-system",
-        "Changes to be committed:",
-        "  new file: src/auth/login.ts",
-        "  new file: src/auth/oauth.ts",
-      ],
-    },
-    align: "left",
-  },
-  {
-    number: "02",
-    title: "AgentMesh",
-    subtitle: "Multi-Agent Collaboration",
-    description:
-      "Enable multiple AI agents to work together through pod bindings and channel communication. Visualize the collaboration topology in real-time.",
-    highlights: [
-      "Pod Binding with permission control",
-      "Channel-based message broadcasting",
-      "Real-time topology visualization",
-      "Cross-agent task coordination",
-    ],
-    diagram: {
-      nodes: [
-        { id: "agent1", label: "Claude Code", x: 20, y: 30 },
-        { id: "agent2", label: "Codex CLI", x: 70, y: 30 },
-        { id: "channel", label: "Channel", x: 45, y: 70 },
-      ],
-      connections: [
-        { from: "agent1", to: "channel" },
-        { from: "agent2", to: "channel" },
-        { from: "agent1", to: "agent2", dashed: true },
-      ],
-    },
-    align: "right",
-  },
-  {
-    number: "03",
-    title: "Tickets",
-    subtitle: "Task-Driven Development",
-    description:
-      "Integrate AI pods with your task management workflow. Create tickets, bind them to pods, and track progress through a Kanban board.",
-    highlights: [
-      "Kanban board visualization",
-      "Ticket ↔ Pod binding",
-      "Progress tracking",
-      "MR/PR integration",
-    ],
-    kanban: {
-      columns: [
-        { title: "Backlog", cards: ["AUTH-1", "AUTH-3"] },
-        { title: "In Progress", cards: ["AUTH-2"] },
-        { title: "Review", cards: ["AUTH-4"] },
-        { title: "Done", cards: [] },
-      ],
-    },
-    align: "left",
-  },
-  {
-    number: "04",
-    title: "Self-hosted Runners",
-    subtitle: "Your Infrastructure, Your Data",
-    description:
-      "Deploy runners on your own infrastructure. Your code and data never leave your environment, meeting the strictest security and compliance requirements.",
-    highlights: [
-      "Docker/Kubernetes deployment",
-      "Complete data localization",
-      "Air-gapped environment support",
-      "Full audit trail",
-    ],
-    architecture: true,
-    align: "right",
-  },
-];
+import { useTranslations } from "@/lib/i18n/client";
 
 export function CoreFeatures() {
+  const t = useTranslations();
+
+  const features = [
+    {
+      number: "01",
+      title: t("landing.coreFeatures.agentpod.title"),
+      subtitle: t("landing.coreFeatures.agentpod.subtitle"),
+      description: t("landing.coreFeatures.agentpod.description"),
+      highlights: [
+        t("landing.coreFeatures.agentpod.highlights.0"),
+        t("landing.coreFeatures.agentpod.highlights.1"),
+        t("landing.coreFeatures.agentpod.highlights.2"),
+        t("landing.coreFeatures.agentpod.highlights.3"),
+      ],
+      terminal: {
+        title: "AgentPod Terminal",
+        lines: [
+          "$ claude-code --pod dev-42",
+          "> Workspace: /projects/my-app",
+          "> Branch: feature/auth-system",
+          "> Status: Running",
+          "",
+          "$ git status",
+          "On branch feature/auth-system",
+          "Changes to be committed:",
+          "  new file: src/auth/login.ts",
+          "  new file: src/auth/oauth.ts",
+        ],
+      },
+      align: "left",
+    },
+    {
+      number: "02",
+      title: t("landing.coreFeatures.agentmesh.title"),
+      subtitle: t("landing.coreFeatures.agentmesh.subtitle"),
+      description: t("landing.coreFeatures.agentmesh.description"),
+      highlights: [
+        t("landing.coreFeatures.agentmesh.highlights.0"),
+        t("landing.coreFeatures.agentmesh.highlights.1"),
+        t("landing.coreFeatures.agentmesh.highlights.2"),
+        t("landing.coreFeatures.agentmesh.highlights.3"),
+      ],
+      diagram: {
+        nodes: [
+          { id: "agent1", label: "Claude Code", x: 20, y: 30 },
+          { id: "agent2", label: "Codex CLI", x: 70, y: 30 },
+          { id: "channel", label: "Channel", x: 45, y: 70 },
+        ],
+        connections: [
+          { from: "agent1", to: "channel" },
+          { from: "agent2", to: "channel" },
+          { from: "agent1", to: "agent2", dashed: true },
+        ],
+      },
+      align: "right",
+    },
+    {
+      number: "03",
+      title: t("landing.coreFeatures.tickets.title"),
+      subtitle: t("landing.coreFeatures.tickets.subtitle"),
+      description: t("landing.coreFeatures.tickets.description"),
+      highlights: [
+        t("landing.coreFeatures.tickets.highlights.0"),
+        t("landing.coreFeatures.tickets.highlights.1"),
+        t("landing.coreFeatures.tickets.highlights.2"),
+        t("landing.coreFeatures.tickets.highlights.3"),
+      ],
+      kanban: {
+        columns: [
+          { title: "Backlog", cards: ["AUTH-1", "AUTH-3"] },
+          { title: "In Progress", cards: ["AUTH-2"] },
+          { title: "Review", cards: ["AUTH-4"] },
+          { title: "Done", cards: [] },
+        ],
+      },
+      align: "left",
+    },
+    {
+      number: "04",
+      title: t("landing.coreFeatures.runners.title"),
+      subtitle: t("landing.coreFeatures.runners.subtitle"),
+      description: t("landing.coreFeatures.runners.description"),
+      highlights: [
+        t("landing.coreFeatures.runners.highlights.0"),
+        t("landing.coreFeatures.runners.highlights.1"),
+        t("landing.coreFeatures.runners.highlights.2"),
+        t("landing.coreFeatures.runners.highlights.3"),
+      ],
+      architecture: true,
+      align: "right",
+    },
+  ];
+
   return (
     <section className="py-24" id="features">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Core <span className="text-primary">Features</span>
+            {t("landing.coreFeatures.title")} <span className="text-primary">{t("landing.coreFeatures.titleHighlight")}</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to manage and coordinate terminal-based AI coding agents at scale.
+            {t("landing.coreFeatures.description")}
           </p>
         </div>
 

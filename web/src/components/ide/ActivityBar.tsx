@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIDEStore, ACTIVITIES, type ActivityType } from "@/stores/ide";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   Terminal,
   Ticket,
@@ -40,6 +41,7 @@ export function ActivityBar({ className }: ActivityBarProps) {
   const { currentOrg } = useAuthStore();
   const pathname = usePathname();
   const orgSlug = currentOrg?.slug || "";
+  const t = useTranslations();
 
   // Map activity to route
   const getActivityRoute = (activity: ActivityType): string => {
@@ -132,7 +134,7 @@ export function ActivityBar({ className }: ActivityBarProps) {
                   side="right"
                   className="bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
                 >
-                  {activity.label}
+                  {t(`ide.activities.${activity.id}`)}
                 </TooltipContent>
               </Tooltip>
             );
@@ -168,7 +170,7 @@ export function ActivityBar({ className }: ActivityBarProps) {
                   side="right"
                   className="bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
                 >
-                  {activity.label}
+                  {t(`ide.activities.${activity.id}`)}
                 </TooltipContent>
               </Tooltip>
             );

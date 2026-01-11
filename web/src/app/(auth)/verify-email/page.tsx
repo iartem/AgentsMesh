@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 
 function VerifyEmailContent() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,7 @@ function VerifyEmailContent() {
 
   const handleResend = async () => {
     if (!email) {
-      setError("Email address is missing");
+      setError(t("auth.verifyEmailPage.emailMissing"));
       return;
     }
 
@@ -25,9 +27,9 @@ function VerifyEmailContent() {
 
     try {
       await authApi.resendVerification(email);
-      setMessage("Verification email sent! Please check your inbox.");
+      setMessage(t("auth.verifyEmailPage.emailSent"));
     } catch {
-      setError("Failed to resend verification email. Please try again.");
+      setError(t("auth.verifyEmailPage.resendFailed"));
     } finally {
       setLoading(false);
     }
@@ -80,13 +82,14 @@ function VerifyEmailContent() {
         {/* Content */}
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-foreground">
-            Verify your email
+            {t("auth.verifyEmailPage.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            We&apos;ve sent a verification email to{" "}
-            <span className="font-medium text-foreground">{email || "your email address"}</span>.
+            {email
+              ? t("auth.verifyEmailPage.subtitle", { email })
+              : t("auth.verifyEmailPage.subtitleDefault")}
             <br />
-            Please click the link in the email to verify your account.
+            {t("auth.verifyEmailPage.clickLink")}
           </p>
         </div>
 
@@ -110,13 +113,13 @@ function VerifyEmailContent() {
             onClick={handleResend}
             disabled={loading || !email}
           >
-            {loading ? "Sending..." : "Resend verification email"}
+            {loading ? t("auth.verifyEmailPage.sending") : t("auth.verifyEmailPage.resendEmail")}
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Wrong email?{" "}
+            {t("auth.verifyEmailPage.wrongEmail")}{" "}
             <Link href="/register" className="text-primary hover:underline">
-              Sign up with a different email
+              {t("auth.verifyEmailPage.signUpDifferent")}
             </Link>
           </p>
         </div>
@@ -124,9 +127,9 @@ function VerifyEmailContent() {
         {/* Footer */}
         <div className="pt-4 border-t border-border">
           <p className="text-sm text-muted-foreground">
-            Already verified?{" "}
+            {t("auth.verifyEmailPage.alreadyVerified")}{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Sign in
+              {t("auth.verifyEmailPage.signIn")}
             </Link>
           </p>
         </div>
@@ -136,10 +139,11 @@ function VerifyEmailContent() {
 }
 
 export default function VerifyEmailPage() {
+  const t = useTranslations();
   return (
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-8 h-8 text-primary animate-spin">Loading...</div>
+        <div className="w-8 h-8 text-primary animate-spin">{t("common.loading")}</div>
       </div>
     }>
       <VerifyEmailContent />

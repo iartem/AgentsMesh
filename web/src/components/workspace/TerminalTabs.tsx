@@ -14,6 +14,7 @@ import {
   Square,
   Circle,
 } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 import { terminalPool } from "@/stores/workspace";
 
 interface TerminalTabsProps {
@@ -22,6 +23,7 @@ interface TerminalTabsProps {
 }
 
 export function TerminalTabs({ onAddNew, className }: TerminalTabsProps) {
+  const t = useTranslations();
   const {
     panes,
     activePane,
@@ -110,7 +112,7 @@ export function TerminalTabs({ onAddNew, className }: TerminalTabsProps) {
             gridLayout.type === "1x1" && "bg-[#3c3c3c] text-[#ffffff]"
           )}
           onClick={() => setGridLayout({ type: "1x1", rows: 1, cols: 1 })}
-          title="Single view"
+          title={t("terminalTabs.singleView")}
         >
           <Square className="w-3.5 h-3.5" />
         </Button>
@@ -122,7 +124,7 @@ export function TerminalTabs({ onAddNew, className }: TerminalTabsProps) {
             gridLayout.type === "1x2" && "bg-[#3c3c3c] text-[#ffffff]"
           )}
           onClick={() => setGridLayout({ type: "1x2", rows: 1, cols: 2 })}
-          title="Two columns"
+          title={t("terminalTabs.twoColumns")}
         >
           <Columns className="w-3.5 h-3.5" />
         </Button>
@@ -134,7 +136,7 @@ export function TerminalTabs({ onAddNew, className }: TerminalTabsProps) {
             gridLayout.type === "2x1" && "bg-[#3c3c3c] text-[#ffffff]"
           )}
           onClick={() => setGridLayout({ type: "2x1", rows: 2, cols: 1 })}
-          title="Two rows"
+          title={t("terminalTabs.twoRows")}
         >
           <Rows className="w-3.5 h-3.5" />
         </Button>
@@ -146,7 +148,7 @@ export function TerminalTabs({ onAddNew, className }: TerminalTabsProps) {
             gridLayout.type === "2x2" && "bg-[#3c3c3c] text-[#ffffff]"
           )}
           onClick={() => setGridLayout({ type: "2x2", rows: 2, cols: 2 })}
-          title="2x2 grid"
+          title={t("terminalTabs.grid2x2")}
         >
           <Grid2X2 className="w-3.5 h-3.5" />
         </Button>

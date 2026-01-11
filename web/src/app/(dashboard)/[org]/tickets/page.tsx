@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTicketStore, Ticket, TicketStatus } from "@/stores/ticket";
 import { KanbanBoard, TicketCreateDialog } from "@/components/tickets";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 
 // Status colors for list view
 const statusColors: Record<string, string> = {
@@ -26,6 +27,7 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function TicketsPage() {
+  const t = useTranslations();
   const router = useRouter();
   const {
     tickets,
@@ -65,7 +67,7 @@ export default function TicketsPage() {
       {/* Content - filtered by sidebar */}
       {viewMode === "list" ? (
         <div className="flex-1 overflow-auto p-4">
-          <ListView tickets={tickets} />
+          <ListView tickets={tickets} t={t} />
         </div>
       ) : (
         <div className="flex-1 min-h-0 p-4">
@@ -80,18 +82,18 @@ export default function TicketsPage() {
   );
 }
 
-function ListView({ tickets }: { tickets: Ticket[] }) {
+function ListView({ tickets, t }: { tickets: Ticket[]; t: (key: string) => string }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Title</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.id")}</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.titleColumn")}</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.status")}</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.priority")}</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.type")}</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">{t("tickets.listView.created")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -114,16 +116,16 @@ function ListView({ tickets }: { tickets: Ticket[] }) {
                     statusColors[ticket.status] || "bg-gray-100"
                   }`}
                 >
-                  {ticket.status.replace("_", " ")}
+                  {t(`tickets.status.${ticket.status}`)}
                 </span>
               </td>
               <td className="px-4 py-3">
                 <span className={priorityColors[ticket.priority] || ""}>
-                  {ticket.priority}
+                  {t(`tickets.priority.${ticket.priority}`)}
                 </span>
               </td>
               <td className="px-4 py-3 text-muted-foreground">
-                {ticket.type}
+                {t(`tickets.type.${ticket.type}`)}
               </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : "-"}
@@ -136,7 +138,7 @@ function ListView({ tickets }: { tickets: Ticket[] }) {
                 colSpan={6}
                 className="px-4 py-8 text-center text-muted-foreground"
               >
-                No tickets found. Use sidebar filters or create a new ticket.
+                {t("tickets.listView.noTickets")}
               </td>
             </tr>
           )}

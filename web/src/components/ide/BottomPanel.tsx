@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useIDEStore, type BottomPanelTab } from "@/stores/ide";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import {
   ChevronDown,
@@ -18,26 +19,17 @@ interface BottomPanelProps {
   className?: string;
 }
 
-const TABS: { id: BottomPanelTab; label: string; icon: React.ReactNode }[] = [
-  { id: "output", label: "Output", icon: <Terminal className="w-3.5 h-3.5" /> },
-  {
-    id: "problems",
-    label: "Problems",
-    icon: <AlertCircle className="w-3.5 h-3.5" />,
-  },
-  {
-    id: "channels",
-    label: "Channels",
-    icon: <MessageSquare className="w-3.5 h-3.5" />,
-  },
-  {
-    id: "activity",
-    label: "Activity",
-    icon: <Activity className="w-3.5 h-3.5" />,
-  },
-];
+const TAB_ICONS: Record<BottomPanelTab, React.ReactNode> = {
+  output: <Terminal className="w-3.5 h-3.5" />,
+  problems: <AlertCircle className="w-3.5 h-3.5" />,
+  channels: <MessageSquare className="w-3.5 h-3.5" />,
+  activity: <Activity className="w-3.5 h-3.5" />,
+};
+
+const TAB_IDS: BottomPanelTab[] = ["output", "problems", "channels", "activity"];
 
 export function BottomPanel({ className }: BottomPanelProps) {
+  const t = useTranslations();
   const {
     bottomPanelOpen,
     bottomPanelHeight,
@@ -86,22 +78,22 @@ export function BottomPanel({ className }: BottomPanelProps) {
           className
         )}
       >
-        {TABS.map((tab) => (
+        {TAB_IDS.map((tabId) => (
           <button
-            key={tab.id}
+            key={tabId}
             className={cn(
               "flex items-center gap-1.5 px-2 py-1 text-xs rounded hover:bg-muted",
-              bottomPanelTab === tab.id
+              bottomPanelTab === tabId
                 ? "text-foreground"
                 : "text-muted-foreground"
             )}
             onClick={() => {
-              setBottomPanelTab(tab.id);
+              setBottomPanelTab(tabId);
               setBottomPanelOpen(true);
             }}
           >
-            {tab.icon}
-            <span>{tab.label}</span>
+            {TAB_ICONS[tabId]}
+            <span>{t(`ide.bottomPanel.${tabId}`)}</span>
           </button>
         ))}
         <div className="flex-1" />
@@ -134,19 +126,19 @@ export function BottomPanel({ className }: BottomPanelProps) {
 
       {/* Tab bar */}
       <div className="h-8 flex items-center px-2 gap-2 border-b border-border">
-        {TABS.map((tab) => (
+        {TAB_IDS.map((tabId) => (
           <button
-            key={tab.id}
+            key={tabId}
             className={cn(
               "flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors",
-              bottomPanelTab === tab.id
+              bottomPanelTab === tabId
                 ? "text-foreground bg-muted"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
-            onClick={() => setBottomPanelTab(tab.id)}
+            onClick={() => setBottomPanelTab(tabId)}
           >
-            {tab.icon}
-            <span>{tab.label}</span>
+            {TAB_ICONS[tabId]}
+            <span>{t(`ide.bottomPanel.${tabId}`)}</span>
           </button>
         ))}
         <div className="flex-1" />
@@ -172,22 +164,22 @@ export function BottomPanel({ className }: BottomPanelProps) {
       <div className="flex-1 overflow-auto p-2">
         {bottomPanelTab === "output" && (
           <div className="text-xs font-mono text-muted-foreground">
-            <p>No output available</p>
+            <p>{t("ide.bottomPanel.noOutput")}</p>
           </div>
         )}
         {bottomPanelTab === "problems" && (
           <div className="text-xs text-muted-foreground">
-            <p>No problems detected</p>
+            <p>{t("ide.bottomPanel.noProblems")}</p>
           </div>
         )}
         {bottomPanelTab === "channels" && (
           <div className="text-xs text-muted-foreground">
-            <p>No active channels</p>
+            <p>{t("ide.bottomPanel.noChannels")}</p>
           </div>
         )}
         {bottomPanelTab === "activity" && (
           <div className="text-xs text-muted-foreground">
-            <p>No recent activity</p>
+            <p>{t("ide.bottomPanel.noActivity")}</p>
           </div>
         )}
       </div>

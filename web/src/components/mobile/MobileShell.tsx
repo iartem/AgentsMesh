@@ -50,7 +50,7 @@ export function MobileShell({
   }
 
   return (
-    <div className={cn("flex flex-col h-screen bg-background overflow-hidden", className)} style={{ height: '100dvh' }}>
+    <div className={cn("app-shell flex flex-col h-screen bg-background overflow-hidden", className)} style={{ height: '100dvh' }}>
       {/* Header */}
       <MobileHeader title={title} actions={headerActions} />
 

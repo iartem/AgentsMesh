@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function SetupRunnerPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { currentOrg } = useAuthStore();
 
   const handleSkip = () => {
@@ -41,10 +43,10 @@ export default function SetupRunnerPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Connect Your First Runner
+            {t("auth.onboarding.setupRunner.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            A Runner executes AI agent tasks. You need at least one Runner to start using AgentMesh.
+            {t("auth.onboarding.setupRunner.subtitle")}
           </p>
         </div>
 
@@ -69,13 +71,13 @@ export default function SetupRunnerPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Local Runner</h3>
+                <h3 className="font-semibold text-foreground">{t("auth.onboarding.setupRunner.localRunner")}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Run a Runner on your local machine. Perfect for development and testing.
+                  {t("auth.onboarding.setupRunner.localRunnerDescription")}
                 </p>
                 <Link href="/onboarding/setup-runner/local">
                   <Button className="mt-4 w-full">
-                    Set Up Local Runner
+                    {t("auth.onboarding.setupRunner.setUpLocalRunner")}
                   </Button>
                 </Link>
               </div>
@@ -102,16 +104,16 @@ export default function SetupRunnerPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">Cloud Runner</h3>
+                  <h3 className="font-semibold text-foreground">{t("auth.onboarding.setupRunner.cloudRunner")}</h3>
                   <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
-                    Coming Soon
+                    {t("auth.onboarding.setupRunner.comingSoon")}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Use AgentMesh-hosted Runners. No setup required, instant availability.
+                  {t("auth.onboarding.setupRunner.cloudRunnerDescription")}
                 </p>
                 <Button className="mt-4 w-full" variant="outline" disabled>
-                  Coming Soon
+                  {t("auth.onboarding.setupRunner.comingSoon")}
                 </Button>
               </div>
             </div>
@@ -121,7 +123,7 @@ export default function SetupRunnerPage() {
         {/* Skip */}
         <div className="pt-4 border-t border-border text-center">
           <Button variant="ghost" onClick={handleSkip}>
-            Skip for now, I&apos;ll set this up later
+            {t("auth.onboarding.setupRunner.skipForNow")}
           </Button>
         </div>
       </div>

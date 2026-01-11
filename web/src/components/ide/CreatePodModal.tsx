@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { podApi, agentApi, runnerApi, repositoryApi, RepositoryData } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 
 interface AgentType {
@@ -34,6 +35,7 @@ interface CreatePodModalProps {
 }
 
 export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps) {
+  const t = useTranslations();
   const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const [runners, setRunners] = useState<Runner[]>([]);
   const [repositories, setRepositories] = useState<RepositoryData[]>([]);
@@ -129,7 +131,7 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background border border-border rounded-lg w-full max-w-md p-4 md:p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg md:text-xl font-semibold mb-4">Create New Pod</h2>
+        <h2 className="text-lg md:text-xl font-semibold mb-4">{t("ide.createPod.title")}</h2>
 
         {loadingData ? (
           <div className="flex items-center justify-center py-8">
@@ -138,13 +140,13 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Agent Type</label>
+              <label className="block text-sm font-medium mb-2">{t("ide.createPod.selectAgent")}</label>
               <select
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
                 value={selectedAgent || ""}
                 onChange={(e) => setSelectedAgent(Number(e.target.value))}
               >
-                <option value="">Select an agent...</option>
+                <option value="">{t("ide.createPod.selectAgentPlaceholder")}</option>
                 {agentTypes.map((agent) => (
                   <option key={agent.id} value={agent.id}>
                     {agent.name}
@@ -154,13 +156,13 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Runner</label>
+              <label className="block text-sm font-medium mb-2">{t("ide.createPod.selectRunner")}</label>
               <select
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
                 value={selectedRunner || ""}
                 onChange={(e) => setSelectedRunner(Number(e.target.value))}
               >
-                <option value="">Select a runner...</option>
+                <option value="">{t("ide.createPod.selectRunnerPlaceholder")}</option>
                 {runners.map((runner) => (
                   <option key={runner.id} value={runner.id}>
                     {runner.node_id} ({runner.current_pods}/{runner.max_concurrent_pods})
@@ -169,19 +171,19 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
               </select>
               {runners.length === 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  No online runners available
+                  {t("ide.createPod.selectRunnerPlaceholder")}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Repository (optional)</label>
+              <label className="block text-sm font-medium mb-2">{t("ide.createPod.selectRepository")}</label>
               <select
                 className="w-full px-3 py-2 border border-border rounded-md bg-background"
                 value={selectedRepository || ""}
                 onChange={(e) => setSelectedRepository(e.target.value ? Number(e.target.value) : null)}
               >
-                <option value="">Select a repository...</option>
+                <option value="">{t("ide.createPod.selectRepositoryPlaceholder")}</option>
                 {repositories.map((repo) => (
                   <option key={repo.id} value={repo.id}>
                     {repo.full_path}
@@ -192,11 +194,11 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
 
             {selectedRepository && (
               <div>
-                <label className="block text-sm font-medium mb-2">Branch</label>
+                <label className="block text-sm font-medium mb-2">{t("ide.createPod.branch")}</label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                  placeholder="Enter branch name (e.g., main)"
+                  placeholder={t("ide.createPod.branchPlaceholder")}
                   value={selectedBranch}
                   onChange={(e) => setSelectedBranch(e.target.value)}
                 />
@@ -204,11 +206,11 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Initial Prompt (optional)</label>
+              <label className="block text-sm font-medium mb-2">{t("ide.createPod.initialPrompt")}</label>
               <textarea
                 className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none"
                 rows={3}
-                placeholder="Enter an initial prompt for the agent..."
+                placeholder={t("ide.createPod.initialPromptPlaceholder")}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
@@ -218,14 +220,14 @@ export function CreatePodModal({ open, onClose, onCreated }: CreatePodModalProps
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Cancel
+            {t("ide.createPod.cancel")}
           </Button>
           <Button
             onClick={handleCreate}
             disabled={!selectedAgent || !selectedRunner || loading || loadingData}
             className="w-full sm:w-auto"
           >
-            {loading ? "Creating..." : "Create Pod"}
+            {loading ? t("ide.createPod.creating") : t("ide.createPod.create")}
           </Button>
         </div>
       </div>

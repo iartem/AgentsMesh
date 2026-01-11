@@ -7,8 +7,10 @@ import { ChannelChatPanel, MobileChannelChat } from "@/components/mesh";
 import { useDevMeshStore } from "@/stores/devmesh";
 import { cn } from "@/lib/utils";
 import { useBreakpoint } from "@/components/layout/useBreakpoint";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function MeshPage() {
+  const t = useTranslations();
   const {
     topology,
     selectedChannel,
@@ -46,9 +48,9 @@ export default function MeshPage() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">DevMesh</h1>
+            <h1 className="text-xl font-semibold text-foreground">{t("mesh.page.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Multi-agent collaboration network topology
+              {t("mesh.page.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -57,13 +59,13 @@ export default function MeshPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-muted-foreground">
-                  {activePodCount} active pods
+                  {t("mesh.page.activePods", { count: activePodCount })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-blue-500">#</span>
                 <span className="text-muted-foreground">
-                  {activeChannelCount} channels
+                  {t("mesh.page.channelsCount", { count: activeChannelCount })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -71,7 +73,7 @@ export default function MeshPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
                 <span className="text-muted-foreground">
-                  {topology?.edges.length || 0} bindings
+                  {t("mesh.page.bindingsCount", { count: topology?.edges.length || 0 })}
                 </span>
               </div>
             </div>
@@ -81,7 +83,7 @@ export default function MeshPage() {
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              {t("mesh.page.refresh")}
             </Button>
           </div>
         </div>
@@ -96,7 +98,7 @@ export default function MeshPage() {
               <span className="text-sm">{error}</span>
             </div>
             <Button variant="ghost" size="sm" onClick={clearError}>
-              Dismiss
+              {t("mesh.page.dismiss")}
             </Button>
           </div>
         )}
@@ -114,7 +116,7 @@ export default function MeshPage() {
           {loading && topology && (
             <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-background/80 border border-border rounded-full text-xs text-muted-foreground">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              Updating...
+              {t("mesh.page.updating")}
             </div>
           )}
         </div>
@@ -122,34 +124,34 @@ export default function MeshPage() {
         {/* Legend */}
         <div className="px-6 py-3 border-t border-border">
           <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
-            <span className="font-medium">Legend:</span>
+            <span className="font-medium">{t("mesh.legend.title")}:</span>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-green-500" />
-              <span>Running</span>
+              <span>{t("mesh.legend.running")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-yellow-500" />
-              <span>Initializing</span>
+              <span>{t("mesh.legend.initializing")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-gray-500" />
-              <span>Terminated</span>
+              <span>{t("mesh.legend.terminated")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-red-500" />
-              <span>Failed</span>
+              <span>{t("mesh.legend.failed")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-blue-500" />
-              <span>Channel</span>
+              <span>{t("mesh.legend.channel")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-6 border-t-2 border-green-500" />
-              <span>Active Binding</span>
+              <span>{t("mesh.legend.activeBinding")}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-6 border-t-2 border-yellow-500 border-dashed" />
-              <span>Pending Binding</span>
+              <span>{t("mesh.legend.pendingBinding")}</span>
             </div>
           </div>
         </div>

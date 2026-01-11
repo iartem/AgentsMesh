@@ -9,7 +9,13 @@
     "search": "搜索",
     "noResults": "未找到结果",
     "error": "发生错误",
-    "success": "成功"
+    "success": "成功",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交",
+    "reset": "重置"
   },
   "auth": {
     "login": "登录",
@@ -22,7 +28,149 @@
     "forgotPassword": "忘记密码？",
     "noAccount": "没有账号？",
     "hasAccount": "已有账号？",
-    "loginWith": "使用 {provider} 登录"
+    "loginWith": "使用 {provider} 登录",
+    "loginPage": {
+      "title": "欢迎回来",
+      "subtitle": "登录您的账号以继续",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "••••••••",
+      "signIn": "登录",
+      "orContinueWith": "或使用以下方式继续",
+      "dontHaveAccount": "还没有账号？",
+      "signUp": "注册",
+      "invalidCredentials": "邮箱或密码错误"
+    },
+    "registerPage": {
+      "title": "创建您的账号",
+      "subtitle": "立即开始使用 AgentMesh",
+      "fullName": "姓名",
+      "fullNamePlaceholder": "张三",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "usernameLabel": "用户名",
+      "usernamePlaceholder": "zhangsan",
+      "usernameHint": "3-50个字符，仅限字母、数字和下划线",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "••••••••",
+      "passwordHint": "至少8个字符",
+      "confirmPasswordLabel": "确认密码",
+      "createAccount": "创建账号",
+      "creatingAccount": "正在创建账号...",
+      "termsText": "创建账号即表示您同意我们的",
+      "termsOfService": "服务条款",
+      "and": "和",
+      "privacyPolicy": "隐私政策",
+      "orContinueWith": "或使用以下方式继续",
+      "alreadyHaveAccount": "已有账号？",
+      "signIn": "登录",
+      "passwordsNotMatch": "两次输入的密码不一致",
+      "passwordTooShort": "密码至少需要8个字符",
+      "registrationFailed": "注册失败，请重试。"
+    },
+    "forgotPasswordPage": {
+      "title": "重置密码",
+      "subtitle": "输入您的邮箱地址，我们将发送重置密码链接。",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "sendResetLink": "发送重置链接",
+      "sending": "发送中...",
+      "rememberPassword": "记起密码了？",
+      "signIn": "登录",
+      "checkEmail": "请查收邮件",
+      "emailSentDescription": "如果 {email} 对应的账号存在，您将很快收到密码重置链接。",
+      "backToSignIn": "返回登录",
+      "sendFailed": "发送重置邮件失败，请重试。"
+    },
+    "verifyEmailPage": {
+      "title": "验证您的邮箱",
+      "subtitle": "我们已向 {email} 发送了验证邮件。",
+      "subtitleDefault": "我们已向您的邮箱发送了验证邮件。",
+      "clickLink": "请点击邮件中的链接验证您的账号。",
+      "resendEmail": "重新发送验证邮件",
+      "sending": "发送中...",
+      "wrongEmail": "邮箱错误？",
+      "signUpDifferent": "使用其他邮箱注册",
+      "alreadyVerified": "已经验证？",
+      "signIn": "登录",
+      "emailSent": "验证邮件已发送！请查收您的收件箱。",
+      "resendFailed": "重新发送验证邮件失败，请重试。",
+      "emailMissing": "缺少邮箱地址"
+    },
+    "onboarding": {
+      "welcome": "欢迎！",
+      "welcomeWithName": "欢迎，{name}！",
+      "setupWorkspace": "让我们设置您的工作区以开始使用。",
+      "quickStart": "快速开始",
+      "quickStartDescription": "创建个人工作区，立即开始使用 AgentMesh。",
+      "createPersonalWorkspace": "创建个人工作区",
+      "creating": "创建中...",
+      "createTeamWorkspace": "创建团队工作区",
+      "createTeamWorkspaceDescription": "为团队设置自定义名称的工作区，并邀请成员加入。",
+      "orJoinExisting": "或加入已有工作区",
+      "haveInviteCode": "有邀请码？",
+      "enterInviteCodePlaceholder": "输入邀请码",
+      "enterInviteCode": "请输入邀请码",
+      "join": "加入",
+      "joining": "加入中...",
+      "inviteCodeComingSoon": "邀请码功能即将上线",
+      "invalidInviteCode": "邀请码无效或已过期",
+      "createWorkspaceFailed": "创建工作区失败，该名称可能已被使用。",
+      "backToOptions": "← 返回选项",
+      "createOrg": {
+        "title": "创建团队工作区",
+        "subtitle": "为团队设置协作工作区。",
+        "workspaceNameLabel": "工作区名称",
+        "workspaceNamePlaceholder": "我的团队",
+        "workspaceNameHint": "这是您工作区的显示名称。",
+        "urlIdentifierLabel": "URL 标识",
+        "urlIdentifierPlaceholder": "my-team",
+        "urlIdentifierHint": "这将用于 URL 中。仅允许小写字母、数字和连字符。",
+        "createWorkspace": "创建工作区",
+        "enterWorkspaceName": "请输入工作区名称",
+        "enterUrlIdentifier": "请输入 URL 标识",
+        "urlTooShort": "URL 标识至少需要 3 个字符",
+        "urlTaken": "此 URL 标识已被使用，请尝试其他标识。",
+        "createFailed": "创建工作区失败，请重试。"
+      },
+      "setupRunner": {
+        "title": "连接您的第一个 Runner",
+        "subtitle": "Runner 负责执行 AI 智能体任务。您需要至少一个 Runner 才能开始使用 AgentMesh。",
+        "localRunner": "本地 Runner",
+        "localRunnerDescription": "在本地机器上运行 Runner。非常适合开发和测试。",
+        "setUpLocalRunner": "设置本地 Runner",
+        "cloudRunner": "云端 Runner",
+        "cloudRunnerDescription": "使用 AgentMesh 托管的 Runner。无需设置，即时可用。",
+        "comingSoon": "即将上线",
+        "skipForNow": "暂时跳过，稍后再设置"
+      },
+      "localRunner": {
+        "title": "设置本地 Runner",
+        "subtitle": "按照以下步骤将本地机器连接为 Runner。",
+        "step1Title": "获取 Runner 令牌",
+        "generatingToken": "正在生成令牌...",
+        "tokenWarning": "⚠️ 请妥善保管此令牌，它只会显示一次。",
+        "tokenGenerationFailed": "生成 Runner 令牌失败，请重试。",
+        "tokenGenerationFailedShort": "生成令牌失败",
+        "step2Title": "安装并启动 Runner",
+        "startRunnerComment": "使用令牌启动 Runner",
+        "step3Title": "等待连接",
+        "waitingForConnection": "等待 Runner 连接...",
+        "elapsed": "已等待",
+        "connectionTimeout": "尚未有 Runner 连接。请确保使用正确的令牌启动了 Runner。",
+        "retry": "重试",
+        "back": "← 返回",
+        "skipForNow": "暂时跳过",
+        "runnerConnected": "Runner 已连接！",
+        "runnerConnectedDescription": "您的 Runner 已上线，可以执行任务了。",
+        "runnerId": "Runner ID",
+        "system": "系统",
+        "status": "状态",
+        "online": "在线",
+        "goToDashboard": "前往控制台"
+      }
+    }
   },
   "nav": {
     "agentpod": "AgentPod",
@@ -31,13 +179,300 @@
     "settings": "设置",
     "billing": "账单"
   },
+  "landing": {
+    "nav": {
+      "features": "功能特性",
+      "pricing": "定价",
+      "docs": "文档",
+      "signIn": "登录",
+      "getStarted": "立即开始",
+      "console": "控制台",
+      "language": "语言"
+    },
+    "hero": {
+      "badge": "终端原生 AI 平台",
+      "title1": "基于终端的",
+      "title2": "编程智能体",
+      "title3": "协作平台",
+      "description": "统一管理 Claude Code、Codex CLI、Gemini CLI、Aider 等终端编程智能体。让多个 AI 智能体协作完成复杂的开发任务。",
+      "getStartedFree": "免费开始",
+      "viewDocs": "查看文档",
+      "trustedBy": "受全球开发者信赖",
+      "teams": "500+ 团队",
+      "pods": "10K+ Pod",
+      "openSource": "开源项目"
+    },
+    "agentLogos": {
+      "title": "支持所有主流终端编程智能体"
+    },
+    "whyTerminal": {
+      "title": "为什么选择",
+      "titleHighlight": "终端智能体",
+      "titleEnd": "？",
+      "description": "与 Cursor 或 Copilot 等 IDE 插件不同，终端智能体具备自主执行和完整的开发能力。",
+      "benefits": {
+        "autonomous": {
+          "title": "自主执行",
+          "description": "不仅是代码补全。终端智能体可以独立完成从开始到结束的复杂开发任务。"
+        },
+        "fullCapabilities": {
+          "title": "完整能力",
+          "description": "读写文件、执行命令、Git 操作、运行测试——具备完整的全栈开发能力。"
+        },
+        "dataControl": {
+          "title": "数据可控",
+          "description": "自托管运行节点意味着代码永远不会离开你的基础设施，满足安全和合规要求。"
+        }
+      },
+      "comparison": {
+        "idePlugins": "IDE 插件",
+        "idePluginsSubtitle": "Copilot / Cursor",
+        "terminalBased": "终端智能体 ✓",
+        "terminalBasedSubtitle": "Claude Code / Aider",
+        "autonomy": "自主性",
+        "capabilities": "能力",
+        "environment": "环境",
+        "multiAgent": "多智能体",
+        "selfHosted": "自托管",
+        "ide": {
+          "autonomy": "被动响应",
+          "capabilities": "代码补全",
+          "environment": "IDE 沙箱",
+          "multiAgent": "不支持",
+          "selfHosted": "仅限云端"
+        },
+        "terminal": {
+          "autonomy": "主动执行任务",
+          "capabilities": "全栈开发",
+          "environment": "完整终端访问",
+          "multiAgent": "AgentMesh 支持",
+          "selfHosted": "完全可控"
+        }
+      }
+    },
+    "coreFeatures": {
+      "title": "核心",
+      "titleHighlight": "功能",
+      "description": "管理和协调终端 AI 编程智能体所需的一切。",
+      "agentpod": {
+        "title": "AgentPod",
+        "subtitle": "远程 AI 工作站",
+        "description": "在云端运行 AI 智能体，通过浏览器访问完整的开发环境。每个 AgentPod 运行在隔离的 Git Worktree 上，支持实时终端访问。",
+        "highlights": [
+          "实时交互的 Web 终端",
+          "每个 AgentPod 独立 Git Worktree",
+          "支持多个并发 AgentPod",
+          "完成后自动清理"
+        ]
+      },
+      "agentmesh": {
+        "title": "AgentMesh",
+        "subtitle": "多智能体协作",
+        "description": "让多个 AI 智能体通过 Pod 绑定和频道通信协同工作。实时可视化协作拓扑。",
+        "highlights": [
+          "带权限控制的 Pod 绑定",
+          "基于频道的消息广播",
+          "实时拓扑可视化",
+          "跨智能体任务协调"
+        ]
+      },
+      "tickets": {
+        "title": "任务管理",
+        "subtitle": "任务驱动开发",
+        "description": "将 AI Pod 与任务管理工作流集成。创建任务，绑定到 Pod，通过看板追踪进度。",
+        "highlights": [
+          "看板可视化",
+          "任务与 Pod 绑定",
+          "进度追踪",
+          "MR/PR 集成"
+        ]
+      },
+      "runners": {
+        "title": "自托管运行节点",
+        "subtitle": "你的基础设施，你的数据",
+        "description": "在自己的基础设施上部署运行节点。代码和数据永远不会离开你的环境，满足最严格的安全和合规要求。",
+        "highlights": [
+          "Docker/Kubernetes 部署",
+          "数据完全本地化",
+          "支持离线环境",
+          "完整审计日志"
+        ]
+      }
+    },
+    "howItWorks": {
+      "title": "只需",
+      "titleHighlight": "3 步",
+      "description": "部署、连接、开始协作，几分钟内即可与 AI 智能体协同工作。",
+      "step1": {
+        "title": "部署运行节点",
+        "description": "使用单条命令在服务器或本地机器上部署运行节点。"
+      },
+      "step2": {
+        "title": "连接智能体",
+        "description": "配置你的 AI 编程智能体连接到 AgentMesh。"
+      },
+      "step3": {
+        "title": "开始协作",
+        "description": "创建 Pod、频道，让多个智能体协同工作。"
+      }
+    },
+    "enterprise": {
+      "title": "为",
+      "titleHighlight": "企业",
+      "description": "企业团队所需的安全、合规和可扩展性功能。",
+      "features": {
+        "multiTenant": {
+          "title": "多租户",
+          "description": "组织和团队层级结构，隔离的工作空间。"
+        },
+        "sso": {
+          "title": "SSO 集成",
+          "description": "支持 SAML 2.0 和 LDAP 企业认证。"
+        },
+        "auditLogs": {
+          "title": "审计日志",
+          "description": "完整的活动追踪，满足合规和安全要求。"
+        },
+        "rbac": {
+          "title": "RBAC",
+          "description": "细粒度的团队角色访问控制。"
+        },
+        "gitIntegration": {
+          "title": "Git 集成",
+          "description": "开箱即用支持 GitLab、GitHub 和 Gitee。"
+        },
+        "monitoring": {
+          "title": "监控",
+          "description": "内置 Prometheus 指标和 Grafana 仪表板。"
+        },
+        "backupDR": {
+          "title": "备份与灾备",
+          "description": "自动备份和灾难恢复支持。"
+        },
+        "airGapped": {
+          "title": "离线部署",
+          "description": "完全离线部署，实现最高安全性。"
+        }
+      }
+    },
+    "pricing": {
+      "title": "简单透明的",
+      "titleHighlight": "定价",
+      "description": "免费开始，按需扩展。无隐藏费用。",
+      "mostPopular": "最受欢迎",
+      "free": {
+        "name": "免费版",
+        "price": "¥0",
+        "period": "永久免费",
+        "description": "适合刚开始使用的个人开发者。",
+        "features": [
+          "1 个运行节点",
+          "3 个并发 Pod",
+          "1 个组织成员",
+          "社区支持",
+          "基础集成"
+        ],
+        "cta": "立即开始"
+      },
+      "pro": {
+        "name": "专业版",
+        "price": "¥199",
+        "period": "每用户/月",
+        "description": "适合需要更强大功能和协作的团队。",
+        "features": [
+          "无限运行节点",
+          "无限 Pod",
+          "最多 10 名团队成员",
+          "优先邮件支持",
+          "API 访问",
+          "高级分析",
+          "自定义集成"
+        ],
+        "cta": "开始试用"
+      },
+      "enterprise": {
+        "name": "企业版",
+        "price": "定制",
+        "period": "联系我们",
+        "description": "适合有高级安全需求的组织。",
+        "features": [
+          "专业版全部功能",
+          "SAML/LDAP SSO",
+          "审计日志",
+          "专属支持",
+          "私有部署",
+          "SLA 保障",
+          "定制合同"
+        ],
+        "cta": "联系销售"
+      },
+      "footer": "所有方案均包含 SSL 加密、99.9% 正常运行时间 SLA 和定期备份。",
+      "customPlan": "需要定制方案？",
+      "contactUs": "联系我们"
+    },
+    "selfHosted": {
+      "title": "需要完整的",
+      "titleHighlight": "自托管",
+      "titleEnd": "部署？",
+      "description": "AgentMesh 支持完全自托管部署。代码和数据永远不会离开你的基础设施。非常适合有严格安全和合规要求的企业。",
+      "dockerCompose": "Docker Compose",
+      "kubernetesHelm": "Kubernetes Helm",
+      "airGappedSupport": "离线环境支持",
+      "viewDocs": "查看部署文档",
+      "contactSales": "联系企业销售"
+    },
+    "finalCta": {
+      "title1": "准备好让你的",
+      "title2": "终端智能体协作了吗？",
+      "description": "加入数千名使用 AgentMesh 协调 AI 编程智能体的开发者。免费开始，无需信用卡。",
+      "getStartedFree": "免费开始",
+      "scheduleDemo": "预约演示",
+      "freeTier": "提供免费版",
+      "noCreditCard": "无需信用卡",
+      "selfHostedOption": "可自托管部署"
+    },
+    "footer": {
+      "tagline": "基于终端的编程智能体协作平台",
+      "copyright": "AgentMesh. 保留所有权利。",
+      "madeWith": "为开发者用心打造",
+      "product": {
+        "title": "产品",
+        "agentpod": "AgentPod",
+        "agentmesh": "AgentMesh",
+        "tickets": "任务管理",
+        "runners": "运行节点",
+        "pricing": "定价"
+      },
+      "resources": {
+        "title": "资源",
+        "documentation": "文档",
+        "apiReference": "API 参考",
+        "tutorials": "教程",
+        "changelog": "更新日志",
+        "status": "服务状态"
+      },
+      "company": {
+        "title": "公司",
+        "about": "关于我们",
+        "blog": "博客",
+        "careers": "加入我们",
+        "contact": "联系我们"
+      },
+      "legal": {
+        "title": "法律",
+        "privacy": "隐私政策",
+        "terms": "服务条款",
+        "security": "安全"
+      }
+    }
+  },
   "agentpod": {
     "title": "AgentPod",
     "pods": "Pod",
     "newPod": "新建 Pod",
     "runners": "运行节点",
     "noRunnersOnline": "暂无在线节点",
-    "selectAgent": "选择 Agent",
+    "selectAgent": "选择智能体",
     "selectRepository": "选择仓库",
     "initialPrompt": "初始提示",
     "status": {
@@ -54,11 +489,44 @@
     "newChannel": "新建频道",
     "topology": "拓扑图",
     "messages": "消息",
-    "sendMessage": "发送消息..."
+    "sendMessage": "发送消息...",
+    "page": {
+      "title": "DevMesh",
+      "subtitle": "多智能体协作网络拓扑",
+      "activePods": "{count} 个活跃 Pod",
+      "channelsCount": "{count} 个频道",
+      "bindingsCount": "{count} 个绑定",
+      "refresh": "刷新",
+      "dismiss": "关闭",
+      "updating": "更新中..."
+    },
+    "legend": {
+      "title": "图例",
+      "running": "运行中",
+      "initializing": "初始化",
+      "terminated": "已终止",
+      "failed": "失败",
+      "channel": "频道",
+      "activeBinding": "活跃绑定",
+      "pendingBinding": "待处理绑定"
+    },
+    "channelList": {
+      "title": "频道",
+      "showArchived": "显示已归档",
+      "hideArchived": "隐藏已归档",
+      "noChannels": "暂无频道",
+      "archived": "已归档",
+      "archive": "归档",
+      "unarchive": "取消归档"
+    },
+    "messageInput": {
+      "placeholder": "输入消息...",
+      "hint": "按 Enter 发送，Shift+Enter 换行"
+    }
   },
   "tickets": {
     "title": "任务管理",
-    "newTicket": "新建任务",
+    "newTicket": "新建 Ticket",
     "board": "看板",
     "list": "列表",
     "backlog": "待办池",
@@ -66,6 +534,34 @@
     "inProgress": "进行中",
     "inReview": "待审核",
     "done": "已完成",
+    "searchPlaceholder": "搜索 Ticket...",
+    "ticketCount": "个 Ticket",
+    "clear": "清除",
+    "view": "视图",
+    "filters": {
+      "status": "状态",
+      "type": "类型",
+      "priority": "优先级"
+    },
+    "emptyState": {
+      "title": "暂无 Ticket",
+      "noMatch": "没有匹配的 Ticket",
+      "createFirst": "创建你的第一个 Ticket 开始使用"
+    },
+    "moreTickets": "+{count} 个",
+    "listView": {
+      "id": "ID",
+      "titleColumn": "标题",
+      "status": "状态",
+      "type": "类型",
+      "priority": "优先级",
+      "assignee": "负责人",
+      "created": "创建时间",
+      "noTickets": "未找到 Ticket。使用侧边栏筛选或创建新 Ticket。"
+    },
+    "kanban": {
+      "noTickets": "暂无 Ticket"
+    },
     "priority": {
       "none": "无优先级",
       "low": "低",
@@ -77,7 +573,87 @@
       "task": "任务",
       "bug": "缺陷",
       "feature": "功能",
+      "improvement": "改进",
       "epic": "史诗"
+    },
+    "status": {
+      "backlog": "待办池",
+      "todo": "待开始",
+      "in_progress": "进行中",
+      "in_review": "待审核",
+      "done": "已完成",
+      "cancelled": "已取消"
+    },
+    "createDialog": {
+      "title": "创建 Ticket",
+      "createSubTicket": "创建子 Ticket",
+      "titleLabel": "标题",
+      "titlePlaceholder": "输入 Ticket 标题",
+      "titleRequired": "标题为必填项",
+      "repositoryRequired": "仓库为必填项",
+      "createFailed": "创建 Ticket 失败",
+      "repository": "仓库",
+      "selectRepository": "选择仓库...",
+      "summary": "摘要",
+      "summaryPlaceholder": "简要描述...",
+      "content": "内容",
+      "submit": "创建 Ticket"
+    },
+    "detail": {
+      "retry": "重试",
+      "notFound": "Ticket 未找到",
+      "summary": "摘要",
+      "content": "内容",
+      "subTickets": "子 Ticket",
+      "related": "关联",
+      "commits": "提交记录",
+      "actions": "操作",
+      "details": "详情",
+      "dueDate": "截止日期",
+      "repository": "仓库",
+      "assignees": "负责人",
+      "noAssignees": "暂无负责人",
+      "timestamps": "时间信息",
+      "created": "创建时间",
+      "updated": "更新时间",
+      "deleteTicket": "删除 Ticket",
+      "deleteConfirmation": "确定要删除 Ticket {identifier} 吗？此操作无法撤销。",
+      "labels": "标签",
+      "timeline": "时间线",
+      "started": "开始时间",
+      "completed": "完成时间",
+      "viewFullDetails": "查看完整详情"
+    },
+    "list": {
+      "ticket": "Ticket",
+      "assignees": "负责人",
+      "dueDate": "截止日期",
+      "updated": "更新时间",
+      "noTickets": "未找到 Ticket"
+    },
+    "podPanel": {
+      "activeCount": "{count} 个活跃",
+      "newPod": "新建 Pod",
+      "createNewPod": "创建新 Pod",
+      "runner": "Runner",
+      "selectRunner": "选择 Runner...",
+      "selectRunnerRequired": "请选择一个 Runner",
+      "model": "模型",
+      "permissionMode": "权限模式",
+      "permissionDefault": "默认",
+      "permissionPlan": "计划模式",
+      "permissionAutoApprove": "自动批准（危险）",
+      "initialPrompt": "初始提示（可选）",
+      "initialPromptPlaceholder": "处理 Ticket：{title}",
+      "creating": "创建中...",
+      "createPod": "创建 Pod",
+      "createFailed": "创建 Pod 失败",
+      "previousPods": "{count} 个历史 Pod",
+      "noPods": "此 Ticket 暂无 Pod",
+      "noRunners": "暂无在线 Runner",
+      "connect": "连接",
+      "openInNewTab": "在新标签页打开",
+      "started": "开始时间"
     }
   },
   "settings": {
@@ -86,6 +662,746 @@
     "team": "团队",
     "gitProviders": "Git 服务",
     "agents": "智能体",
-    "billing": "账单"
+    "billing": "账单",
+    "language": {
+      "title": "语言",
+      "description": "选择界面显示语言。",
+      "selectLabel": "显示语言",
+      "selectHint": "这将更改整个应用的语言。"
+    },
+    "organizationDetails": {
+      "title": "组织详情",
+      "nameLabel": "组织名称",
+      "namePlaceholder": "我的组织",
+      "slugLabel": "组织标识",
+      "slugHint": "创建后不可更改",
+      "saving": "保存中...",
+      "saveChanges": "保存更改"
+    },
+    "dangerZone": {
+      "title": "危险区域",
+      "description": "删除组织后将无法恢复，请谨慎操作。",
+      "deleteOrg": "删除组织"
+    },
+    "members": {
+      "title": "成员",
+      "description": "管理组织的访问权限",
+      "inviteMember": "邀请成员",
+      "loading": "加载成员中...",
+      "noMembers": "暂无成员。邀请他人开始协作。",
+      "you": "（你）",
+      "roleOwner": "所有者",
+      "roleAdmin": "管理员",
+      "roleMember": "成员",
+      "remove": "移除",
+      "confirmRemove": "确定要移除该成员吗？",
+      "dismiss": "关闭",
+      "failedToLoad": "加载成员失败",
+      "failedToRemove": "移除成员失败",
+      "failedToUpdate": "更新成员角色失败",
+      "failedToInvite": "邀请成员失败。请检查邮箱地址后重试。",
+      "inviteDialog": {
+        "title": "邀请成员",
+        "emailLabel": "邮箱地址",
+        "emailPlaceholder": "colleague@example.com",
+        "roleLabel": "角色",
+        "cancel": "取消",
+        "inviting": "邀请中...",
+        "sendInvite": "发送邀请"
+      }
+    },
+    "agentConfig": {
+      "title": "智能体配置",
+      "description": "为组织启用和配置 AI 智能体",
+      "loading": "加载中...",
+      "configureDefault": "配置 {name} 设置",
+      "configure": "配置"
+    },
+    "credentials": {
+      "title": "你的凭据",
+      "description": "设置 AI 服务的个人 API 密钥。密钥会在存储前加密。",
+      "dismiss": "关闭",
+      "enterAtLeastOne": "请至少输入一个 API 密钥",
+      "savedSuccess": "凭据保存成功",
+      "failedToSave": "保存凭据失败，请重试。",
+      "anthropicLabel": "Anthropic API 密钥 (Claude)",
+      "anthropicPlaceholder": "sk-ant-...",
+      "anthropicHint": "从以下地址获取密钥",
+      "openaiLabel": "OpenAI API 密钥",
+      "openaiPlaceholder": "sk-...",
+      "openaiHint": "从以下地址获取密钥",
+      "googleLabel": "Google AI API 密钥 (Gemini)",
+      "googlePlaceholder": "AIza...",
+      "googleHint": "从以下地址获取密钥",
+      "saving": "保存中...",
+      "saveCredentials": "保存凭据"
+    },
+    "gitProviders": {
+      "title": "Git 服务",
+      "description": "配置 Git 服务以进行仓库集成",
+      "addProvider": "添加服务",
+      "loading": "加载服务中...",
+      "noProviders": "暂无 Git 服务配置。添加一个开始使用。",
+      "default": "默认",
+      "disabled": "已禁用",
+      "configure": "配置",
+      "enable": "启用",
+      "disable": "禁用",
+      "delete": "删除",
+      "confirmDelete": "确定要删除此服务吗？",
+      "failedToLoad": "加载 Git 服务失败",
+      "failedToAdd": "添加服务失败",
+      "failedToUpdate": "更新服务失败",
+      "failedToDelete": "删除服务失败",
+      "failedToToggle": "切换服务状态失败",
+      "sshAuth": "SSH 认证",
+      "dialog": {
+        "addTitle": "添加 Git 服务",
+        "editTitle": "配置服务",
+        "providerType": "服务类型",
+        "sshHint": "SSH 服务使用 SSH 密钥进行认证，适用于自托管 Git 服务器。",
+        "nameLabel": "名称",
+        "namePlaceholderSSH": "例如：我的 Git 服务器",
+        "namePlaceholder": "例如：我的 GitHub",
+        "baseUrlLabel": "基础 URL",
+        "baseUrlHint": "对于自托管实例，请输入完整 URL",
+        "clientIdLabel": "Client ID（可选）",
+        "clientIdPlaceholder": "OAuth App Client ID",
+        "clientSecretLabel": "Client Secret（可选）",
+        "clientSecretPlaceholder": "OAuth App Client Secret",
+        "botTokenLabel": "Bot Token（可选）",
+        "botTokenPlaceholder": "个人访问令牌",
+        "sshKeyLabel": "SSH 密钥",
+        "sshKeyPlaceholder": "选择一个 SSH 密钥...",
+        "noSSHKeys": "暂无 SSH 密钥。请在下方创建。",
+        "setDefault": "设为默认服务",
+        "cancel": "取消",
+        "saving": "保存中...",
+        "saveChanges": "保存更改",
+        "addProvider": "添加服务"
+      }
+    },
+    "sshKeys": {
+      "title": "SSH 密钥",
+      "description": "管理 Git 认证的 SSH 密钥",
+      "addSSHKey": "添加 SSH 密钥",
+      "noKeys": "暂无 SSH 密钥。添加一个以使用 SSH Git 服务。",
+      "copyPublicKey": "复制公钥",
+      "delete": "删除",
+      "confirmDelete": "确定要删除此 SSH 密钥吗？",
+      "createdSuccess": "SSH 密钥创建成功",
+      "deletedSuccess": "SSH 密钥已删除",
+      "failedToCreate": "创建 SSH 密钥失败",
+      "failedToDelete": "删除 SSH 密钥失败",
+      "nameRequired": "SSH 密钥名称为必填项",
+      "dialog": {
+        "addTitle": "添加 SSH 密钥",
+        "createdTitle": "SSH 密钥已创建",
+        "createdHint": "将此公钥添加到你的 Git 服务器：",
+        "nameLabel": "名称",
+        "namePlaceholder": "例如：生产服务器密钥",
+        "privateKeyLabel": "私钥（可选）",
+        "privateKeyPlaceholder": "-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----",
+        "privateKeyHint": "留空以自动生成新的 Ed25519 密钥对。",
+        "cancel": "取消",
+        "creating": "创建中...",
+        "importKey": "导入密钥",
+        "generateKey": "生成密钥",
+        "done": "完成"
+      }
+    },
+    "billingPage": {
+      "currentPlan": "当前方案",
+      "yearly": "年付",
+      "monthly": "月付",
+      "renews": "续费时间",
+      "upgrade": "升级",
+      "changePlan": "更换方案",
+      "usage": "使用情况",
+      "podMinutes": "Pod 分钟数",
+      "teamMembers": "团队成员",
+      "repositories": "仓库",
+      "unlimited": "无限制",
+      "paymentMethod": "支付方式",
+      "noPaymentMethod": "暂无支付方式",
+      "addPaymentMethod": "添加支付方式",
+      "noSubscription": "暂无有效订阅",
+      "choosePlan": "选择一个方案开始使用 AgentMesh",
+      "selectPlan": "选择方案",
+      "retry": "重试",
+      "failedToLoad": "加载账单数据失败",
+      "failedToUpgrade": "升级方案失败",
+      "plansDialog": {
+        "title": "选择方案",
+        "noPlans": "暂无可用方案",
+        "podMinutes": "Pod 分钟数",
+        "teamMembers": "名团队成员",
+        "runners": "个 Runner",
+        "repositories": "个仓库",
+        "processing": "处理中...",
+        "currentPlan": "当前方案",
+        "select": "选择",
+        "free": "免费"
+      }
+    },
+    "notifications": {
+      "title": "推送通知",
+      "description": "配置重要事件的推送通知，如 Pod 状态变化、Ticket 分配和 Runner 警报。",
+      "notSupported": "此浏览器不支持推送通知。",
+      "enabled": "你将收到重要事件的通知",
+      "disabled": "启用以接收 Pod、Ticket 等的通知",
+      "enable": "启用",
+      "disable": "禁用",
+      "blocked": "已阻止",
+      "blockedTitle": "通知已被阻止",
+      "blockedHint": "请在浏览器设置中启用通知以接收提醒。",
+      "types": "通知类型",
+      "podStatus": "Pod 状态变化",
+      "podStatusDesc": "当 Pod 完成、失败或状态变化时",
+      "ticketAssigned": "Ticket 分配",
+      "ticketAssignedDesc": "当有 Ticket 分配给你时",
+      "ticketUpdated": "Ticket 更新",
+      "ticketUpdatedDesc": "当你关注的 Ticket 有更新时",
+      "runnerOffline": "Runner 警报",
+      "runnerOfflineDesc": "当 Runner 离线或出现问题时",
+      "active": "通知已启用"
+    },
+    "runnersSection": {
+      "title": "Runner",
+      "description": "管理你的自托管 Runner",
+      "loading": "加载中...",
+      "noRunners": "暂无注册的 Runner。使用注册令牌添加 Runner。",
+      "pods": "Pod：",
+      "lastSeen": "最后在线：",
+      "justNow": "刚刚",
+      "edit": "编辑",
+      "regenerateToken": "重新生成令牌",
+      "delete": "删除",
+      "disabled": "已禁用",
+      "deleteDialog": {
+        "title": "删除 Runner",
+        "description": "确定要删除此 Runner 吗？此操作无法撤销。",
+        "cancel": "取消",
+        "delete": "删除"
+      },
+      "tokenDialog": {
+        "title": "新认证令牌",
+        "description": "请立即复制此令牌，你将无法再次查看。Runner 需要更新为此新令牌。",
+        "copy": "复制",
+        "done": "完成"
+      },
+      "editDialog": {
+        "title": "编辑 Runner",
+        "nodeIdLabel": "节点 ID",
+        "descriptionLabel": "描述",
+        "descriptionPlaceholder": "Runner 描述",
+        "maxPodsLabel": "最大并发 Pod 数",
+        "enabledLabel": "已启用",
+        "cancel": "取消",
+        "saving": "保存中...",
+        "saveChanges": "保存更改"
+      }
+    },
+    "tokensSection": {
+      "title": "注册令牌",
+      "description": "创建令牌以注册新的 Runner",
+      "createToken": "创建令牌",
+      "loading": "加载中...",
+      "noTokens": "暂无注册令牌。创建一个以注册 Runner。",
+      "revoked": "已撤销",
+      "uses": "使用次数：",
+      "created": "创建时间：",
+      "expires": "过期时间：",
+      "revoke": "撤销",
+      "dialog": {
+        "createTitle": "创建注册令牌",
+        "createdTitle": "令牌已创建",
+        "createdHint": "请立即复制此令牌，你将无法再次查看。",
+        "descriptionLabel": "描述（可选）",
+        "descriptionPlaceholder": "例如：开发团队 Runner",
+        "maxUsesLabel": "最大使用次数（可选）",
+        "maxUsesPlaceholder": "留空表示不限",
+        "expiresLabel": "过期时间（可选）",
+        "cancel": "取消",
+        "creating": "创建中...",
+        "createToken": "创建令牌",
+        "copy": "复制",
+        "done": "完成"
+      }
+    },
+    "gitConnections": {
+      "title": "Git 连接",
+      "description": "管理你的 Git 服务连接。OAuth 连接会在你使用 GitHub、GitLab 或 Gitee 登录时自动创建。",
+      "failedToLoad": "加载 Git 连接失败",
+      "failedToDelete": "删除连接失败",
+      "oauthCannotDelete": "OAuth 连接无法删除。请在账户设置中管理。",
+      "confirmDelete": "确定要删除「{name}」吗？",
+      "oauthConnections": "OAuth 连接",
+      "oauthDescription": "通过 OAuth 登录创建的连接",
+      "noOauthConnections": "暂无 OAuth 连接。使用 GitHub、GitLab 或 Gitee 登录可自动连接。",
+      "personalConnections": "个人连接",
+      "personalDescription": "使用 Personal Access Token 或 SSH 密钥的连接",
+      "addConnection": "添加连接",
+      "noPersonalConnections": "暂无个人连接。添加连接以访问私有 Git 服务。",
+      "active": "活跃",
+      "inactive": "未激活",
+      "browseRepos": "浏览仓库",
+      "dialog": {
+        "title": "添加 Git 连接",
+        "selectProvider": "选择要连接的 Git 服务：",
+        "githubDescription": "连接到 GitHub.com 或 GitHub Enterprise",
+        "gitlabDescription": "连接到 GitLab.com 或自托管 GitLab",
+        "giteeDescription": "连接到 Gitee（码云）",
+        "fillAllFields": "请填写所有必填字段",
+        "enterPat": "请输入你的 Personal Access Token",
+        "enterSshKey": "请输入你的 SSH 私钥",
+        "failedToCreate": "创建连接失败。请检查你的凭据。",
+        "connectionName": "连接名称",
+        "connectionNamePlaceholder": "例如：公司 GitLab",
+        "baseUrl": "基础 URL",
+        "baseUrlHint": "对于自托管实例，请输入完整 URL",
+        "authType": "认证方式",
+        "patHint": "令牌需要仓库访问权限",
+        "sshPrivateKey": "SSH 私钥",
+        "connect": "连接"
+      },
+      "repoBrowser": {
+        "title": "浏览仓库",
+        "searchPlaceholder": "搜索仓库...",
+        "failedToLoad": "加载仓库失败",
+        "noRepos": "未找到仓库",
+        "noDescription": "无描述",
+        "branch": "分支",
+        "previous": "上一页",
+        "next": "下一页",
+        "page": "第 {page} 页"
+      }
+    }
+  },
+  "ide": {
+    "activities": {
+      "workspace": "工作区",
+      "tickets": "任务",
+      "mesh": "AgentMesh",
+      "repositories": "仓库",
+      "runners": "Runner",
+      "settings": "设置"
+    },
+    "bottomPanel": {
+      "output": "输出",
+      "problems": "问题",
+      "channels": "频道",
+      "activity": "活动",
+      "noOutput": "暂无输出",
+      "noProblems": "未检测到问题",
+      "noChannels": "暂无活跃频道",
+      "noActivity": "暂无最近活动"
+    },
+    "createPod": {
+      "title": "创建新 Pod",
+      "selectRunner": "选择 Runner",
+      "selectRunnerPlaceholder": "请选择一个 Runner...",
+      "selectAgent": "选择智能体",
+      "selectAgentPlaceholder": "请选择一个智能体...",
+      "selectRepository": "选择仓库",
+      "selectRepositoryPlaceholder": "请选择一个仓库...",
+      "branch": "分支",
+      "branchPlaceholder": "main",
+      "initialPrompt": "初始提示",
+      "initialPromptPlaceholder": "输入智能体的初始任务...",
+      "advanced": "高级选项",
+      "timeout": "超时时间（分钟）",
+      "autoCleanup": "完成后自动清理",
+      "create": "创建 Pod",
+      "creating": "创建中...",
+      "cancel": "取消"
+    },
+    "sidebar": {
+      "settings": {
+        "title": "设置",
+        "description": "管理您的组织",
+        "currentOrg": "当前组织",
+        "tabs": {
+          "general": "常规",
+          "generalDesc": "组织详情",
+          "members": "成员",
+          "membersDesc": "团队成员和角色",
+          "agents": "智能体",
+          "agentsDesc": "AI 智能体类型",
+          "runners": "Runner",
+          "runnersDesc": "Runner 管理",
+          "gitProviders": "Git 提供商",
+          "gitProvidersDesc": "Git 集成",
+          "notifications": "通知",
+          "notificationsDesc": "通知偏好设置",
+          "billing": "账单",
+          "billingDesc": "订阅和付款"
+        }
+      },
+      "mesh": {
+        "searchPlaceholder": "搜索网络...",
+        "viewTopology": "查看拓扑",
+        "showTerminatedPods": "显示已终止的 Pod",
+        "networkStats": "网络统计",
+        "active": "活跃",
+        "channels": "频道",
+        "bindings": "绑定",
+        "channelsSection": "频道",
+        "podsSection": "Pod",
+        "noChannels": "暂无频道",
+        "noPods": "暂无 Pod",
+        "podsCount": "{count} 个 Pod",
+        "connectedPods": "{count} 个已连接的 Pod",
+        "selectedPod": "已选择的 Pod",
+        "selectedChannel": "已选择的频道",
+        "channelsLabel": "频道",
+        "podsLabel": "Pod",
+        "terminal": "终端"
+      }
+    }
+  },
+  "workspace": {
+    "title": "工作区",
+    "searchPlaceholder": "搜索 Pod...",
+    "newPod": "新建 Pod",
+    "noTerminalsOpen": "暂无打开的终端",
+    "noTerminalsDescription": "点击侧边栏中的 Pod 打开其终端，或创建新的 Pod 开始使用。",
+    "createNewPod": "创建新 Pod",
+    "podCreated": "Pod 已创建！等待启动中...",
+    "filters": {
+      "all": "全部",
+      "running": "运行中",
+      "completed": "已完成",
+      "error": "错误"
+    },
+    "emptyState": {
+      "title": "暂无 Pod",
+      "description": "创建你的第一个 Pod 开始使用",
+      "createFirst": "创建 Pod",
+      "noMatch": "没有匹配的 Pod",
+      "noFiltered": "没有{filter}的 Pod"
+    },
+    "runners": {
+      "title": "Runner",
+      "online": "在线",
+      "noRunners": "暂无注册的 Runner"
+    },
+    "pod": {
+      "status": "状态",
+      "agent": "智能体",
+      "repository": "仓库",
+      "branch": "分支",
+      "created": "创建时间",
+      "duration": "持续时间",
+      "actions": {
+        "open": "打开",
+        "terminate": "终止",
+        "restart": "重启",
+        "logs": "查看日志"
+      }
+    },
+    "modal": {
+      "title": "创建新 Pod",
+      "agentType": "智能体类型",
+      "selectAgent": "选择智能体...",
+      "selectRunner": "选择 Runner...",
+      "repositoryOptional": "仓库（可选）",
+      "selectRepository": "选择仓库...",
+      "branch": "分支",
+      "branchPlaceholder": "输入分支名称（例如：main）",
+      "initialPromptOptional": "初始提示（可选）",
+      "initialPromptPlaceholder": "为智能体输入初始提示...",
+      "creating": "创建中...",
+      "createPod": "创建 Pod"
+    }
+  },
+  "repositories": {
+    "title": "仓库",
+    "subtitle": "管理 AgentPod 的 Git 仓库",
+    "searchPlaceholder": "搜索仓库...",
+    "import": "导入仓库",
+    "repoCount": "个仓库",
+    "allProviders": "所有服务",
+    "inactive": "已禁用",
+    "view": "查看",
+    "confirmDelete": "确定要删除仓库「{name}」吗？",
+    "filters": {
+      "all": "全部",
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitee": "Gitee"
+    },
+    "stats": {
+      "total": "仓库总数",
+      "active": "活跃",
+      "providers": "服务数"
+    },
+    "emptyState": {
+      "title": "暂无仓库",
+      "description": "连接你的 Git 服务以导入仓库",
+      "connectProvider": "连接服务",
+      "noMatch": "没有匹配的仓库",
+      "importHint": "导入仓库以在 AgentPod 中使用 Git 工作流"
+    },
+    "repository": {
+      "lastUpdated": "最后更新",
+      "defaultBranch": "默认分支",
+      "default": "默认",
+      "ticketPrefix": "任务前缀",
+      "viewOnProvider": "在 {provider} 查看",
+      "visibility": "可见性",
+      "public": "公开",
+      "private": "私有",
+      "actions": {
+        "createPod": "创建 Pod",
+        "refresh": "刷新",
+        "remove": "移除"
+      }
+    },
+    "modal": {
+      "title": "导入仓库",
+      "selectSourceHint": "选择 Git 连接以浏览仓库，或手动输入仓库详情。",
+      "yourConnections": "你的 Git 连接",
+      "noConnections": "暂无 Git 连接配置。",
+      "addOne": "添加一个",
+      "toBrowse": "以浏览你的仓库。",
+      "or": "或",
+      "enterManually": "手动输入",
+      "enterManuallyHint": "无需 Git 连接，直接输入仓库 URL",
+      "noReposFound": "未找到仓库",
+      "noDescription": "暂无描述",
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {page} 页",
+      "manualEntry": "手动输入",
+      "providerType": "服务类型",
+      "genericGit": "通用 Git",
+      "baseUrl": "基础 URL",
+      "cloneUrl": "克隆 URL",
+      "repoName": "仓库名称",
+      "fullPath": "完整路径",
+      "defaultBranch": "默认分支",
+      "confirmImport": "确认导入",
+      "branch": "分支",
+      "provider": "服务",
+      "ticketPrefixOptional": "任务前缀（可选）",
+      "ticketPrefixHint": "用于任务标识（例如：PROJ-123）",
+      "visibility": "可见性",
+      "organization": "组织可见",
+      "privateOnly": "仅自己可见",
+      "continue": "继续",
+      "importRepository": "导入仓库",
+      "fillRequiredFields": "请填写所有必填字段",
+      "failedToLoadConnections": "加载 Git 连接失败",
+      "failedToLoadRepos": "加载仓库失败",
+      "failedToImport": "导入仓库失败，请检查输入内容。"
+    },
+    "detail": {
+      "notFound": "仓库不存在",
+      "backToList": "返回仓库列表",
+      "information": "基本信息",
+      "branches": "分支",
+      "repoDetails": "仓库详情",
+      "name": "名称",
+      "fullPath": "完整路径",
+      "cloneUrl": "克隆 URL",
+      "defaultBranch": "默认分支",
+      "ticketPrefix": "任务前缀",
+      "status": "状态",
+      "active": "活跃",
+      "created": "创建时间",
+      "gitProvider": "Git 服务",
+      "type": "类型",
+      "baseUrl": "基础 URL",
+      "visibility": "可见性",
+      "actions": "操作",
+      "setupWebhook": "配置 Webhook",
+      "webhookFailed": "配置 Webhook 失败，请重试。",
+      "confirmDelete": "确定要删除仓库「{name}」吗？此操作无法撤销。",
+      "branchesRequireCredentials": "分支列表需要 Git 凭据",
+      "configureGitConnection": "在设置中配置 Git 连接以浏览分支"
+    },
+    "edit": {
+      "title": "编辑仓库",
+      "name": "名称",
+      "defaultBranch": "默认分支",
+      "ticketPrefixOptional": "任务前缀（可选）",
+      "active": "活跃",
+      "nameRequired": "名称为必填项",
+      "updateFailed": "更新仓库失败，请重试。",
+      "saving": "保存中...",
+      "saveChanges": "保存更改"
+    }
+  },
+  "runners": {
+    "title": "Runner",
+    "searchPlaceholder": "搜索 Runner...",
+    "addRunner": "添加 Runner",
+    "registrationTokens": "注册令牌",
+    "runnerCount": "个 Runner",
+    "disabled": "已禁用",
+    "filters": {
+      "all": "全部",
+      "online": "在线",
+      "offline": "离线",
+      "busy": "忙碌"
+    },
+    "overview": {
+      "title": "概览",
+      "online": "在线"
+    },
+    "emptyState": {
+      "title": "暂无 Runner",
+      "description": "部署一个 Runner 以开始创建 Pod",
+      "deployRunner": "部署 Runner",
+      "noMatch": "没有匹配的 Runner"
+    },
+    "runner": {
+      "status": "状态",
+      "version": "版本",
+      "os": "操作系统",
+      "arch": "架构",
+      "pods": "活跃 Pod",
+      "lastSeen": "最后在线",
+      "uptime": "运行时间",
+      "actions": {
+        "configure": "配置",
+        "restart": "重启",
+        "remove": "移除"
+      }
+    },
+    "token": {
+      "title": "注册令牌",
+      "description": "使用此令牌注册新的 Runner",
+      "generate": "生成令牌",
+      "copy": "复制",
+      "copied": "已复制！",
+      "expires": "过期时间",
+      "active": "活跃",
+      "noTokens": "暂无注册令牌",
+      "viewAll": "查看全部令牌",
+      "manage": "管理令牌"
+    },
+    "page": {
+      "title": "Runner",
+      "subtitle": "管理计算资源",
+      "refresh": "刷新",
+      "addRunner": "添加 Runner",
+      "totalRunners": "Runner 总数",
+      "online": "在线",
+      "activePods": "活跃 Pod",
+      "totalCapacity": "总容量",
+      "activeRunners": "活跃 Runner",
+      "noRunners": "暂无注册的 Runner。",
+      "noRunnersHint": "添加一个 Runner 以开始部署 Pod。",
+      "runnerColumn": "Runner",
+      "statusColumn": "状态",
+      "podsColumn": "Pod",
+      "hostInfoColumn": "主机信息",
+      "versionColumn": "版本",
+      "actionsColumn": "操作",
+      "configure": "配置",
+      "enable": "启用",
+      "disable": "禁用",
+      "delete": "删除",
+      "confirmDelete": "确定要删除 Runner「{nodeId}」吗？",
+      "cores": "核心",
+      "mobilePodsLabel": "Pod：",
+      "mobileCpuLabel": "CPU：",
+      "mobileOsLabel": "系统：",
+      "mobileVersionLabel": "版本："
+    },
+    "registrationTokens": {
+      "title": "注册令牌",
+      "newToken": "新建令牌",
+      "descriptionColumn": "描述",
+      "usageColumn": "使用情况",
+      "statusColumn": "状态",
+      "createdColumn": "创建时间",
+      "actionsColumn": "操作",
+      "noDescription": "无描述",
+      "revoked": "已撤销",
+      "revoke": "撤销",
+      "noTokens": "暂无注册令牌。创建一个以添加 Runner。"
+    },
+    "createTokenModal": {
+      "title": "创建注册令牌",
+      "tokenCreated": "令牌已创建",
+      "tokenHint": "复制此令牌用于注册新的 Runner。此令牌只会显示一次。",
+      "descriptionLabel": "描述（可选）",
+      "descriptionPlaceholder": "例如：生产环境 Runner",
+      "maxUsesLabel": "最大使用次数（可选）",
+      "maxUsesPlaceholder": "不限",
+      "cancel": "取消",
+      "creating": "创建中...",
+      "createToken": "创建令牌",
+      "done": "完成"
+    },
+    "configModal": {
+      "title": "配置 Runner",
+      "nodeIdLabel": "节点 ID",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "添加描述...",
+      "maxPodsLabel": "最大并发 Pod 数",
+      "activePodsLabel": "活跃 Pod ({count})",
+      "cancel": "取消",
+      "saving": "保存中...",
+      "save": "保存更改"
+    }
+  },
+  "commandPalette": {
+    "placeholder": "输入命令或搜索...",
+    "searching": "搜索中...",
+    "noResults": "未找到结果。",
+    "navigation": "导航",
+    "actions": "操作",
+    "goToWorkspace": "前往工作区",
+    "workspaceDescription": "终端工作区",
+    "goToTickets": "前往任务",
+    "ticketsDescription": "查看和管理任务",
+    "goToMesh": "前往 AgentMesh",
+    "meshDescription": "网络拓扑",
+    "goToRepositories": "前往仓库",
+    "repositoriesDescription": "管理仓库",
+    "goToRunners": "前往 Runner",
+    "runnersDescription": "管理计算资源",
+    "goToSettings": "前往设置",
+    "settingsDescription": "组织设置",
+    "createNewPod": "创建新 Pod",
+    "createPodDescription": "启动一个新的智能体 Pod",
+    "createNewTicket": "创建新任务",
+    "createTicketDescription": "创建新的任务或问题",
+    "signOut": "退出登录",
+    "signOutDescription": "退出您的账号",
+    "navigate": "导航",
+    "select": "选择",
+    "toOpen": "打开"
+  },
+  "terminalTabs": {
+    "singleView": "单视图",
+    "twoColumns": "两列",
+    "twoRows": "两行",
+    "grid2x2": "2x2 网格"
+  },
+  "terminalToolbar": {
+    "clearScreen": "清屏",
+    "font": "字体"
+  },
+  "mobile": {
+    "more": "更多",
+    "drawer": {
+      "navigationMenu": "导航菜单",
+      "organization": "组织",
+      "navigation": "导航",
+      "signOut": "退出登录"
+    },
+    "menu": {
+      "gitConnections": "Git 连接",
+      "profile": "个人资料",
+      "theme": "主题",
+      "theme_light": "浅色",
+      "theme_dark": "深色",
+      "theme_system": "跟随系统"
+    }
   }
 }

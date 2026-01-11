@@ -99,7 +99,7 @@ export function IDEShell({
   }
 
   return (
-    <div className={cn("flex h-screen bg-background overflow-hidden", className)}>
+    <div className={cn("app-shell flex h-screen bg-background overflow-hidden", className)}>
       {/* Activity Bar - fixed width */}
       <ActivityBar className="flex-shrink-0" />
 

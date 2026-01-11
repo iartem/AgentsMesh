@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import Link from "next/link";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -89,6 +90,7 @@ export function TicketDetailPanel({
   onOpenChange,
   onTicketUpdated,
 }: TicketDetailPanelProps) {
+  const t = useTranslations();
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +208,7 @@ export function TicketDetailPanel({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Status
+                    {t("tickets.filters.status")}
                   </label>
                   <Select
                     value={ticket.status}
@@ -219,7 +221,7 @@ export function TicketDetailPanel({
                     <SelectContent>
                       {statusOptions.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                          {t(`tickets.status.${opt.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -228,7 +230,7 @@ export function TicketDetailPanel({
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Priority
+                    {t("tickets.filters.priority")}
                   </label>
                   <Select
                     value={ticket.priority}
@@ -241,7 +243,7 @@ export function TicketDetailPanel({
                     <SelectContent>
                       {priorityOptions.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                          {t(`tickets.priority.${opt.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -253,7 +255,7 @@ export function TicketDetailPanel({
               {ticket.description && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Summary
+                    {t("tickets.detail.summary")}
                   </label>
                   <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
                 </div>
@@ -263,7 +265,7 @@ export function TicketDetailPanel({
               {ticket.content && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Content
+                    {t("tickets.detail.content")}
                   </label>
                   <div className="border border-border rounded-md overflow-hidden bg-card">
                     <Suspense fallback={<div className="h-[100px] animate-pulse bg-muted" />}>
@@ -278,7 +280,7 @@ export function TicketDetailPanel({
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <User className="h-4 w-4" />
-                    Assignees
+                    {t("tickets.detail.assignees")}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {ticket.assignees.map((assignee) => (
@@ -301,7 +303,7 @@ export function TicketDetailPanel({
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <Tag className="h-4 w-4" />
-                    Labels
+                    {t("tickets.detail.labels")}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {ticket.labels.map((label) => (
@@ -326,7 +328,7 @@ export function TicketDetailPanel({
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <GitBranch className="h-4 w-4" />
-                    Repository
+                    {t("tickets.detail.repository")}
                   </label>
                   <p className="text-sm">{ticket.repository.name}</p>
                 </div>
@@ -336,28 +338,28 @@ export function TicketDetailPanel({
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  Timeline
+                  {t("tickets.detail.timeline")}
                 </label>
                 <div className="text-sm space-y-1">
                   <p className="text-muted-foreground">
-                    Created: {formatDate(ticket.created_at)}
+                    {t("tickets.detail.created")}: {formatDate(ticket.created_at)}
                   </p>
                   <p className="text-muted-foreground">
-                    Updated: {formatDate(ticket.updated_at)}
+                    {t("tickets.detail.updated")}: {formatDate(ticket.updated_at)}
                   </p>
                   {ticket.due_date && (
                     <p className={new Date(ticket.due_date) < new Date() ? "text-destructive" : ""}>
-                      Due: {formatDate(ticket.due_date)}
+                      {t("tickets.detail.dueDate")}: {formatDate(ticket.due_date)}
                     </p>
                   )}
                   {ticket.started_at && (
                     <p className="text-muted-foreground">
-                      Started: {formatDate(ticket.started_at)}
+                      {t("tickets.detail.started")}: {formatDate(ticket.started_at)}
                     </p>
                   )}
                   {ticket.completed_at && (
                     <p className="text-muted-foreground">
-                      Completed: {formatDate(ticket.completed_at)}
+                      {t("tickets.detail.completed")}: {formatDate(ticket.completed_at)}
                     </p>
                   )}
                 </div>
@@ -368,7 +370,7 @@ export function TicketDetailPanel({
                 <Link href={`tickets/${ticket.identifier}`}>
                   <Button variant="outline" className="w-full">
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    View Full Details
+                    {t("tickets.detail.viewFullDetails")}
                   </Button>
                 </Link>
               </div>

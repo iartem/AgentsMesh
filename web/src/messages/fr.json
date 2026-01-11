@@ -1,0 +1,746 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "noResults": "Aucun résultat trouvé",
+    "error": "Une erreur est survenue",
+    "success": "Succès",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "reset": "Réinitialiser"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "register": "S'inscrire",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "username": "Nom d'utilisateur",
+    "name": "Nom",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "loginWith": "Se connecter avec {provider}"
+  },
+  "nav": {
+    "agentpod": "AgentPod",
+    "mesh": "AgentMesh",
+    "tickets": "Tickets",
+    "settings": "Paramètres",
+    "billing": "Facturation"
+  },
+  "landing": {
+    "nav": {
+      "features": "Fonctionnalités",
+      "pricing": "Tarifs",
+      "docs": "Documentation",
+      "signIn": "Connexion",
+      "getStarted": "Commencer",
+      "console": "Console",
+      "language": "Langue"
+    },
+    "hero": {
+      "badge": "Plateforme IA Native Terminal",
+      "title1": "Plateforme de Collaboration",
+      "title2": "d'Agents de Code",
+      "title3": "Basés sur Terminal",
+      "description": "Gestion unifiée pour Claude Code, Codex CLI, Gemini CLI, Aider et plus. Permettez à plusieurs agents IA de collaborer sur des tâches de développement complexes.",
+      "getStartedFree": "Commencer Gratuitement",
+      "viewDocs": "Voir la Documentation",
+      "trustedBy": "Fait confiance par les développeurs du monde entier",
+      "teams": "500+ Équipes",
+      "pods": "10K+ Pods",
+      "openSource": "Open Source"
+    },
+    "agentLogos": {
+      "title": "Supporte tous les principaux Agents de Code basés sur Terminal"
+    },
+    "whyTerminal": {
+      "title": "Pourquoi des Agents",
+      "titleHighlight": "Basés sur Terminal",
+      "titleEnd": "?",
+      "description": "Contrairement aux plugins IDE comme Cursor ou Copilot, les agents basés sur terminal offrent une exécution autonome et des capacités de développement complètes.",
+      "benefits": {
+        "autonomous": {
+          "title": "Exécution Autonome",
+          "description": "Pas seulement de la complétion de code. Les agents terminal peuvent accomplir indépendamment des tâches de développement complexes du début à la fin."
+        },
+        "fullCapabilities": {
+          "title": "Capacités Complètes",
+          "description": "Lire/écrire des fichiers, exécuter des commandes, opérations Git, exécuter des tests - capacités complètes de développement full-stack."
+        },
+        "dataControl": {
+          "title": "Contrôle des Données",
+          "description": "Les runners auto-hébergés signifient que votre code ne quitte jamais votre infrastructure. Répondez aux exigences de sécurité et de conformité."
+        }
+      },
+      "comparison": {
+        "idePlugins": "Plugins IDE",
+        "idePluginsSubtitle": "Copilot / Cursor",
+        "terminalBased": "Basé sur Terminal",
+        "terminalBasedSubtitle": "Claude Code / Aider",
+        "autonomy": "Autonomie",
+        "capabilities": "Capacités",
+        "environment": "Environnement",
+        "multiAgent": "Multi-Agent",
+        "selfHosted": "Auto-hébergé",
+        "ide": {
+          "autonomy": "Réponse passive",
+          "capabilities": "Complétion de code",
+          "environment": "Sandbox IDE",
+          "multiAgent": "Non supporté",
+          "selfHosted": "Cloud uniquement"
+        },
+        "terminal": {
+          "autonomy": "Exécution active de tâches",
+          "capabilities": "Développement full-stack",
+          "environment": "Accès terminal complet",
+          "multiAgent": "Activé par AgentMesh",
+          "selfHosted": "Entièrement contrôlable"
+        }
+      }
+    },
+    "coreFeatures": {
+      "title": "Fonctionnalités",
+      "titleHighlight": "Principales",
+      "description": "Tout ce dont vous avez besoin pour gérer et coordonner des agents de code IA basés sur terminal à grande échelle.",
+      "agentpod": {
+        "title": "AgentPod",
+        "subtitle": "Station de Travail IA Distante",
+        "description": "Exécutez des agents IA dans le cloud, accédez à un environnement de développement complet via votre navigateur. Chaque AgentPod s'exécute sur des worktrees Git isolés avec accès terminal en temps réel.",
+        "highlights": [
+          "Terminal Web avec interaction en temps réel",
+          "Isolation Git Worktree par AgentPod",
+          "Plusieurs AgentPods simultanés",
+          "Nettoyage automatique à la fin"
+        ]
+      },
+      "agentmesh": {
+        "title": "AgentMesh",
+        "subtitle": "Collaboration Multi-Agent",
+        "description": "Permettez à plusieurs agents IA de travailler ensemble via des liaisons de pods et la communication par canaux. Visualisez la topologie de collaboration en temps réel.",
+        "highlights": [
+          "Liaison de Pod avec contrôle des permissions",
+          "Diffusion de messages basée sur les canaux",
+          "Visualisation de topologie en temps réel",
+          "Coordination des tâches entre agents"
+        ]
+      },
+      "tickets": {
+        "title": "Tickets",
+        "subtitle": "Développement Axé sur les Tâches",
+        "description": "Intégrez les pods IA à votre flux de travail de gestion des tâches. Créez des tickets, liez-les à des pods et suivez la progression via un tableau Kanban.",
+        "highlights": [
+          "Visualisation tableau Kanban",
+          "Liaison Ticket - Pod",
+          "Suivi de progression",
+          "Intégration MR/PR"
+        ]
+      },
+      "runners": {
+        "title": "Runners Auto-hébergés",
+        "subtitle": "Votre Infrastructure, Vos Données",
+        "description": "Déployez des runners sur votre propre infrastructure. Votre code et vos données ne quittent jamais votre environnement, répondant aux exigences de sécurité et de conformité les plus strictes.",
+        "highlights": [
+          "Déploiement Docker/Kubernetes",
+          "Localisation complète des données",
+          "Support environnement air-gapped",
+          "Piste d'audit complète"
+        ]
+      }
+    },
+    "howItWorks": {
+      "title": "Commencez en",
+      "titleHighlight": "3 Étapes",
+      "description": "Déployez, connectez et commencez à collaborer avec des agents IA en quelques minutes.",
+      "step1": {
+        "title": "Déployer le Runner",
+        "description": "Déployez un Runner sur votre serveur ou machine locale avec une seule commande."
+      },
+      "step2": {
+        "title": "Connecter l'Agent",
+        "description": "Configurez votre agent de code IA pour se connecter à AgentMesh."
+      },
+      "step3": {
+        "title": "Commencer à Collaborer",
+        "description": "Créez des pods, des canaux et laissez plusieurs agents travailler ensemble."
+      }
+    },
+    "enterprise": {
+      "title": "Conçu pour les",
+      "titleHighlight": "Entreprises",
+      "description": "Fonctionnalités de sécurité, conformité et évolutivité requises par les équipes d'entreprise.",
+      "features": {
+        "multiTenant": {
+          "title": "Multi-Tenant",
+          "description": "Hiérarchie d'organisation et d'équipe avec espaces de travail isolés."
+        },
+        "sso": {
+          "title": "Intégration SSO",
+          "description": "Support SAML 2.0 et LDAP pour l'authentification d'entreprise."
+        },
+        "auditLogs": {
+          "title": "Journaux d'Audit",
+          "description": "Suivi complet des activités pour la conformité et la sécurité."
+        },
+        "rbac": {
+          "title": "RBAC",
+          "description": "Contrôle d'accès basé sur les rôles granulaire pour les équipes."
+        },
+        "gitIntegration": {
+          "title": "Intégration Git",
+          "description": "Support GitLab, GitHub et Gitee prêt à l'emploi."
+        },
+        "monitoring": {
+          "title": "Surveillance",
+          "description": "Métriques Prometheus et tableaux de bord Grafana inclus."
+        },
+        "backupDR": {
+          "title": "Sauvegarde et DR",
+          "description": "Sauvegardes automatisées avec support de reprise après sinistre."
+        },
+        "airGapped": {
+          "title": "Air-Gapped",
+          "description": "Déploiement entièrement hors ligne pour une sécurité maximale."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Tarification Simple et",
+      "titleHighlight": "Transparente",
+      "description": "Commencez gratuitement et évoluez selon votre croissance. Pas de frais cachés.",
+      "mostPopular": "Le Plus Populaire",
+      "free": {
+        "name": "Gratuit",
+        "price": "0$",
+        "period": "pour toujours",
+        "description": "Parfait pour les développeurs individuels qui débutent.",
+        "features": [
+          "1 Runner",
+          "3 pods simultanés",
+          "1 membre d'organisation",
+          "Support communautaire",
+          "Intégrations de base"
+        ],
+        "cta": "Commencer"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "29$",
+        "period": "par utilisateur/mois",
+        "description": "Pour les équipes qui ont besoin de plus de puissance et de collaboration.",
+        "features": [
+          "Runners illimités",
+          "Pods illimités",
+          "Jusqu'à 10 membres d'équipe",
+          "Support email prioritaire",
+          "Accès API",
+          "Analyses avancées",
+          "Intégrations personnalisées"
+        ],
+        "cta": "Démarrer l'Essai Pro"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "Personnalisé",
+        "period": "contactez-nous",
+        "description": "Pour les organisations avec des besoins de sécurité avancés.",
+        "features": [
+          "Tout dans Pro",
+          "SSO SAML/LDAP",
+          "Journaux d'audit",
+          "Support dédié",
+          "Déploiement privé",
+          "Garantie SLA",
+          "Contrats personnalisés"
+        ],
+        "cta": "Contacter les Ventes"
+      },
+      "footer": "Tous les plans incluent le chiffrement SSL, un SLA de disponibilité de 99,9% et des sauvegardes régulières.",
+      "customPlan": "Besoin d'un plan personnalisé ?",
+      "contactUs": "Contactez-nous"
+    },
+    "selfHosted": {
+      "title": "Besoin d'un Déploiement",
+      "titleHighlight": "Auto-hébergé",
+      "titleEnd": "Complet ?",
+      "description": "AgentMesh supporte un déploiement entièrement auto-hébergé. Votre code et vos données ne quittent jamais votre infrastructure. Parfait pour les entreprises avec des exigences strictes de sécurité et de conformité.",
+      "dockerCompose": "Docker Compose",
+      "kubernetesHelm": "Kubernetes Helm",
+      "airGappedSupport": "Support Air-gapped",
+      "viewDocs": "Voir la Documentation de Déploiement",
+      "contactSales": "Contacter les Ventes Enterprise"
+    },
+    "finalCta": {
+      "title1": "Prêt à faire",
+      "title2": "Collaborer vos Agents Terminal ?",
+      "description": "Rejoignez des milliers de développeurs utilisant AgentMesh pour coordonner des agents de code IA. Commencez gratuitement, aucune carte de crédit requise.",
+      "getStartedFree": "Commencer Gratuitement",
+      "scheduleDemo": "Planifier une Démo",
+      "freeTier": "Niveau gratuit disponible",
+      "noCreditCard": "Aucune carte de crédit requise",
+      "selfHostedOption": "Option auto-hébergée"
+    },
+    "footer": {
+      "tagline": "Plateforme de Collaboration d'Agents de Code Basés sur Terminal",
+      "copyright": "AgentMesh. Tous droits réservés.",
+      "madeWith": "Fait avec amour pour les développeurs",
+      "product": {
+        "title": "Produit",
+        "agentpod": "AgentPod",
+        "agentmesh": "AgentMesh",
+        "tickets": "Tickets",
+        "runners": "Runners",
+        "pricing": "Tarifs"
+      },
+      "resources": {
+        "title": "Ressources",
+        "documentation": "Documentation",
+        "apiReference": "Référence API",
+        "tutorials": "Tutoriels",
+        "changelog": "Journal des modifications",
+        "status": "Statut"
+      },
+      "company": {
+        "title": "Entreprise",
+        "about": "À propos",
+        "blog": "Blog",
+        "careers": "Carrières",
+        "contact": "Contact"
+      },
+      "legal": {
+        "title": "Juridique",
+        "privacy": "Politique de Confidentialité",
+        "terms": "Conditions d'Utilisation",
+        "security": "Sécurité"
+      }
+    }
+  },
+  "agentpod": {
+    "title": "AgentPod",
+    "pods": "Pods",
+    "newPod": "Nouveau Pod",
+    "runners": "Runners",
+    "noRunnersOnline": "Aucun runner en ligne",
+    "selectAgent": "Sélectionner l'Agent",
+    "selectRepository": "Sélectionner le Dépôt",
+    "initialPrompt": "Prompt Initial",
+    "status": {
+      "initializing": "Initialisation",
+      "running": "En cours",
+      "paused": "En pause",
+      "terminated": "Terminé",
+      "error": "Erreur"
+    }
+  },
+  "mesh": {
+    "title": "AgentMesh",
+    "channels": "Canaux",
+    "newChannel": "Nouveau Canal",
+    "topology": "Topologie",
+    "messages": "Messages",
+    "sendMessage": "Envoyer un message...",
+    "page": {
+      "title": "DevMesh",
+      "subtitle": "Topologie du réseau de collaboration multi-agent",
+      "activePods": "{count} pods actifs",
+      "channelsCount": "{count} canaux",
+      "bindingsCount": "{count} liaisons",
+      "refresh": "Actualiser",
+      "dismiss": "Fermer",
+      "updating": "Mise à jour..."
+    },
+    "legend": {
+      "title": "Légende",
+      "running": "En cours",
+      "initializing": "Initialisation",
+      "terminated": "Terminé",
+      "failed": "Échoué",
+      "channel": "Canal",
+      "activeBinding": "Liaison Active",
+      "pendingBinding": "Liaison En Attente"
+    },
+    "channelList": {
+      "title": "Canaux",
+      "showArchived": "Afficher Archivés",
+      "hideArchived": "Masquer Archivés",
+      "noChannels": "Aucun canal trouvé",
+      "archived": "Archivé",
+      "archive": "Archiver",
+      "unarchive": "Désarchiver"
+    },
+    "messageInput": {
+      "placeholder": "Tapez un message...",
+      "hint": "Appuyez sur Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"
+    }
+  },
+  "tickets": {
+    "title": "Tickets",
+    "newTicket": "Nouveau Ticket",
+    "board": "Tableau",
+    "list": "Liste",
+    "backlog": "Backlog",
+    "todo": "À Faire",
+    "inProgress": "En Cours",
+    "inReview": "En Révision",
+    "done": "Terminé",
+    "priority": {
+      "none": "Sans Priorité",
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute",
+      "urgent": "Urgente"
+    },
+    "type": {
+      "task": "Tâche",
+      "bug": "Bug",
+      "feature": "Fonctionnalité",
+      "epic": "Epic"
+    },
+    "searchPlaceholder": "Rechercher des tickets...",
+    "ticketCount": "tickets",
+    "clear": "Effacer",
+    "view": "Voir",
+    "filters": {
+      "status": "Statut",
+      "type": "Type",
+      "priority": "Priorité"
+    },
+    "emptyState": {
+      "title": "Aucun ticket",
+      "noMatch": "Aucun ticket ne correspond aux filtres",
+      "createFirst": "Créez votre premier ticket pour commencer"
+    },
+    "moreTickets": "+{count} de plus",
+    "listView": {
+      "id": "ID",
+      "titleColumn": "Titre",
+      "status": "Statut",
+      "type": "Type",
+      "priority": "Priorité",
+      "assignee": "Assigné",
+      "created": "Créé",
+      "noTickets": "Aucun ticket trouvé. Utilisez les filtres de la barre latérale ou créez un nouveau ticket."
+    },
+    "kanban": {
+      "noTickets": "Aucun ticket"
+    },
+    "status": {
+      "backlog": "Backlog",
+      "todo": "À Faire",
+      "in_progress": "En Cours",
+      "in_review": "En Révision",
+      "done": "Terminé",
+      "cancelled": "Annulé"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "general": "Général",
+    "team": "Équipe",
+    "gitProviders": "Fournisseurs Git",
+    "agents": "Agents",
+    "billing": "Facturation",
+    "language": {
+      "title": "Langue",
+      "description": "Choisissez votre langue préférée pour l'interface.",
+      "selectLabel": "Langue d'Affichage",
+      "selectHint": "Cela changera la langue dans toute l'application."
+    }
+  },
+  "ide": {
+    "sidebar": {
+      "mesh": {
+        "channelsSection": "Canaux",
+        "podsSection": "Pods",
+        "podsCount": "{count} pods",
+        "connectedPods": "{count} pods connectés",
+        "channelsLabel": "Canaux",
+        "podsLabel": "Pods"
+      }
+    },
+    "activities": {
+      "workspace": "Espace de Travail",
+      "tickets": "Tickets",
+      "mesh": "AgentMesh",
+      "repositories": "Dépôts",
+      "runners": "Runner",
+      "settings": "Paramètres"
+    },
+    "bottomPanel": {
+      "output": "Sortie",
+      "problems": "Problèmes",
+      "channels": "Canaux",
+      "activity": "Activité",
+      "noOutput": "Pas encore de sortie",
+      "noProblems": "Aucun problème détecté",
+      "noChannels": "Aucun canal actif",
+      "noActivity": "Aucune activité récente"
+    },
+    "createPod": {
+      "title": "Créer un Nouveau Pod",
+      "selectRunner": "Sélectionner un Runner",
+      "selectRunnerPlaceholder": "Choisissez un runner...",
+      "selectAgent": "Sélectionner un Agent",
+      "selectAgentPlaceholder": "Choisissez un agent...",
+      "selectRepository": "Sélectionner un Dépôt",
+      "selectRepositoryPlaceholder": "Choisissez un dépôt...",
+      "branch": "Branche",
+      "branchPlaceholder": "main",
+      "initialPrompt": "Prompt Initial",
+      "initialPromptPlaceholder": "Entrez la tâche initiale pour l'agent...",
+      "advanced": "Options Avancées",
+      "timeout": "Délai d'attente (minutes)",
+      "autoCleanup": "Nettoyage automatique à la fin",
+      "create": "Créer Pod",
+      "creating": "Création...",
+      "cancel": "Annuler"
+    }
+  },
+  "workspace": {
+    "title": "Espace de Travail",
+    "searchPlaceholder": "Rechercher des pods...",
+    "newPod": "Nouveau Pod",
+    "filters": {
+      "all": "Tous",
+      "running": "En cours",
+      "completed": "Terminés",
+      "error": "Erreur"
+    },
+    "emptyState": {
+      "title": "Pas encore de pods",
+      "description": "Créez votre premier pod pour commencer",
+      "createFirst": "Créer Pod",
+      "noMatch": "Aucun pod ne correspond à votre recherche",
+      "noFiltered": "Aucun pod {filter}"
+    },
+    "runners": {
+      "title": "Runners",
+      "online": "en ligne",
+      "noRunners": "Aucun runner enregistré"
+    },
+    "pod": {
+      "status": "Statut",
+      "agent": "Agent",
+      "repository": "Dépôt",
+      "branch": "Branche",
+      "created": "Créé",
+      "duration": "Durée",
+      "actions": {
+        "open": "Ouvrir",
+        "terminate": "Terminer",
+        "restart": "Redémarrer",
+        "logs": "Voir les Logs"
+      }
+    }
+  },
+  "repositories": {
+    "title": "Dépôts",
+    "searchPlaceholder": "Rechercher des dépôts...",
+    "import": "Importer un Dépôt",
+    "repoCount": "dépôts",
+    "filters": {
+      "all": "Tous",
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitee": "Gitee"
+    },
+    "emptyState": {
+      "title": "Aucun dépôt encore",
+      "description": "Connectez votre fournisseur Git pour importer des dépôts",
+      "connectProvider": "Connecter Fournisseur",
+      "noMatch": "Aucun dépôt ne correspond aux filtres"
+    },
+    "repository": {
+      "lastUpdated": "Dernière mise à jour",
+      "defaultBranch": "Branche par défaut",
+      "default": "par défaut",
+      "ticketPrefix": "préfixe de ticket",
+      "viewOnProvider": "Voir sur {provider}",
+      "visibility": "Visibilité",
+      "public": "Public",
+      "private": "Privé",
+      "actions": {
+        "createPod": "Créer Pod",
+        "refresh": "Actualiser",
+        "remove": "Supprimer"
+      }
+    }
+  },
+  "runners": {
+    "title": "Runner",
+    "searchPlaceholder": "Rechercher des runners...",
+    "addRunner": "Ajouter Runner",
+    "registrationTokens": "Tokens d'Inscription",
+    "runnerCount": "runners",
+    "disabled": "Désactivé",
+    "filters": {
+      "all": "Tous",
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "busy": "Occupé"
+    },
+    "overview": {
+      "title": "Aperçu",
+      "online": "en ligne"
+    },
+    "emptyState": {
+      "title": "Aucun runner encore",
+      "description": "Déployez un runner pour commencer à créer des pods",
+      "deployRunner": "Déployer Runner",
+      "noMatch": "Aucun runner ne correspond aux filtres"
+    },
+    "runner": {
+      "status": "Statut",
+      "version": "Version",
+      "os": "SE",
+      "arch": "Architecture",
+      "pods": "Pods Actifs",
+      "lastSeen": "Dernière vue",
+      "uptime": "Temps de fonctionnement",
+      "actions": {
+        "configure": "Configurer",
+        "restart": "Redémarrer",
+        "remove": "Supprimer"
+      }
+    },
+    "token": {
+      "title": "Token d'Inscription",
+      "description": "Utilisez ce token pour enregistrer de nouveaux runners",
+      "generate": "Générer Token",
+      "copy": "Copier",
+      "copied": "Copié !",
+      "expires": "Expire",
+      "active": "actif",
+      "noTokens": "Aucun token d'inscription",
+      "viewAll": "Voir tous les tokens",
+      "manage": "Gérer les Tokens"
+    },
+    "page": {
+      "stats": {
+        "online": "En ligne",
+        "offline": "Hors ligne",
+        "busy": "Occupé",
+        "activePods": "Pods Actifs"
+      },
+      "table": {
+        "nodeId": "ID du Nœud",
+        "status": "Statut",
+        "pods": "Pods",
+        "version": "Version",
+        "os": "SE",
+        "cpu": "CPU",
+        "lastSeen": "Dernière vue",
+        "actions": "Actions"
+      },
+      "mobilePodsLabel": "Pods :",
+      "mobileOsLabel": "SE :",
+      "mobileCpuLabel": "CPU :",
+      "mobileVersionLabel": "Version :",
+      "cores": "cœurs",
+      "configure": "Configurer",
+      "noDescription": "Aucune description",
+      "justNow": "À l'instant",
+      "ago": "il y a"
+    },
+    "registrationTokens": {
+      "title": "Tokens d'Inscription",
+      "createToken": "Créer Token",
+      "noTokens": "Aucun token d'inscription. Créez un token pour enregistrer de nouveaux Runners.",
+      "description": "Description",
+      "noDescription": "Aucune description",
+      "created": "Créé",
+      "expires": "Expire",
+      "noExpiry": "Pas d'expiration",
+      "uses": "Utilisations",
+      "unlimited": "Illimité",
+      "revoke": "Révoquer",
+      "revoked": "Révoqué"
+    },
+    "createTokenModal": {
+      "title": "Créer Token d'Inscription",
+      "descriptionLabel": "Description (optionnel)",
+      "descriptionPlaceholder": "ex., Runner équipe de développement",
+      "maxUsesLabel": "Utilisations Max (optionnel)",
+      "maxUsesPlaceholder": "Laisser vide pour illimité",
+      "expiresLabel": "Expire Le (optionnel)",
+      "cancel": "Annuler",
+      "creating": "Création...",
+      "create": "Créer"
+    },
+    "configModal": {
+      "title": "Configurer Runner",
+      "nodeIdLabel": "ID du Nœud",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Ajouter une description...",
+      "maxPodsLabel": "Pods Concurrents Max",
+      "activePodsLabel": "Pods Actifs ({count})",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer les Modifications"
+    }
+  },
+  "commandPalette": {
+    "placeholder": "Tapez une commande ou recherchez...",
+    "searching": "Recherche...",
+    "noResults": "Aucun résultat trouvé.",
+    "navigation": "Navigation",
+    "actions": "Actions",
+    "goToWorkspace": "Aller à l'espace de travail",
+    "workspaceDescription": "Espace de travail terminal",
+    "goToTickets": "Aller aux tickets",
+    "ticketsDescription": "Voir et gérer les tickets",
+    "goToMesh": "Aller à AgentMesh",
+    "meshDescription": "Topologie réseau",
+    "goToRepositories": "Aller aux dépôts",
+    "repositoriesDescription": "Gérer les dépôts",
+    "goToRunners": "Aller aux runners",
+    "runnersDescription": "Gérer les ressources de calcul",
+    "goToSettings": "Aller aux paramètres",
+    "settingsDescription": "Paramètres de l'organisation",
+    "createNewPod": "Créer un nouveau Pod",
+    "createPodDescription": "Démarrer un nouveau pod d'agent",
+    "createNewTicket": "Créer un nouveau ticket",
+    "createTicketDescription": "Créer une nouvelle tâche ou problème",
+    "signOut": "Déconnexion",
+    "signOutDescription": "Se déconnecter de votre compte",
+    "navigate": "Naviguer",
+    "select": "Sélectionner",
+    "toOpen": "pour ouvrir"
+  },
+  "terminalTabs": {
+    "singleView": "Vue unique",
+    "twoColumns": "Deux colonnes",
+    "twoRows": "Deux lignes",
+    "grid2x2": "Grille 2x2"
+  },
+  "terminalToolbar": {
+    "clearScreen": "Effacer l'écran",
+    "font": "Police"
+  },
+  "mobile": {
+    "more": "Plus",
+    "drawer": {
+      "navigationMenu": "Menu de navigation",
+      "organization": "Organisation",
+      "navigation": "Navigation",
+      "signOut": "Déconnexion"
+    },
+    "menu": {
+      "gitConnections": "Connexions Git",
+      "profile": "Profil",
+      "theme": "Thème",
+      "theme_light": "Clair",
+      "theme_dark": "Sombre",
+      "theme_system": "Système"
+    }
+  }
+}

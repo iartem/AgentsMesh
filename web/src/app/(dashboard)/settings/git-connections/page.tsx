@@ -8,6 +8,7 @@ import {
   GitConnectionData,
   RemoteRepositoryData,
 } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 
 // Provider icons
 const ProviderIcon = ({ provider }: { provider: string }) => {
@@ -40,6 +41,7 @@ const ProviderIcon = ({ provider }: { provider: string }) => {
 };
 
 export default function GitConnectionsPage() {
+  const t = useTranslations();
   const [connections, setConnections] = useState<GitConnectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,11 +57,11 @@ export default function GitConnectionsPage() {
       setConnections(response.connections || []);
     } catch (err) {
       console.error("Failed to load connections:", err);
-      setError("Failed to load Git connections");
+      setError(t("settings.gitConnections.failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadConnections();
@@ -67,10 +69,10 @@ export default function GitConnectionsPage() {
 
   const handleDelete = async (connection: GitConnectionData) => {
     if (connection.type === "oauth") {
-      alert("OAuth connections cannot be deleted. Please manage them from your account settings.");
+      alert(t("settings.gitConnections.oauthCannotDelete"));
       return;
     }
-    if (!confirm(`Are you sure you want to delete "${connection.provider_name}"?`)) {
+    if (!confirm(t("settings.gitConnections.confirmDelete", { name: connection.provider_name }))) {
       return;
     }
     try {
@@ -78,7 +80,7 @@ export default function GitConnectionsPage() {
       await loadConnections();
     } catch (err) {
       console.error("Failed to delete connection:", err);
-      setError("Failed to delete connection");
+      setError(t("settings.gitConnections.failedToDelete"));
     }
   };
 
@@ -90,10 +92,9 @@ export default function GitConnectionsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Git Connections</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("settings.gitConnections.title")}</h1>
         <p className="text-muted-foreground">
-          Manage your Git provider connections. OAuth connections are automatically
-          created when you sign in with GitHub, GitLab, or Gitee.
+          {t("settings.gitConnections.description")}
         </p>
       </div>
 
@@ -108,9 +109,9 @@ export default function GitConnectionsPage() {
         <div className="border border-border rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold">OAuth Connections</h2>
+              <h2 className="text-lg font-semibold">{t("settings.gitConnections.oauthConnections")}</h2>
               <p className="text-sm text-muted-foreground">
-                Connections created through OAuth sign-in
+                {t("settings.gitConnections.oauthDescription")}
               </p>
             </div>
           </div>
@@ -133,8 +134,7 @@ export default function GitConnectionsPage() {
                 ))}
               {connections.filter((c) => c.type === "oauth").length === 0 && (
                 <p className="text-sm text-muted-foreground py-4">
-                  No OAuth connections. Sign in with GitHub, GitLab, or Gitee to
-                  automatically connect.
+                  {t("settings.gitConnections.noOauthConnections")}
                 </p>
               )}
             </div>
@@ -145,9 +145,9 @@ export default function GitConnectionsPage() {
         <div className="border border-border rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold">Personal Connections</h2>
+              <h2 className="text-lg font-semibold">{t("settings.gitConnections.personalConnections")}</h2>
               <p className="text-sm text-muted-foreground">
-                Connections using Personal Access Tokens or SSH keys
+                {t("settings.gitConnections.personalDescription")}
               </p>
             </div>
             <Button onClick={() => setShowAddDialog(true)}>
@@ -164,7 +164,7 @@ export default function GitConnectionsPage() {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Add Connection
+              {t("settings.gitConnections.addConnection")}
             </Button>
           </div>
 
@@ -186,8 +186,7 @@ export default function GitConnectionsPage() {
                 ))}
               {connections.filter((c) => c.type === "personal").length === 0 && (
                 <p className="text-sm text-muted-foreground py-4">
-                  No personal connections. Add a connection to access private Git
-                  providers.
+                  {t("settings.gitConnections.noPersonalConnections")}
                 </p>
               )}
             </div>
@@ -230,6 +229,7 @@ function ConnectionCard({
   onBrowse: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations();
   return (
     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
       <div className="flex items-center gap-4">
@@ -241,11 +241,11 @@ function ConnectionCard({
             <span className="font-medium">{connection.provider_name}</span>
             {connection.is_active ? (
               <span className="px-2 py-0.5 text-xs bg-green-500/10 text-green-600 rounded-full">
-                Active
+                {t("settings.gitConnections.active")}
               </span>
             ) : (
               <span className="px-2 py-0.5 text-xs bg-yellow-500/10 text-yellow-600 rounded-full">
-                Inactive
+                {t("settings.gitConnections.inactive")}
               </span>
             )}
             {connection.type === "oauth" && (
@@ -262,7 +262,7 @@ function ConnectionCard({
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={onBrowse}>
-          Browse Repos
+          {t("settings.gitConnections.browseRepos")}
         </Button>
         {connection.type === "personal" && (
           <Button variant="ghost" size="sm" onClick={onDelete}>
@@ -294,6 +294,7 @@ function AddConnectionDialog({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const t = useTranslations();
   const [step, setStep] = useState<"provider" | "credentials">("provider");
   const [providerType, setProviderType] = useState<string>("");
   const [providerName, setProviderName] = useState("");
@@ -309,19 +310,19 @@ function AddConnectionDialog({
       type: "github",
       name: "GitHub",
       defaultURL: "https://github.com",
-      description: "Connect to GitHub.com or GitHub Enterprise",
+      descriptionKey: "settings.gitConnections.dialog.githubDescription",
     },
     {
       type: "gitlab",
       name: "GitLab",
       defaultURL: "https://gitlab.com",
-      description: "Connect to GitLab.com or self-hosted GitLab",
+      descriptionKey: "settings.gitConnections.dialog.gitlabDescription",
     },
     {
       type: "gitee",
       name: "Gitee",
       defaultURL: "https://gitee.com",
-      description: "Connect to Gitee (码云)",
+      descriptionKey: "settings.gitConnections.dialog.giteeDescription",
     },
   ];
 
@@ -335,15 +336,15 @@ function AddConnectionDialog({
 
   const handleSubmit = async () => {
     if (!providerType || !providerName || !baseURL) {
-      setError("Please fill in all required fields");
+      setError(t("settings.gitConnections.dialog.fillAllFields"));
       return;
     }
     if (authType === "pat" && !accessToken) {
-      setError("Please enter your Personal Access Token");
+      setError(t("settings.gitConnections.dialog.enterPat"));
       return;
     }
     if (authType === "ssh" && !sshPrivateKey) {
-      setError("Please enter your SSH private key");
+      setError(t("settings.gitConnections.dialog.enterSshKey"));
       return;
     }
 
@@ -362,7 +363,7 @@ function AddConnectionDialog({
       onSuccess();
     } catch (err) {
       console.error("Failed to create connection:", err);
-      setError("Failed to create connection. Please check your credentials.");
+      setError(t("settings.gitConnections.dialog.failedToCreate"));
     } finally {
       setSaving(false);
     }
@@ -372,7 +373,7 @@ function AddConnectionDialog({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background rounded-lg shadow-lg w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">Add Git Connection</h2>
+          <h2 className="text-lg font-semibold">{t("settings.gitConnections.dialog.title")}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -390,7 +391,7 @@ function AddConnectionDialog({
           {step === "provider" && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-4">
-                Select a Git provider to connect:
+                {t("settings.gitConnections.dialog.selectProvider")}
               </p>
               {providers.map((provider) => (
                 <button
@@ -402,7 +403,7 @@ function AddConnectionDialog({
                   <div className="text-left">
                     <div className="font-medium">{provider.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {provider.description}
+                      {t(provider.descriptionKey)}
                     </div>
                   </div>
                 </button>
@@ -419,23 +420,23 @@ function AddConnectionDialog({
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Back
+                {t("common.back")}
               </button>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Connection Name
+                  {t("settings.gitConnections.dialog.connectionName")}
                 </label>
                 <Input
                   value={providerName}
                   onChange={(e) => setProviderName(e.target.value)}
-                  placeholder="e.g., Company GitLab"
+                  placeholder={t("settings.gitConnections.dialog.connectionNamePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Base URL
+                  {t("settings.gitConnections.dialog.baseUrl")}
                 </label>
                 <Input
                   value={baseURL}
@@ -443,13 +444,13 @@ function AddConnectionDialog({
                   placeholder="https://gitlab.company.com"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  For self-hosted instances, enter the full URL
+                  {t("settings.gitConnections.dialog.baseUrlHint")}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Authentication Type
+                  {t("settings.gitConnections.dialog.authType")}
                 </label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2">
@@ -485,7 +486,7 @@ function AddConnectionDialog({
                     placeholder="ghp_xxxx or glpat-xxxx"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Token requires repo access permissions
+                    {t("settings.gitConnections.dialog.patHint")}
                   </p>
                 </div>
               )}
@@ -493,7 +494,7 @@ function AddConnectionDialog({
               {authType === "ssh" && (
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    SSH Private Key
+                    {t("settings.gitConnections.dialog.sshPrivateKey")}
                   </label>
                   <textarea
                     value={sshPrivateKey}
@@ -510,10 +511,10 @@ function AddConnectionDialog({
         {step === "credentials" && (
           <div className="flex justify-end gap-3 p-4 border-t border-border">
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              Connect
+              {t("settings.gitConnections.dialog.connect")}
             </Button>
           </div>
         )}
@@ -530,6 +531,7 @@ function RepositoryBrowserDialog({
   connection: GitConnectionData;
   onClose: () => void;
 }) {
+  const t = useTranslations();
   const [repositories, setRepositories] = useState<RemoteRepositoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -548,11 +550,11 @@ function RepositoryBrowserDialog({
       setRepositories(response.repositories || []);
     } catch (err) {
       console.error("Failed to load repositories:", err);
-      setError("Failed to load repositories");
+      setError(t("settings.gitConnections.repoBrowser.failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [connection.id, page, search]);
+  }, [connection.id, page, search, t]);
 
   useEffect(() => {
     loadRepositories();
@@ -569,7 +571,7 @@ function RepositoryBrowserDialog({
       <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold">Browse Repositories</h2>
+            <h2 className="text-lg font-semibold">{t("settings.gitConnections.repoBrowser.title")}</h2>
             <p className="text-sm text-muted-foreground">
               {connection.provider_name} - {connection.username || connection.base_url}
             </p>
@@ -586,10 +588,10 @@ function RepositoryBrowserDialog({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search repositories..."
+              placeholder={t("settings.gitConnections.repoBrowser.searchPlaceholder")}
               className="flex-1"
             />
-            <Button type="submit">Search</Button>
+            <Button type="submit">{t("common.search")}</Button>
           </form>
         </div>
 
@@ -606,7 +608,7 @@ function RepositoryBrowserDialog({
             </div>
           ) : repositories.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              No repositories found
+              {t("settings.gitConnections.repoBrowser.noRepos")}
             </p>
           ) : (
             <div className="space-y-2">
@@ -618,13 +620,13 @@ function RepositoryBrowserDialog({
                   <div>
                     <div className="font-medium">{repo.full_path}</div>
                     <div className="text-sm text-muted-foreground line-clamp-1">
-                      {repo.description || "No description"}
+                      {repo.description || t("settings.gitConnections.repoBrowser.noDescription")}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span className="px-2 py-0.5 bg-muted rounded">
                         {repo.visibility}
                       </span>
-                      <span>Branch: {repo.default_branch}</span>
+                      <span>{t("settings.gitConnections.repoBrowser.branch")}: {repo.default_branch}</span>
                     </div>
                   </div>
                   <a
@@ -650,16 +652,16 @@ function RepositoryBrowserDialog({
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
-            Previous
+            {t("settings.gitConnections.repoBrowser.previous")}
           </Button>
-          <span className="text-sm text-muted-foreground">Page {page}</span>
+          <span className="text-sm text-muted-foreground">{t("settings.gitConnections.repoBrowser.page", { page })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={repositories.length < 20}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next
+            {t("settings.gitConnections.repoBrowser.next")}
           </Button>
         </div>
       </div>

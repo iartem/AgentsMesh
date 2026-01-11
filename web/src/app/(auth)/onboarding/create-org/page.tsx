@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api/organization";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function CreateOrgPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { setOrganizations, setCurrentOrg } = useAuthStore();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -43,17 +45,17 @@ export default function CreateOrgPage() {
     e.preventDefault();
 
     if (!name.trim()) {
-      setError("Please enter a workspace name");
+      setError(t("auth.onboarding.createOrg.enterWorkspaceName"));
       return;
     }
 
     if (!slug.trim()) {
-      setError("Please enter a URL identifier");
+      setError(t("auth.onboarding.createOrg.enterUrlIdentifier"));
       return;
     }
 
     if (slug.length < 3) {
-      setError("URL identifier must be at least 3 characters");
+      setError(t("auth.onboarding.createOrg.urlTooShort"));
       return;
     }
 
@@ -76,9 +78,9 @@ export default function CreateOrgPage() {
       router.push("/onboarding/setup-runner");
     } catch (err) {
       if (err instanceof Error && err.message.includes("already")) {
-        setError("This URL identifier is already taken. Please try another.");
+        setError(t("auth.onboarding.createOrg.urlTaken"));
       } else {
-        setError("Failed to create workspace. Please try again.");
+        setError(t("auth.onboarding.createOrg.createFailed"));
       }
     } finally {
       setLoading(false);
@@ -109,10 +111,10 @@ export default function CreateOrgPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Create Team Workspace
+            {t("auth.onboarding.createOrg.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Set up a workspace for your team to collaborate.
+            {t("auth.onboarding.createOrg.subtitle")}
           </p>
         </div>
 
@@ -126,29 +128,29 @@ export default function CreateOrgPage() {
 
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-medium text-foreground">
-              Workspace Name
+              {t("auth.onboarding.createOrg.workspaceNameLabel")}
             </label>
             <Input
               id="name"
-              placeholder="My Team"
+              placeholder={t("auth.onboarding.createOrg.workspaceNamePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
             <p className="text-xs text-muted-foreground">
-              This is the display name for your workspace.
+              {t("auth.onboarding.createOrg.workspaceNameHint")}
             </p>
           </div>
 
           <div className="space-y-2">
             <label htmlFor="slug" className="text-sm font-medium text-foreground">
-              URL Identifier
+              {t("auth.onboarding.createOrg.urlIdentifierLabel")}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">agentmesh.dev/</span>
               <Input
                 id="slug"
-                placeholder="my-team"
+                placeholder={t("auth.onboarding.createOrg.urlIdentifierPlaceholder")}
                 value={slug}
                 onChange={(e) => handleSlugChange(e.target.value)}
                 className="flex-1"
@@ -156,12 +158,12 @@ export default function CreateOrgPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              This will be used in URLs. Only lowercase letters, numbers, and hyphens are allowed.
+              {t("auth.onboarding.createOrg.urlIdentifierHint")}
             </p>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating..." : "Create Workspace"}
+            {loading ? t("auth.onboarding.creating") : t("auth.onboarding.createOrg.createWorkspace")}
           </Button>
         </form>
 
@@ -171,7 +173,7 @@ export default function CreateOrgPage() {
             href="/onboarding"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            ← Back to options
+            {t("auth.onboarding.backToOptions")}
           </Link>
         </div>
       </div>

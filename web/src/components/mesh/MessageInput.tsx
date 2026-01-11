@@ -2,6 +2,7 @@
 
 import { useState, useRef, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface MessageInputProps {
   onSend: (content: string) => void;
@@ -12,8 +13,10 @@ interface MessageInputProps {
 export function MessageInput({
   onSend,
   disabled,
-  placeholder = "Type a message...",
+  placeholder,
 }: MessageInputProps) {
+  const t = useTranslations();
+  const defaultPlaceholder = placeholder || t("mesh.messageInput.placeholder");
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -59,7 +62,7 @@ export function MessageInput({
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
-            placeholder={placeholder}
+            placeholder={defaultPlaceholder}
             disabled={disabled}
             className="w-full resize-none rounded-lg border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 min-h-[44px] max-h-[200px]"
             rows={1}
@@ -87,7 +90,7 @@ export function MessageInput({
         </Button>
       </div>
       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-        <span>Press Enter to send, Shift+Enter for new line</span>
+        <span>{t("mesh.messageInput.hint")}</span>
       </div>
     </div>
   );

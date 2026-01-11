@@ -29,6 +29,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface TicketsSidebarContentProps {
   className?: string;
@@ -50,6 +51,7 @@ const typeOptions: TicketType[] = ["task", "bug", "feature", "improvement", "epi
 const priorityOptions: TicketPriority[] = ["urgent", "high", "medium", "low", "none"];
 
 export function TicketsSidebarContent({ className }: TicketsSidebarContentProps) {
+  const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
   const {
@@ -192,7 +194,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search tickets..."
+            placeholder={t("tickets.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -209,7 +211,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
           onClick={() => setCreateDialogOpen(true)}
         >
           <Plus className="w-3 h-3 mr-1" />
-          New Ticket
+          {t("tickets.newTicket")}
         </Button>
         <Button
           size="sm"
@@ -224,7 +226,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
 
       {/* View Mode Toggle */}
       <div className="flex items-center gap-1 px-2 pb-2">
-        <span className="text-xs text-muted-foreground mr-2">View:</span>
+        <span className="text-xs text-muted-foreground mr-2">{t("tickets.view")}:</span>
         <div className="flex border border-border rounded-md overflow-hidden">
           <button
             className={cn(
@@ -254,7 +256,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
             className="h-7 text-xs ml-auto"
             onClick={clearAllFilters}
           >
-            Clear
+            {t("tickets.clear")}
           </Button>
         )}
       </div>
@@ -265,7 +267,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
         <Collapsible open={statusExpanded} onOpenChange={setStatusExpanded}>
           <CollapsibleTrigger asChild>
             <div className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted/50">
-              <span className="text-xs font-medium">Status</span>
+              <span className="text-xs font-medium">{t("tickets.filters.status")}</span>
               <div className="flex items-center gap-1">
                 {selectedStatuses.length > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-1.5 rounded">
@@ -307,7 +309,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
         <Collapsible open={typeExpanded} onOpenChange={setTypeExpanded}>
           <CollapsibleTrigger asChild>
             <div className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted/50 border-t border-border">
-              <span className="text-xs font-medium">Type</span>
+              <span className="text-xs font-medium">{t("tickets.filters.type")}</span>
               <div className="flex items-center gap-1">
                 {selectedTypes.length > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-1.5 rounded">
@@ -349,7 +351,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
         <Collapsible open={priorityExpanded} onOpenChange={setPriorityExpanded}>
           <CollapsibleTrigger asChild>
             <div className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted/50 border-t border-border">
-              <span className="text-xs font-medium">Priority</span>
+              <span className="text-xs font-medium">{t("tickets.filters.priority")}</span>
               <div className="flex items-center gap-1">
                 {selectedPriorities.length > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-1.5 rounded">
@@ -391,7 +393,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
       {/* Ticket list preview */}
       <div className="flex-1 overflow-y-auto border-t border-border">
         <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
-          {filteredTickets.length} tickets
+          {filteredTickets.length} {t("tickets.ticketCount")}
         </div>
 
         {loading ? (
@@ -401,7 +403,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
         ) : filteredTickets.length === 0 ? (
           <div className="px-3 py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              {hasActiveFilters ? "No tickets match filters" : "No tickets yet"}
+              {hasActiveFilters ? t("tickets.emptyState.noMatch") : t("tickets.emptyState.title")}
             </p>
           </div>
         ) : (
@@ -436,7 +438,7 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
             ))}
             {filteredTickets.length > 20 && (
               <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                +{filteredTickets.length - 20} more
+                {t("tickets.moreTickets", { count: filteredTickets.length - 20 })}
               </div>
             )}
           </div>

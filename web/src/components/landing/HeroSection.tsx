@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/lib/i18n/client";
 
 // Claude Code TUI style animation - showing pod supervision workflow
 const tuiFrames = [
@@ -177,6 +178,7 @@ const tuiFrames = [
 export function HeroSection() {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [displayedLines, setDisplayedLines] = useState<number>(0);
+  const t = useTranslations();
 
   // Cycle through frames
   useEffect(() => {
@@ -254,44 +256,43 @@ export function HeroSection() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
-              Terminal-Native AI Platform
+              {t("landing.hero.badge")}
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-              <span className="text-foreground">Terminal-based</span>
+              <span className="text-foreground">{t("landing.hero.title1")}</span>
               <br />
-              <span className="text-primary">Coding Agent</span>
+              <span className="text-primary">{t("landing.hero.title2")}</span>
               <br />
-              <span className="text-foreground">Collaboration Platform</span>
+              <span className="text-foreground">{t("landing.hero.title3")}</span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0">
-              Unified management for Claude Code, Codex CLI, Gemini CLI, Aider and more.
-              Enable multiple AI agents to collaborate on complex development tasks.
+              {t("landing.hero.description")}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link href="/register">
                 <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 text-base px-8">
-                  Get Started Free
+                  {t("landing.hero.getStartedFree")}
                 </Button>
               </Link>
               <Link href="/docs">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8">
-                  View Documentation
+                  {t("landing.hero.viewDocs")}
                 </Button>
               </Link>
             </div>
 
             {/* Trust badges */}
             <div className="mt-10 pt-8 border-t border-border/50">
-              <p className="text-sm text-muted-foreground mb-4">Trusted by developers worldwide</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("landing.hero.trustedBy")}</p>
               <div className="flex items-center justify-center lg:justify-start gap-6 opacity-50">
-                <div className="text-sm font-medium">500+ Teams</div>
+                <div className="text-sm font-medium">{t("landing.hero.teams")}</div>
                 <div className="w-px h-4 bg-border" />
-                <div className="text-sm font-medium">10K+ Pods</div>
+                <div className="text-sm font-medium">{t("landing.hero.pods")}</div>
                 <div className="w-px h-4 bg-border" />
-                <div className="text-sm font-medium">Open Source</div>
+                <div className="text-sm font-medium">{t("landing.hero.openSource")}</div>
               </div>
             </div>
           </div>

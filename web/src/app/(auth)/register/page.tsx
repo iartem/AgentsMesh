@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { setAuth } = useAuthStore();
   const [formData, setFormData] = useState({
     email: "",
@@ -35,14 +37,14 @@ export default function RegisterPage() {
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("auth.registerPage.passwordsNotMatch"));
       setLoading(false);
       return;
     }
 
     // Validate password strength
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("auth.registerPage.passwordTooShort"));
       setLoading(false);
       return;
     }
@@ -64,10 +66,10 @@ export default function RegisterPage() {
         if (apiErr.data?.error) {
           setError(apiErr.data.error);
         } else {
-          setError("Registration failed. Please try again.");
+          setError(t("auth.registerPage.registrationFailed"));
         }
       } else {
-        setError("Registration failed. Please try again.");
+        setError(t("auth.registerPage.registrationFailed"));
       }
     } finally {
       setLoading(false);
@@ -98,10 +100,10 @@ export default function RegisterPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Create your account
+            {t("auth.registerPage.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Get started with AgentMesh today
+            {t("auth.registerPage.subtitle")}
           </p>
         </div>
 
@@ -115,13 +117,13 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-medium text-foreground">
-              Full Name
+              {t("auth.registerPage.fullName")}
             </label>
             <Input
               id="name"
               name="name"
               type="text"
-              placeholder="John Doe"
+              placeholder={t("auth.registerPage.fullNamePlaceholder")}
               value={formData.name}
               onChange={handleChange}
             />
@@ -129,13 +131,13 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
+              {t("auth.registerPage.emailLabel")}
             </label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("auth.registerPage.emailPlaceholder")}
               value={formData.email}
               onChange={handleChange}
               required
@@ -144,13 +146,13 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <label htmlFor="username" className="text-sm font-medium text-foreground">
-              Username
+              {t("auth.registerPage.usernameLabel")}
             </label>
             <Input
               id="username"
               name="username"
               type="text"
-              placeholder="johndoe"
+              placeholder={t("auth.registerPage.usernamePlaceholder")}
               value={formData.username}
               onChange={handleChange}
               required
@@ -158,26 +160,26 @@ export default function RegisterPage() {
               maxLength={50}
             />
             <p className="text-xs text-muted-foreground">
-              3-50 characters, letters, numbers, and underscores only
+              {t("auth.registerPage.usernameHint")}
             </p>
           </div>
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Password
+              {t("auth.registerPage.passwordLabel")}
             </label>
             <Input
               id="password"
               name="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={t("auth.registerPage.passwordPlaceholder")}
               value={formData.password}
               onChange={handleChange}
               required
               minLength={8}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum 8 characters
+              {t("auth.registerPage.passwordHint")}
             </p>
           </div>
 
@@ -186,13 +188,13 @@ export default function RegisterPage() {
               htmlFor="confirmPassword"
               className="text-sm font-medium text-foreground"
             >
-              Confirm Password
+              {t("auth.registerPage.confirmPasswordLabel")}
             </label>
             <Input
               id="confirmPassword"
               name="confirmPassword"
               type="password"
-              placeholder="••••••••"
+              placeholder={t("auth.registerPage.passwordPlaceholder")}
               value={formData.confirmPassword}
               onChange={handleChange}
               required
@@ -200,19 +202,19 @@ export default function RegisterPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create account"}
+            {loading ? t("auth.registerPage.creatingAccount") : t("auth.registerPage.createAccount")}
           </Button>
         </form>
 
         {/* Terms */}
         <p className="text-center text-xs text-muted-foreground">
-          By creating an account, you agree to our{" "}
+          {t("auth.registerPage.termsText")}{" "}
           <Link href="/terms" className="text-primary hover:underline">
-            Terms of Service
+            {t("auth.registerPage.termsOfService")}
           </Link>{" "}
-          and{" "}
+          {t("auth.registerPage.and")}{" "}
           <Link href="/privacy" className="text-primary hover:underline">
-            Privacy Policy
+            {t("auth.registerPage.privacyPolicy")}
           </Link>
         </p>
 
@@ -223,7 +225,7 @@ export default function RegisterPage() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
+              {t("auth.registerPage.orContinueWith")}
             </span>
           </div>
         </div>
@@ -272,9 +274,9 @@ export default function RegisterPage() {
 
         {/* Login link */}
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t("auth.registerPage.alreadyHaveAccount")}{" "}
           <Link href="/login" className="text-primary hover:underline">
-            Sign in
+            {t("auth.registerPage.signIn")}
           </Link>
         </p>
       </div>

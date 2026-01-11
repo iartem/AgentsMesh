@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { ticketApi, runnerApi } from "@/lib/api/client";
 import { getPodStatusInfo, getAgentStatusInfo } from "@/stores/devmesh";
@@ -38,6 +39,7 @@ export default function TicketPodPanel({
   ticketTitle,
   onPodCreated,
 }: TicketPodPanelProps) {
+  const t = useTranslations();
   const [pods, setPods] = useState<TicketPod[]>([]);
   const [runners, setRunners] = useState<Runner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ export default function TicketPodPanel({
 
   const handleCreatePod = async () => {
     if (!selectedRunner) {
-      setError("Please select a runner");
+      setError(t("tickets.podPanel.selectRunnerRequired"));
       return;
     }
 
@@ -112,7 +114,7 @@ export default function TicketPodPanel({
       await fetchPods();
       onPodCreated?.();
     } catch (err: any) {
-      setError(err.message || "Failed to create pod");
+      setError(err.message || t("tickets.podPanel.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -146,7 +148,7 @@ export default function TicketPodPanel({
           <h3 className="font-medium">AgentPods</h3>
           {activePods.length > 0 && (
             <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
-              {activePods.length} active
+              {t("tickets.podPanel.activeCount", { count: activePods.length })}
             </span>
           )}
         </div>
@@ -158,24 +160,24 @@ export default function TicketPodPanel({
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New Pod
+          {t("tickets.podPanel.newPod")}
         </Button>
       </div>
 
       {/* Create Form */}
       {showCreateForm && (
         <div className="p-4 border-b border-border bg-muted/30">
-          <h4 className="text-sm font-medium mb-3">Create New Pod</h4>
+          <h4 className="text-sm font-medium mb-3">{t("tickets.podPanel.createNewPod")}</h4>
           <div className="space-y-3">
             {/* Runner Selection */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Runner</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.runner")}</label>
               <select
                 className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
                 value={selectedRunner || ""}
                 onChange={(e) => setSelectedRunner(Number(e.target.value) || null)}
               >
-                <option value="">Select a runner...</option>
+                <option value="">{t("tickets.podPanel.selectRunner")}</option>
                 {runners.map((runner) => (
                   <option key={runner.id} value={runner.id}>
                     {runner.node_id} ({runner.current_pods}{runner.max_concurrent_pods ? `/${runner.max_concurrent_pods}` : ""})
@@ -186,7 +188,7 @@ export default function TicketPodPanel({
 
             {/* Model Selection */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Model</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.model")}</label>
               <select
                 className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
                 value={model}
@@ -200,27 +202,27 @@ export default function TicketPodPanel({
 
             {/* Permission Mode */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Permission Mode</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.permissionMode")}</label>
               <select
                 className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
                 value={permissionMode}
                 onChange={(e) => setPermissionMode(e.target.value)}
               >
-                <option value="default">Default</option>
-                <option value="plan">Plan Mode</option>
-                <option value="dangerously-skip-permissions">Auto-approve (Dangerous)</option>
+                <option value="default">{t("tickets.podPanel.permissionDefault")}</option>
+                <option value="plan">{t("tickets.podPanel.permissionPlan")}</option>
+                <option value="dangerously-skip-permissions">{t("tickets.podPanel.permissionAutoApprove")}</option>
               </select>
             </div>
 
             {/* Initial Prompt */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                Initial Prompt (optional)
+                {t("tickets.podPanel.initialPrompt")}
               </label>
               <textarea
                 className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background resize-none"
                 rows={3}
-                placeholder={`Work on ticket: ${ticketTitle}`}
+                placeholder={t("tickets.podPanel.initialPromptPlaceholder", { title: ticketTitle })}
                 value={initialPrompt}
                 onChange={(e) => setInitialPrompt(e.target.value)}
               />
@@ -238,14 +240,14 @@ export default function TicketPodPanel({
                 size="sm"
                 onClick={() => setShowCreateForm(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 size="sm"
                 onClick={handleCreatePod}
                 disabled={!selectedRunner || creating}
               >
-                {creating ? "Creating..." : "Create Pod"}
+                {creating ? t("tickets.podPanel.creating") : t("tickets.podPanel.createPod")}
               </Button>
             </div>
           </div>
@@ -263,7 +265,7 @@ export default function TicketPodPanel({
         {inactivePods.length > 0 && (
           <details className="group">
             <summary className="px-4 py-2 text-sm text-muted-foreground cursor-pointer hover:bg-muted/50">
-              {inactivePods.length} previous pod{inactivePods.length !== 1 ? "s" : ""}
+              {t("tickets.podPanel.previousPods", { count: inactivePods.length })}
             </summary>
             <div className="divide-y divide-border border-t border-border">
               {inactivePods.map((pod) => (
@@ -279,10 +281,10 @@ export default function TicketPodPanel({
             <svg className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-sm">No pods for this ticket yet</p>
+            <p className="text-sm">{t("tickets.podPanel.noPods")}</p>
             {runners.length === 0 && (
               <p className="text-xs mt-1 text-yellow-600">
-                No online runners available
+                {t("tickets.podPanel.noRunners")}
               </p>
             )}
           </div>
@@ -298,6 +300,7 @@ interface PodItemProps {
 }
 
 function PodItem({ pod, ticketIdentifier }: PodItemProps) {
+  const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
   const { addPane } = useWorkspaceStore();
@@ -363,14 +366,14 @@ function PodItem({ pod, ticketIdentifier }: PodItemProps) {
             <>
               <Button size="sm" variant="outline" onClick={handleConnect}>
                 <Terminal className="w-3.5 h-3.5 mr-1" />
-                Connect
+                {t("tickets.podPanel.connect")}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 className="hidden sm:flex"
                 onClick={handleOpenInNewTab}
-                title="Open in new tab"
+                title={t("tickets.podPanel.openInNewTab")}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </Button>
@@ -382,7 +385,7 @@ function PodItem({ pod, ticketIdentifier }: PodItemProps) {
       {/* Started At */}
       {pod.started_at && (
         <div className="mt-1 text-xs text-muted-foreground ml-5">
-          Started: {new Date(pod.started_at).toLocaleString()}
+          {t("tickets.podPanel.started")}: {new Date(pod.started_at).toLocaleString()}
         </div>
       )}
     </div>

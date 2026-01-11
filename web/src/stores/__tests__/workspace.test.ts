@@ -2,24 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useWorkspaceStore, terminalPool } from "../workspace";
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-  };
-})();
-Object.defineProperty(window, "localStorage", { value: localStorageMock });
-
 // Mock WebSocket
 class MockWebSocket {
   static CONNECTING = 0;
@@ -44,7 +26,7 @@ vi.stubGlobal("WebSocket", MockWebSocket);
 
 describe("Workspace Store", () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    localStorage.clear();
     // Reset store to initial state
     useWorkspaceStore.setState({
       panes: [],
@@ -352,11 +334,11 @@ describe("Terminal Connection Pool", () => {
   beforeEach(() => {
     // Clear all connections
     terminalPool.disconnectAll();
-    localStorageMock.clear();
+    localStorage.clear();
     lastMockWsInstance = null;
 
     // Set up auth data for WebSocket URL construction
-    localStorageMock.setItem(
+    localStorage.setItem(
       "agentmesh-auth",
       JSON.stringify({
         state: {
@@ -506,7 +488,7 @@ describe("Terminal Connection Pool", () => {
     });
 
     it("should handle missing auth data gracefully", () => {
-      localStorageMock.clear();
+      localStorage.clear();
       const onMessage = vi.fn();
 
       // Should not throw
@@ -514,7 +496,7 @@ describe("Terminal Connection Pool", () => {
     });
 
     it("should handle invalid auth data JSON", () => {
-      localStorageMock.setItem("agentmesh-auth", "invalid json");
+      localStorage.setItem("agentmesh-auth", "invalid json");
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const onMessage = vi.fn();
 
@@ -548,11 +530,25 @@ describe("Terminal Connection Pool", () => {
   });
 
   describe("sendResize", () => {
-    it("should send resize command through WebSocket", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should send resize command through WebSocket after debounce", () => {
       const onMessage = vi.fn();
       terminalPool.connect("pod-123", onMessage);
 
       terminalPool.sendResize("pod-123", 24, 80);
+
+      // Should not be called immediately due to debounce
+      expect(lastMockWsInstance.send).not.toHaveBeenCalled();
+
+      // Advance timers past debounce period (150ms)
+      vi.advanceTimersByTime(150);
 
       expect(lastMockWsInstance.send).toHaveBeenCalledWith(
         JSON.stringify({ type: "resize", rows: 24, cols: 80 })
@@ -566,11 +562,16 @@ describe("Terminal Connection Pool", () => {
       lastMockWsInstance.readyState = MockWebSocket.CLOSED;
       terminalPool.sendResize("pod-123", 24, 80);
 
+      // Advance timers past debounce period
+      vi.advanceTimersByTime(150);
+
       expect(lastMockWsInstance.send).not.toHaveBeenCalled();
     });
 
     it("should not send resize for non-existent connection", () => {
       terminalPool.sendResize("non-existent", 24, 80);
+      // Advance timers past debounce period
+      vi.advanceTimersByTime(150);
       // Should not throw, just silently fail
     });
   });

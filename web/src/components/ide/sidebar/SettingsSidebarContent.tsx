@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   Settings,
   Users,
@@ -18,21 +19,22 @@ interface SettingsSidebarContentProps {
   className?: string;
 }
 
-// Settings tabs configuration
-const settingsTabs = [
-  { id: "general", label: "General", icon: Settings, description: "Organization details" },
-  { id: "members", label: "Members", icon: Users, description: "Team members and roles" },
-  { id: "agents", label: "Agents", icon: Bot, description: "AI agent types" },
-  { id: "runners", label: "Runners", icon: Server, description: "Runner management" },
-  { id: "git-providers", label: "Git Providers", icon: GitBranch, description: "Git integrations" },
-  { id: "notifications", label: "Notifications", icon: Bell, description: "Notification preferences" },
-  { id: "billing", label: "Billing", icon: CreditCard, description: "Subscription and payments" },
-];
-
 export function SettingsSidebarContent({ className }: SettingsSidebarContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentOrg } = useAuthStore();
+  const t = useTranslations();
+
+  // Settings tabs configuration with translation keys
+  const settingsTabs = [
+    { id: "general", labelKey: "ide.sidebar.settings.tabs.general", icon: Settings, descKey: "ide.sidebar.settings.tabs.generalDesc" },
+    { id: "members", labelKey: "ide.sidebar.settings.tabs.members", icon: Users, descKey: "ide.sidebar.settings.tabs.membersDesc" },
+    { id: "agents", labelKey: "ide.sidebar.settings.tabs.agents", icon: Bot, descKey: "ide.sidebar.settings.tabs.agentsDesc" },
+    { id: "runners", labelKey: "ide.sidebar.settings.tabs.runners", icon: Server, descKey: "ide.sidebar.settings.tabs.runnersDesc" },
+    { id: "git-providers", labelKey: "ide.sidebar.settings.tabs.gitProviders", icon: GitBranch, descKey: "ide.sidebar.settings.tabs.gitProvidersDesc" },
+    { id: "notifications", labelKey: "ide.sidebar.settings.tabs.notifications", icon: Bell, descKey: "ide.sidebar.settings.tabs.notificationsDesc" },
+    { id: "billing", labelKey: "ide.sidebar.settings.tabs.billing", icon: CreditCard, descKey: "ide.sidebar.settings.tabs.billingDesc" },
+  ];
 
   // Get current tab from URL params
   const currentTab = searchParams.get("tab") || "general";
@@ -46,9 +48,9 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
       <div className="px-3 py-3 border-b border-border">
-        <h3 className="text-sm font-semibold">Settings</h3>
+        <h3 className="text-sm font-semibold">{t("ide.sidebar.settings.title")}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Manage your organization
+          {t("ide.sidebar.settings.description")}
         </p>
       </div>
 
@@ -78,10 +80,10 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
                   "text-sm truncate",
                   isActive && "font-medium"
                 )}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {tab.description}
+                  {t(tab.descKey)}
                 </p>
               </div>
             </button>
@@ -92,7 +94,7 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
       {/* Organization info */}
       {currentOrg && (
         <div className="border-t border-border px-3 py-3">
-          <div className="text-xs text-muted-foreground mb-1">Current Organization</div>
+          <div className="text-xs text-muted-foreground mb-1">{t("ide.sidebar.settings.currentOrg")}</div>
           <div className="text-sm font-medium truncate">{currentOrg.name}</div>
           <div className="text-xs text-muted-foreground truncate">/{currentOrg.slug}</div>
         </div>

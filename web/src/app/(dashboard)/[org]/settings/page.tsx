@@ -7,32 +7,34 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi, agentApi, billingApi, BillingOverview, SubscriptionPlan, gitProviderApi, sshKeyApi, SSHKeyData } from "@/lib/api/client";
 import { useRunnerStore, Runner, RegistrationToken, getRunnerStatusInfo } from "@/stores/runner";
-import { NotificationSettings } from "@/components/settings";
+import { NotificationSettings, LanguageSettings } from "@/components/settings";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "general";
   const { currentOrg } = useAuthStore();
+  const t = useTranslations();
 
   // Tab content mapping
   const renderContent = () => {
     switch (activeTab) {
       case "general":
-        return <GeneralSettings org={currentOrg} />;
+        return <GeneralSettings org={currentOrg} t={t} />;
       case "members":
-        return <MembersSettings />;
+        return <MembersSettings t={t} />;
       case "agents":
-        return <AgentsSettings />;
+        return <AgentsSettings t={t} />;
       case "runners":
-        return <RunnersSettings />;
+        return <RunnersSettings t={t} />;
       case "git-providers":
-        return <GitProvidersSettings />;
+        return <GitProvidersSettings t={t} />;
       case "notifications":
-        return <NotificationsSettings />;
+        return <NotificationsSettings t={t} />;
       case "billing":
-        return <BillingSettings />;
+        return <BillingSettings t={t} />;
       default:
-        return <GeneralSettings org={currentOrg} />;
+        return <GeneralSettings org={currentOrg} t={t} />;
     }
   };
 
@@ -46,7 +48,9 @@ export default function SettingsPage() {
   );
 }
 
-function GeneralSettings({ org }: { org: { name: string; slug: string } | null }) {
+type TranslationFn = (key: string, params?: Record<string, string | number>) => string;
+
+function GeneralSettings({ org, t }: { org: { name: string; slug: string } | null; t: TranslationFn }) {
   const [name, setName] = useState(org?.name || "");
   const [saving, setSaving] = useState(false);
 
@@ -63,51 +67,53 @@ function GeneralSettings({ org }: { org: { name: string; slug: string } | null }
 
   return (
     <div className="space-y-6">
+      {/* Language Settings */}
+      <LanguageSettings />
+
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Organization Details</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.organizationDetails.title")}</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Organization Name
+              {t("settings.organizationDetails.nameLabel")}
             </label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My Organization"
+              placeholder={t("settings.organizationDetails.namePlaceholder")}
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Organization Slug
+              {t("settings.organizationDetails.slugLabel")}
             </label>
             <Input value={org?.slug || ""} disabled />
             <p className="text-xs text-muted-foreground mt-1">
-              The slug cannot be changed after creation
+              {t("settings.organizationDetails.slugHint")}
             </p>
           </div>
         </div>
         <div className="mt-6">
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t("settings.organizationDetails.saving") : t("settings.organizationDetails.saveChanges")}
           </Button>
         </div>
       </div>
 
       <div className="border border-destructive rounded-lg p-6">
         <h2 className="text-lg font-semibold text-destructive mb-4">
-          Danger Zone
+          {t("settings.dangerZone.title")}
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Once you delete an organization, there is no going back. Please be
-          certain.
+          {t("settings.dangerZone.description")}
         </p>
-        <Button variant="destructive">Delete Organization</Button>
+        <Button variant="destructive">{t("settings.dangerZone.deleteOrg")}</Button>
       </div>
     </div>
   );
 }
 
-function MembersSettings() {
+function MembersSettings({ t }: { t: TranslationFn }) {
   const { currentOrg, user } = useAuthStore();
   const [members, setMembers] = useState<Array<{
     id: number;
@@ -194,28 +200,28 @@ function MembersSettings() {
     <div className="border border-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold">Members</h2>
+          <h2 className="text-lg font-semibold">{t("settings.members.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage who has access to this organization
+            {t("settings.members.description")}
           </p>
         </div>
-        <Button onClick={() => setShowInviteDialog(true)}>Invite Member</Button>
+        <Button onClick={() => setShowInviteDialog(true)}>{t("settings.members.inviteMember")}</Button>
       </div>
 
       {error && (
         <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg mb-4">
           {error}
           <button onClick={() => setError(null)} className="ml-4 underline text-sm">
-            Dismiss
+            {t("settings.members.dismiss")}
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading members...</div>
+        <div className="text-center py-8 text-muted-foreground">{t("settings.members.loading")}</div>
       ) : members.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No members found. Invite someone to get started.
+          {t("settings.members.noMembers")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -237,7 +243,7 @@ function MembersSettings() {
                       {member.role}
                     </span>
                     {member.user_id === user?.id && (
-                      <span className="text-xs text-muted-foreground">(You)</span>
+                      <span className="text-xs text-muted-foreground">{t("settings.members.you")}</span>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">{member.user?.email}</p>
@@ -251,8 +257,8 @@ function MembersSettings() {
                       onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
                       className="text-sm border border-border rounded px-2 py-1 bg-background"
                     >
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
+                      <option value="member">{t("settings.members.roleMember")}</option>
+                      <option value="admin">{t("settings.members.roleAdmin")}</option>
                     </select>
                     <Button
                       variant="ghost"
@@ -260,7 +266,7 @@ function MembersSettings() {
                       className="text-destructive hover:text-destructive"
                       onClick={() => handleRemove(member.user_id)}
                     >
-                      Remove
+                      {t("settings.members.remove")}
                     </Button>
                   </>
                 )}
@@ -274,26 +280,26 @@ function MembersSettings() {
       {showInviteDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Invite Member</h3>
+            <h3 className="text-lg font-semibold mb-4">{t("settings.members.inviteDialog.title")}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
+                <label className="block text-sm font-medium mb-2">{t("settings.members.inviteDialog.emailLabel")}</label>
                 <Input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="colleague@example.com"
+                  placeholder={t("settings.members.inviteDialog.emailPlaceholder")}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Role</label>
+                <label className="block text-sm font-medium mb-2">{t("settings.members.inviteDialog.roleLabel")}</label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
                   className="w-full border border-border rounded px-3 py-2 bg-background"
                 >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
+                  <option value="member">{t("settings.members.roleMember")}</option>
+                  <option value="admin">{t("settings.members.roleAdmin")}</option>
                 </select>
               </div>
             </div>
@@ -307,14 +313,14 @@ function MembersSettings() {
                   setInviteRole("member");
                 }}
               >
-                Cancel
+                {t("settings.members.inviteDialog.cancel")}
               </Button>
               <Button
                 className="flex-1"
                 onClick={handleInvite}
                 disabled={inviting || !inviteEmail}
               >
-                {inviting ? "Inviting..." : "Send Invite"}
+                {inviting ? t("settings.members.inviteDialog.inviting") : t("settings.members.inviteDialog.sendInvite")}
               </Button>
             </div>
           </div>
@@ -324,7 +330,7 @@ function MembersSettings() {
   );
 }
 
-function AgentsSettings() {
+function AgentsSettings({ t }: { t: TranslationFn }) {
   const [agentTypes, setAgentTypes] = useState<
     Array<{ id: number; slug: string; name: string; description?: string }>
   >([]);
@@ -398,13 +404,13 @@ function AgentsSettings() {
   return (
     <div className="space-y-6">
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Agent Configuration</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.agentConfig.title")}</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Enable and configure AI agents for your organization
+          {t("settings.agentConfig.description")}
         </p>
 
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="text-center py-4">{t("settings.agentConfig.loading")}</div>
         ) : (
           <div className="space-y-4">
             {agentTypes.map((agent) => (
@@ -415,12 +421,12 @@ function AgentsSettings() {
                 <div>
                   <h3 className="font-medium">{agent.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {agent.description || `Configure ${agent.name} settings`}
+                    {agent.description || t("settings.agentConfig.configureDefault", { name: agent.name })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm">
-                    Configure
+                    {t("settings.agentConfig.configure")}
                   </Button>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" />
@@ -434,16 +440,16 @@ function AgentsSettings() {
       </div>
 
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Your Credentials</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.credentials.title")}</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Set your personal API keys for AI providers. Keys are encrypted before storage.
+          {t("settings.credentials.description")}
         </p>
 
         {error && (
           <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg mb-4">
             {error}
             <button onClick={() => setError(null)} className="ml-4 underline text-sm">
-              Dismiss
+              {t("settings.credentials.dismiss")}
             </button>
           </div>
         )}
@@ -452,7 +458,7 @@ function AgentsSettings() {
           <div className="bg-green-50 border border-green-500 text-green-700 px-4 py-3 rounded-lg mb-4">
             {success}
             <button onClick={() => setSuccess(null)} className="ml-4 underline text-sm">
-              Dismiss
+              {t("settings.credentials.dismiss")}
             </button>
           </div>
         )}
@@ -460,16 +466,16 @@ function AgentsSettings() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Anthropic API Key (Claude)
+              {t("settings.credentials.anthropicLabel")}
             </label>
             <Input
               type="password"
-              placeholder="sk-ant-..."
+              placeholder={t("settings.credentials.anthropicPlaceholder")}
               value={anthropicKey}
               onChange={(e) => setAnthropicKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Get your key from{" "}
+              {t("settings.credentials.anthropicHint")}{" "}
               <a
                 href="https://console.anthropic.com/settings/keys"
                 target="_blank"
@@ -482,16 +488,16 @@ function AgentsSettings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              OpenAI API Key
+              {t("settings.credentials.openaiLabel")}
             </label>
             <Input
               type="password"
-              placeholder="sk-..."
+              placeholder={t("settings.credentials.openaiPlaceholder")}
               value={openaiKey}
               onChange={(e) => setOpenaiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Get your key from{" "}
+              {t("settings.credentials.openaiHint")}{" "}
               <a
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
@@ -504,16 +510,16 @@ function AgentsSettings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Google AI API Key (Gemini)
+              {t("settings.credentials.googleLabel")}
             </label>
             <Input
               type="password"
-              placeholder="AIza..."
+              placeholder={t("settings.credentials.googlePlaceholder")}
               value={googleKey}
               onChange={(e) => setGoogleKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Get your key from{" "}
+              {t("settings.credentials.googleHint")}{" "}
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
@@ -530,7 +536,7 @@ function AgentsSettings() {
             onClick={handleSaveCredentials}
             disabled={savingCredentials || (!anthropicKey && !openaiKey && !googleKey)}
           >
-            {savingCredentials ? "Saving..." : "Save Credentials"}
+            {savingCredentials ? t("settings.credentials.saving") : t("settings.credentials.saveCredentials")}
           </Button>
         </div>
       </div>
@@ -538,7 +544,7 @@ function AgentsSettings() {
   );
 }
 
-function GitProvidersSettings() {
+function GitProvidersSettings({ t }: { t: TranslationFn }) {
   const [providers, setProviders] = useState<Array<{
     id: number;
     provider_type: string;
@@ -759,19 +765,19 @@ function GitProvidersSettings() {
       <div className="border border-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Git Providers</h2>
+            <h2 className="text-lg font-semibold">{t("settings.gitProviders.title")}</h2>
             <p className="text-sm text-muted-foreground">
-              Configure Git providers for repository integration
+              {t("settings.gitProviders.description")}
             </p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>Add Provider</Button>
+          <Button onClick={() => setShowAddDialog(true)}>{t("settings.gitProviders.addProvider")}</Button>
         </div>
 
         {error && (
           <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg mb-4">
             {error}
             <button onClick={() => setError(null)} className="ml-4 underline text-sm">
-              Dismiss
+              {t("settings.members.dismiss")}
             </button>
           </div>
         )}
@@ -780,16 +786,16 @@ function GitProvidersSettings() {
           <div className="bg-green-50 border border-green-500 text-green-700 px-4 py-3 rounded-lg mb-4">
             {success}
             <button onClick={() => setSuccess(null)} className="ml-4 underline text-sm">
-              Dismiss
+              {t("settings.members.dismiss")}
             </button>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading providers...</div>
+          <div className="text-center py-8 text-muted-foreground">{t("settings.gitProviders.loading")}</div>
         ) : providers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No Git providers configured. Add one to get started.
+            {t("settings.gitProviders.noProviders")}
           </div>
         ) : (
           <div className="space-y-4">
@@ -812,30 +818,30 @@ function GitProvidersSettings() {
                       </span>
                       {provider.is_default && (
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          Default
+                          {t("settings.gitProviders.default")}
                         </span>
                       )}
                       {!provider.is_active && (
                         <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                          Disabled
+                          {t("settings.gitProviders.disabled")}
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {provider.base_url || (provider.provider_type === "ssh" ? "SSH Authentication" : "")}
+                      {provider.base_url || (provider.provider_type === "ssh" ? t("settings.gitProviders.sshAuth") : "")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(provider)}>
-                    Configure
+                    {t("settings.gitProviders.configure")}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleToggleActive(provider.id, provider.is_active)}
                   >
-                    {provider.is_active ? "Disable" : "Enable"}
+                    {provider.is_active ? t("settings.gitProviders.disable") : t("settings.gitProviders.enable")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -843,7 +849,7 @@ function GitProvidersSettings() {
                     className="text-destructive hover:text-destructive"
                     onClick={() => handleDeleteProvider(provider.id)}
                   >
-                    Delete
+                    {t("settings.gitProviders.delete")}
                   </Button>
                 </div>
               </div>
@@ -856,12 +862,12 @@ function GitProvidersSettings() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4">
-                {editingProvider ? "Configure Provider" : "Add Git Provider"}
+                {editingProvider ? t("settings.gitProviders.dialog.editTitle") : t("settings.gitProviders.dialog.addTitle")}
               </h3>
               <div className="space-y-4">
                 {!editingProvider && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">Provider Type</label>
+                    <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.providerType")}</label>
                     <select
                       value={formType}
                       onChange={(e) => {
@@ -877,69 +883,69 @@ function GitProvidersSettings() {
                     </select>
                     {isSSHProvider && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        SSH provider uses SSH keys for authentication. Suitable for self-hosted Git servers.
+                        {t("settings.gitProviders.dialog.sshHint")}
                       </p>
                     )}
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Name</label>
+                  <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.nameLabel")}</label>
                   <Input
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder={isSSHProvider ? "e.g., My Git Server" : "e.g., My GitHub"}
+                    placeholder={isSSHProvider ? t("settings.gitProviders.dialog.namePlaceholderSSH") : t("settings.gitProviders.dialog.namePlaceholder")}
                   />
                 </div>
                 {!isSSHProvider && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Base URL</label>
+                      <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.baseUrlLabel")}</label>
                       <Input
                         value={formBaseUrl}
                         onChange={(e) => setFormBaseUrl(e.target.value)}
                         placeholder={getDefaultBaseUrl(formType)}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        For self-hosted instances, enter the base URL
+                        {t("settings.gitProviders.dialog.baseUrlHint")}
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Client ID (optional)</label>
+                      <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.clientIdLabel")}</label>
                       <Input
                         value={formClientId}
                         onChange={(e) => setFormClientId(e.target.value)}
-                        placeholder="OAuth App Client ID"
+                        placeholder={t("settings.gitProviders.dialog.clientIdPlaceholder")}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Client Secret (optional)</label>
+                      <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.clientSecretLabel")}</label>
                       <Input
                         type="password"
                         value={formClientSecret}
                         onChange={(e) => setFormClientSecret(e.target.value)}
-                        placeholder="OAuth App Client Secret"
+                        placeholder={t("settings.gitProviders.dialog.clientSecretPlaceholder")}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Bot Token (optional)</label>
+                      <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.botTokenLabel")}</label>
                       <Input
                         type="password"
                         value={formBotToken}
                         onChange={(e) => setFormBotToken(e.target.value)}
-                        placeholder="Personal Access Token"
+                        placeholder={t("settings.gitProviders.dialog.botTokenPlaceholder")}
                       />
                     </div>
                   </>
                 )}
                 {isSSHProvider && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">SSH Key</label>
+                    <label className="block text-sm font-medium mb-2">{t("settings.gitProviders.dialog.sshKeyLabel")}</label>
                     <select
                       value={formSSHKeyId || ""}
                       onChange={(e) => setFormSSHKeyId(e.target.value ? Number(e.target.value) : null)}
                       className="w-full border border-border rounded px-3 py-2 bg-background"
                     >
-                      <option value="">Select an SSH key...</option>
+                      <option value="">{t("settings.gitProviders.dialog.sshKeyPlaceholder")}</option>
                       {sshKeys.map((key) => (
                         <option key={key.id} value={key.id}>
                           {key.name} ({key.fingerprint.substring(0, 16)}...)
@@ -948,7 +954,7 @@ function GitProvidersSettings() {
                     </select>
                     {sshKeys.length === 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        No SSH keys available. Create one below.
+                        {t("settings.gitProviders.dialog.noSSHKeys")}
                       </p>
                     )}
                   </div>
@@ -960,7 +966,7 @@ function GitProvidersSettings() {
                     checked={formIsDefault}
                     onChange={(e) => setFormIsDefault(e.target.checked)}
                   />
-                  <label htmlFor="isDefault" className="text-sm">Set as default provider</label>
+                  <label htmlFor="isDefault" className="text-sm">{t("settings.gitProviders.dialog.setDefault")}</label>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
@@ -972,14 +978,14 @@ function GitProvidersSettings() {
                     resetForm();
                   }}
                 >
-                  Cancel
+                  {t("settings.gitProviders.dialog.cancel")}
                 </Button>
                 <Button
                   className="flex-1"
                   onClick={() => editingProvider ? handleUpdateProvider(editingProvider) : handleAddProvider()}
                   disabled={saving || (isSSHProvider && !formSSHKeyId)}
                 >
-                  {saving ? "Saving..." : editingProvider ? "Save Changes" : "Add Provider"}
+                  {saving ? t("settings.gitProviders.dialog.saving") : editingProvider ? t("settings.gitProviders.dialog.saveChanges") : t("settings.gitProviders.dialog.addProvider")}
                 </Button>
               </div>
             </div>
@@ -991,17 +997,17 @@ function GitProvidersSettings() {
       <div className="border border-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">SSH Keys</h2>
+            <h2 className="text-lg font-semibold">{t("settings.sshKeys.title")}</h2>
             <p className="text-sm text-muted-foreground">
-              Manage SSH keys for Git authentication
+              {t("settings.sshKeys.description")}
             </p>
           </div>
-          <Button onClick={() => setShowSSHKeyDialog(true)}>Add SSH Key</Button>
+          <Button onClick={() => setShowSSHKeyDialog(true)}>{t("settings.sshKeys.addSSHKey")}</Button>
         </div>
 
         {sshKeys.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No SSH keys configured. Add one to use SSH Git providers.
+            {t("settings.sshKeys.noKeys")}
           </div>
         ) : (
           <div className="space-y-4">
@@ -1027,7 +1033,7 @@ function GitProvidersSettings() {
                     size="sm"
                     onClick={() => copyToClipboard(key.public_key)}
                   >
-                    Copy Public Key
+                    {t("settings.sshKeys.copyPublicKey")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -1035,7 +1041,7 @@ function GitProvidersSettings() {
                     className="text-destructive hover:text-destructive"
                     onClick={() => handleDeleteSSHKey(key.id)}
                   >
-                    Delete
+                    {t("settings.sshKeys.delete")}
                   </Button>
                 </div>
               </div>
@@ -1049,9 +1055,9 @@ function GitProvidersSettings() {
             <div className="bg-background border border-border rounded-lg p-6 w-full max-w-lg">
               {createdSSHKey ? (
                 <>
-                  <h3 className="text-lg font-semibold mb-4">SSH Key Created</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t("settings.sshKeys.dialog.createdTitle")}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Add this public key to your Git server:
+                    {t("settings.sshKeys.dialog.createdHint")}
                   </p>
                   <div className="bg-muted p-3 rounded-lg mb-4">
                     <code className="text-xs break-all">{createdSSHKey.public_key}</code>
@@ -1062,51 +1068,51 @@ function GitProvidersSettings() {
                       className="flex-1"
                       onClick={() => copyToClipboard(createdSSHKey.public_key)}
                     >
-                      Copy Public Key
+                      {t("settings.sshKeys.copyPublicKey")}
                     </Button>
                     <Button className="flex-1" onClick={resetSSHKeyDialog}>
-                      Done
+                      {t("settings.sshKeys.dialog.done")}
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-semibold mb-4">Add SSH Key</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t("settings.sshKeys.dialog.addTitle")}</h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Name</label>
+                      <label className="block text-sm font-medium mb-2">{t("settings.sshKeys.dialog.nameLabel")}</label>
                       <Input
                         value={newSSHKeyName}
                         onChange={(e) => setNewSSHKeyName(e.target.value)}
-                        placeholder="e.g., Production Server Key"
+                        placeholder={t("settings.sshKeys.dialog.namePlaceholder")}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Private Key (optional)
+                        {t("settings.sshKeys.dialog.privateKeyLabel")}
                       </label>
                       <textarea
                         className="w-full px-3 py-2 border border-border rounded-md bg-background font-mono text-xs"
                         rows={6}
                         value={newSSHKeyPrivate}
                         onChange={(e) => setNewSSHKeyPrivate(e.target.value)}
-                        placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
+                        placeholder={t("settings.sshKeys.dialog.privateKeyPlaceholder")}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Leave empty to generate a new Ed25519 key pair automatically.
+                        {t("settings.sshKeys.dialog.privateKeyHint")}
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-3 mt-6">
                     <Button variant="outline" className="flex-1" onClick={resetSSHKeyDialog}>
-                      Cancel
+                      {t("settings.sshKeys.dialog.cancel")}
                     </Button>
                     <Button
                       className="flex-1"
                       onClick={handleCreateSSHKey}
                       disabled={savingSSHKey || !newSSHKeyName}
                     >
-                      {savingSSHKey ? "Creating..." : newSSHKeyPrivate ? "Import Key" : "Generate Key"}
+                      {savingSSHKey ? t("settings.sshKeys.dialog.creating") : newSSHKeyPrivate ? t("settings.sshKeys.dialog.importKey") : t("settings.sshKeys.dialog.generateKey")}
                     </Button>
                   </div>
                 </>
@@ -1119,7 +1125,7 @@ function GitProvidersSettings() {
   );
 }
 
-function BillingSettings() {
+function BillingSettings({ t }: { t: TranslationFn }) {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -1177,7 +1183,7 @@ function BillingSettings() {
   };
 
   const formatLimit = (value: number): string => {
-    return value === -1 ? "Unlimited" : String(value);
+    return value === -1 ? t("settings.billingPage.unlimited") : String(value);
   };
 
   if (loading) {
@@ -1198,7 +1204,7 @@ function BillingSettings() {
         <div className="border border-border rounded-lg p-6">
           <p className="text-destructive">{error}</p>
           <Button variant="outline" className="mt-4" onClick={loadBillingData}>
-            Retry
+            {t("settings.billingPage.retry")}
           </Button>
         </div>
       </div>
@@ -1210,11 +1216,11 @@ function BillingSettings() {
     return (
       <div className="space-y-6">
         <div className="border border-border rounded-lg p-6 text-center">
-          <h2 className="text-lg font-semibold mb-4">No Active Subscription</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("settings.billingPage.noSubscription")}</h2>
           <p className="text-muted-foreground mb-6">
-            Choose a plan to get started with AgentMesh
+            {t("settings.billingPage.choosePlan")}
           </p>
-          <Button onClick={() => setShowPlansDialog(true)}>Select a Plan</Button>
+          <Button onClick={() => setShowPlansDialog(true)}>{t("settings.billingPage.selectPlan")}</Button>
         </div>
 
         {/* Plans Dialog */}
@@ -1225,6 +1231,7 @@ function BillingSettings() {
             onSelect={handleUpgrade}
             onClose={() => setShowPlansDialog(false)}
             loading={upgrading}
+            t={t}
           />
         )}
       </div>
@@ -1237,11 +1244,11 @@ function BillingSettings() {
     <div className="space-y-6">
       {/* Current Plan */}
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Current Plan</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.billingPage.currentPlan")}</h2>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h3 className="text-2xl font-bold">{plan?.display_name || plan?.name || "Free"}</h3>
+              <h3 className="text-2xl font-bold">{plan?.display_name || plan?.name || t("settings.billingPage.plansDialog.free")}</h3>
               <span className={`text-xs px-2 py-0.5 rounded ${
                 status === "active" ? "bg-green-100 text-green-800" :
                 status === "past_due" ? "bg-yellow-100 text-yellow-800" :
@@ -1251,9 +1258,9 @@ function BillingSettings() {
               </span>
             </div>
             <p className="text-muted-foreground">
-              {billing_cycle === "yearly" ? "Yearly" : "Monthly"} billing
+              {billing_cycle === "yearly" ? t("settings.billingPage.yearly") : t("settings.billingPage.monthly")} billing
               {current_period_end && (
-                <> · Renews {new Date(current_period_end).toLocaleDateString()}</>
+                <> · {t("settings.billingPage.renews")} {new Date(current_period_end).toLocaleDateString()}</>
               )}
             </p>
             {plan?.price_per_seat_monthly > 0 && (
@@ -1263,19 +1270,19 @@ function BillingSettings() {
             )}
           </div>
           <Button onClick={() => setShowPlansDialog(true)}>
-            {plan?.name === "free" ? "Upgrade" : "Change Plan"}
+            {plan?.name === "free" ? t("settings.billingPage.upgrade") : t("settings.billingPage.changePlan")}
           </Button>
         </div>
       </div>
 
       {/* Usage */}
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Usage</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.billingPage.usage")}</h2>
         <div className="space-y-4">
           {/* Pod Minutes */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm">Pod Minutes</span>
+              <span className="text-sm">{t("settings.billingPage.podMinutes")}</span>
               <span className="text-sm font-medium">
                 {Math.round(usage.pod_minutes)} / {formatLimit(usage.included_pod_minutes)}
               </span>
@@ -1295,7 +1302,7 @@ function BillingSettings() {
           {/* Users */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm">Team Members</span>
+              <span className="text-sm">{t("settings.billingPage.teamMembers")}</span>
               <span className="text-sm font-medium">
                 {usage.users} / {formatLimit(usage.max_users)}
               </span>
@@ -1331,7 +1338,7 @@ function BillingSettings() {
           {/* Repositories */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm">Repositories</span>
+              <span className="text-sm">{t("settings.billingPage.repositories")}</span>
               <span className="text-sm font-medium">
                 {usage.repositories} / {formatLimit(usage.max_repositories)}
               </span>
@@ -1352,10 +1359,10 @@ function BillingSettings() {
 
       {/* Payment Method */}
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
-        <p className="text-muted-foreground">No payment method on file</p>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.billingPage.paymentMethod")}</h2>
+        <p className="text-muted-foreground">{t("settings.billingPage.noPaymentMethod")}</p>
         <Button variant="outline" className="mt-4">
-          Add Payment Method
+          {t("settings.billingPage.addPaymentMethod")}
         </Button>
       </div>
 
@@ -1367,6 +1374,7 @@ function BillingSettings() {
           onSelect={handleUpgrade}
           onClose={() => setShowPlansDialog(false)}
           loading={upgrading}
+          t={t}
         />
       )}
     </div>
@@ -1380,29 +1388,31 @@ function PlansDialog({
   onSelect,
   onClose,
   loading,
+  t,
 }: {
   plans: SubscriptionPlan[];
   currentPlan: string | null;
   onSelect: (planName: string) => void;
   onClose: () => void;
   loading: boolean;
+  t: TranslationFn;
 }) {
   const formatLimit = (value: number): string => {
-    return value === -1 ? "Unlimited" : String(value);
+    return value === -1 ? t("settings.billingPage.unlimited") : String(value);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Choose a Plan</h3>
+          <h3 className="text-lg font-semibold">{t("settings.billingPage.plansDialog.title")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             ✕
           </button>
         </div>
 
         {plans.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No plans available</p>
+          <p className="text-center text-muted-foreground py-8">{t("settings.billingPage.plansDialog.noPlans")}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map((plan) => {
@@ -1422,26 +1432,26 @@ function PlansDialog({
                         <span className="text-sm font-normal text-muted-foreground">/seat/month</span>
                       </p>
                     ) : (
-                      <p className="text-2xl font-bold mt-2">Free</p>
+                      <p className="text-2xl font-bold mt-2">{t("settings.billingPage.plansDialog.free")}</p>
                     )}
                   </div>
 
                   <ul className="space-y-2 mb-6 text-sm">
                     <li className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      {formatLimit(plan.included_pod_minutes)} pod minutes
+                      {formatLimit(plan.included_pod_minutes)} {t("settings.billingPage.plansDialog.podMinutes")}
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      {formatLimit(plan.max_users)} team members
+                      {formatLimit(plan.max_users)} {t("settings.billingPage.plansDialog.teamMembers")}
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      {formatLimit(plan.max_runners)} runners
+                      {formatLimit(plan.max_runners)} {t("settings.billingPage.plansDialog.runners")}
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      {formatLimit(plan.max_repositories)} repositories
+                      {formatLimit(plan.max_repositories)} {t("settings.billingPage.plansDialog.repositories")}
                     </li>
                   </ul>
 
@@ -1451,7 +1461,7 @@ function PlansDialog({
                     disabled={isCurrent || loading}
                     onClick={() => onSelect(plan.name)}
                   >
-                    {loading ? "Processing..." : isCurrent ? "Current Plan" : "Select"}
+                    {loading ? t("settings.billingPage.plansDialog.processing") : isCurrent ? t("settings.billingPage.plansDialog.currentPlan") : t("settings.billingPage.plansDialog.select")}
                   </Button>
                 </div>
               );
@@ -1465,7 +1475,7 @@ function PlansDialog({
 
 // ===== Runners Settings =====
 
-function RunnersSettings() {
+function RunnersSettings({ t }: { t: TranslationFn }) {
   const {
     runners,
     tokens,
@@ -1495,7 +1505,7 @@ function RunnersSettings() {
         <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
           <button onClick={clearError} className="text-sm underline">
-            Dismiss
+            {t("settings.members.dismiss")}
           </button>
         </div>
       )}
@@ -1508,6 +1518,7 @@ function RunnersSettings() {
         onRevokeToken={revokeToken}
         showDialog={showTokenDialog}
         onShowDialog={setShowTokenDialog}
+        t={t}
       />
 
       {/* Runners List */}
@@ -1517,6 +1528,7 @@ function RunnersSettings() {
         onEdit={setEditingRunner}
         onDelete={deleteRunner}
         onRegenerateToken={regenerateAuthToken}
+        t={t}
       />
 
       {/* Edit Runner Dialog */}
@@ -1528,6 +1540,7 @@ function RunnersSettings() {
             await updateRunner(id, data);
             setEditingRunner(null);
           }}
+          t={t}
         />
       )}
     </div>
@@ -1542,6 +1555,7 @@ function TokensPanel({
   onRevokeToken,
   showDialog,
   onShowDialog,
+  t,
 }: {
   tokens: RegistrationToken[];
   loading: boolean;
@@ -1549,6 +1563,7 @@ function TokensPanel({
   onRevokeToken: (id: number) => Promise<void>;
   showDialog: boolean;
   onShowDialog: (show: boolean) => void;
+  t: TranslationFn;
 }) {
   const [newTokenDescription, setNewTokenDescription] = useState("");
   const [newTokenMaxUses, setNewTokenMaxUses] = useState<string>("");
@@ -1593,19 +1608,19 @@ function TokensPanel({
     <div className="border border-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold">Registration Tokens</h2>
+          <h2 className="text-lg font-semibold">{t("settings.tokensSection.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Create tokens to register new runners
+            {t("settings.tokensSection.description")}
           </p>
         </div>
-        <Button onClick={() => onShowDialog(true)}>Create Token</Button>
+        <Button onClick={() => onShowDialog(true)}>{t("settings.tokensSection.createToken")}</Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-4 text-muted-foreground">Loading...</div>
+        <div className="text-center py-4 text-muted-foreground">{t("settings.tokensSection.loading")}</div>
       ) : tokens.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No registration tokens. Create one to register runners.
+          {t("settings.tokensSection.noTokens")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -1622,14 +1637,14 @@ function TokensPanel({
                     {token.description || `Token #${token.id}`}
                   </span>
                   {!token.is_active && (
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded">Revoked</span>
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded">{t("settings.tokensSection.revoked")}</span>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1 space-x-4">
-                  <span>Uses: {token.used_count}{token.max_uses ? ` / ${token.max_uses}` : ""}</span>
-                  <span>Created: {formatDate(token.created_at)}</span>
+                  <span>{t("settings.tokensSection.uses")} {token.used_count}{token.max_uses ? ` / ${token.max_uses}` : ""}</span>
+                  <span>{t("settings.tokensSection.created")} {formatDate(token.created_at)}</span>
                   {token.expires_at && (
-                    <span>Expires: {formatDate(token.expires_at)}</span>
+                    <span>{t("settings.tokensSection.expires")} {formatDate(token.expires_at)}</span>
                   )}
                 </div>
               </div>
@@ -1640,7 +1655,7 @@ function TokensPanel({
                   className="text-destructive hover:text-destructive"
                   onClick={() => onRevokeToken(token.id)}
                 >
-                  Revoke
+                  {t("settings.tokensSection.revoke")}
                 </Button>
               )}
             </div>
@@ -1654,9 +1669,9 @@ function TokensPanel({
           <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
             {createdToken ? (
               <>
-                <h3 className="text-lg font-semibold mb-4">Token Created</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("settings.tokensSection.dialog.createdTitle")}</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Copy this token now. You won&apos;t be able to see it again.
+                  {t("settings.tokensSection.dialog.createdHint")}
                 </p>
                 <div className="bg-muted p-3 rounded-lg mb-4 flex items-center justify-between">
                   <code className="text-sm break-all">{createdToken}</code>
@@ -1665,42 +1680,42 @@ function TokensPanel({
                     size="sm"
                     onClick={() => copyToClipboard(createdToken)}
                   >
-                    Copy
+                    {t("settings.tokensSection.dialog.copy")}
                   </Button>
                 </div>
                 <Button className="w-full" onClick={handleCloseDialog}>
-                  Done
+                  {t("settings.tokensSection.dialog.done")}
                 </Button>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold mb-4">Create Registration Token</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("settings.tokensSection.dialog.createTitle")}</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Description (optional)
+                      {t("settings.tokensSection.dialog.descriptionLabel")}
                     </label>
                     <Input
                       value={newTokenDescription}
                       onChange={(e) => setNewTokenDescription(e.target.value)}
-                      placeholder="e.g., Dev team runner"
+                      placeholder={t("settings.tokensSection.dialog.descriptionPlaceholder")}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Max Uses (optional)
+                      {t("settings.tokensSection.dialog.maxUsesLabel")}
                     </label>
                     <Input
                       type="number"
                       value={newTokenMaxUses}
                       onChange={(e) => setNewTokenMaxUses(e.target.value)}
-                      placeholder="Leave empty for unlimited"
+                      placeholder={t("settings.tokensSection.dialog.maxUsesPlaceholder")}
                       min="1"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Expires At (optional)
+                      {t("settings.tokensSection.dialog.expiresLabel")}
                     </label>
                     <Input
                       type="datetime-local"
@@ -1711,10 +1726,10 @@ function TokensPanel({
                 </div>
                 <div className="flex gap-3 mt-6">
                   <Button variant="outline" className="flex-1" onClick={handleCloseDialog}>
-                    Cancel
+                    {t("settings.tokensSection.dialog.cancel")}
                   </Button>
                   <Button className="flex-1" onClick={handleCreateToken} disabled={creating}>
-                    {creating ? "Creating..." : "Create Token"}
+                    {creating ? t("settings.tokensSection.dialog.creating") : t("settings.tokensSection.dialog.createToken")}
                   </Button>
                 </div>
               </>
@@ -1733,12 +1748,14 @@ function RunnersPanel({
   onEdit,
   onDelete,
   onRegenerateToken,
+  t,
 }: {
   runners: Runner[];
   loading: boolean;
   onEdit: (runner: Runner) => void;
   onDelete: (id: number) => Promise<void>;
   onRegenerateToken: (id: number) => Promise<string>;
+  t: TranslationFn;
 }) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [regeneratedToken, setRegeneratedToken] = useState<{ id: number; token: string } | null>(null);
@@ -1772,7 +1789,7 @@ function RunnersPanel({
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.floor(diffMs / 1000);
 
-    if (diffSec < 60) return "Just now";
+    if (diffSec < 60) return t("settings.runnersSection.justNow");
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
     return date.toLocaleDateString();
@@ -1781,17 +1798,17 @@ function RunnersPanel({
   return (
     <div className="border border-border rounded-lg p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold">Runners</h2>
+        <h2 className="text-lg font-semibold">{t("settings.runnersSection.title")}</h2>
         <p className="text-sm text-muted-foreground">
-          Manage your self-hosted runners
+          {t("settings.runnersSection.description")}
         </p>
       </div>
 
       {loading ? (
-        <div className="text-center py-4 text-muted-foreground">Loading...</div>
+        <div className="text-center py-4 text-muted-foreground">{t("settings.runnersSection.loading")}</div>
       ) : runners.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No runners registered. Use a registration token to add runners.
+          {t("settings.runnersSection.noRunners")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -1816,7 +1833,7 @@ function RunnersPanel({
                       </span>
                       {!runner.is_enabled && (
                         <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                          Disabled
+                          {t("settings.runnersSection.disabled")}
                         </span>
                       )}
                     </div>
@@ -1827,22 +1844,22 @@ function RunnersPanel({
                     )}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
                       <span>
-                        Pods: {runner.current_pods} / {runner.max_concurrent_pods}
+                        {t("settings.runnersSection.pods")} {runner.current_pods} / {runner.max_concurrent_pods}
                       </span>
                       {runner.runner_version && <span>v{runner.runner_version}</span>}
-                      <span>Last seen: {formatLastSeen(runner.last_heartbeat)}</span>
+                      <span>{t("settings.runnersSection.lastSeen")} {formatLastSeen(runner.last_heartbeat)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => onEdit(runner)}>
-                      Edit
+                      {t("settings.runnersSection.edit")}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleRegenerateToken(runner.id)}
                     >
-                      Regenerate Token
+                      {t("settings.runnersSection.regenerateToken")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1850,7 +1867,7 @@ function RunnersPanel({
                       className="text-destructive hover:text-destructive"
                       onClick={() => setConfirmDelete(runner.id)}
                     >
-                      Delete
+                      {t("settings.runnersSection.delete")}
                     </Button>
                   </div>
                 </div>
@@ -1864,20 +1881,20 @@ function RunnersPanel({
       {confirmDelete !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border border-border rounded-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-2">Delete Runner</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("settings.runnersSection.deleteDialog.title")}</h3>
             <p className="text-muted-foreground mb-4">
-              Are you sure you want to delete this runner? This action cannot be undone.
+              {t("settings.runnersSection.deleteDialog.description")}
             </p>
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(null)}>
-                Cancel
+                {t("settings.runnersSection.deleteDialog.cancel")}
               </Button>
               <Button
                 variant="destructive"
                 className="flex-1"
                 onClick={() => handleDelete(confirmDelete)}
               >
-                Delete
+                {t("settings.runnersSection.deleteDialog.delete")}
               </Button>
             </div>
           </div>
@@ -1888,9 +1905,9 @@ function RunnersPanel({
       {regeneratedToken && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">New Auth Token</h3>
+            <h3 className="text-lg font-semibold mb-4">{t("settings.runnersSection.tokenDialog.title")}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Copy this token now. You won&apos;t be able to see it again. The runner will need to be updated with this new token.
+              {t("settings.runnersSection.tokenDialog.description")}
             </p>
             <div className="bg-muted p-3 rounded-lg mb-4 flex items-center justify-between">
               <code className="text-sm break-all">{regeneratedToken.token}</code>
@@ -1899,11 +1916,11 @@ function RunnersPanel({
                 size="sm"
                 onClick={() => copyToClipboard(regeneratedToken.token)}
               >
-                Copy
+                {t("settings.runnersSection.tokenDialog.copy")}
               </Button>
             </div>
             <Button className="w-full" onClick={() => setRegeneratedToken(null)}>
-              Done
+              {t("settings.runnersSection.tokenDialog.done")}
             </Button>
           </div>
         </div>
@@ -1917,10 +1934,12 @@ function EditRunnerDialog({
   runner,
   onClose,
   onSave,
+  t,
 }: {
   runner: Runner;
   onClose: () => void;
   onSave: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean }) => Promise<void>;
+  t: TranslationFn;
 }) {
   const [description, setDescription] = useState(runner.description || "");
   const [maxPods, setMaxPods] = useState(runner.max_concurrent_pods.toString());
@@ -1945,23 +1964,23 @@ function EditRunnerDialog({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">Edit Runner</h3>
+        <h3 className="text-lg font-semibold mb-4">{t("settings.runnersSection.editDialog.title")}</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Node ID</label>
+            <label className="block text-sm font-medium mb-2">{t("settings.runnersSection.editDialog.nodeIdLabel")}</label>
             <Input value={runner.node_id} disabled />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-2">{t("settings.runnersSection.editDialog.descriptionLabel")}</label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Runner description"
+              placeholder={t("settings.runnersSection.editDialog.descriptionPlaceholder")}
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Max Concurrent Pods
+              {t("settings.runnersSection.editDialog.maxPodsLabel")}
             </label>
             <Input
               type="number"
@@ -1971,7 +1990,7 @@ function EditRunnerDialog({
             />
           </div>
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Enabled</label>
+            <label className="text-sm font-medium">{t("settings.runnersSection.editDialog.enabledLabel")}</label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -1985,10 +2004,10 @@ function EditRunnerDialog({
         </div>
         <div className="flex gap-3 mt-6">
           <Button variant="outline" className="flex-1" onClick={onClose}>
-            Cancel
+            {t("settings.runnersSection.editDialog.cancel")}
           </Button>
           <Button className="flex-1" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t("settings.runnersSection.editDialog.saving") : t("settings.runnersSection.editDialog.saveChanges")}
           </Button>
         </div>
       </div>
@@ -1998,14 +2017,13 @@ function EditRunnerDialog({
 
 // ===== Notifications Settings =====
 
-function NotificationsSettings() {
+function NotificationsSettings({ t }: { t: TranslationFn }) {
   return (
     <div className="space-y-6">
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Push Notifications</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.notifications.title")}</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Configure push notifications for important events like pod status changes,
-          ticket assignments, and runner alerts.
+          {t("settings.notifications.description")}
         </p>
         <NotificationSettings />
       </div>

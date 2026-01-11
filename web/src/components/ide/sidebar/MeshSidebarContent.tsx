@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import { useDevMeshStore, DevMeshNode, ChannelInfo, getPodStatusInfo, getAgentStatusInfo } from "@/stores/devmesh";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface MeshSidebarContentProps {
 
 export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
   const router = useRouter();
+  const t = useTranslations();
   const { currentOrg } = useAuthStore();
   const {
     topology,
@@ -141,7 +143,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search mesh..."
+            placeholder={t("ide.sidebar.mesh.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -158,7 +160,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
           onClick={() => router.push(`/${currentOrg?.slug}/mesh`)}
         >
           <Network className="w-3 h-3 mr-1" />
-          View Topology
+          {t("ide.sidebar.mesh.viewTopology")}
         </Button>
         <Button
           size="sm"
@@ -180,28 +182,28 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
             onChange={(e) => setShowArchived(e.target.checked)}
             className="rounded border-border"
           />
-          <span className="text-muted-foreground">Show terminated pods</span>
+          <span className="text-muted-foreground">{t("ide.sidebar.mesh.showTerminatedPods")}</span>
         </label>
       </div>
 
       {/* Network stats */}
       <div className="px-3 py-2 border-t border-border space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">Network Stats</div>
+        <div className="text-xs font-medium text-muted-foreground">{t("ide.sidebar.mesh.networkStats")}</div>
         <div className="grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center text-xs">
             <Activity className="w-3.5 h-3.5 text-green-500 mb-0.5" />
             <span className="font-medium">{activeNodes}</span>
-            <span className="text-muted-foreground">Active</span>
+            <span className="text-muted-foreground">{t("ide.sidebar.mesh.active")}</span>
           </div>
           <div className="flex flex-col items-center text-xs">
             <Radio className="w-3.5 h-3.5 text-blue-500 mb-0.5" />
             <span className="font-medium">{totalChannels}</span>
-            <span className="text-muted-foreground">Channels</span>
+            <span className="text-muted-foreground">{t("ide.sidebar.mesh.channels")}</span>
           </div>
           <div className="flex flex-col items-center text-xs">
             <Link2 className="w-3.5 h-3.5 text-purple-500 mb-0.5" />
             <span className="font-medium">{totalBindings}</span>
-            <span className="text-muted-foreground">Bindings</span>
+            <span className="text-muted-foreground">{t("ide.sidebar.mesh.bindings")}</span>
           </div>
         </div>
       </div>
@@ -212,7 +214,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
           <div className="flex items-center justify-between px-3 py-2 border-t border-border cursor-pointer hover:bg-muted/50">
             <div className="flex items-center gap-2">
               <Radio className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Channels</span>
+              <span className="text-sm font-medium">{t("ide.sidebar.mesh.channelsSection")}</span>
               <span className="text-xs text-muted-foreground">
                 ({filteredChannels.length})
               </span>
@@ -232,7 +234,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
               </div>
             ) : filteredChannels.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No channels
+                {t("ide.sidebar.mesh.noChannels")}
               </div>
             ) : (
               <div className="py-1">
@@ -250,7 +252,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
                       <Radio className="w-3 h-3 text-blue-500" />
                       <span className="text-sm truncate flex-1">{channel.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {channel.pod_keys.length} pods
+                        {t("ide.sidebar.mesh.podsCount", { count: channel.pod_keys.length })}
                       </span>
                     </div>
                   );
@@ -267,7 +269,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
           <div className="flex items-center justify-between px-3 py-2 border-t border-border cursor-pointer hover:bg-muted/50">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Pods</span>
+              <span className="text-sm font-medium">{t("ide.sidebar.mesh.podsSection")}</span>
               <span className="text-xs text-muted-foreground">
                 ({filteredNodes.length})
               </span>
@@ -287,7 +289,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
               </div>
             ) : filteredNodes.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No pods
+                {t("ide.sidebar.mesh.noPods")}
               </div>
             ) : (
               <div className="py-1">
@@ -335,7 +337,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
       {(selectedNodeData || selectedChannelData) && (
         <div className="border-t border-border p-3 space-y-2">
           <div className="text-xs font-medium text-muted-foreground">
-            {selectedNodeData ? "Selected Pod" : "Selected Channel"}
+            {selectedNodeData ? t("ide.sidebar.mesh.selectedPod") : t("ide.sidebar.mesh.selectedChannel")}
           </div>
 
           {selectedNodeData && (
@@ -351,7 +353,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
               </div>
               {selectedNodeChannels.length > 0 && (
                 <div className="text-xs text-muted-foreground">
-                  Channels: {selectedNodeChannels.map(c => c.name).join(", ")}
+                  {t("ide.sidebar.mesh.channelsLabel")}: {selectedNodeChannels.map(c => c.name).join(", ")}
                 </div>
               )}
               <div className="flex gap-2">
@@ -362,7 +364,7 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
                   onClick={(e) => handleOpenTerminal(selectedNodeData.pod_key, e)}
                 >
                   <Terminal className="w-3 h-3 mr-1" />
-                  Terminal
+                  {t("ide.sidebar.mesh.terminal")}
                 </Button>
               </div>
             </div>
@@ -372,10 +374,10 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
             <div className="space-y-2">
               <div className="text-sm font-medium">{selectedChannelData.name}</div>
               <div className="text-xs text-muted-foreground">
-                {selectedChannelData.pod_keys.length} connected pods
+                {t("ide.sidebar.mesh.connectedPods", { count: selectedChannelData.pod_keys.length })}
               </div>
               <div className="text-xs text-muted-foreground break-all">
-                Pods: {selectedChannelData.pod_keys.map(k => k.substring(0, 8)).join(", ")}
+                {t("ide.sidebar.mesh.podsLabel")}: {selectedChannelData.pod_keys.map(k => k.substring(0, 8)).join(", ")}
               </div>
             </div>
           )}

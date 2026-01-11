@@ -1,46 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
-const footerLinks = {
-  product: {
-    title: "Product",
-    links: [
-      { label: "AgentPod", href: "/docs#agentpod" },
-      { label: "AgentMesh", href: "/docs#devmesh" },
-      { label: "Tickets", href: "/docs#tickets" },
-      { label: "Runners", href: "/docs#runner-setup" },
-      { label: "Pricing", href: "#pricing" },
-    ],
-  },
-  resources: {
-    title: "Resources",
-    links: [
-      { label: "Documentation", href: "/docs" },
-      { label: "API Reference", href: "/docs#rest-api" },
-      { label: "Tutorials", href: "/docs#quick-start" },
-      { label: "Changelog", href: "/changelog" },
-      { label: "Status", href: "https://status.agentmesh.dev" },
-    ],
-  },
-  company: {
-    title: "Company",
-    links: [
-      { label: "About", href: "/about" },
-      { label: "Blog", href: "/blog" },
-      { label: "Careers", href: "/careers" },
-      { label: "Contact", href: "/contact" },
-    ],
-  },
-  legal: {
-    title: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Security", href: "/security" },
-    ],
-  },
-};
+import { useTranslations } from "@/lib/i18n/client";
 
 const socialLinks = [
   {
@@ -73,6 +34,48 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const t = useTranslations();
+
+  const footerLinks = {
+    product: {
+      title: t("landing.footer.product.title"),
+      links: [
+        { label: t("landing.footer.product.agentpod"), href: "/docs#agentpod" },
+        { label: t("landing.footer.product.agentmesh"), href: "/docs#devmesh" },
+        { label: t("landing.footer.product.tickets"), href: "/docs#tickets" },
+        { label: t("landing.footer.product.runners"), href: "/docs#runner-setup" },
+        { label: t("landing.footer.product.pricing"), href: "#pricing" },
+      ],
+    },
+    resources: {
+      title: t("landing.footer.resources.title"),
+      links: [
+        { label: t("landing.footer.resources.documentation"), href: "/docs" },
+        { label: t("landing.footer.resources.apiReference"), href: "/docs#rest-api" },
+        { label: t("landing.footer.resources.tutorials"), href: "/docs#quick-start" },
+        { label: t("landing.footer.resources.changelog"), href: "/changelog" },
+        { label: t("landing.footer.resources.status"), href: "https://status.agentmesh.dev" },
+      ],
+    },
+    company: {
+      title: t("landing.footer.company.title"),
+      links: [
+        { label: t("landing.footer.company.about"), href: "/about" },
+        { label: t("landing.footer.company.blog"), href: "/blog" },
+        { label: t("landing.footer.company.careers"), href: "/careers" },
+        { label: t("landing.footer.company.contact"), href: "/contact" },
+      ],
+    },
+    legal: {
+      title: t("landing.footer.legal.title"),
+      links: [
+        { label: t("landing.footer.legal.privacy"), href: "/privacy" },
+        { label: t("landing.footer.legal.terms"), href: "/terms" },
+        { label: t("landing.footer.legal.security"), href: "/security" },
+      ],
+    },
+  };
+
   return (
     <footer className="border-t border-border bg-[#0a0a0a]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -99,9 +102,7 @@ export function Footer() {
               <span className="text-lg font-bold">AgentMesh</span>
             </Link>
             <p className="text-sm text-muted-foreground mb-4">
-              Terminal-based Coding Agent
-              <br />
-              Collaboration Platform
+              {t("landing.footer.tagline")}
             </p>
             {/* Social links */}
             <div className="flex gap-4">
@@ -143,10 +144,10 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} AgentMesh. All rights reserved.
+            © {new Date().getFullYear()} {t("landing.footer.copyright")}
           </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Made with ❤️ for developers</span>
+            <span>{t("landing.footer.madeWith")}</span>
           </div>
         </div>
       </div>

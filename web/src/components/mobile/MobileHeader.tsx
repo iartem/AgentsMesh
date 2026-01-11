@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useIDEStore, type ActivityType } from "@/stores/ide";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Menu, Network, PanelRight } from "lucide-react";
 
@@ -13,30 +14,29 @@ interface MobileHeaderProps {
   actions?: React.ReactNode;
 }
 
-/**
- * Get display title for activity
- */
-function getActivityTitle(activity: ActivityType): string {
-  switch (activity) {
-    case "workspace":
-      return "Workspace";
-    case "tickets":
-      return "Tickets";
-    case "mesh":
-      return "AgentMesh";
-    case "repositories":
-      return "Repositories";
-    case "runners":
-      return "Runners";
-    case "settings":
-      return "Settings";
-    default:
-      return "AgentMesh";
-  }
-}
-
 export function MobileHeader({ className, title, actions }: MobileHeaderProps) {
   const { activeActivity, setMobileDrawerOpen, setMobileSidebarOpen } = useIDEStore();
+  const t = useTranslations();
+
+  // Get display title for activity
+  const getActivityTitle = (activity: ActivityType): string => {
+    switch (activity) {
+      case "workspace":
+        return t("ide.activities.workspace");
+      case "tickets":
+        return t("ide.activities.tickets");
+      case "mesh":
+        return t("ide.activities.mesh");
+      case "repositories":
+        return t("ide.activities.repositories");
+      case "runners":
+        return t("ide.activities.runners");
+      case "settings":
+        return t("ide.activities.settings");
+      default:
+        return "AgentMesh";
+    }
+  };
 
   const displayTitle = title || getActivityTitle(activeActivity);
 

@@ -18,6 +18,7 @@ import {
   Option,
   ArrowBigUp,
 } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface TerminalToolbarProps {
   className?: string;
@@ -45,6 +46,7 @@ const KEYS = {
 };
 
 export function TerminalToolbar({ className }: TerminalToolbarProps) {
+  const t = useTranslations();
   const { panes, activePane, terminalFontSize, setTerminalFontSize } = useWorkspaceStore();
   const [ctrlActive, setCtrlActive] = useState(false);
   const [altActive, setAltActive] = useState(false);
@@ -111,7 +113,7 @@ export function TerminalToolbar({ className }: TerminalToolbarProps) {
             <ToolbarButton
               label="Ctrl+L"
               onClick={() => sendKey(KEYS.CTRL_L)}
-              title="Clear screen"
+              title={t("terminalToolbar.clearScreen")}
             />
             <ToolbarButton
               label="Home"
@@ -133,7 +135,7 @@ export function TerminalToolbar({ className }: TerminalToolbarProps) {
 
           {/* Font size control */}
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#3c3c3c]">
-            <span className="text-xs text-[#808080]">Font:</span>
+            <span className="text-xs text-[#808080]">{t("terminalToolbar.font")}:</span>
             <Button
               variant="ghost"
               size="sm"

@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { authApi, organizationApi } from "@/lib/api/client";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations();
   const { setAuth, setOrganizations } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,7 +43,7 @@ export default function LoginPage() {
         router.push("/onboarding");
       }
     } catch {
-      setError("Invalid email or password");
+      setError(t("auth.loginPage.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -71,10 +73,10 @@ export default function LoginPage() {
             <span className="text-2xl font-bold text-foreground">AgentMesh</span>
           </Link>
           <h1 className="mt-6 text-2xl font-semibold text-foreground">
-            Welcome back
+            {t("auth.loginPage.title")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to your account to continue
+            {t("auth.loginPage.subtitle")}
           </p>
         </div>
 
@@ -88,12 +90,12 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
+              {t("auth.loginPage.emailLabel")}
             </label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("auth.loginPage.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -103,19 +105,19 @@ export default function LoginPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Password
+                {t("auth.loginPage.passwordLabel")}
               </label>
               <Link
                 href="/forgot-password"
                 className="text-sm text-primary hover:underline"
               >
-                Forgot password?
+                {t("auth.forgotPassword")}
               </Link>
             </div>
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={t("auth.loginPage.passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -123,7 +125,7 @@ export default function LoginPage() {
           </div>
 
           <Button type="submit" className="w-full" loading={loading}>
-            Sign in
+            {t("auth.loginPage.signIn")}
           </Button>
         </form>
 
@@ -134,7 +136,7 @@ export default function LoginPage() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
+              {t("auth.loginPage.orContinueWith")}
             </span>
           </div>
         </div>
@@ -183,9 +185,9 @@ export default function LoginPage() {
 
         {/* Register link */}
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          {t("auth.loginPage.dontHaveAccount")}{" "}
           <Link href="/register" className="text-primary hover:underline">
-            Sign up
+            {t("auth.loginPage.signUp")}
           </Link>
         </p>
       </div>

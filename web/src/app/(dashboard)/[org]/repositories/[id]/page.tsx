@@ -6,8 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { repositoryApi, RepositoryData } from "@/lib/api";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function RepositoryDetailPage() {
+  const t = useTranslations();
   const params = useParams();
   const router = useRouter();
   const repositoryId = Number(params.id);
@@ -53,9 +55,7 @@ export default function RepositoryDetailPage() {
   const handleDelete = useCallback(async () => {
     if (!repository) return;
     if (
-      !confirm(
-        `Are you sure you want to delete repository "${repository.name}"? This action cannot be undone.`
-      )
+      !confirm(t("repositories.detail.confirmDelete", { name: repository.name }))
     ) {
       return;
     }
@@ -74,9 +74,9 @@ export default function RepositoryDetailPage() {
       alert(res.message + (res.webhook_url ? `\n\nWebhook URL: ${res.webhook_url}` : ""));
     } catch (error) {
       console.error("Failed to setup webhook:", error);
-      alert("Failed to setup webhook. Please try again.");
+      alert(t("repositories.detail.webhookFailed"));
     }
-  }, [repository, repositoryId]);
+  }, [repository, repositoryId, t]);
 
   useEffect(() => {
     if (activeTab === "branches" && branches.length === 0 && repository) {
@@ -125,9 +125,9 @@ export default function RepositoryDetailPage() {
     return (
       <div className="p-6">
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">Repository not found</p>
+          <p className="text-muted-foreground mb-4">{t("repositories.detail.notFound")}</p>
           <Link href="../repositories">
-            <Button variant="outline">Back to Repositories</Button>
+            <Button variant="outline">{t("repositories.detail.backToList")}</Button>
           </Link>
         </div>
       </div>
@@ -147,12 +147,12 @@ export default function RepositoryDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">{repository.name}</h1>
               {!repository.is_active && (
                 <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                  Inactive
+                  {t("repositories.inactive")}
                 </span>
               )}
               {repository.visibility === "private" && (
                 <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">
-                  Private
+                  {t("repositories.repository.private")}
                 </span>
               )}
             </div>
@@ -161,10 +161,10 @@ export default function RepositoryDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setShowEditModal(true)}>
-            Edit
+            {t("common.edit")}
           </Button>
           <Button variant="destructive" onClick={handleDelete}>
-            Delete
+            {t("common.delete")}
           </Button>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function RepositoryDetailPage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
         <Link href="../repositories" className="hover:text-foreground">
-          Repositories
+          {t("repositories.title")}
         </Link>
         <span>/</span>
         <span className="text-foreground">{repository.name}</span>
@@ -189,7 +189,7 @@ export default function RepositoryDetailPage() {
             }`}
             onClick={() => setActiveTab("info")}
           >
-            Information
+            {t("repositories.detail.information")}
           </button>
           <button
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -199,7 +199,7 @@ export default function RepositoryDetailPage() {
             }`}
             onClick={() => setActiveTab("branches")}
           >
-            Branches
+            {t("repositories.detail.branches")}
           </button>
         </div>
       </div>
@@ -209,30 +209,30 @@ export default function RepositoryDetailPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Repository Info */}
           <div className="border border-border rounded-lg p-6">
-            <h3 className="font-semibold mb-4">Repository Details</h3>
+            <h3 className="font-semibold mb-4">{t("repositories.detail.repoDetails")}</h3>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-muted-foreground">Name</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.name")}</dt>
                 <dd className="font-medium">{repository.name}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Full Path</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.fullPath")}</dt>
                 <dd className="font-medium">{repository.full_path}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Clone URL</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.cloneUrl")}</dt>
                 <dd className="font-medium text-sm break-all">{repository.clone_url}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Default Branch</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.defaultBranch")}</dt>
                 <dd className="font-medium">{repository.default_branch}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Ticket Prefix</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.ticketPrefix")}</dt>
                 <dd className="font-medium">{repository.ticket_prefix || "-"}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Status</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.status")}</dt>
                 <dd>
                   <span
                     className={`inline-flex px-2 py-0.5 text-xs rounded ${
@@ -241,12 +241,12 @@ export default function RepositoryDetailPage() {
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {repository.is_active ? "Active" : "Inactive"}
+                    {repository.is_active ? t("repositories.detail.active") : t("repositories.inactive")}
                   </span>
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Created</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.created")}</dt>
                 <dd className="font-medium">
                   {new Date(repository.created_at).toLocaleString()}
                 </dd>
@@ -256,18 +256,18 @@ export default function RepositoryDetailPage() {
 
           {/* Git Provider Info (from self-contained fields) */}
           <div className="border border-border rounded-lg p-6">
-            <h3 className="font-semibold mb-4">Git Provider</h3>
+            <h3 className="font-semibold mb-4">{t("repositories.detail.gitProvider")}</h3>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-muted-foreground">Type</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.type")}</dt>
                 <dd className="font-medium capitalize">{repository.provider_type}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Base URL</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.baseUrl")}</dt>
                 <dd className="font-medium">{repository.provider_base_url}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Visibility</dt>
+                <dt className="text-sm text-muted-foreground">{t("repositories.detail.visibility")}</dt>
                 <dd className="font-medium capitalize">{repository.visibility}</dd>
               </div>
             </dl>
@@ -275,7 +275,7 @@ export default function RepositoryDetailPage() {
 
           {/* Actions */}
           <div className="border border-border rounded-lg p-6 md:col-span-2">
-            <h3 className="font-semibold mb-4">Actions</h3>
+            <h3 className="font-semibold mb-4">{t("repositories.detail.actions")}</h3>
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" onClick={handleSetupWebhook}>
                 <svg
@@ -291,7 +291,7 @@ export default function RepositoryDetailPage() {
                     d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
                   />
                 </svg>
-                Setup Webhook
+                {t("repositories.detail.setupWebhook")}
               </Button>
             </div>
           </div>
@@ -301,7 +301,7 @@ export default function RepositoryDetailPage() {
       {activeTab === "branches" && (
         <div className="border border-border rounded-lg">
           <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-semibold">Branches</h3>
+            <h3 className="font-semibold">{t("repositories.detail.branches")}</h3>
           </div>
           <div className="divide-y divide-border">
             {loadingBranches ? (
@@ -331,7 +331,7 @@ export default function RepositoryDetailPage() {
                     <span className="font-medium">{branch}</span>
                     {branch === repository.default_branch && (
                       <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">
-                        default
+                        {t("repositories.repository.default")}
                       </span>
                     )}
                   </div>
@@ -339,9 +339,9 @@ export default function RepositoryDetailPage() {
               ))
             ) : (
               <div className="p-8 text-center text-muted-foreground">
-                <p className="mb-2">Branch listing requires Git credentials</p>
+                <p className="mb-2">{t("repositories.detail.branchesRequireCredentials")}</p>
                 <p className="text-sm">
-                  Configure a Git connection in your settings to browse branches
+                  {t("repositories.detail.configureGitConnection")}
                 </p>
               </div>
             )}
@@ -373,6 +373,7 @@ function EditRepositoryModal({
   onClose: () => void;
   onUpdated: () => void;
 }) {
+  const t = useTranslations();
   const [name, setName] = useState(repository.name);
   const [defaultBranch, setDefaultBranch] = useState(repository.default_branch);
   const [ticketPrefix, setTicketPrefix] = useState(repository.ticket_prefix || "");
@@ -382,7 +383,7 @@ function EditRepositoryModal({
 
   const handleUpdate = async () => {
     if (!name) {
-      setError("Name is required");
+      setError(t("repositories.edit.nameRequired"));
       return;
     }
 
@@ -399,7 +400,7 @@ function EditRepositoryModal({
       onUpdated();
     } catch (err) {
       console.error("Failed to update repository:", err);
-      setError("Failed to update repository. Please try again.");
+      setError(t("repositories.edit.updateFailed"));
     } finally {
       setLoading(false);
     }
@@ -408,7 +409,7 @@ function EditRepositoryModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background border border-border rounded-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Edit Repository</h2>
+        <h2 className="text-xl font-semibold mb-4">{t("repositories.edit.title")}</h2>
 
         {error && (
           <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-md">
@@ -419,13 +420,13 @@ function EditRepositoryModal({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Name <span className="text-destructive">*</span>
+              {t("repositories.edit.name")} <span className="text-destructive">*</span>
             </label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Default Branch</label>
+            <label className="block text-sm font-medium mb-2">{t("repositories.edit.defaultBranch")}</label>
             <Input
               value={defaultBranch}
               onChange={(e) => setDefaultBranch(e.target.value)}
@@ -434,7 +435,7 @@ function EditRepositoryModal({
 
           <div>
             <label className="block text-sm font-medium mb-2">
-              Ticket Prefix (optional)
+              {t("repositories.edit.ticketPrefixOptional")}
             </label>
             <Input
               placeholder="PROJ"
@@ -452,17 +453,17 @@ function EditRepositoryModal({
               className="rounded border-border"
             />
             <label htmlFor="is-active" className="text-sm font-medium">
-              Active
+              {t("repositories.edit.active")}
             </label>
           </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleUpdate} disabled={!name || loading}>
-            {loading ? "Saving..." : "Save Changes"}
+            {loading ? t("repositories.edit.saving") : t("repositories.edit.saveChanges")}
           </Button>
         </div>
       </div>

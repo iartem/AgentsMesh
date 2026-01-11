@@ -9,6 +9,7 @@ import {
   type ActivityType,
 } from "@/stores/ide";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   Terminal,
   Ticket,
@@ -33,6 +34,7 @@ export function MobileTabBar({ className }: MobileTabBarProps) {
   const { activeActivity, setActiveActivity, setMobileMoreMenuOpen } =
     useIDEStore();
   const { currentOrg } = useAuthStore();
+  const t = useTranslations();
   const orgSlug = currentOrg?.slug || "";
 
   const mobileActivities = getMobileActivities();
@@ -77,7 +79,7 @@ export function MobileTabBar({ className }: MobileTabBarProps) {
             onClick={() => setActiveActivity(activity.id)}
           >
             <Icon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{activity.label}</span>
+            <span className="text-[10px] font-medium">{t(`ide.activities.${activity.id}`)}</span>
           </Link>
         );
       })}
@@ -91,7 +93,7 @@ export function MobileTabBar({ className }: MobileTabBarProps) {
         onClick={() => setMobileMoreMenuOpen(true)}
       >
         <MoreHorizontal className="w-5 h-5" />
-        <span className="text-[10px] font-medium">More</span>
+        <span className="text-[10px] font-medium">{t("mobile.more")}</span>
       </button>
     </nav>
   );

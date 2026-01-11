@@ -1,44 +1,48 @@
 "use client";
 
-const benefits = [
-  {
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    title: "Autonomous Execution",
-    description: "Not just code completion. Terminal agents can independently complete complex development tasks from start to finish.",
-  },
-  {
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-    title: "Full Capabilities",
-    description: "Read/write files, execute commands, Git operations, run tests - complete full-stack development capabilities.",
-  },
-  {
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
-    title: "Data Control",
-    description: "Self-hosted runners mean your code never leaves your infrastructure. Meet security and compliance requirements.",
-  },
-];
-
-const comparisonData = [
-  { feature: "Autonomy", ide: "Passive response", terminal: "Active task execution", highlight: true },
-  { feature: "Capabilities", ide: "Code completion", terminal: "Full-stack development", highlight: true },
-  { feature: "Environment", ide: "IDE sandbox", terminal: "Full terminal access", highlight: true },
-  { feature: "Multi-Agent", ide: "Not supported", terminal: "AgentMesh enabled", highlight: true },
-  { feature: "Self-hosted", ide: "Cloud only", terminal: "Fully controllable", highlight: true },
-];
+import { useTranslations } from "@/lib/i18n/client";
 
 export function WhyTerminalBased() {
+  const t = useTranslations();
+
+  const benefits = [
+    {
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      title: t("landing.whyTerminal.benefits.autonomous.title"),
+      description: t("landing.whyTerminal.benefits.autonomous.description"),
+    },
+    {
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      title: t("landing.whyTerminal.benefits.fullCapabilities.title"),
+      description: t("landing.whyTerminal.benefits.fullCapabilities.description"),
+    },
+    {
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      ),
+      title: t("landing.whyTerminal.benefits.dataControl.title"),
+      description: t("landing.whyTerminal.benefits.dataControl.description"),
+    },
+  ];
+
+  const comparisonData = [
+    { feature: t("landing.whyTerminal.comparison.autonomy"), ide: t("landing.whyTerminal.comparison.ide.autonomy"), terminal: t("landing.whyTerminal.comparison.terminal.autonomy") },
+    { feature: t("landing.whyTerminal.comparison.capabilities"), ide: t("landing.whyTerminal.comparison.ide.capabilities"), terminal: t("landing.whyTerminal.comparison.terminal.capabilities") },
+    { feature: t("landing.whyTerminal.comparison.environment"), ide: t("landing.whyTerminal.comparison.ide.environment"), terminal: t("landing.whyTerminal.comparison.terminal.environment") },
+    { feature: t("landing.whyTerminal.comparison.multiAgent"), ide: t("landing.whyTerminal.comparison.ide.multiAgent"), terminal: t("landing.whyTerminal.comparison.terminal.multiAgent") },
+    { feature: t("landing.whyTerminal.comparison.selfHosted"), ide: t("landing.whyTerminal.comparison.ide.selfHosted"), terminal: t("landing.whyTerminal.comparison.terminal.selfHosted") },
+  ];
+
   return (
     <section className="py-24 relative" id="why-terminal">
       {/* Background */}
@@ -48,11 +52,10 @@ export function WhyTerminalBased() {
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Why <span className="text-primary">Terminal-based</span> Agent?
+            {t("landing.whyTerminal.title")} <span className="text-primary">{t("landing.whyTerminal.titleHighlight")}</span>{t("landing.whyTerminal.titleEnd")}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Unlike IDE plugins like Cursor or Copilot, terminal-based agents offer
-            autonomous execution and complete development capabilities.
+            {t("landing.whyTerminal.description")}
           </p>
         </div>
 
@@ -79,12 +82,12 @@ export function WhyTerminalBased() {
             <div className="grid grid-cols-3 bg-[#1a1a1a] border-b border-border">
               <div className="p-4 font-semibold text-sm"></div>
               <div className="p-4 font-semibold text-sm text-center text-muted-foreground">
-                IDE Plugins
-                <div className="text-xs font-normal mt-1">Copilot / Cursor</div>
+                {t("landing.whyTerminal.comparison.idePlugins")}
+                <div className="text-xs font-normal mt-1">{t("landing.whyTerminal.comparison.idePluginsSubtitle")}</div>
               </div>
               <div className="p-4 font-semibold text-sm text-center text-primary">
-                Terminal-based ✓
-                <div className="text-xs font-normal mt-1 text-primary/70">Claude Code / Aider</div>
+                {t("landing.whyTerminal.comparison.terminalBased")}
+                <div className="text-xs font-normal mt-1 text-primary/70">{t("landing.whyTerminal.comparison.terminalBasedSubtitle")}</div>
               </div>
             </div>
 

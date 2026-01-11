@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, lazy, Suspense } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -65,6 +66,7 @@ export function TicketCreateDialog({
   defaultRepositoryId,
   parentTicketId,
 }: TicketCreateDialogProps) {
+  const t = useTranslations();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
@@ -98,11 +100,11 @@ export function TicketCreateDialog({
 
     // Validation
     if (!form.title.trim()) {
-      setError("Title is required");
+      setError(t("tickets.createDialog.titleRequired"));
       return;
     }
     if (!form.repositoryId) {
-      setError("Repository is required");
+      setError(t("tickets.createDialog.repositoryRequired"));
       return;
     }
 
@@ -124,7 +126,7 @@ export function TicketCreateDialog({
       handleClose();
     } catch (err: any) {
       console.error("Failed to create ticket:", err);
-      setError(err.message || "Failed to create ticket");
+      setError(err.message || t("tickets.createDialog.createFailed"));
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ export function TicketCreateDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {parentTicketId ? "Create Sub-ticket" : "Create Ticket"}
+            {parentTicketId ? t("tickets.createDialog.createSubTicket") : t("tickets.createDialog.title")}
           </DialogTitle>
         </DialogHeader>
 
@@ -149,10 +151,10 @@ export function TicketCreateDialog({
             {/* Title */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Title <span className="text-destructive">*</span>
+                {t("tickets.createDialog.titleLabel")} <span className="text-destructive">*</span>
               </label>
               <Input
-                placeholder="Enter ticket title"
+                placeholder={t("tickets.createDialog.titlePlaceholder")}
                 value={form.title}
                 onChange={(e) => updateField("title", e.target.value)}
                 autoFocus
@@ -162,7 +164,7 @@ export function TicketCreateDialog({
             {/* Type & Priority */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Type</label>
+                <label className="text-sm font-medium">{t("tickets.filters.type")}</label>
                 <Select
                   value={form.type}
                   onValueChange={(val) => updateField("type", val as TicketType)}
@@ -173,7 +175,7 @@ export function TicketCreateDialog({
                   <SelectContent>
                     {typeOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(`tickets.type.${opt.value}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -181,7 +183,7 @@ export function TicketCreateDialog({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Priority</label>
+                <label className="text-sm font-medium">{t("tickets.filters.priority")}</label>
                 <Select
                   value={form.priority}
                   onValueChange={(val) => updateField("priority", val as TicketPriority)}
@@ -192,7 +194,7 @@ export function TicketCreateDialog({
                   <SelectContent>
                     {priorityOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(`tickets.priority.${opt.value}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -203,21 +205,21 @@ export function TicketCreateDialog({
             {/* Repository */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Repository <span className="text-destructive">*</span>
+                {t("tickets.createDialog.repository")} <span className="text-destructive">*</span>
               </label>
               <RepositorySelect
                 value={form.repositoryId}
                 onChange={(value) => updateField("repositoryId", value)}
-                placeholder="Select a repository..."
+                placeholder={t("tickets.createDialog.selectRepository")}
               />
             </div>
 
             {/* Summary */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Summary</label>
+              <label className="text-sm font-medium">{t("tickets.createDialog.summary")}</label>
               <textarea
                 className="w-full min-h-[60px] px-3 py-2 text-sm rounded-md border border-input bg-transparent shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                placeholder="Brief summary..."
+                placeholder={t("tickets.createDialog.summaryPlaceholder")}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 rows={2}
@@ -226,7 +228,7 @@ export function TicketCreateDialog({
 
             {/* Content - Rich Text Editor */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Content</label>
+              <label className="text-sm font-medium">{t("tickets.createDialog.content")}</label>
               <div className="border border-input rounded-md overflow-hidden min-h-[150px] bg-card">
                 <Suspense fallback={<div className="h-[150px] animate-pulse bg-muted" />}>
                   <BlockEditor
@@ -248,10 +250,10 @@ export function TicketCreateDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" loading={loading}>
-              Create Ticket
+              {t("tickets.createDialog.submit")}
             </Button>
           </DialogFooter>
         </form>

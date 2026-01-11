@@ -8,6 +8,7 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
 import { useIDEStore, ACTIVITIES, type ActivityType } from "@/stores/ide";
 import { useAuthStore } from "@/stores/auth";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   Terminal,
   Ticket,
@@ -39,6 +40,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
     useIDEStore();
   const { currentOrg, organizations, setCurrentOrg, user, logout } =
     useAuthStore();
+  const t = useTranslations();
   const orgSlug = currentOrg?.slug || "";
 
   const getActivityRoute = (activity: ActivityType): string => {
@@ -97,7 +99,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
         >
           {/* Hidden title for accessibility */}
           <VisuallyHidden.Root>
-            <Drawer.Title>Navigation Menu</Drawer.Title>
+            <Drawer.Title>{t("mobile.drawer.navigationMenu")}</Drawer.Title>
           </VisuallyHidden.Root>
 
           {/* User info */}
@@ -120,7 +122,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
           {/* Organization selector */}
           <div className="p-2 border-b border-border">
             <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
-              Organization
+              {t("mobile.drawer.organization")}
             </p>
             {organizations.map((org) => (
               <button
@@ -147,7 +149,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
           {/* Navigation */}
           <nav className="flex-1 p-2 overflow-y-auto">
             <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
-              Navigation
+              {t("mobile.drawer.navigation")}
             </p>
             {ACTIVITIES.map((activity) => {
               const Icon = ICON_MAP[activity.icon] || Terminal;
@@ -165,7 +167,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
                   onClick={() => handleActivityClick(activity.id)}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="text-sm">{activity.label}</span>
+                  <span className="text-sm">{t(`ide.activities.${activity.id}`)}</span>
                 </button>
               );
             })}
@@ -178,7 +180,7 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
               onClick={handleLogout}
             >
               <LogOut className="w-5 h-5" />
-              <span className="text-sm">Sign out</span>
+              <span className="text-sm">{t("mobile.drawer.signOut")}</span>
             </button>
           </div>
         </Drawer.Content>

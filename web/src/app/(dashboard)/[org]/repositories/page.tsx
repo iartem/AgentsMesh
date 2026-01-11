@@ -11,8 +11,10 @@ import {
   GitConnectionData,
   RemoteRepositoryData,
 } from "@/lib/api";
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function RepositoriesPage() {
+  const t = useTranslations();
   const [repositories, setRepositories] = useState<RepositoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
@@ -35,7 +37,7 @@ export default function RepositoriesPage() {
   };
 
   const handleDelete = useCallback(async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete repository "${name}"?`)) {
+    if (!confirm(t("repositories.confirmDelete", { name }))) {
       return;
     }
     try {
@@ -99,9 +101,9 @@ export default function RepositoriesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Repositories</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("repositories.title")}</h1>
           <p className="text-muted-foreground">
-            Manage your Git repositories for AgentPod
+            {t("repositories.subtitle")}
           </p>
         </div>
         <Button onClick={() => setShowImportModal(true)}>
@@ -118,24 +120,24 @@ export default function RepositoriesPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          Import Repository
+          {t("repositories.import")}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="p-4 border border-border rounded-lg bg-card">
-          <p className="text-sm text-muted-foreground">Total Repositories</p>
+          <p className="text-sm text-muted-foreground">{t("repositories.stats.total")}</p>
           <p className="text-2xl font-bold">{repositories.length}</p>
         </div>
         <div className="p-4 border border-border rounded-lg bg-card">
-          <p className="text-sm text-muted-foreground">Active</p>
+          <p className="text-sm text-muted-foreground">{t("repositories.stats.active")}</p>
           <p className="text-2xl font-bold">
             {repositories.filter((r) => r.is_active).length}
           </p>
         </div>
         <div className="p-4 border border-border rounded-lg bg-card">
-          <p className="text-sm text-muted-foreground">Providers</p>
+          <p className="text-sm text-muted-foreground">{t("repositories.stats.providers")}</p>
           <p className="text-2xl font-bold">{providerTypes.length}</p>
         </div>
       </div>
@@ -143,7 +145,7 @@ export default function RepositoriesPage() {
       {/* Filters */}
       <div className="flex gap-4 mb-6">
         <Input
-          placeholder="Search repositories..."
+          placeholder={t("repositories.searchPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="max-w-sm"
@@ -153,7 +155,7 @@ export default function RepositoriesPage() {
           value={providerFilter}
           onChange={(e) => setProviderFilter(e.target.value)}
         >
-          <option value="">All Providers</option>
+          <option value="">{t("repositories.allProviders")}</option>
           {providerTypes.map((type) => (
             <option key={type} value={type}>
               {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -183,12 +185,12 @@ export default function RepositoriesPage() {
                   </Link>
                   {!repo.is_active && (
                     <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                      Inactive
+                      {t("repositories.inactive")}
                     </span>
                   )}
                   {repo.visibility === "private" && (
                     <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">
-                      Private
+                      {t("repositories.repository.private")}
                     </span>
                   )}
                 </div>
@@ -224,7 +226,7 @@ export default function RepositoriesPage() {
             <div className="flex items-center gap-2">
               <Link href={`repositories/${repo.id}`}>
                 <Button variant="outline" size="sm">
-                  View
+                  {t("repositories.view")}
                 </Button>
               </Link>
               <Button
@@ -267,13 +269,13 @@ export default function RepositoriesPage() {
                     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                   />
                 </svg>
-                <p className="mb-2">No repositories yet</p>
+                <p className="mb-2">{t("repositories.emptyState.title")}</p>
                 <p className="text-sm">
-                  Import a repository to use Git-based workflows in AgentPod
+                  {t("repositories.emptyState.importHint")}
                 </p>
               </>
             ) : (
-              <p>No repositories match your search</p>
+              <p>{t("repositories.emptyState.noMatch")}</p>
             )}
           </div>
         )}
@@ -301,6 +303,7 @@ function ImportRepositoryModal({
   onClose: () => void;
   onImported: () => void;
 }) {
+  const t = useTranslations();
   const [step, setStep] = useState<"source" | "browse" | "manual" | "confirm">("source");
   const [connections, setConnections] = useState<GitConnectionData[]>([]);
   const [selectedConnection, setSelectedConnection] = useState<GitConnectionData | null>(null);
@@ -336,7 +339,7 @@ function ImportRepositoryModal({
       setConnections(response.connections || []);
     } catch (err) {
       console.error("Failed to load connections:", err);
-      setError("Failed to load Git connections");
+      setError(t("repositories.modal.failedToLoadConnections"));
     } finally {
       setLoadingConnections(false);
     }
@@ -355,7 +358,7 @@ function ImportRepositoryModal({
       setRepositories(response.repositories || []);
     } catch (err) {
       console.error("Failed to load repositories:", err);
-      setError("Failed to load repositories");
+      setError(t("repositories.modal.failedToLoadRepos"));
     } finally {
       setLoadingRepos(false);
     }
@@ -387,7 +390,7 @@ function ImportRepositoryModal({
 
   const handleManualContinue = () => {
     if (!manualCloneURL || !manualName || !manualFullPath) {
-      setError("Please fill in all required fields");
+      setError(t("repositories.modal.fillRequiredFields"));
       return;
     }
     setStep("confirm");
@@ -411,7 +414,7 @@ function ImportRepositoryModal({
       onImported();
     } catch (err) {
       console.error("Failed to import repository:", err);
-      setError("Failed to import repository. Please check your inputs.");
+      setError(t("repositories.modal.failedToImport"));
     } finally {
       setImporting(false);
     }
@@ -450,7 +453,7 @@ function ImportRepositoryModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">Import Repository</h2>
+          <h2 className="text-lg font-semibold">{t("repositories.modal.title")}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -469,7 +472,7 @@ function ImportRepositoryModal({
           {step === "source" && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Select a Git connection to browse repositories, or enter repository details manually.
+                {t("repositories.modal.selectSourceHint")}
               </p>
 
               {loadingConnections ? (
@@ -479,14 +482,14 @@ function ImportRepositoryModal({
               ) : (
                 <>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Your Git Connections</p>
+                    <p className="text-sm font-medium">{t("repositories.modal.yourConnections")}</p>
                     {connections.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-4">
-                        No Git connections configured.{" "}
+                        {t("repositories.modal.noConnections")}{" "}
                         <Link href="/settings/git-connections" className="text-primary hover:underline">
-                          Add one
+                          {t("repositories.modal.addOne")}
                         </Link>{" "}
-                        to browse your repositories.
+                        {t("repositories.modal.toBrowse")}
                       </p>
                     ) : (
                       <div className="grid grid-cols-2 gap-3">
@@ -516,7 +519,7 @@ function ImportRepositoryModal({
                       <div className="w-full border-t border-border"></div>
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">or</span>
+                      <span className="bg-background px-2 text-muted-foreground">{t("repositories.modal.or")}</span>
                     </div>
                   </div>
 
@@ -530,9 +533,9 @@ function ImportRepositoryModal({
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className="font-medium">Enter Manually</div>
+                      <div className="font-medium">{t("repositories.modal.enterManually")}</div>
                       <div className="text-xs text-muted-foreground">
-                        Enter repository URL without a Git connection
+                        {t("repositories.modal.enterManuallyHint")}
                       </div>
                     </div>
                   </button>
@@ -573,10 +576,10 @@ function ImportRepositoryModal({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search repositories..."
+                  placeholder={t("repositories.searchPlaceholder")}
                   className="flex-1"
                 />
-                <Button type="submit">Search</Button>
+                <Button type="submit">{t("common.search")}</Button>
               </form>
 
               {loadingRepos ? (
@@ -584,7 +587,7 @@ function ImportRepositoryModal({
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : repositories.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No repositories found</p>
+                <p className="text-center text-muted-foreground py-8">{t("repositories.modal.noReposFound")}</p>
               ) : (
                 <div className="space-y-2 max-h-[300px] overflow-auto">
                   {repositories.map((repo) => (
@@ -596,7 +599,7 @@ function ImportRepositoryModal({
                       <div>
                         <div className="font-medium">{repo.full_path}</div>
                         <div className="text-sm text-muted-foreground line-clamp-1">
-                          {repo.description || "No description"}
+                          {repo.description || t("repositories.modal.noDescription")}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="px-2 py-0.5 text-xs bg-muted rounded">
@@ -623,16 +626,16 @@ function ImportRepositoryModal({
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Previous
+                    {t("repositories.modal.previous")}
                   </Button>
-                  <span className="text-sm text-muted-foreground">Page {page}</span>
+                  <span className="text-sm text-muted-foreground">{t("repositories.modal.page", { page })}</span>
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={repositories.length < 20}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Next
+                    {t("repositories.modal.next")}
                   </Button>
                 </div>
               )}
@@ -651,12 +654,12 @@ function ImportRepositoryModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <span className="text-sm text-muted-foreground">Manual Entry</span>
+                <span className="text-sm text-muted-foreground">{t("repositories.modal.manualEntry")}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Provider Type</label>
+                  <label className="block text-sm font-medium mb-2">{t("repositories.modal.providerType")}</label>
                   <select
                     className="w-full px-3 py-2 border border-border rounded-md bg-background"
                     value={manualProviderType}
@@ -680,11 +683,11 @@ function ImportRepositoryModal({
                     <option value="github">GitHub</option>
                     <option value="gitlab">GitLab</option>
                     <option value="gitee">Gitee</option>
-                    <option value="generic">Generic Git</option>
+                    <option value="generic">{t("repositories.modal.genericGit")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Base URL</label>
+                  <label className="block text-sm font-medium mb-2">{t("repositories.modal.baseUrl")}</label>
                   <Input
                     value={manualBaseURL}
                     onChange={(e) => setManualBaseURL(e.target.value)}
@@ -694,7 +697,7 @@ function ImportRepositoryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Clone URL *</label>
+                <label className="block text-sm font-medium mb-2">{t("repositories.modal.cloneUrl")} *</label>
                 <Input
                   value={manualCloneURL}
                   onChange={(e) => setManualCloneURL(e.target.value)}
@@ -704,7 +707,7 @@ function ImportRepositoryModal({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Repository Name *</label>
+                  <label className="block text-sm font-medium mb-2">{t("repositories.modal.repoName")} *</label>
                   <Input
                     value={manualName}
                     onChange={(e) => setManualName(e.target.value)}
@@ -712,7 +715,7 @@ function ImportRepositoryModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Full Path *</label>
+                  <label className="block text-sm font-medium mb-2">{t("repositories.modal.fullPath")} *</label>
                   <Input
                     value={manualFullPath}
                     onChange={(e) => setManualFullPath(e.target.value)}
@@ -722,7 +725,7 @@ function ImportRepositoryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Default Branch</label>
+                <label className="block text-sm font-medium mb-2">{t("repositories.modal.defaultBranch")}</label>
                 <Input
                   value={manualDefaultBranch}
                   onChange={(e) => setManualDefaultBranch(e.target.value)}
@@ -744,7 +747,7 @@ function ImportRepositoryModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <span className="text-sm text-muted-foreground">Confirm Import</span>
+                <span className="text-sm text-muted-foreground">{t("repositories.modal.confirmImport")}</span>
               </div>
 
               <div className="p-4 border border-border rounded-lg bg-muted/50">
@@ -756,29 +759,29 @@ function ImportRepositoryModal({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">Clone URL</div>
+                  <div className="text-muted-foreground">{t("repositories.modal.cloneUrl")}</div>
                   <div className="truncate">{manualCloneURL}</div>
-                  <div className="text-muted-foreground">Branch</div>
+                  <div className="text-muted-foreground">{t("repositories.modal.branch")}</div>
                   <div>{manualDefaultBranch}</div>
-                  <div className="text-muted-foreground">Provider</div>
+                  <div className="text-muted-foreground">{t("repositories.modal.provider")}</div>
                   <div className="capitalize">{manualProviderType}</div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Ticket Prefix (optional)</label>
+                <label className="block text-sm font-medium mb-2">{t("repositories.modal.ticketPrefixOptional")}</label>
                 <Input
                   value={ticketPrefix}
                   onChange={(e) => setTicketPrefix(e.target.value.toUpperCase())}
                   placeholder="PROJ"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Used for ticket identifiers (e.g., PROJ-123)
+                  {t("repositories.modal.ticketPrefixHint")}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Visibility</label>
+                <label className="block text-sm font-medium mb-2">{t("repositories.modal.visibility")}</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2">
                     <input
@@ -787,7 +790,7 @@ function ImportRepositoryModal({
                       onChange={() => setVisibility("organization")}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm">Organization</span>
+                    <span className="text-sm">{t("repositories.modal.organization")}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input
@@ -796,7 +799,7 @@ function ImportRepositoryModal({
                       onChange={() => setVisibility("private")}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm">Private (only you)</span>
+                    <span className="text-sm">{t("repositories.modal.privateOnly")}</span>
                   </label>
                 </div>
               </div>
@@ -806,14 +809,14 @@ function ImportRepositoryModal({
 
         <div className="flex justify-end gap-3 p-4 border-t border-border">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           {step === "manual" && (
-            <Button onClick={handleManualContinue}>Continue</Button>
+            <Button onClick={handleManualContinue}>{t("repositories.modal.continue")}</Button>
           )}
           {step === "confirm" && (
             <Button onClick={handleImport} loading={importing}>
-              Import Repository
+              {t("repositories.modal.importRepository")}
             </Button>
           )}
         </div>

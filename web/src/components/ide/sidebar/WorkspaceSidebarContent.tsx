@@ -30,6 +30,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface WorkspaceSidebarContentProps {
   className?: string;
@@ -48,6 +49,7 @@ const statusColors: Record<string, { bg: string; text: string; dot: string }> = 
 type FilterType = "all" | "running" | "completed";
 
 export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSidebarContentProps) {
+  const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
   const { pods, loading, fetchPods, terminatePod } = usePodStore();
@@ -150,7 +152,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search pods..."
+            placeholder={t("workspace.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -167,7 +169,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
           onClick={onCreatePod}
         >
           <Plus className="w-3 h-3 mr-1" />
-          New Pod
+          {t("workspace.newPod")}
         </Button>
         <Button
           size="sm"
@@ -193,7 +195,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
             )}
             onClick={() => setFilter(f)}
           >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {t(`workspace.filters.${f}`)}
           </button>
         ))}
       </div>
@@ -209,10 +211,10 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
             <Terminal className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               {searchQuery
-                ? "No pods match your search"
+                ? t("workspace.emptyState.noMatch")
                 : filter === "all"
-                  ? "No pods yet"
-                  : `No ${filter} pods`}
+                  ? t("workspace.emptyState.title")
+                  : t("workspace.emptyState.noFiltered", { filter: t(`workspace.filters.${filter}`) })}
             </p>
             {!searchQuery && filter === "all" && (
               <Button
@@ -221,7 +223,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
                 className="mt-3"
                 onClick={onCreatePod}
               >
-                Create Pod
+                {t("workspace.emptyState.createFirst")}
               </Button>
             )}
           </div>
@@ -288,9 +290,9 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
           <div className="flex items-center justify-between px-3 py-2 border-t border-border cursor-pointer hover:bg-muted/50">
             <div className="flex items-center gap-2">
               <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Runners</span>
+              <span className="text-sm font-medium">{t("workspace.runners.title")}</span>
               <span className="text-xs text-muted-foreground">
-                ({onlineRunners.length} online)
+                ({onlineRunners.length} {t("workspace.runners.online")})
               </span>
             </div>
             {runnersExpanded ? (
@@ -308,7 +310,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
               </div>
             ) : runners.length === 0 ? (
               <div className="px-3 py-4 text-center">
-                <p className="text-xs text-muted-foreground">No runners registered</p>
+                <p className="text-xs text-muted-foreground">{t("workspace.runners.noRunners")}</p>
               </div>
             ) : (
               <div className="py-1 max-h-32 overflow-y-auto">

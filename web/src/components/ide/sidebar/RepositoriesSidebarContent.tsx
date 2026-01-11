@@ -25,6 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface RepositoriesSidebarContentProps {
   className?: string;
@@ -38,16 +39,11 @@ const providerIcons: Record<string, React.ReactNode> = {
   generic: <Globe className="w-3.5 h-3.5" />,
 };
 
-// Provider filter options
-const providerOptions = [
-  { value: "all", label: "All" },
-  { value: "github", label: "GitHub" },
-  { value: "gitlab", label: "GitLab" },
-  { value: "gitee", label: "Gitee" },
-  { value: "generic", label: "Generic" },
-];
+// Provider filter values - labels will be translated
+const PROVIDER_FILTER_VALUES = ["all", "github", "gitlab", "gitee"] as const;
 
 export function RepositoriesSidebarContent({ className }: RepositoriesSidebarContentProps) {
+  const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
 
@@ -138,7 +134,7 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search repositories..."
+            placeholder={t("repositories.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -155,7 +151,7 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
           onClick={handleImportRepo}
         >
           <Plus className="w-3 h-3 mr-1" />
-          Import Repository
+          {t("repositories.import")}
         </Button>
         <Button
           size="sm"
@@ -171,18 +167,18 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
       {/* Provider filter */}
       <div className="px-2 pb-2">
         <div className="flex items-center gap-1 flex-wrap">
-          {providerOptions.map((opt) => (
+          {PROVIDER_FILTER_VALUES.map((value) => (
             <button
-              key={opt.value}
+              key={value}
               className={cn(
                 "px-2 py-1 text-xs rounded transition-colors",
-                selectedProvider === opt.value
+                selectedProvider === value
                   ? "bg-muted text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
-              onClick={() => setSelectedProvider(opt.value)}
+              onClick={() => setSelectedProvider(value)}
             >
-              {opt.label}
+              {t(`repositories.filters.${value}`)}
             </button>
           ))}
         </div>
@@ -191,7 +187,7 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
       {/* Repository list */}
       <div className="flex-1 overflow-y-auto border-t border-border">
         <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
-          {filteredRepositories.length} repositories
+          {filteredRepositories.length} {t("repositories.repoCount")}
         </div>
 
         {loading ? (
@@ -203,8 +199,8 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
             <FolderGit2 className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               {searchQuery || selectedProvider !== "all"
-                ? "No repositories match filters"
-                : "No repositories yet"}
+                ? t("repositories.emptyState.noMatch")
+                : t("repositories.emptyState.title")}
             </p>
             {!searchQuery && selectedProvider === "all" && (
               <Button
@@ -213,7 +209,7 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
                 className="mt-3"
                 onClick={handleImportRepo}
               >
-                Import Repository
+                {t("repositories.import")}
               </Button>
             )}
           </div>
@@ -270,14 +266,14 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <GitBranch className="w-3 h-3" />
                         <span>{repo.default_branch}</span>
-                        <span className="text-muted-foreground/50">(default)</span>
+                        <span className="text-muted-foreground/50">({t("repositories.repository.default")})</span>
                       </div>
                       {repo.ticket_prefix && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                           <span className="font-mono bg-muted px-1 rounded">
                             {repo.ticket_prefix}
                           </span>
-                          <span>ticket prefix</span>
+                          <span>{t("repositories.repository.ticketPrefix")}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 mt-2">
@@ -289,7 +285,7 @@ export function RepositoriesSidebarContent({ className }: RepositoriesSidebarCon
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink className="w-3 h-3" />
-                          View on {repo.provider_type}
+                          {t("repositories.repository.viewOnProvider", { provider: repo.provider_type })}
                         </a>
                       </div>
                     </div>

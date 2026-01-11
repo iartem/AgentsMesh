@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "@/lib/i18n/client";
 import { Ticket } from "@/stores/ticket";
 
 interface TicketCardProps {
@@ -37,6 +38,7 @@ const priorityConfig: Record<string, { icon: string; color: string }> = {
 };
 
 export function TicketCard({ ticket, onClick, showRepository = true }: TicketCardProps) {
+  const t = useTranslations();
   const typeStyle = typeConfig[ticket.type] || typeConfig.task;
   const statusStyle = statusConfig[ticket.status] || statusConfig.backlog;
   const priorityStyle = priorityConfig[ticket.priority] || priorityConfig.none;
@@ -65,7 +67,7 @@ export function TicketCard({ ticket, onClick, showRepository = true }: TicketCar
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={typeStyle.color} title={ticket.type}>
+          <span className={typeStyle.color} title={t(`tickets.type.${ticket.type}`)}>
             {typeStyle.icon}
           </span>
           <Link
@@ -79,7 +81,7 @@ export function TicketCard({ ticket, onClick, showRepository = true }: TicketCar
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.color}`}
         >
-          {statusStyle.label}
+          {t(`tickets.status.${ticket.status}`)}
         </span>
       </div>
 
@@ -108,7 +110,7 @@ export function TicketCard({ ticket, onClick, showRepository = true }: TicketCar
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-2">
           {/* Priority */}
-          <span className={`text-sm ${priorityStyle.color}`} title={ticket.priority}>
+          <span className={`text-sm ${priorityStyle.color}`} title={t(`tickets.priority.${ticket.priority}`)}>
             {priorityStyle.icon}
           </span>
 

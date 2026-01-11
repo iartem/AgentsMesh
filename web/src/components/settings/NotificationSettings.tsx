@@ -7,12 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { usePushNotifications } from "@/components/pwa";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface NotificationSettingsProps {
   className?: string;
 }
 
 export function NotificationSettings({ className }: NotificationSettingsProps) {
+  const t = useTranslations();
   const {
     permission,
     subscription,
@@ -44,7 +46,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
       <div className={cn("p-4 rounded-lg bg-muted/50", className)}>
         <div className="flex items-center gap-3 text-muted-foreground">
           <BellOff className="w-5 h-5" />
-          <span>Push notifications are not supported in this browser.</span>
+          <span>{t("settings.notifications.notSupported")}</span>
         </div>
       </div>
     );
@@ -65,11 +67,11 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
             </div>
           )}
           <div>
-            <p className="font-medium">Push Notifications</p>
+            <p className="font-medium">{t("settings.notifications.title")}</p>
             <p className="text-sm text-muted-foreground">
               {isEnabled
-                ? "You will receive notifications for important events"
-                : "Enable to receive notifications about pods, tickets, and more"}
+                ? t("settings.notifications.enabled")
+                : t("settings.notifications.disabled")}
             </p>
           </div>
         </div>
@@ -82,20 +84,20 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : isEnabled ? (
-            "Disable"
+            t("settings.notifications.disable")
           ) : permission === "denied" ? (
-            "Blocked"
+            t("settings.notifications.blocked")
           ) : (
-            "Enable"
+            t("settings.notifications.enable")
           )}
         </Button>
       </div>
 
       {permission === "denied" && (
         <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
-          <p className="font-medium">Notifications are blocked</p>
+          <p className="font-medium">{t("settings.notifications.blockedTitle")}</p>
           <p className="text-destructive/80">
-            Please enable notifications in your browser settings to receive alerts.
+            {t("settings.notifications.blockedHint")}
           </p>
         </div>
       )}
@@ -109,37 +111,37 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
       {/* Preferences Section */}
       {isEnabled && (
         <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Notification Types</h4>
+          <h4 className="font-medium text-sm text-muted-foreground">{t("settings.notifications.types")}</h4>
 
           <div className="space-y-3">
             <NotificationPreferenceItem
               id="pod-status"
-              label="Pod Status Changes"
-              description="When a pod completes, fails, or changes status"
+              label={t("settings.notifications.podStatus")}
+              description={t("settings.notifications.podStatusDesc")}
               checked={preferences.podStatus}
               onChange={(checked) => updatePreferences({ podStatus: checked })}
             />
 
             <NotificationPreferenceItem
               id="ticket-assigned"
-              label="Ticket Assignments"
-              description="When a ticket is assigned to you"
+              label={t("settings.notifications.ticketAssigned")}
+              description={t("settings.notifications.ticketAssignedDesc")}
               checked={preferences.ticketAssigned}
               onChange={(checked) => updatePreferences({ ticketAssigned: checked })}
             />
 
             <NotificationPreferenceItem
               id="ticket-updated"
-              label="Ticket Updates"
-              description="When tickets you're watching are updated"
+              label={t("settings.notifications.ticketUpdated")}
+              description={t("settings.notifications.ticketUpdatedDesc")}
               checked={preferences.ticketUpdated}
               onChange={(checked) => updatePreferences({ ticketUpdated: checked })}
             />
 
             <NotificationPreferenceItem
               id="runner-offline"
-              label="Runner Alerts"
-              description="When a runner goes offline or has issues"
+              label={t("settings.notifications.runnerOffline")}
+              description={t("settings.notifications.runnerOfflineDesc")}
               checked={preferences.runnerOffline}
               onChange={(checked) => updatePreferences({ runnerOffline: checked })}
             />
@@ -151,7 +153,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
       {isEnabled && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Check className="w-4 h-4 text-green-500" />
-          <span>Notifications are active</span>
+          <span>{t("settings.notifications.active")}</span>
         </div>
       )}
     </div>

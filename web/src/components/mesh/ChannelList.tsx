@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface Channel {
   id: number;
@@ -44,6 +45,7 @@ export function ChannelList({
   onArchive,
   onUnarchive,
 }: ChannelListProps) {
+  const t = useTranslations();
   const [showArchived, setShowArchived] = useState(false);
 
   const filteredChannels = showArchived
@@ -57,7 +59,7 @@ export function ChannelList({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b">
-        <h2 className="font-semibold">Channels</h2>
+        <h2 className="font-semibold">{t("mesh.channelList.title")}</h2>
         <div className="flex items-center gap-2">
           <button
             className={`text-xs px-2 py-1 rounded ${
@@ -65,7 +67,7 @@ export function ChannelList({
             }`}
             onClick={() => setShowArchived(!showArchived)}
           >
-            {showArchived ? "Hide Archived" : "Show Archived"}
+            {showArchived ? t("mesh.channelList.hideArchived") : t("mesh.channelList.showArchived")}
           </button>
         </div>
       </div>
@@ -74,7 +76,7 @@ export function ChannelList({
       <div className="flex-1 overflow-y-auto">
         {filteredChannels.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            No channels found
+            {t("mesh.channelList.noChannels")}
           </div>
         ) : (
           <div className="space-y-1 p-2">
@@ -95,7 +97,7 @@ export function ChannelList({
                       <span className="font-medium truncate">{channel.name}</span>
                       {channel.isArchived && (
                         <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          Archived
+                          {t("mesh.channelList.archived")}
                         </span>
                       )}
                     </div>
@@ -140,7 +142,7 @@ export function ChannelList({
                         onUnarchive?.(channel.id);
                       }}
                     >
-                      Unarchive
+                      {t("mesh.channelList.unarchive")}
                     </Button>
                   ) : (
                     <Button
@@ -152,7 +154,7 @@ export function ChannelList({
                         onArchive?.(channel.id);
                       }}
                     >
-                      Archive
+                      {t("mesh.channelList.archive")}
                     </Button>
                   )}
                 </div>
