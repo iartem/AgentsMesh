@@ -81,6 +81,11 @@ runner/*.out
 # Docker
 # =========================
 .docker/
-runner/*.out
-*.out# Test binaries
+
+# =========================
+# Test artifacts
+# =========================
+*.out
 *.test
+*_coverage.out
+coverage.out
