@@ -51,10 +51,7 @@ export function Footer() {
       title: t("landing.footer.resources.title"),
       links: [
         { label: t("landing.footer.resources.documentation"), href: "/docs" },
-        { label: t("landing.footer.resources.apiReference"), href: "/docs#rest-api" },
-        { label: t("landing.footer.resources.tutorials"), href: "/docs#quick-start" },
         { label: t("landing.footer.resources.changelog"), href: "/changelog" },
-        { label: t("landing.footer.resources.status"), href: "https://status.agentmesh.dev" },
       ],
     },
     company: {
@@ -71,7 +68,6 @@ export function Footer() {
       links: [
         { label: t("landing.footer.legal.privacy"), href: "/privacy" },
         { label: t("landing.footer.legal.terms"), href: "/terms" },
-        { label: t("landing.footer.legal.security"), href: "/security" },
       ],
     },
   };

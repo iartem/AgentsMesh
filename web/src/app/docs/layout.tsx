@@ -4,39 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  {
-    title: "Getting Started",
-    items: [
-      { title: "Introduction", href: "/docs" },
-      { title: "Quick Start", href: "/docs/getting-started" },
-    ],
-  },
-  {
-    title: "Features",
-    items: [
-      { title: "AgentPod", href: "/docs/features/agentpod" },
-      { title: "DevMesh", href: "/docs/features/devmesh" },
-      { title: "Tickets", href: "/docs/features/tickets" },
-      { title: "Channels", href: "/docs/features/channels" },
-    ],
-  },
-  {
-    title: "Runners",
-    items: [
-      { title: "Runner Setup", href: "/docs/runners/setup" },
-      { title: "MCP Tools", href: "/docs/runners/mcp-tools" },
-    ],
-  },
-  {
-    title: "API Reference",
-    items: [
-      { title: "REST API", href: "/docs/api/rest" },
-      { title: "Webhooks", href: "/docs/api/webhooks" },
-    ],
-  },
-];
+import { useTranslations } from "@/lib/i18n/client";
 
 export default function DocsLayout({
   children,
@@ -44,6 +12,32 @@ export default function DocsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const t = useTranslations();
+
+  const navigation = [
+    {
+      title: t("docs.nav.gettingStarted"),
+      items: [
+        { title: t("docs.nav.introduction"), href: "/docs" },
+        { title: t("docs.nav.quickStart"), href: "/docs/getting-started" },
+      ],
+    },
+    {
+      title: t("docs.nav.features"),
+      items: [
+        { title: "AgentPod", href: "/docs/features/agentpod" },
+        { title: "AgentMesh", href: "/docs/features/channels" },
+        { title: t("docs.nav.tickets"), href: "/docs/features/tickets" },
+      ],
+    },
+    {
+      title: t("docs.nav.runners"),
+      items: [
+        { title: t("docs.nav.runnerSetup"), href: "/docs/runners/setup" },
+        { title: t("docs.nav.mcpTools"), href: "/docs/runners/mcp-tools" },
+      ],
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,18 +56,21 @@ export default function DocsLayout({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
             </div>
             <span className="text-xl font-bold">AgentMesh</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">
-              Docs
+            <Link
+              href="/docs"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {t("landing.nav.docs")}
             </Link>
             <Link href="/login">
-              <Button variant="outline">Sign In</Button>
+              <Button variant="outline">{t("landing.nav.signIn")}</Button>
             </Link>
           </div>
         </div>
@@ -117,26 +114,20 @@ export default function DocsLayout({
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              &copy; 2025 AgentMesh. All rights reserved.
+              &copy; {new Date().getFullYear()} AgentMesh. {t("common.allRightsReserved")}
             </p>
             <div className="flex gap-6">
               <Link
                 href="/privacy"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Privacy Policy
+                {t("landing.footer.legal.privacy")}
               </Link>
               <Link
                 href="/terms"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Terms of Service
-              </Link>
-              <Link
-                href="/docs"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Documentation
+                {t("landing.footer.legal.terms")}
               </Link>
             </div>
           </div>

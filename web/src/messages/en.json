@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Loading...",
+    "allRightsReserved": "All rights reserved.",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -1639,6 +1640,163 @@
       "theme_light": "Light",
       "theme_dark": "Dark",
       "theme_system": "System"
+    }
+  },
+  "about": {
+    "hero": {
+      "title": "Building the Future of AI-Powered Development",
+      "subtitle": "We're on a mission to enable seamless collaboration between humans and AI coding agents, transforming how software is built."
+    },
+    "mission": {
+      "title": "Our Mission",
+      "content": "AgentMesh was founded with a simple belief: the future of software development lies in the collaboration between humans and AI agents. We're building the infrastructure that enables multiple AI coding agents to work together, coordinated by human developers, to tackle complex development challenges at unprecedented speed and scale."
+    },
+    "vision": {
+      "title": "What We Believe",
+      "autonomous": {
+        "title": "Autonomous Execution",
+        "content": "AI agents should be able to independently complete complex tasks, not just assist with code completion."
+      },
+      "collaboration": {
+        "title": "Multi-Agent Collaboration",
+        "content": "The most complex problems require multiple specialized agents working together seamlessly."
+      },
+      "security": {
+        "title": "Data Sovereignty",
+        "content": "Your code and data should never leave your infrastructure without your explicit consent."
+      }
+    },
+    "contact": {
+      "title": "Get in Touch",
+      "content": "Interested in learning more about AgentMesh or exploring partnership opportunities?",
+      "email": "Contact Us",
+      "careers": "Join Our Team"
+    }
+  },
+  "careers": {
+    "hero": {
+      "title": "Join Us in Shaping the Future",
+      "subtitle": "We're building the platform that enables AI agents to collaborate on complex development tasks. Join us in this exciting journey."
+    },
+    "openPositions": "Open Positions",
+    "responsibilities": "Key Responsibilities",
+    "applyNow": "Apply Now",
+    "positions": {
+      "builder": {
+        "title": "Builder",
+        "description": "Builders are the creators who turn ideas into reality. You'll push the boundaries of what's possible, exploring new capabilities and implementing innovative features.",
+        "resp1": "Design and implement core platform features",
+        "resp2": "Explore the boundaries of AI agent capabilities",
+        "resp3": "Build robust, scalable infrastructure"
+      },
+      "experiencer": {
+        "title": "Experiencer",
+        "description": "Experiencers transform technology into delightful products. You'll focus on user experience, ensuring every interaction with AgentMesh is intuitive and powerful.",
+        "resp1": "Design and refine user experiences",
+        "resp2": "Transform features into polished products",
+        "resp3": "Gather and incorporate user feedback"
+      },
+      "growth": {
+        "title": "Growth",
+        "description": "Growth champions take our product to market. You'll help developers discover AgentMesh and turn them into passionate advocates.",
+        "resp1": "Develop go-to-market strategies",
+        "resp2": "Build relationships with developer communities",
+        "resp3": "Drive user acquisition and retention"
+      }
+    },
+    "whyJoin": {
+      "title": "Why Join AgentMesh?",
+      "innovation": {
+        "title": "Cutting-Edge Technology",
+        "content": "Work with the latest AI technologies and shape the future of software development."
+      },
+      "remote": {
+        "title": "Remote-First",
+        "content": "Work from anywhere in the world with a flexible schedule that fits your life."
+      },
+      "equity": {
+        "title": "Competitive Package",
+        "content": "Competitive salary, equity participation, and comprehensive benefits."
+      }
+    },
+    "cta": {
+      "title": "Don't See a Perfect Fit?",
+      "content": "We're always looking for exceptional talent. Send us your resume and tell us how you'd contribute.",
+      "button": "Send Your Resume"
+    }
+  },
+  "docs": {
+    "title": "Documentation",
+    "nav": {
+      "gettingStarted": "Getting Started",
+      "introduction": "Introduction",
+      "quickStart": "Quick Start",
+      "features": "Features",
+      "tickets": "Tickets",
+      "runners": "Runners",
+      "runnerSetup": "Runner Setup",
+      "mcpTools": "MCP Tools"
+    },
+    "intro": {
+      "title": "Introduction",
+      "description": "AgentMesh is a Terminal-based Coding Agent collaboration platform that enables teams to leverage AI coding assistants like Claude Code, Codex CLI, Gemini CLI, and Aider at scale. Unlike IDE plugins (Cursor, Copilot), AgentMesh focuses on autonomous terminal agents with full system access, enabling multi-agent coordination (AgentMesh), remote AI workstations (AgentPod), and integrated task management.",
+      "supportedAgents": "Supported AI Agents:",
+      "customAgents": "Custom agents via MCP protocol"
+    },
+    "whyTerminal": {
+      "title": "Why Terminal-based Agents?",
+      "description": "Terminal-based coding agents offer significant advantages over IDE plugins:",
+      "feature": "Feature",
+      "idePlugins": "IDE Plugins (Copilot/Cursor)",
+      "terminalAgents": "Terminal Agents (Claude Code/Aider)",
+      "autonomy": "Autonomy",
+      "autonomyIde": "Passive, requires triggers",
+      "autonomyTerminal": "Active execution of complex tasks",
+      "capabilities": "Capabilities",
+      "capabilitiesIde": "Code completion",
+      "capabilitiesTerminal": "Full-stack dev, refactoring, testing",
+      "environment": "Environment",
+      "environmentIde": "IDE sandbox",
+      "environmentTerminal": "Full terminal access",
+      "multiAgent": "Multi-Agent",
+      "multiAgentTerminal": "AgentMesh supported",
+      "selfHosted": "Self-hosted",
+      "selfHostedTerminal": "Fully controllable"
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "quickStart": "Quick Start",
+      "quickStartDesc": "Get up and running in 5 minutes",
+      "agentpodDesc": "Remote AI development workstations",
+      "agentmeshDesc": "Multi-agent collaboration network",
+      "mcpTools": "MCP Tools",
+      "mcpToolsDesc": "25+ tools for AI agents"
+    }
+  },
+  "blog": {
+    "hero": {
+      "title": "Blog",
+      "subtitle": "Technical insights, product updates, and stories from the AgentMesh team."
+    },
+    "minRead": "min read",
+    "backToList": "Back to Blog",
+    "notFound": "Post not found",
+    "posts": {
+      "introducing": {
+        "title": "Introducing AgentMesh: The Future of AI-Powered Development",
+        "excerpt": "Today we're excited to announce AgentMesh, a platform that enables multiple AI coding agents to collaborate on complex development tasks.",
+        "content": "Today we're excited to announce AgentMesh, a platform that enables multiple AI coding agents to collaborate on complex development tasks.\n\nThe way we build software is changing. AI coding agents like Claude Code, Codex CLI, and Aider are becoming increasingly capable of handling complex development tasks autonomously. But as these agents become more powerful, a new challenge emerges: how do we coordinate multiple agents working on the same project?\n\nAgentMesh solves this challenge by providing:\n\n• AgentPod: Remote AI workstations that run agents in isolated environments\n• AgentMesh Channels: Communication infrastructure for multi-agent collaboration\n• Self-Hosted Runners: Keep your code and data in your own infrastructure\n\nWe believe the future of software development lies in human-AI collaboration, where developers orchestrate teams of AI agents to tackle complex challenges at unprecedented speed and scale.\n\nGet started for free at agentmesh.dev"
+      },
+      "multiAgent": {
+        "title": "Understanding Multi-Agent Collaboration in Software Development",
+        "excerpt": "Explore how multiple AI agents can work together to solve complex development challenges more effectively than single-agent approaches.",
+        "content": "As AI coding agents become more sophisticated, we're discovering that some problems are best solved by multiple specialized agents working together.\n\nConsider a typical feature implementation: it might require understanding existing code, designing new components, writing tests, and updating documentation. Each of these tasks benefits from different approaches and contexts.\n\nWith AgentMesh, you can:\n\n• Assign different agents to different aspects of a task\n• Enable agents to communicate through channels\n• Coordinate work through pod bindings and permissions\n• Visualize the collaboration topology in real-time\n\nThis approach mirrors how human development teams work, with specialized roles collaborating toward a common goal. The difference? AI agents can work continuously, share context instantly, and iterate at machine speed.\n\nLearn more about multi-agent collaboration in our documentation."
+      },
+      "selfHosted": {
+        "title": "Why Self-Hosted Runners Matter for Enterprise AI Development",
+        "excerpt": "For enterprises with strict security and compliance requirements, self-hosted runners provide the control and data sovereignty they need.",
+        "content": "When adopting AI development tools, enterprises face a critical question: where does the code go?\n\nWith AgentMesh's self-hosted runners, the answer is simple: your code stays in your infrastructure. Here's why this matters:\n\n• Data Sovereignty: Code never leaves your network\n• Compliance: Meet regulatory requirements for data handling\n• Security: Full control over access and audit logs\n• Performance: Optimized for your specific environment\n\nDeploying a runner is straightforward:\n\n1. Generate a registration token in your AgentMesh dashboard\n2. Run the runner binary on your infrastructure\n3. Start creating pods that execute in your environment\n\nWhether you're running on bare metal, VMs, or Kubernetes, AgentMesh runners adapt to your infrastructure.\n\nContact us to learn more about enterprise deployment options."
+      }
     }
   }
 }
