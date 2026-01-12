@@ -162,7 +162,8 @@ func (c *Client) Connect(ctx context.Context) error {
 
 	// Connect with context
 	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second,
+		HandshakeTimeout:  10 * time.Second,
+		EnableCompression: true,
 	}
 
 	conn, _, err := dialer.DialContext(ctx, wsURL, headers)
