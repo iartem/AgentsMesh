@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
-import { organizationApi, agentApi, billingApi, BillingOverview, SubscriptionPlan, gitProviderApi, sshKeyApi, SSHKeyData } from "@/lib/api/client";
+import { organizationApi, agentApi, billingApi, BillingOverview, SubscriptionPlan, gitProviderApi, sshKeyApi, SSHKeyData, RedeemPromoCodeResponse } from "@/lib/api/client";
+import { PromoCodeInput } from "@/components/promo-code/PromoCodeInput";
 import { useRunnerStore, Runner, RegistrationToken, getRunnerStatusInfo } from "@/stores/runner";
 import { NotificationSettings, LanguageSettings } from "@/components/settings";
 import { useTranslations } from "@/lib/i18n/client";
@@ -1357,13 +1358,19 @@ function BillingSettings({ t }: { t: TranslationFn }) {
         </div>
       </div>
 
-      {/* Payment Method */}
+      {/* Promo Code */}
       <div className="border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">{t("settings.billingPage.paymentMethod")}</h2>
-        <p className="text-muted-foreground">{t("settings.billingPage.noPaymentMethod")}</p>
-        <Button variant="outline" className="mt-4">
-          {t("settings.billingPage.addPaymentMethod")}
-        </Button>
+        <h2 className="text-lg font-semibold mb-2">{t("settings.billingPage.promoCode.title")}</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          {t("settings.billingPage.promoCode.description")}
+        </p>
+        <PromoCodeInput
+          onRedeemSuccess={(response: RedeemPromoCodeResponse) => {
+            // Reload billing data after successful redemption
+            loadBillingData();
+          }}
+          t={(key: string) => t(`settings.billingPage.promoCode.${key}`)}
+        />
       </div>
 
       {/* Plans Dialog */}

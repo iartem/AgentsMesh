@@ -1,0 +1,238 @@
+package promocode
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/anthropics/agentmesh/backend/internal/domain/promocode"
+	"gorm.io/gorm"
+)
+
+var (
+	ErrPromoCodeNotFound      = errors.New("promo code not found")
+	ErrPromoCodeInvalid       = errors.New("promo code is invalid or expired")
+	ErrPromoCodeAlreadyUsed   = errors.New("promo code already used by this organization")
+	ErrPromoCodeMaxUses       = errors.New("promo code has reached maximum uses")
+	ErrInvalidPlan            = errors.New("invalid plan in promo code")
+	ErrNotOwner               = errors.New("only organization owner can redeem promo codes")
+	ErrPromoCodeAlreadyExists = errors.New("promo code already exists")
+)
+
+// Service handles promo code operations
+type Service struct {
+	db       *gorm.DB
+	repo     promocode.Repository
+	billing  BillingProvider
+}
+
+// NewService creates a new promo code service
+func NewService(db *gorm.DB) *Service {
+	return &Service{
+		db:       db,
+		repo:     promocode.NewRepository(db),
+		billing:  NewGormBillingProvider(db),
+	}
+}
+
+// NewServiceWithBilling creates a new promo code service with custom billing provider
+func NewServiceWithBilling(db *gorm.DB, billing BillingProvider) *Service {
+	return &Service{
+		db:       db,
+		repo:     promocode.NewRepository(db),
+		billing:  billing,
+	}
+}
+
+// ValidateRequest represents a validate promo code request
+type ValidateRequest struct {
+	Code           string
+	OrganizationID int64
+}
+
+// Error codes for promo code validation
+const (
+	ErrCodeNotFound      = "promo_code_not_found"
+	ErrCodeExpired       = "promo_code_expired"
+	ErrCodeDisabled      = "promo_code_disabled"
+	ErrCodeMaxUsed       = "promo_code_max_used"
+	ErrCodeInvalid       = "promo_code_invalid"
+	ErrCodeAlreadyUsed   = "promo_code_already_used"
+	ErrCodeNotOwner      = "promo_code_not_owner"
+	ErrCodeRedeemSuccess = "promo_code_redeem_success"
+)
+
+// ValidateResponse represents a validate promo code response
+type ValidateResponse struct {
+	Valid           bool       `json:"valid"`
+	Code            string     `json:"code"`
+	PlanName        string     `json:"plan_name,omitempty"`
+	PlanDisplayName string     `json:"plan_display_name,omitempty"`
+	DurationMonths  int        `json:"duration_months,omitempty"`
+	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
+	MessageCode     string     `json:"message_code,omitempty"`
+}
+
+// Validate validates a promo code
+func (s *Service) Validate(ctx context.Context, req *ValidateRequest) (*ValidateResponse, error) {
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+
+	promoCode, err := s.repo.GetByCode(ctx, code)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ValidateResponse{Valid: false, Code: code, MessageCode: ErrCodeNotFound}, nil
+		}
+		return nil, err
+	}
+
+	// Check basic validity
+	if !promoCode.IsValid() {
+		messageCode := ErrCodeInvalid
+		if promoCode.ExpiresAt != nil && time.Now().After(*promoCode.ExpiresAt) {
+			messageCode = ErrCodeExpired
+		}
+		if promoCode.MaxUses != nil && promoCode.UsedCount >= *promoCode.MaxUses {
+			messageCode = ErrCodeMaxUsed
+		}
+		if !promoCode.IsActive {
+			messageCode = ErrCodeDisabled
+		}
+		return &ValidateResponse{Valid: false, Code: code, MessageCode: messageCode}, nil
+	}
+
+	// Check if organization already used this code
+	count, err := s.repo.CountOrgRedemptionsForCode(ctx, req.OrganizationID, promoCode.ID)
+	if err != nil {
+		return nil, err
+	}
+	if count >= int64(promoCode.MaxUsesPerOrg) {
+		return &ValidateResponse{Valid: false, Code: code, MessageCode: ErrCodeAlreadyUsed}, nil
+	}
+
+	// Get plan display name via billing provider
+	plan, err := s.billing.GetPlanByName(ctx, promoCode.PlanName)
+	if err != nil {
+		return nil, ErrInvalidPlan
+	}
+
+	return &ValidateResponse{
+		Valid:           true,
+		Code:            promoCode.Code,
+		PlanName:        promoCode.PlanName,
+		PlanDisplayName: plan.DisplayName,
+		DurationMonths:  promoCode.DurationMonths,
+		ExpiresAt:       promoCode.ExpiresAt,
+	}, nil
+}
+
+// RedeemRequest represents a redeem promo code request
+type RedeemRequest struct {
+	Code           string
+	OrganizationID int64
+	UserID         int64
+	UserRole       string // owner, admin, member
+	IPAddress      string
+	UserAgent      string
+}
+
+// RedeemResponse represents a redeem promo code response
+type RedeemResponse struct {
+	Success        bool      `json:"success"`
+	PlanName       string    `json:"plan_name,omitempty"`
+	DurationMonths int       `json:"duration_months,omitempty"`
+	NewPeriodEnd   time.Time `json:"new_period_end,omitempty"`
+	MessageCode    string    `json:"message_code,omitempty"`
+}
+
+// Redeem redeems a promo code
+func (s *Service) Redeem(ctx context.Context, req *RedeemRequest) (*RedeemResponse, error) {
+	// Check if user is owner
+	if req.UserRole != "owner" {
+		return &RedeemResponse{Success: false, MessageCode: ErrCodeNotOwner}, nil
+	}
+
+	// Validate first
+	validateResp, err := s.Validate(ctx, &ValidateRequest{
+		Code:           req.Code,
+		OrganizationID: req.OrganizationID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !validateResp.Valid {
+		return &RedeemResponse{Success: false, MessageCode: validateResp.MessageCode}, nil
+	}
+
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+	promoCode, _ := s.repo.GetByCode(ctx, code)
+
+	// Get target plan via billing provider
+	targetPlan, err := s.billing.GetActivePlanByName(ctx, promoCode.PlanName)
+	if err != nil {
+		return nil, ErrInvalidPlan
+	}
+
+	// Execute in transaction
+	var newPeriodEnd time.Time
+	var previousPlanName *string
+	var previousPeriodEnd *time.Time
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Apply subscription via billing provider
+		result, err := s.billing.ApplyPromoSubscription(ctx, tx, &ApplySubscriptionRequest{
+			OrganizationID: req.OrganizationID,
+			PlanID:         targetPlan.ID,
+			DurationMonths: promoCode.DurationMonths,
+		})
+		if err != nil {
+			return err
+		}
+
+		newPeriodEnd = result.NewPeriodEnd
+		previousPlanName = result.PreviousPlanName
+		previousPeriodEnd = result.PreviousPeriodEnd
+
+		// Create redemption record
+		redemption := &promocode.Redemption{
+			PromoCodeID:       promoCode.ID,
+			OrganizationID:    req.OrganizationID,
+			UserID:            req.UserID,
+			PlanName:          promoCode.PlanName,
+			DurationMonths:    promoCode.DurationMonths,
+			PreviousPlanName:  previousPlanName,
+			PreviousPeriodEnd: previousPeriodEnd,
+			NewPeriodEnd:      newPeriodEnd,
+			IPAddress:         &req.IPAddress,
+			UserAgent:         &req.UserAgent,
+		}
+		if err := tx.Create(redemption).Error; err != nil {
+			return err
+		}
+
+		// Increment used count
+		if err := tx.Model(&promocode.PromoCode{}).Where("id = ?", promoCode.ID).
+			Update("used_count", gorm.Expr("used_count + 1")).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &RedeemResponse{
+		Success:        true,
+		PlanName:       promoCode.PlanName,
+		DurationMonths: promoCode.DurationMonths,
+		NewPeriodEnd:   newPeriodEnd,
+		MessageCode:    ErrCodeRedeemSuccess,
+	}, nil
+}
+
+// GetRedemptionHistory gets redemption history for an organization
+func (s *Service) GetRedemptionHistory(ctx context.Context, orgID int64) ([]*promocode.Redemption, error) {
+	return s.repo.GetRedemptionsByOrg(ctx, orgID)
+}

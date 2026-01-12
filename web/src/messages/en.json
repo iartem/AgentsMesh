@@ -919,6 +919,36 @@
         "currentPlan": "Current Plan",
         "select": "Select",
         "free": "Free"
+      },
+      "promoCode": {
+        "title": "Promo Code",
+        "description": "Enter a promo code to get extra subscription time",
+        "placeholder": "Enter promo code",
+        "validate": "Validate",
+        "redeem": "Redeem",
+        "validating": "Validating...",
+        "redeeming": "Redeeming...",
+        "invalid": "Invalid promo code",
+        "expired": "Promo code has expired",
+        "used": "Promo code has already been used",
+        "success": "Successfully redeemed",
+        "valid": "Promo code is valid",
+        "plan": "Plan",
+        "duration": "Duration",
+        "months": "months",
+        "enterCode": "Please enter a promo code",
+        "validateError": "Validation failed, please try again",
+        "redeemError": "Redemption failed, please try again",
+        "confirmRedeem": "Click \"Redeem\" to confirm",
+        "errors": {
+          "promo_code_not_found": "Promo code not found",
+          "promo_code_expired": "Promo code has expired",
+          "promo_code_disabled": "Promo code is disabled",
+          "promo_code_max_used": "Promo code has reached maximum uses",
+          "promo_code_invalid": "Invalid promo code",
+          "promo_code_already_used": "You have already used this promo code",
+          "promo_code_not_owner": "Only organization owner can redeem promo codes"
+        }
       }
     },
     "notifications": {

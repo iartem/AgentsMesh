@@ -919,6 +919,36 @@
         "currentPlan": "当前方案",
         "select": "选择",
         "free": "免费"
+      },
+      "promoCode": {
+        "title": "优惠码",
+        "description": "输入优惠码获取套餐时长",
+        "placeholder": "输入优惠码",
+        "validate": "验证",
+        "redeem": "确认兑换",
+        "validating": "验证中...",
+        "redeeming": "兑换中...",
+        "invalid": "优惠码无效",
+        "expired": "优惠码已过期",
+        "used": "优惠码已被使用",
+        "success": "兑换成功",
+        "valid": "优惠码有效",
+        "plan": "套餐",
+        "duration": "时长",
+        "months": "个月",
+        "enterCode": "请输入优惠码",
+        "validateError": "验证失败，请稍后重试",
+        "redeemError": "兑换失败，请稍后重试",
+        "confirmRedeem": "点击「确认兑换」完成兑换",
+        "errors": {
+          "promo_code_not_found": "优惠码不存在",
+          "promo_code_expired": "优惠码已过期",
+          "promo_code_disabled": "优惠码已停用",
+          "promo_code_max_used": "优惠码已达使用上限",
+          "promo_code_invalid": "优惠码无效",
+          "promo_code_already_used": "您已使用过该优惠码",
+          "promo_code_not_owner": "仅组织所有者可使用优惠码"
+        }
       }
     },
     "notifications": {

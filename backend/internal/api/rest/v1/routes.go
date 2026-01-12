@@ -16,6 +16,7 @@ import (
 	"github.com/anthropics/agentmesh/backend/internal/service/gitprovider"
 	"github.com/anthropics/agentmesh/backend/internal/service/invitation"
 	"github.com/anthropics/agentmesh/backend/internal/service/organization"
+	"github.com/anthropics/agentmesh/backend/internal/service/promocode"
 	"github.com/anthropics/agentmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentmesh/backend/internal/service/sshkey"
@@ -54,6 +55,7 @@ type Services struct {
 	Email             email.Service        // Email service
 	Invitation        *invitation.Service  // Organization invitations
 	File              *fileservice.Service // File storage service
+	PromoCode         *promocode.Service   // Promo code management
 }
 
 // RegisterAllRoutes registers all API v1 routes with proper handlers
@@ -67,6 +69,17 @@ func RegisterAllRoutes(rg *gin.RouterGroup, cfg *config.Config, svc *Services) {
 	// Organization routes (authenticated, some require org context)
 	// Path changed: /organizations → /orgs
 	RegisterOrganizationRoutes(rg.Group("/orgs"), svc.Org)
+
+	// Admin routes (require admin role)
+	RegisterAdminRoutes(rg.Group("/admin"), svc)
+}
+
+// RegisterAdminRoutes registers admin-only routes
+func RegisterAdminRoutes(rg *gin.RouterGroup, svc *Services) {
+	// Promo Codes admin
+	if svc.PromoCode != nil {
+		RegisterAdminPromoCodeRoutes(rg.Group("/promo-codes"), svc.PromoCode)
+	}
 }
 
 // RegisterOrgScopedRoutes registers organization-scoped routes (require tenant context)
@@ -235,6 +248,11 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 
 	// Billing
 	RegisterBillingHandlers(rg.Group("/billing"), svc.Billing)
+
+	// Promo Codes (under billing)
+	if svc.PromoCode != nil {
+		RegisterPromoCodeRoutes(rg.Group("/billing/promo-codes"), svc.PromoCode)
+	}
 
 	// DevMesh (topology visualization)
 	devmesh := rg.Group("/devmesh")

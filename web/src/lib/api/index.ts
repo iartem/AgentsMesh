@@ -116,3 +116,12 @@ export type {
   CreateConnectionRequest,
   UpdateConnectionRequest,
 } from "./git-connection";
+
+// Promo Code
+export { promoCodeApi } from "./promocode";
+export type {
+  PromoCodeType,
+  ValidatePromoCodeResponse,
+  RedeemPromoCodeResponse,
+  PromoCodeRedemption,
+} from "./promocode";

@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// Get the expected API URL - should match what base.ts uses
+const EXPECTED_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 import { request, ApiError, orgPath } from "../base";
 
 // Mock useAuthStore
@@ -35,7 +39,7 @@ describe("request", () => {
     const result = await request("/api/v1/test");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test",
+      `${EXPECTED_API_URL}/api/v1/test`,
       {
         method: "GET",
         headers: {
@@ -62,7 +66,7 @@ describe("request", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test",
+      `${EXPECTED_API_URL}/api/v1/test`,
       {
         method: "POST",
         headers: {
@@ -86,7 +90,7 @@ describe("request", () => {
     await request("/api/v1/test/1", { method: "PUT", body });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test/1",
+      `${EXPECTED_API_URL}/api/v1/test/1`,
       expect.objectContaining({ method: "PUT" })
     );
   });
@@ -100,7 +104,7 @@ describe("request", () => {
     await request("/api/v1/test/1", { method: "DELETE" });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test/1",
+      `${EXPECTED_API_URL}/api/v1/test/1`,
       expect.objectContaining({ method: "DELETE" })
     );
   });
@@ -118,7 +122,7 @@ describe("request", () => {
     await request("/api/v1/test");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test",
+      `${EXPECTED_API_URL}/api/v1/test`,
       {
         method: "GET",
         headers: {
@@ -143,7 +147,7 @@ describe("request", () => {
     await request("/api/v1/test");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test",
+      `${EXPECTED_API_URL}/api/v1/test`,
       {
         method: "GET",
         headers: {
@@ -216,7 +220,7 @@ describe("request", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/test",
+      `${EXPECTED_API_URL}/api/v1/test`,
       expect.objectContaining({
         headers: expect.objectContaining({
           "X-Custom-Header": "custom-value",
