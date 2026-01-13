@@ -433,7 +433,7 @@ func handleGitHubCallback(ctx context.Context, cfg OAuthConfig, code string) (*O
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	// Reuse client with timeout for user info request
 	userResp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
