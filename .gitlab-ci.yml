@@ -1,0 +1,72 @@
+variables:
+  REGISTRY: registry.corp.agentsmesh.ai
+  BACKEND_IMAGE: ${REGISTRY}/agentmesh/backend
+  WEB_IMAGE: ${REGISTRY}/agentmesh/web
+  RUNNER_IMAGE: ${REGISTRY}/agentmesh/runner
+
+stages:
+  - build
+  - push
+
+# Build backend image
+build-backend:
+  stage: build
+  tags:
+    - amd64
+    - docker
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - cd backend
+    - docker build -f ../deploy/prod/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
+    - docker push ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${BACKEND_IMAGE}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/**/*
+        - deploy/prod/backend.Dockerfile
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# Build web image
+build-web:
+  stage: build
+  tags:
+    - amd64
+    - docker
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - cd web
+    - docker build -f ../deploy/prod/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
+    - docker push ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${WEB_IMAGE}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - web/**/*
+        - deploy/prod/web.Dockerfile
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# Build runner image
+build-runner:
+  stage: build
+  tags:
+    - amd64
+    - docker
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - cd runner
+    - docker build -f ../deploy/prod/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
+    - docker push ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${RUNNER_IMAGE}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - runner/**/*
+        - deploy/prod/runner.Dockerfile
+    - if: $CI_PIPELINE_SOURCE == "web"
