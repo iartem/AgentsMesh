@@ -99,23 +99,17 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
     return runners.find(r => r.id === selectedRunnerId) || null;
   }, [runners, selectedRunnerId]);
 
-  // Filter agent types based on selected runner's capabilities
+  // All agent types are available when a runner is selected
+  // The Backend now controls which agents are supported
   const availableAgentTypes = useMemo((): AgentTypeData[] => {
-    if (!selectedRunner?.capabilities || selectedRunner.capabilities.length === 0) {
-      // If no runner selected or no capabilities, return empty list
+    if (!selectedRunner) {
+      // If no runner selected, return empty list
       return [];
     }
 
-    // Collect unique agent slugs from all plugin capabilities
-    const supportedSlugs = new Set<string>();
-    for (const cap of selectedRunner.capabilities) {
-      for (const agent of cap.supported_agents || []) {
-        supportedSlugs.add(agent);
-      }
-    }
-
-    // Filter agent types by supported slugs
-    return agentTypes.filter(agent => supportedSlugs.has(agent.slug));
+    // Return all active agent types when a runner is selected
+    // The actual availability check is done server-side during pod creation
+    return agentTypes.filter(agent => agent.is_active);
   }, [selectedRunner, agentTypes]);
 
   return {

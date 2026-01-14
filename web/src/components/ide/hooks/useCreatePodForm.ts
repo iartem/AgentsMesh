@@ -207,9 +207,8 @@ export function useCreatePodForm(
       setError(null);
 
       try {
-        // Build plugin config for API
-        const config: Record<string, unknown> = {
-          agent_type: selectedAgentSlug,
+        // Build config overrides for API
+        const configOverrides: Record<string, unknown> = {
           ...pluginConfig,
         };
 
@@ -219,7 +218,7 @@ export function useCreatePodForm(
           repository_id: selectedRepository || undefined,
           branch_name: selectedBranch || undefined,
           initial_prompt: prompt,
-          plugin_config: config,
+          config_overrides: configOverrides,
           credential_profile_id: selectedCredentialProfile > 0 ? selectedCredentialProfile : undefined,
         });
 

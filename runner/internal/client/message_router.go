@@ -55,8 +55,8 @@ func (r *MessageRouter) handleCreatePod(msg ProtocolMessage) {
 		return
 	}
 
-	log.Printf("[router] Received create pod request: pod_key=%s, initial_command=%s, permission_mode=%s",
-		req.PodKey, req.InitialCommand, req.PermissionMode)
+	log.Printf("[router] Received create pod request: pod_key=%s, command=%s",
+		req.PodKey, req.LaunchCommand)
 
 	if err := r.handler.OnCreatePod(req); err != nil {
 		log.Printf("[router] Failed to create pod: %v", err)

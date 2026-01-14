@@ -25,6 +25,7 @@ type PodHandler struct {
 	runnerConnMgr     *runner.ConnectionManager   // Runner connections (not abstracted)
 	podCoordinator    *runner.PodCoordinator      // Pod coordination (not abstracted)
 	terminalRouter    interface{}                 // *runner.TerminalRouter, optional
+	configBuilder     *agent.ConfigBuilder        // New protocol: builds pod config from agent type templates
 }
 
 // PodHandlerOption is a functional option for configuring PodHandler
@@ -85,6 +86,7 @@ func NewPodHandler(podService *agentpod.PodService, runnerService *runner.Servic
 		podService:    podService,
 		runnerService: runnerService,
 		agentService:  agentService,
+		configBuilder: agent.NewConfigBuilder(agentService), // Initialize ConfigBuilder for new protocol
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -154,7 +156,7 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 // CreatePodRequest represents pod creation request
 type CreatePodRequest struct {
 	RunnerID          int64   `json:"runner_id" binding:"required"`
-	AgentTypeID       *int64  `json:"agent_type_id"`
+	AgentTypeID       *int64  `json:"agent_type_id" binding:"required"` // Required for new protocol
 	CustomAgentTypeID *int64  `json:"custom_agent_type_id"`
 	RepositoryID      *int64  `json:"repository_id"`
 	RepositoryURL     *string `json:"repository_url"`      // Direct repository URL (takes precedence over repository_id)
@@ -169,9 +171,8 @@ type CreatePodRequest struct {
 	// - >0: Use specified credential profile ID
 	CredentialProfileID *int64 `json:"credential_profile_id"`
 
-	// PluginConfig allows advanced users to pass additional configuration to sandbox plugins
-	// Fields: init_script, init_timeout, env_vars
-	PluginConfig map[string]interface{} `json:"plugin_config"`
+	// ConfigOverrides allows users to override agent type default configuration
+	ConfigOverrides map[string]interface{} `json:"config_overrides"`
 }
 
 // CreatePod creates a new pod
@@ -227,20 +228,19 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 			permissionMode = *pod.PermissionMode
 		}
 
-		// Build PluginConfig for Runner's Sandbox plugins
-		pluginConfig := h.buildPluginConfig(c, &req)
-
-		createReq := &runner.CreatePodRequest{
-			PodKey:         pod.PodKey,
-			InitialCommand: "claude", // Default command to run Claude Code CLI
-			InitialPrompt:  req.InitialPrompt,
-			PermissionMode: permissionMode,
-			PluginConfig:   pluginConfig,
+		// Build pod config using ConfigBuilder (new protocol only)
+		podConfig, err := h.buildPodConfigWithNewProtocol(c, &req, pod.PodKey, permissionMode)
+		if err != nil {
+			log.Printf("[pods] Failed to build pod config: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to build pod configuration: " + err.Error(),
+				"code":  "POD_CONFIG_BUILD_FAILED",
+			})
+			return
 		}
 
-		// Log the request
-		log.Printf("[pods] Sending create_pod to runner %d for pod %s with plugin_config: %v",
-			req.RunnerID, pod.PodKey, pluginConfig)
+		createReq := h.convertPodConfigToRequest(podConfig, pod.PodKey)
+		log.Printf("[pods] Sending create_pod to runner %d for pod %s", req.RunnerID, pod.PodKey)
 
 		if err := h.podCoordinator.CreatePod(c.Request.Context(), req.RunnerID, createReq); err != nil {
 			// Log the error but don't fail - pod is created, runner might be offline
@@ -411,7 +411,7 @@ func (h *PodHandler) SendPrompt(c *gin.Context) {
 // NOTE: Terminal-related handlers (ObserveTerminal, SendTerminalInput, ResizeTerminal)
 // have been moved to pod_terminal.go for better code organization
 
-// NOTE: buildPluginConfig and related config resolution functions
+// NOTE: buildPodConfigWithNewProtocol and related config resolution functions
 // have been moved to pod_config.go for better code organization
 
 // NOTE: mapCredentialsToEnvVars, getUserGitCredential, getUserGitToken, isPublicProvider

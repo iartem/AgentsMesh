@@ -71,7 +71,13 @@ type AgentType struct {
 	Description *string `gorm:"type:text" json:"description,omitempty"`
 
 	LaunchCommand string  `gorm:"size:500;not null" json:"launch_command"`
+	Executable    string  `gorm:"size:100" json:"executable,omitempty"` // Executable name for availability check
 	DefaultArgs   *string `gorm:"type:text" json:"default_args,omitempty"`
+
+	// New fields for config-driven agent setup
+	ConfigSchema    ConfigSchema    `gorm:"type:jsonb;not null;default:'{}'" json:"config_schema"`
+	CommandTemplate CommandTemplate `gorm:"type:jsonb;not null;default:'{}'" json:"command_template"`
+	FilesTemplate   FilesTemplate   `gorm:"type:jsonb" json:"files_template,omitempty"`
 
 	CredentialSchema CredentialSchema `gorm:"type:jsonb;not null;default:'[]'" json:"credential_schema"`
 	StatusDetection  StatusDetection  `gorm:"type:jsonb" json:"status_detection,omitempty"`

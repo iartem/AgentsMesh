@@ -2,14 +2,10 @@ package runner
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/anthropics/agentmesh/backend/internal/domain/agentpod"
-	runnerDomain "github.com/anthropics/agentmesh/backend/internal/domain/runner"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +19,6 @@ type PodCoordinator struct {
 
 	// Callbacks
 	onStatusChange func(podKey string, status string, agentStatus string)
-
-	// Cache for capabilities hash to avoid unnecessary DB updates
-	capabilitiesHashCache map[int64]string
 }
 
 // NewPodCoordinator creates a new pod coordinator
@@ -37,12 +30,11 @@ func NewPodCoordinator(
 	logger *slog.Logger,
 ) *PodCoordinator {
 	pc := &PodCoordinator{
-		db:                    db,
-		connectionManager:     cm,
-		terminalRouter:        tr,
-		heartbeatBatcher:      hb,
-		logger:                logger,
-		capabilitiesHashCache: make(map[int64]string),
+		db:                db,
+		connectionManager: cm,
+		terminalRouter:    tr,
+		heartbeatBatcher:  hb,
+		logger:            logger,
 	}
 
 	// Set up callbacks from connection manager
@@ -150,25 +142,4 @@ func (pc *PodCoordinator) MarkReconnected(ctx context.Context, podKey string) er
 			"status":        agentpod.StatusRunning,
 			"last_activity": time.Now(),
 		}).Error
-}
-
-// hashCapabilities computes a SHA256 hash of capabilities for change detection.
-// This avoids unnecessary database updates when capabilities haven't changed.
-func (pc *PodCoordinator) hashCapabilities(caps []runnerDomain.PluginCapability) string {
-	data, err := json.Marshal(caps)
-	if err != nil {
-		return ""
-	}
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash)
-}
-
-// marshalCapabilities marshals capabilities to JSON bytes, logging errors.
-func (pc *PodCoordinator) marshalCapabilities(caps []runnerDomain.PluginCapability) []byte {
-	data, err := json.Marshal(caps)
-	if err != nil {
-		pc.logger.Warn("failed to marshal capabilities", "error", err)
-		return nil
-	}
-	return data
 }

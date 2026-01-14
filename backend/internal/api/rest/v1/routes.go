@@ -86,6 +86,7 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 	agents := rg.Group("/agents")
 	{
 		agents.GET("/types", agentHandler.ListAgentTypes)
+		agents.GET("/types/:agent_type_id", agentHandler.GetAgentType)
 		agents.GET("/config", agentHandler.GetOrganizationAgentConfig)
 		agents.POST("/config", agentHandler.EnableAgent)
 		agents.DELETE("/config/:agent_type_id", agentHandler.DisableAgent)
@@ -98,6 +99,8 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		agents.GET("/:agent_type_id/default-config", agentHandler.GetDefaultConfig)
 		agents.PUT("/:agent_type_id/default-config", agentHandler.SetDefaultConfig)
 		agents.DELETE("/:agent_type_id/default-config", agentHandler.DeleteDefaultConfig)
+		// Config schema (for frontend dynamic form rendering)
+		agents.GET("/:agent_type_id/config-schema", agentHandler.GetAgentTypeConfigSchema)
 	}
 
 	// NOTE: Git Providers and SSH Keys have been moved to user-level settings
@@ -130,7 +133,6 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		runners.PUT("/:id", runnerHandler.UpdateRunner)
 		runners.DELETE("/:id", runnerHandler.DeleteRunner)
 		runners.POST("/:id/regenerate-token", runnerHandler.RegenerateAuthToken)
-		runners.GET("/:id/plugins", runnerHandler.GetPluginOptions)
 	}
 
 	// Pods - using functional options for cleaner dependency injection

@@ -34,17 +34,17 @@ export type {
 
 // Runner
 export { runnerApi } from "./runner";
-export type {
-  RunnerData,
-  PluginCapability,
-  UIConfig,
-  UIField,
-  UIOption,
-} from "./runner";
+export type { RunnerData } from "./runner";
 
 // Agent
 export { agentApi } from "./agent";
-export type { AgentTypeData, OrganizationAgentConfigData } from "./agent";
+export type {
+  AgentTypeData,
+  OrganizationAgentConfigData,
+  ConfigField,
+  ConfigFieldOption,
+  ConfigSchema,
+} from "./agent";
 
 // Repository
 export { repositoryApi } from "./repository";

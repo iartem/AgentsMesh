@@ -29,6 +29,11 @@ func (rs *RunnerSender) SendMessage(ctx context.Context, runnerID int64, msg *Ru
 		return ErrRunnerNotConnected
 	}
 
+	// Check if runner has completed initialization (skip for init messages)
+	if msg.Type != MsgTypeInitializeResult && !conn.IsInitialized() {
+		return ErrRunnerNotInitialized
+	}
+
 	return conn.SendMessage(msg)
 }
 
@@ -37,8 +42,7 @@ func (rs *RunnerSender) SendCreatePod(ctx context.Context, runnerID int64, req *
 	rs.cm.logger.Info("sending create_pod to runner",
 		"runner_id", runnerID,
 		"pod_key", req.PodKey,
-		"initial_command", req.InitialCommand,
-		"permission_mode", req.PermissionMode)
+		"launch_command", req.LaunchCommand)
 
 	data, err := json.Marshal(req)
 	if err != nil {

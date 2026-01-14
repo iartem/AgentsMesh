@@ -4,14 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
+// 协议版本
+const CurrentProtocolVersion = 2
+
 // ServerConnection manages the WebSocket connection to the server.
-// Responsibilities: Connection lifecycle, read/write loops.
+// Responsibilities: Connection lifecycle, read/write loops, initialization.
 // Message routing is delegated to MessageRouter.
 // Reconnection timing is delegated to ReconnectStrategy.
 type ServerConnection struct {
@@ -33,7 +39,18 @@ type ServerConnection struct {
 
 	// Heartbeat
 	heartbeatInterval time.Duration
-	capabilitiesSent  bool // Only send capabilities on first heartbeat after connect
+
+	// Initialization timeout
+	initTimeout time.Duration
+
+	// Runner info
+	runnerVersion string
+	mcpPort       int
+
+	// Initialization state
+	initialized     bool
+	availableAgents []string
+	initCh          chan InitializeResult // Channel to receive initialize_result
 
 	// Channels
 	sendCh   chan ProtocolMessage
@@ -43,7 +60,10 @@ type ServerConnection struct {
 
 // NewServerConnection creates a new server connection.
 // serverURL should be the WebSocket base URL (e.g., ws://localhost:8080)
-// The actual connection URL will be: {serverURL}/api/v1/orgs/{orgSlug}/ws/runners?node_id=xxx&token=xxx
+// The actual connection URL will be: {serverURL}/api/v1/orgs/{orgSlug}/ws/runners?node_id=xxx
+// DefaultInitTimeout is the default timeout for initialization handshake
+const DefaultInitTimeout = 30 * time.Second
+
 func NewServerConnection(serverURL, nodeID, authToken, orgSlug string) *ServerConnection {
 	conn := &ServerConnection{
 		serverURL:         serverURL,
@@ -52,11 +72,20 @@ func NewServerConnection(serverURL, nodeID, authToken, orgSlug string) *ServerCo
 		orgSlug:           orgSlug,
 		dialer:            NewGorillaDialer(), // Default dialer
 		heartbeatInterval: 30 * time.Second,
+		initTimeout:       DefaultInitTimeout,
 		reconnectStrategy: NewReconnectStrategy(5*time.Second, 5*time.Minute),
 		sendCh:            make(chan ProtocolMessage, 100),
 		stopCh:            make(chan struct{}),
+		initCh:            make(chan InitializeResult, 1),
+		runnerVersion:     "1.0.0", // Default version
+		mcpPort:           19000,   // Default MCP port
 	}
 	return conn
+}
+
+// SetInitTimeout sets the initialization handshake timeout.
+func (c *ServerConnection) SetInitTimeout(timeout time.Duration) {
+	c.initTimeout = timeout
 }
 
 // WithDialer sets a custom WebSocket dialer (for testing).
@@ -77,8 +106,17 @@ func (c *ServerConnection) SetHeartbeatInterval(interval time.Duration) {
 	c.heartbeatInterval = interval
 }
 
+// SetRunnerVersion sets the runner version for initialization.
+func (c *ServerConnection) SetRunnerVersion(version string) {
+	c.runnerVersion = version
+}
+
+// SetMCPPort sets the MCP port for initialization.
+func (c *ServerConnection) SetMCPPort(port int) {
+	c.mcpPort = port
+}
+
 // SetAuthToken sets the authentication token.
-// This should be called after registration to update the token before connecting.
 func (c *ServerConnection) SetAuthToken(token string) {
 	c.mu.Lock()
 	c.authToken = token
@@ -86,7 +124,6 @@ func (c *ServerConnection) SetAuthToken(token string) {
 }
 
 // SetOrgSlug sets the organization slug.
-// This should be called after registration to update the org slug before connecting.
 func (c *ServerConnection) SetOrgSlug(orgSlug string) {
 	c.mu.Lock()
 	c.orgSlug = orgSlug
@@ -98,6 +135,20 @@ func (c *ServerConnection) GetOrgSlug() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.orgSlug
+}
+
+// IsInitialized returns whether the connection has completed initialization.
+func (c *ServerConnection) IsInitialized() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.initialized
+}
+
+// GetAvailableAgents returns the list of available agents on this runner.
+func (c *ServerConnection) GetAvailableAgents() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.availableAgents
 }
 
 // Connect establishes a connection to the server.
@@ -119,6 +170,7 @@ func (c *ServerConnection) Connect() error {
 
 	c.mu.Lock()
 	c.conn = conn
+	c.initialized = false
 	c.mu.Unlock()
 
 	log.Printf("[connection] Connected to server: %s (org: %s)", c.serverURL, c.orgSlug)
@@ -143,8 +195,6 @@ func (c *ServerConnection) Stop() {
 }
 
 // Send sends a message to the server (non-blocking).
-// Used for non-critical messages like heartbeat.
-// For terminal output, use SendWithBackpressure instead.
 func (c *ServerConnection) Send(msg ProtocolMessage) {
 	msg.Timestamp = time.Now().UnixMilli()
 	select {
@@ -156,8 +206,6 @@ func (c *ServerConnection) Send(msg ProtocolMessage) {
 }
 
 // SendWithBackpressure sends a message with backpressure (blocking).
-// Used for terminal output to ensure no data loss.
-// Returns false if the connection is stopped.
 func (c *ServerConnection) SendWithBackpressure(msg ProtocolMessage) bool {
 	msg.Timestamp = time.Now().UnixMilli()
 	select {
@@ -193,6 +241,16 @@ func (c *ServerConnection) SendEvent(msgType MessageType, data interface{}) erro
 	return nil
 }
 
+// HandleInitializeResult handles the initialize_result message from server.
+// Called by MessageRouter when receiving initialize_result.
+func (c *ServerConnection) HandleInitializeResult(result InitializeResult) {
+	select {
+	case c.initCh <- result:
+	default:
+		log.Printf("[connection] Initialize result channel full, dropping")
+	}
+}
+
 // connectionLoop manages the connection lifecycle.
 func (c *ServerConnection) connectionLoop() {
 	for {
@@ -209,7 +267,6 @@ func (c *ServerConnection) connectionLoop() {
 			log.Printf("[connection] Failed to connect (attempt=%d, error=%v), will retry in %v",
 				c.reconnectStrategy.AttemptCount(), err, delay)
 
-			// Wait with stop signal check
 			select {
 			case <-c.stopCh:
 				log.Println("[connection] Connection loop stopped during reconnect wait")
@@ -222,7 +279,7 @@ func (c *ServerConnection) connectionLoop() {
 		// Reset reconnect strategy on successful connection
 		c.reconnectStrategy.Reset()
 
-		// Run read/write loops
+		// Run read/write loops and initialization
 		c.runConnection()
 
 		// Check if we should stop before attempting reconnect
@@ -233,7 +290,7 @@ func (c *ServerConnection) connectionLoop() {
 		default:
 		}
 
-		// Connection closed, log and wait before reconnecting
+		// Connection closed, wait before reconnecting
 		log.Println("[connection] Connection closed, will attempt to reconnect")
 		select {
 		case <-c.stopCh:
@@ -248,24 +305,134 @@ func (c *ServerConnection) connectionLoop() {
 func (c *ServerConnection) runConnection() {
 	done := make(chan struct{})
 
-	// Reset capabilities flag for new connection (will be sent on first heartbeat)
-	c.capabilitiesSent = false
-
 	// Start write loop
 	go c.writeLoop(done)
 
-	// Start heartbeat
+	// Start read loop in goroutine so we can do initialization
+	readDone := make(chan struct{})
+	go func() {
+		c.readLoop()
+		close(readDone)
+	}()
+
+	// Perform initialization (three-phase handshake)
+	if err := c.performInitialization(); err != nil {
+		log.Printf("[connection] Initialization failed: %v", err)
+		c.mu.Lock()
+		if c.conn != nil {
+			c.conn.Close()
+		}
+		c.mu.Unlock()
+		close(done)
+		<-readDone
+		return
+	}
+
+	// Start heartbeat after successful initialization
 	go c.heartbeatLoop(done)
 
-	// Run read loop (blocking)
-	c.readLoop()
+	// Wait for read loop to finish
+	<-readDone
 
 	// Signal other goroutines to stop
 	close(done)
 }
 
+// performInitialization performs the three-phase initialization handshake.
+func (c *ServerConnection) performInitialization() error {
+	log.Println("[connection] Starting initialization handshake...")
+
+	// Phase 1: Send initialize request
+	hostname, _ := os.Hostname()
+	initParams := InitializeParams{
+		ProtocolVersion: CurrentProtocolVersion,
+		RunnerInfo: RunnerInfo{
+			Version:  c.runnerVersion,
+			NodeID:   c.nodeID,
+			MCPPort:  c.mcpPort,
+			OS:       runtime.GOOS,
+			Arch:     runtime.GOARCH,
+			Hostname: hostname,
+		},
+	}
+
+	if err := c.SendEvent(MsgTypeInitialize, initParams); err != nil {
+		return fmt.Errorf("failed to send initialize: %w", err)
+	}
+	log.Printf("[connection] Sent initialize request: version=%s, mcp_port=%d", c.runnerVersion, c.mcpPort)
+
+	// Phase 2: Wait for initialize_result
+	select {
+	case result := <-c.initCh:
+		log.Printf("[connection] Received initialize_result: server_version=%s, agent_types=%d, features=%v",
+			result.ServerInfo.Version, len(result.AgentTypes), result.Features)
+
+		// Phase 3: Check available agents and send initialized
+		availableAgents := c.checkAvailableAgents(result.AgentTypes)
+		c.mu.Lock()
+		c.availableAgents = availableAgents
+		c.mu.Unlock()
+
+		initializedParams := InitializedParams{
+			AvailableAgents: availableAgents,
+		}
+
+		if err := c.SendEvent(MsgTypeInitialized, initializedParams); err != nil {
+			return fmt.Errorf("failed to send initialized: %w", err)
+		}
+		log.Printf("[connection] Sent initialized: available_agents=%v", availableAgents)
+
+		c.mu.Lock()
+		c.initialized = true
+		c.mu.Unlock()
+
+		log.Println("[connection] Initialization completed successfully")
+		return nil
+
+	case <-time.After(c.initTimeout):
+		return fmt.Errorf("timeout waiting for initialize_result after %v", c.initTimeout)
+
+	case <-c.stopCh:
+		return fmt.Errorf("connection stopped during initialization")
+	}
+}
+
+// checkAvailableAgents checks which agents are available on this runner.
+func (c *ServerConnection) checkAvailableAgents(agentTypes []AgentTypeInfo) []string {
+	var available []string
+
+	for _, agent := range agentTypes {
+		if agent.Executable == "" {
+			log.Printf("[connection] Agent %s has no executable defined, skipping", agent.Slug)
+			continue
+		}
+
+		// Check if executable exists in PATH
+		path, err := exec.LookPath(agent.Executable)
+		if err != nil {
+			log.Printf("[connection] Agent %s: executable '%s' not found in PATH",
+				agent.Slug, agent.Executable)
+			continue
+		}
+
+		log.Printf("[connection] Agent %s: found executable at %s", agent.Slug, path)
+		available = append(available, agent.Slug)
+	}
+
+	return available
+}
+
 // readLoop reads messages from the server.
 func (c *ServerConnection) readLoop() {
+	// Get connection reference under lock for this read loop
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+
+	if conn == nil {
+		return
+	}
+
 	defer func() {
 		c.mu.Lock()
 		if c.conn != nil {
@@ -274,33 +441,19 @@ func (c *ServerConnection) readLoop() {
 		c.mu.Unlock()
 	}()
 
-	// Set read deadline to detect stale connections
-	// The ping from server will reset this via PingHandler
-	readTimeout := 90 * time.Second // Should be > server's ping interval (30s)
+	readTimeout := 90 * time.Second
 
-	// Set up ping handler to reset read deadline when server sends ping
-	// Server sends ping every 30s, so we should receive it well before 90s timeout
-	c.mu.Lock()
-	if c.conn != nil {
-		c.conn.SetPingHandler(func(appData string) error {
-			log.Printf("[connection] Received ping from server, resetting read deadline")
-			c.conn.SetReadDeadline(time.Now().Add(readTimeout))
-			// Write pong response (gorilla/websocket default behavior)
-			return c.conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
-		})
-	}
-	c.mu.Unlock()
+	conn.SetPingHandler(func(appData string) error {
+		log.Printf("[connection] Received ping from server, resetting read deadline")
+		conn.SetReadDeadline(time.Now().Add(readTimeout))
+		return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
+	})
 
 	for {
-		c.mu.Lock()
-		if c.conn != nil {
-			c.conn.SetReadDeadline(time.Now().Add(readTimeout))
-		}
-		c.mu.Unlock()
+		conn.SetReadDeadline(time.Now().Add(readTimeout))
 
-		_, data, err := c.conn.ReadMessage()
+		_, data, err := conn.ReadMessage()
 		if err != nil {
-			// Log all read errors for debugging
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 				log.Printf("[connection] WebSocket read error: %v", err)
 			} else {
@@ -315,10 +468,20 @@ func (c *ServerConnection) readLoop() {
 			continue
 		}
 
-		// Log all incoming messages for debugging
 		log.Printf("[connection] Received message: type=%s, pod_key=%s", msg.Type, msg.PodKey)
 
-		// Delegate to message router (SRP)
+		// Handle initialize_result specially (before full initialization)
+		if msg.Type == MsgTypeInitializeResult {
+			var result InitializeResult
+			if err := json.Unmarshal(msg.Data, &result); err != nil {
+				log.Printf("[connection] Failed to parse initialize_result: %v", err)
+				continue
+			}
+			c.HandleInitializeResult(result)
+			continue
+		}
+
+		// Delegate other messages to router (only after initialization)
 		if c.router != nil {
 			c.router.Route(msg)
 		}
@@ -348,7 +511,6 @@ func (c *ServerConnection) writeLoop(done <-chan struct{}) {
 			}
 
 			if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				// Close the connection to trigger readLoop exit and reconnection
 				c.conn.Close()
 				c.mu.Unlock()
 				log.Printf("[connection] Failed to send message, closing connection for reconnect: %v", err)
@@ -380,27 +542,19 @@ func (c *ServerConnection) heartbeatLoop(done <-chan struct{}) {
 }
 
 // sendHeartbeat sends a heartbeat message.
-// Capabilities are only sent on the first heartbeat after connection to reduce bandwidth.
 func (c *ServerConnection) sendHeartbeat() {
 	var pods []PodInfo
-	var capabilities []PluginCapability
 
 	if c.handler != nil {
 		pods = c.handler.OnListPods()
-		// Only send capabilities on first heartbeat after connect
-		if !c.capabilitiesSent {
-			capabilities = c.handler.GetCapabilities()
-			c.capabilitiesSent = true
-		}
 	}
 
 	data := HeartbeatData{
-		NodeID:       c.nodeID,
-		Pods:         pods,
-		Capabilities: capabilities,
+		NodeID: c.nodeID,
+		Pods:   pods,
 	}
 
-	log.Printf("[connection] Sending heartbeat with %d pods, %d capabilities", len(pods), len(capabilities))
+	log.Printf("[connection] Sending heartbeat with %d pods", len(pods))
 
 	if err := c.SendEvent(MsgTypeHeartbeat, data); err != nil {
 		log.Printf("[connection] Failed to send heartbeat: %v", err)

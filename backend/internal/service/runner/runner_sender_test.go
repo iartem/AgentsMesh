@@ -28,14 +28,63 @@ func TestRunnerSender_SendMessage_NotConnected(t *testing.T) {
 	assert.Equal(t, ErrRunnerNotConnected, err)
 }
 
+func TestRunnerSender_SendMessage_NotInitialized(t *testing.T) {
+	cm := NewConnectionManager(newTestLogger())
+	defer cm.Close()
+
+	// Create connection but don't initialize it
+	conn := newTestWebSocketConn(t)
+	rc := cm.AddConnection(1, conn)
+	defer cm.RemoveConnection(1)
+
+	// Start consuming messages
+	go func() {
+		for range rc.Send {
+		}
+	}()
+
+	sender := NewRunnerSender(cm)
+	ctx := context.Background()
+
+	// Should fail because connection is not initialized
+	err := sender.SendMessage(ctx, 1, &RunnerMessage{Type: "test"})
+	assert.Equal(t, ErrRunnerNotInitialized, err)
+}
+
+func TestRunnerSender_SendMessage_InitializeResultAllowed(t *testing.T) {
+	cm := NewConnectionManager(newTestLogger())
+	defer cm.Close()
+
+	// Create connection but don't initialize it
+	conn := newTestWebSocketConn(t)
+	rc := cm.AddConnection(1, conn)
+	defer cm.RemoveConnection(1)
+
+	// Start consuming messages
+	go func() {
+		for range rc.Send {
+		}
+	}()
+
+	sender := NewRunnerSender(cm)
+	ctx := context.Background()
+
+	// initialize_result should be allowed even when not initialized
+	err := sender.SendMessage(ctx, 1, &RunnerMessage{Type: MsgTypeInitializeResult})
+	assert.NoError(t, err)
+}
+
 func TestRunnerSender_SendMessage_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
 	// Create mock connection
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	// Start consuming messages
 	go func() {
@@ -65,9 +114,12 @@ func TestRunnerSender_SendCreatePod_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	go func() {
 		for range rc.Send {
@@ -78,9 +130,9 @@ func TestRunnerSender_SendCreatePod_Success(t *testing.T) {
 	ctx := context.Background()
 
 	err := sender.SendCreatePod(ctx, 1, &CreatePodRequest{
-		PodKey:         "test-pod",
-		InitialCommand: "bash",
-		PermissionMode: "normal",
+		PodKey:        "test-pod",
+		LaunchCommand: "bash",
+		LaunchArgs:    []string{"--login"},
 	})
 	assert.NoError(t, err)
 }
@@ -100,9 +152,12 @@ func TestRunnerSender_SendTerminatePod_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	go func() {
 		for range rc.Send {
@@ -131,9 +186,12 @@ func TestRunnerSender_SendTerminalInput_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	go func() {
 		for range rc.Send {
@@ -162,9 +220,12 @@ func TestRunnerSender_SendTerminalResize_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	go func() {
 		for range rc.Send {
@@ -193,9 +254,12 @@ func TestRunnerSender_SendPrompt_Success(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	go func() {
 		for range rc.Send {
@@ -213,9 +277,12 @@ func TestRunnerSender_AllMethods_WithConnection(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())
 	defer cm.Close()
 
-	conn := newMockWebsocketConn()
+	conn := newTestWebSocketConn(t)
 	rc := cm.AddConnection(1, conn)
 	defer cm.RemoveConnection(1)
+
+	// Mark connection as initialized (required for sending non-init messages)
+	rc.SetInitialized(true, []string{})
 
 	// Consume messages
 	messageCount := 0

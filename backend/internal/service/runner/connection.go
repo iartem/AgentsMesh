@@ -31,27 +31,28 @@ func (rc *RunnerConnection) SendMessage(msg *RunnerMessage) error {
 	}
 }
 
-// Close closes the connection
+// Close closes the connection safely (idempotent)
 func (rc *RunnerConnection) Close() {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
+	rc.closeOnce.Do(func() {
+		rc.mu.Lock()
+		if rc.Conn != nil {
+			rc.Conn.Close()
+			rc.Conn = nil
+		}
+		rc.mu.Unlock()
 
-	if rc.Conn != nil {
-		rc.Conn.Close()
-		rc.Conn = nil
-	}
-
-	// Close send channel safely
-	select {
-	case <-rc.Send:
-	default:
+		// Close send channel safely
 		close(rc.Send)
-	}
+	})
 }
 
 // WritePump pumps messages from the send channel to the WebSocket
 func (rc *RunnerConnection) WritePump() {
-	ticker := time.NewTicker(30 * time.Second)
+	pingInterval := rc.PingInterval
+	if pingInterval <= 0 {
+		pingInterval = 30 * time.Second // default fallback
+	}
+	ticker := time.NewTicker(pingInterval)
 	defer func() {
 		ticker.Stop()
 		rc.Close()

@@ -1,6 +1,6 @@
 export { NotificationSettings } from "./NotificationSettings";
 export { LanguageSettings } from "./LanguageSettings";
 export { PersonalSettingsSidebar } from "./PersonalSettingsSidebar";
-export { PluginConfigForm } from "./PluginConfigForm";
+export { ConfigForm } from "./ConfigForm";
 export { GitSettingsContent } from "./GitSettingsContent";
 export { AgentCredentialsSettings } from "./AgentCredentialsSettings";

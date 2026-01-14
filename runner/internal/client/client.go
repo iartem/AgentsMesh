@@ -26,16 +26,12 @@ const (
 	MessageTypeError          = "error"
 
 	// From server (to runner)
-	MessageTypeCreatePod    = "create_pod"
-	MessageTypeTerminatePod = "terminate_pod"
+	MessageTypeCreatePod      = "create_pod"
+	MessageTypeTerminatePod   = "terminate_pod"
 	MessageTypeTerminalInput  = "terminal_input"
 	MessageTypeTerminalResize = "terminal_resize"
 	MessageTypeSendPrompt     = "send_prompt"
-
-	// Legacy aliases for backward compatibility
-	MessageTypePodStart = "create_pod"
-	MessageTypePodStop  = "terminate_pod"
-	MessageTypePodList  = "pod_list"
+	MessageTypePodList        = "pod_list"
 )
 
 // Message represents a WebSocket message
@@ -43,8 +39,7 @@ const (
 type Message struct {
 	Type      string          `json:"type"`
 	PodKey    string          `json:"pod_key,omitempty"`
-	Payload   json.RawMessage `json:"payload,omitempty"` // Legacy field for backward compatibility
-	Data      json.RawMessage `json:"data,omitempty"`    // New field matching backend
+	Data      json.RawMessage `json:"data,omitempty"`
 	Timestamp int64           `json:"timestamp"`
 }
 

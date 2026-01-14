@@ -258,8 +258,8 @@ func TestRunnerRunStopAllPods(t *testing.T) {
 
 // --- Test initEnhancedComponents ---
 
-// Note: TestInitEnhancedComponentsWithWorktree removed - worktreeService has been
-// replaced by sandbox plugins (WorktreePlugin). See sandbox/plugins/worktree_test.go.
+// Note: TestInitEnhancedComponentsWithWorktree removed - worktree functionality
+// is now handled by PodBuilder.setupWorkDir based on WorkDirConfig from Backend.
 
 func TestInitEnhancedComponentsWithMCPConfig(t *testing.T) {
 	tempDir := t.TempDir()

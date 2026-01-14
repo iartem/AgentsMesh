@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// ConfigValues represents dynamic configuration values from Plugin UI (JSONB)
+// ConfigValues represents dynamic configuration values (JSONB)
 type ConfigValues map[string]interface{}
 
 // Scan implements sql.Scanner for ConfigValues
@@ -43,7 +43,7 @@ type OrganizationAgentConfig struct {
 	OrganizationID int64 `gorm:"not null;index" json:"organization_id"`
 	AgentTypeID    int64 `gorm:"not null;index" json:"agent_type_id"`
 
-	// Dynamic configuration from Plugin UI (JSON)
+	// Dynamic configuration values (JSON)
 	ConfigValues ConfigValues `gorm:"type:jsonb;not null;default:'{}'" json:"config_values"`
 
 	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`

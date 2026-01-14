@@ -60,6 +60,14 @@ func (s *Service) UpdateHostInfo(ctx context.Context, runnerID int64, hostInfo m
 		Update("host_info", hostInfo).Error
 }
 
+// UpdateAvailableAgents updates the list of available agents for a runner
+// Called when runner completes initialization handshake
+func (s *Service) UpdateAvailableAgents(ctx context.Context, runnerID int64, agents []string) error {
+	return s.db.WithContext(ctx).Model(&runner.Runner{}).
+		Where("id = ?", runnerID).
+		Update("available_agents", runner.StringSlice(agents)).Error
+}
+
 // IncrementPods increments the pod count for a runner
 func (s *Service) IncrementPods(ctx context.Context, runnerID int64) error {
 	return s.db.WithContext(ctx).Exec(

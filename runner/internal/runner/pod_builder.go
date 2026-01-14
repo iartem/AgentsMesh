@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/anthropics/agentmesh/runner/internal/sandbox"
+	"github.com/anthropics/agentmesh/runner/internal/client"
 	"github.com/anthropics/agentmesh/runner/internal/terminal"
 	"github.com/anthropics/agentmesh/runner/internal/workspace"
 )
@@ -17,28 +20,18 @@ type PodBuilder struct {
 	runner *Runner
 
 	// Pod configuration
-	podKey           string
-	agentType        string
-	launchCommand    string
-	launchArgs       []string
-	envVars          map[string]string
-	rows             int
-	cols             int
-	initialPrompt    string
-	repositoryURL    string
-	branch           string
-	ticketIdentifier string
-	useWorktree      bool
-	prepScript       string
-	prepTimeout      int
+	podKey        string
+	agentType     string
+	launchCommand string
+	launchArgs    []string
+	envVars       map[string]string
+	rows          int
+	cols          int
+	initialPrompt string
 
-	// MCP configuration (legacy - now handled by sandbox plugin)
-	mcpEnabled bool
-	mcpServers []string
-
-	// Sandbox mode - use new plugin-based sandbox system
-	useSandbox   bool
-	pluginConfig map[string]interface{}
+	// New protocol fields
+	filesToCreate []client.FileToCreate
+	workDirConfig *client.WorkDirConfig
 }
 
 // NewPodBuilder creates a new pod builder.
@@ -101,48 +94,21 @@ func (b *PodBuilder) WithInitialPrompt(prompt string) *PodBuilder {
 	return b
 }
 
-// WithRepository configures repository URL and branch.
-func (b *PodBuilder) WithRepository(url, branch string) *PodBuilder {
-	b.repositoryURL = url
-	b.branch = branch
+// WithFilesToCreate sets the files to create in the sandbox.
+func (b *PodBuilder) WithFilesToCreate(files []client.FileToCreate) *PodBuilder {
+	b.filesToCreate = files
 	return b
 }
 
-// WithWorktree enables worktree mode for the given ticket.
-func (b *PodBuilder) WithWorktree(ticketIdentifier string) *PodBuilder {
-	b.ticketIdentifier = ticketIdentifier
-	b.useWorktree = true
+// WithWorkDirConfig sets the working directory configuration.
+func (b *PodBuilder) WithWorkDirConfig(config *client.WorkDirConfig) *PodBuilder {
+	b.workDirConfig = config
 	return b
 }
 
-// WithPreparationScript sets a script to run before pod starts.
-func (b *PodBuilder) WithPreparationScript(script string, timeoutSeconds int) *PodBuilder {
-	b.prepScript = script
-	b.prepTimeout = timeoutSeconds
-	return b
-}
-
-// WithMCP enables MCP with specified servers (legacy - use WithSandbox instead).
-func (b *PodBuilder) WithMCP(serverNames ...string) *PodBuilder {
-	b.mcpEnabled = true
-	b.mcpServers = serverNames
-	return b
-}
-
-// WithSandbox enables sandbox mode with plugin configuration.
-// This is the recommended way to configure pod environments.
-func (b *PodBuilder) WithSandbox(pluginConfig map[string]interface{}) *PodBuilder {
-	b.useSandbox = true
-	b.pluginConfig = pluginConfig
-	return b
-}
-
-// WithPluginConfig adds or updates plugin configuration.
-func (b *PodBuilder) WithPluginConfig(key string, value interface{}) *PodBuilder {
-	if b.pluginConfig == nil {
-		b.pluginConfig = make(map[string]interface{})
-	}
-	b.pluginConfig[key] = value
+// WithNewProtocol is kept for API compatibility but is now a no-op.
+// All pods now use the new protocol.
+func (b *PodBuilder) WithNewProtocol(useNew bool) *PodBuilder {
 	return b
 }
 
@@ -151,59 +117,25 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 	if b.podKey == "" {
 		return nil, fmt.Errorf("pod key is required")
 	}
+	if b.launchCommand == "" {
+		return nil, fmt.Errorf("launch command is required")
+	}
 
-	log.Printf("[pod_builder] Building pod: pod_key=%s, agent=%s, use_sandbox=%v",
-		b.podKey, b.agentType, b.useSandbox)
+	log.Printf("[pod_builder] Building pod: pod_key=%s, command=%s", b.podKey, b.launchCommand)
 
-	var workingDir, worktreePath, branchName string
-	var sb *sandbox.Sandbox
-	var launchArgs []string
-	var err error
-
-	// Use sandbox system if enabled and sandbox manager is available
-	if b.useSandbox && b.runner.sandboxManager != nil {
-		sb, err = b.buildWithSandbox(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create sandbox: %w", err)
-		}
-		workingDir = sb.WorkDir
-		if wt, ok := sb.Metadata["worktree_path"].(string); ok {
-			worktreePath = wt
-		}
-		if bn, ok := sb.Metadata["branch_name"].(string); ok {
-			branchName = bn
-		}
-		launchArgs = append(b.launchArgs, sb.LaunchArgs...)
-	} else {
-		// Legacy mode: use old working directory resolution
-		workingDir, worktreePath, branchName, err = b.resolveWorkingDirectory(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve working directory: %w", err)
-		}
-
-		// Run preparation script if specified (legacy mode)
-		if b.prepScript != "" {
-			if err := b.runPreparation(ctx, workingDir, worktreePath, branchName); err != nil {
-				return nil, fmt.Errorf("preparation failed: %w", err)
-			}
-		}
-		launchArgs = b.launchArgs
+	// Setup sandbox and working directory
+	sandboxRoot, workingDir, worktreePath, branchName, err := b.setup(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Merge environment variables
 	envVars := b.mergeEnvVars()
 
-	// Add sandbox env vars if available
-	if sb != nil {
-		for k, v := range sb.EnvVars {
-			envVars[k] = v
-		}
-	}
-
 	// Create terminal
 	term, err := terminal.New(terminal.Options{
 		Command:  b.launchCommand,
-		Args:     launchArgs,
+		Args:     b.launchArgs,
 		WorkDir:  workingDir,
 		Env:      envVars,
 		Rows:     b.rows,
@@ -213,119 +145,224 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 	})
 	if err != nil {
 		// Cleanup sandbox on failure
-		if sb != nil && b.runner.sandboxManager != nil {
-			b.runner.sandboxManager.Cleanup(b.podKey)
+		if sandboxRoot != "" {
+			os.RemoveAll(sandboxRoot)
 		}
-		return nil, fmt.Errorf("failed to create terminal: %w", err)
+		return nil, &client.PodError{
+			Code:    client.ErrCodeCommandStart,
+			Message: fmt.Sprintf("failed to create terminal: %v", err),
+		}
 	}
 
 	// Create pod
 	pod := &Pod{
-		ID:               b.podKey,
-		PodKey:           b.podKey,
-		AgentType:        b.agentType,
-		RepositoryURL:    b.repositoryURL,
-		Branch:           branchName,
-		WorktreePath:     worktreePath,
-		InitialPrompt:    b.initialPrompt,
-		Terminal:         term,
-		StartedAt:        time.Now(),
-		Status:           PodStatusInitializing,
-		TicketIdentifier: b.ticketIdentifier,
+		ID:            b.podKey,
+		PodKey:        b.podKey,
+		AgentType:     b.agentType,
+		Branch:        branchName,
+		WorktreePath:  worktreePath,
+		InitialPrompt: b.initialPrompt,
+		Terminal:      term,
+		StartedAt:     time.Now(),
+		Status:        PodStatusInitializing,
 	}
 
-	log.Printf("[pod_builder] Pod built: pod_key=%s, working_dir=%s, sandbox=%v",
-		b.podKey, workingDir, sb != nil)
+	log.Printf("[pod_builder] Pod built: pod_key=%s, working_dir=%s", b.podKey, workingDir)
 
 	return pod, nil
 }
 
-// buildWithSandbox creates a sandbox using the plugin system.
-func (b *PodBuilder) buildWithSandbox(ctx context.Context) (*sandbox.Sandbox, error) {
-	// Build plugin config from builder fields
-	config := make(map[string]interface{})
-
-	// Copy explicit builder fields
-	if b.repositoryURL != "" {
-		config["repository_url"] = b.repositoryURL
-	}
-	if b.branch != "" {
-		config["branch"] = b.branch
-	}
-	if b.ticketIdentifier != "" {
-		config["ticket_identifier"] = b.ticketIdentifier
-	}
-	if b.prepScript != "" {
-		config["init_script"] = b.prepScript
-	}
-	if b.prepTimeout > 0 {
-		config["init_timeout"] = b.prepTimeout
-	}
-	if len(b.envVars) > 0 {
-		envMap := make(map[string]interface{})
-		for k, v := range b.envVars {
-			envMap[k] = v
+// setup sets up the sandbox and working directory.
+// Returns (sandboxRoot, workingDir, worktreePath, branchName, error).
+func (b *PodBuilder) setup(ctx context.Context) (string, string, string, string, error) {
+	// 1. Create sandbox root directory
+	sandboxRoot := filepath.Join(b.runner.cfg.WorkspaceRoot, "sandboxes", b.podKey)
+	if err := os.MkdirAll(sandboxRoot, 0755); err != nil {
+		return "", "", "", "", &client.PodError{
+			Code:    client.ErrCodeSandboxCreate,
+			Message: fmt.Sprintf("failed to create sandbox directory: %v", err),
 		}
-		config["env_vars"] = envMap
 	}
 
-	// Merge explicit plugin config (can override above values)
-	for k, v := range b.pluginConfig {
-		config[k] = v
+	// 2. Setup working directory based on WorkDirConfig
+	workingDir, worktreePath, branchName, err := b.setupWorkDir(ctx, sandboxRoot)
+	if err != nil {
+		os.RemoveAll(sandboxRoot)
+		return "", "", "", "", err
 	}
 
-	// Create sandbox
-	return b.runner.sandboxManager.Create(ctx, b.podKey, config)
+	// 3. Create files from FilesToCreate
+	if err := b.createFiles(sandboxRoot, workingDir); err != nil {
+		os.RemoveAll(sandboxRoot)
+		return "", "", "", "", err
+	}
+
+	return sandboxRoot, workingDir, worktreePath, branchName, nil
 }
 
-// resolveWorkingDirectory determines the working directory for the pod.
-// Returns (workingDir, worktreePath, branchName, error).
-// Note: This method is only used in non-sandbox mode. For sandbox mode,
-// the working directory is set by the SandboxManager plugins.
-func (b *PodBuilder) resolveWorkingDirectory(ctx context.Context) (string, string, string, error) {
-	// Priority 1: Use workspace manager with repository URL
-	if b.repositoryURL != "" && b.runner.workspace != nil {
-		worktreePath, err := b.runner.workspace.CreateWorktree(ctx, b.repositoryURL, b.branch, b.podKey)
-		if err != nil {
-			return "", "", "", fmt.Errorf("failed to create repository worktree: %w", err)
+// setupWorkDir sets up the working directory based on WorkDirConfig.
+func (b *PodBuilder) setupWorkDir(ctx context.Context, sandboxRoot string) (string, string, string, error) {
+	if b.workDirConfig == nil {
+		// Default to tempdir
+		tempDir := filepath.Join(sandboxRoot, "workspace")
+		if err := os.MkdirAll(tempDir, 0755); err != nil {
+			return "", "", "", &client.PodError{
+				Code:    client.ErrCodeSandboxCreate,
+				Message: fmt.Sprintf("failed to create temp workspace: %v", err),
+			}
 		}
-		return worktreePath, worktreePath, b.branch, nil
+		return tempDir, "", "", nil
 	}
 
-	// Priority 2: Use temporary workspace
+	switch b.workDirConfig.Type {
+	case "worktree":
+		return b.setupGitWorktree(ctx, sandboxRoot)
+	case "tempdir":
+		tempDir := filepath.Join(sandboxRoot, "workspace")
+		if err := os.MkdirAll(tempDir, 0755); err != nil {
+			return "", "", "", &client.PodError{
+				Code:    client.ErrCodeSandboxCreate,
+				Message: fmt.Sprintf("failed to create temp workspace: %v", err),
+			}
+		}
+		return tempDir, "", "", nil
+	case "local":
+		localPath := b.workDirConfig.LocalPath
+		if localPath == "" {
+			localPath = b.runner.cfg.WorkspaceRoot
+		}
+		// Verify the path exists
+		if _, err := os.Stat(localPath); os.IsNotExist(err) {
+			return "", "", "", &client.PodError{
+				Code:    client.ErrCodeWorkDirNotExist,
+				Message: fmt.Sprintf("local path does not exist: %s", localPath),
+				Details: map[string]string{"path": localPath},
+			}
+		}
+		return localPath, "", "", nil
+	default:
+		return "", "", "", &client.PodError{
+			Code:    client.ErrCodeUnknown,
+			Message: fmt.Sprintf("unknown work_dir type: %s", b.workDirConfig.Type),
+		}
+	}
+}
+
+// setupGitWorktree creates a git worktree for the pod.
+func (b *PodBuilder) setupGitWorktree(ctx context.Context, sandboxRoot string) (string, string, string, error) {
+	cfg := b.workDirConfig
+	if cfg.RepositoryURL == "" {
+		return "", "", "", &client.PodError{
+			Code:    client.ErrCodeGitClone,
+			Message: "repository_url is required for worktree type",
+		}
+	}
+
+	// Use workspace manager if available
 	if b.runner.workspace != nil {
-		tempPath := b.runner.workspace.TempWorkspace(b.podKey)
-		return tempPath, "", "", nil
+		// Set git credentials if provided
+		opts := []workspace.WorktreeOption{}
+		if cfg.GitToken != "" {
+			opts = append(opts, workspace.WithGitToken(cfg.GitToken))
+		}
+		if cfg.SSHKeyPath != "" {
+			opts = append(opts, workspace.WithSSHKeyPath(cfg.SSHKeyPath))
+		}
+
+		worktreePath, err := b.runner.workspace.CreateWorktreeWithOptions(
+			ctx,
+			cfg.RepositoryURL,
+			cfg.Branch,
+			b.podKey,
+			opts...,
+		)
+		if err != nil {
+			// Determine error type
+			errMsg := err.Error()
+			errCode := client.ErrCodeGitWorktree
+			if strings.Contains(errMsg, "authentication") || strings.Contains(errMsg, "Permission denied") {
+				errCode = client.ErrCodeGitAuth
+			} else if strings.Contains(errMsg, "clone") {
+				errCode = client.ErrCodeGitClone
+			}
+			return "", "", "", &client.PodError{
+				Code:    errCode,
+				Message: fmt.Sprintf("failed to create worktree: %v", err),
+				Details: map[string]string{
+					"repository": cfg.RepositoryURL,
+					"branch":     cfg.Branch,
+				},
+			}
+		}
+
+		branchName := cfg.Branch
+		if branchName == "" {
+			branchName = "main"
+		}
+		return worktreePath, worktreePath, branchName, nil
 	}
 
-	// Priority 3: Use workspace root from config
-	return b.runner.cfg.WorkspaceRoot, "", "", nil
+	// Fallback: workspace manager not available
+	return "", "", "", &client.PodError{
+		Code:    client.ErrCodeGitWorktree,
+		Message: "workspace manager not available for git operations",
+	}
 }
 
-// runPreparation runs the preparation script.
-func (b *PodBuilder) runPreparation(ctx context.Context, workingDir, worktreePath, branchName string) error {
-	preparer := workspace.NewPreparerFromScript(b.prepScript, b.prepTimeout)
-	if preparer == nil {
-		return nil
+// createFiles creates files from the FilesToCreate list.
+func (b *PodBuilder) createFiles(sandboxRoot, workDir string) error {
+	for _, f := range b.filesToCreate {
+		// Resolve path template
+		path := b.resolvePath(f.PathTemplate, sandboxRoot, workDir)
+
+		if f.IsDirectory {
+			if err := os.MkdirAll(path, 0755); err != nil {
+				return &client.PodError{
+					Code:    client.ErrCodeFileCreate,
+					Message: fmt.Sprintf("failed to create directory: %v", err),
+					Details: map[string]string{"path": path},
+				}
+			}
+			continue
+		}
+
+		// Ensure parent directory exists
+		parentDir := filepath.Dir(path)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			return &client.PodError{
+				Code:    client.ErrCodeFileCreate,
+				Message: fmt.Sprintf("failed to create parent directory: %v", err),
+				Details: map[string]string{"path": parentDir},
+			}
+		}
+
+		// Determine file mode
+		mode := os.FileMode(0644)
+		if f.Mode != 0 {
+			mode = os.FileMode(f.Mode)
+		}
+
+		// Write file
+		if err := os.WriteFile(path, []byte(f.Content), mode); err != nil {
+			return &client.PodError{
+				Code:    client.ErrCodeFileCreate,
+				Message: fmt.Sprintf("failed to write file: %v", err),
+				Details: map[string]string{"path": path},
+			}
+		}
+
+		log.Printf("[pod_builder] Created file: %s (mode=%o)", path, mode)
 	}
 
-	prepCtx := &workspace.PreparationContext{
-		PodID:            b.podKey,
-		TicketIdentifier: b.ticketIdentifier,
-		BranchName:       branchName,
-		WorkingDir:       workingDir,
-		WorktreeDir:      worktreePath,
-		BaseEnvVars:      b.envVars,
-	}
-
-	log.Printf("[pod_builder] Running preparation script: pod_key=%s", b.podKey)
-
-	if err := preparer.Prepare(ctx, prepCtx); err != nil {
-		return fmt.Errorf("preparation script failed: %w", err)
-	}
-
-	log.Printf("[pod_builder] Preparation completed: pod_key=%s", b.podKey)
 	return nil
+}
+
+// resolvePath resolves path template variables.
+func (b *PodBuilder) resolvePath(pathTemplate, sandboxRoot, workDir string) string {
+	path := pathTemplate
+	path = strings.ReplaceAll(path, "{{.sandbox.root_path}}", sandboxRoot)
+	path = strings.ReplaceAll(path, "{{.sandbox.work_dir}}", workDir)
+	return path
 }
 
 // mergeEnvVars merges all environment variable sources.
@@ -345,22 +382,4 @@ func (b *PodBuilder) mergeEnvVars() map[string]string {
 	}
 
 	return result
-}
-
-// ExtendedPod adds additional fields to Pod for enhanced functionality.
-type ExtendedPod struct {
-	*Pod
-
-	// Output/exit callbacks
-	OnOutput func([]byte)
-	OnExit   func(int)
-
-	// Additional metadata
-	TicketIdentifier       string
-	ManagedTerminalSession *terminal.Session // Reference to managed PTY terminal session
-}
-
-// init initializes extended Pod functionality.
-func init() {
-	// The Pod struct in runner.go will be extended
 }

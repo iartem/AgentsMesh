@@ -12,23 +12,6 @@ import (
 func (pc *PodCoordinator) handleHeartbeat(runnerID int64, data *HeartbeatData) {
 	ctx := context.Background()
 
-	// Check if capabilities changed
-	var capabilitiesJSON []byte
-	if len(data.Capabilities) > 0 {
-		newHash := pc.hashCapabilities(data.Capabilities)
-		cachedHash, ok := pc.capabilitiesHashCache[runnerID]
-		if !ok || cachedHash != newHash {
-			// Capabilities changed, marshal for update
-			capabilitiesJSON = pc.marshalCapabilities(data.Capabilities)
-			if capabilitiesJSON != nil {
-				pc.capabilitiesHashCache[runnerID] = newHash
-				pc.logger.Debug("updating runner capabilities",
-					"runner_id", runnerID,
-					"capabilities_count", len(data.Capabilities))
-			}
-		}
-	}
-
 	// Record heartbeat via batcher (batched DB writes + immediate Redis update)
 	if err := pc.heartbeatBatcher.RecordHeartbeat(
 		ctx,
@@ -36,7 +19,6 @@ func (pc *PodCoordinator) handleHeartbeat(runnerID int64, data *HeartbeatData) {
 		len(data.Pods),
 		"online",
 		data.RunnerVersion,
-		capabilitiesJSON,
 	); err != nil {
 		pc.logger.Error("failed to record heartbeat",
 			"runner_id", runnerID,

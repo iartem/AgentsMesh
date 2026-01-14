@@ -12,13 +12,15 @@ import (
 
 // AgentHandler handles agent-related requests
 type AgentHandler struct {
-	agentService *agent.Service
+	agentService  *agent.Service
+	configBuilder *agent.ConfigBuilder
 }
 
 // NewAgentHandler creates a new agent handler
 func NewAgentHandler(agentService *agent.Service) *AgentHandler {
 	return &AgentHandler{
-		agentService: agentService,
+		agentService:  agentService,
+		configBuilder: agent.NewConfigBuilder(agentService),
 	}
 }
 
@@ -479,4 +481,49 @@ func (h *AgentHandler) DeleteDefaultConfig(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Default config deleted"})
+}
+
+// GetAgentTypeConfigSchema returns the config schema for an agent type with i18n support
+// GET /api/v1/organizations/:slug/agents/:agent_type_id/config-schema
+func (h *AgentHandler) GetAgentTypeConfigSchema(c *gin.Context) {
+	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		return
+	}
+
+	// Get locale from query param or Accept-Language header
+	locale := c.Query("locale")
+	if locale == "" {
+		locale = c.GetHeader("Accept-Language")
+	}
+	if locale == "" {
+		locale = "en"
+	}
+
+	schema, err := h.configBuilder.GetConfigSchemaWithI18n(c.Request.Context(), agentTypeID, locale)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get config schema"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"schema": schema})
+}
+
+// GetAgentType returns details of a specific agent type
+// GET /api/v1/organizations/:slug/agents/types/:agent_type_id
+func (h *AgentHandler) GetAgentType(c *gin.Context) {
+	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		return
+	}
+
+	agentType, err := h.agentService.GetAgentType(c.Request.Context(), agentTypeID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Agent type not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"agent_type": agentType})
 }

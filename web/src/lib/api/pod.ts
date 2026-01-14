@@ -60,7 +60,7 @@ export const podApi = {
     ticket_id?: number;
     initial_prompt?: string;
     branch_name?: string;
-    plugin_config?: Record<string, unknown>;
+    config_overrides?: Record<string, unknown>;
     credential_profile_id?: number; // User's credential profile ID (undefined = RunnerHost mode)
   }) =>
     request<{ message: string; pod: PodData }>(

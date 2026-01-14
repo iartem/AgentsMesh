@@ -17,6 +17,29 @@ type Manager struct {
 	mu            sync.Mutex
 }
 
+// WorktreeOptions contains options for creating a worktree
+type WorktreeOptions struct {
+	GitToken   string // Git token for HTTPS authentication
+	SSHKeyPath string // Path to SSH key for SSH authentication
+}
+
+// WorktreeOption is a function that modifies WorktreeOptions
+type WorktreeOption func(*WorktreeOptions)
+
+// WithGitToken sets the git token for HTTPS authentication
+func WithGitToken(token string) WorktreeOption {
+	return func(opts *WorktreeOptions) {
+		opts.GitToken = token
+	}
+}
+
+// WithSSHKeyPath sets the SSH key path for SSH authentication
+func WithSSHKeyPath(path string) WorktreeOption {
+	return func(opts *WorktreeOptions) {
+		opts.SSHKeyPath = path
+	}
+}
+
 // NewManager creates a new workspace manager
 func NewManager(root, gitConfigPath string) (*Manager, error) {
 	// Ensure root directory exists
@@ -32,6 +55,17 @@ func NewManager(root, gitConfigPath string) (*Manager, error) {
 
 // CreateWorktree creates a git worktree for a repository
 func (m *Manager) CreateWorktree(ctx context.Context, repoURL, branch, podKey string) (string, error) {
+	return m.CreateWorktreeWithOptions(ctx, repoURL, branch, podKey)
+}
+
+// CreateWorktreeWithOptions creates a git worktree with additional options
+func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch, podKey string, opts ...WorktreeOption) (string, error) {
+	// Apply options
+	options := &WorktreeOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -44,8 +78,8 @@ func (m *Manager) CreateWorktree(ctx context.Context, repoURL, branch, podKey st
 	// Main repository path
 	mainRepoPath := filepath.Join(m.root, "repos", repoName)
 
-	// Clone or fetch the repository
-	if err := m.ensureRepository(ctx, repoURL, mainRepoPath); err != nil {
+	// Clone or fetch the repository with authentication
+	if err := m.ensureRepositoryWithAuth(ctx, repoURL, mainRepoPath, options); err != nil {
 		return "", fmt.Errorf("failed to ensure repository: %w", err)
 	}
 
@@ -114,11 +148,17 @@ func (m *Manager) CreateWorktree(ctx context.Context, repoURL, branch, podKey st
 
 // ensureRepository clones or fetches a repository
 func (m *Manager) ensureRepository(ctx context.Context, repoURL, path string) error {
+	return m.ensureRepositoryWithAuth(ctx, repoURL, path, nil)
+}
+
+// ensureRepositoryWithAuth clones or fetches a repository with authentication options
+func (m *Manager) ensureRepositoryWithAuth(ctx context.Context, repoURL, path string, opts *WorktreeOptions) error {
 	// Check if repository exists
 	if _, err := os.Stat(filepath.Join(path, ".git")); err == nil {
 		// Repository exists, fetch updates
 		fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--all")
 		fetchCmd.Dir = path
+		m.setGitAuthEnv(fetchCmd, opts)
 		if output, err := fetchCmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("failed to fetch: %s, output: %s", err, output)
 		}
@@ -130,12 +170,44 @@ func (m *Manager) ensureRepository(ctx context.Context, repoURL, path string) er
 		return fmt.Errorf("failed to create repo parent dir: %w", err)
 	}
 
-	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--bare", repoURL, path)
+	// Prepare clone URL with token if provided
+	cloneURL := m.prepareAuthURL(repoURL, opts)
+
+	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--bare", cloneURL, path)
+	m.setGitAuthEnv(cloneCmd, opts)
 	if output, err := cloneCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to clone: %s, output: %s", err, output)
 	}
 
 	return nil
+}
+
+// prepareAuthURL prepares the repository URL with authentication if needed
+func (m *Manager) prepareAuthURL(repoURL string, opts *WorktreeOptions) string {
+	if opts == nil || opts.GitToken == "" {
+		return repoURL
+	}
+
+	// Only modify HTTPS URLs
+	if strings.HasPrefix(repoURL, "https://") {
+		// Insert token into URL: https://token@github.com/...
+		return strings.Replace(repoURL, "https://", fmt.Sprintf("https://%s@", opts.GitToken), 1)
+	}
+
+	return repoURL
+}
+
+// setGitAuthEnv sets environment variables for git authentication
+func (m *Manager) setGitAuthEnv(cmd *exec.Cmd, opts *WorktreeOptions) {
+	if opts == nil {
+		return
+	}
+
+	// Set SSH key path if provided
+	if opts.SSHKeyPath != "" {
+		sshCmd := fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=no", opts.SSHKeyPath)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
+	}
 }
 
 // RemoveWorktree removes a worktree

@@ -1,5 +1,5 @@
-// Deprecated: The Preparer functionality has been moved to sandbox/plugins/initscript.go.
-// This file is kept for backward compatibility with legacy pod_builder code.
+// Package workspace provides workspace preparation utilities.
+// Preparer executes initialization steps before agent starts.
 package workspace
 
 import (

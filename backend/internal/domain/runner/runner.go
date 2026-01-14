@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -30,6 +29,30 @@ func (hi HostInfo) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return json.Marshal(hi)
+}
+
+// StringSlice is a custom type for []string that implements sql.Scanner and driver.Valuer
+type StringSlice []string
+
+// Scan implements sql.Scanner for StringSlice
+func (s *StringSlice) Scan(value interface{}) error {
+	if value == nil {
+		*s = nil
+		return nil
+	}
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(bytes, s)
+}
+
+// Value implements driver.Valuer for StringSlice
+func (s StringSlice) Value() (driver.Value, error) {
+	if s == nil {
+		return nil, nil
+	}
+	return json.Marshal(s)
 }
 
 // RegistrationToken represents a token used to register runners
@@ -72,103 +95,16 @@ type Runner struct {
 	CurrentPods       int        `gorm:"not null;default:0" json:"current_pods"`
 	MaxConcurrentPods int        `gorm:"not null;default:5" json:"max_concurrent_pods"`
 	RunnerVersion     *string    `gorm:"size:50" json:"runner_version,omitempty"`
-	IsEnabled             bool       `gorm:"not null;default:true" json:"is_enabled"`
+	IsEnabled         bool       `gorm:"not null;default:true" json:"is_enabled"`
 
-	HostInfo     HostInfo     `gorm:"type:jsonb" json:"host_info,omitempty"`
-	Capabilities Capabilities `gorm:"type:jsonb" json:"capabilities,omitempty"`
+	// AvailableAgents is the list of agent type slugs available on this runner
+	// Populated during initialization handshake
+	AvailableAgents StringSlice `gorm:"type:jsonb" json:"available_agents,omitempty"`
+
+	HostInfo HostInfo `gorm:"type:jsonb" json:"host_info,omitempty"`
 
 	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
-}
-
-// Capabilities represents runner plugin capabilities (JSONB type)
-type Capabilities []PluginCapability
-
-// Scan implements sql.Scanner for Capabilities
-func (c *Capabilities) Scan(value interface{}) error {
-	if value == nil {
-		*c = nil
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-	return json.Unmarshal(bytes, c)
-}
-
-// Value implements driver.Valuer for Capabilities
-func (c Capabilities) Value() (driver.Value, error) {
-	if c == nil {
-		return nil, nil
-	}
-	return json.Marshal(c)
-}
-
-// PluginCapability represents a single plugin's capability
-type PluginCapability struct {
-	Name            string    `json:"name"`
-	Version         string    `json:"version"`
-	Description     string    `json:"description"`
-	SupportedAgents []string  `json:"supported_agents"`
-	Executable      string    `json:"executable,omitempty"` // Required CLI command (if any)
-	Available       bool      `json:"available"`            // Whether the executable is available on this system
-	UI              *UIConfig `json:"ui,omitempty"`
-}
-
-// UIConfig represents the UI configuration for a plugin
-type UIConfig struct {
-	Configurable bool      `json:"configurable"`
-	Fields       []UIField `json:"fields"`
-}
-
-// UIField represents a single UI field configuration
-type UIField struct {
-	Name        string      `json:"name"`
-	Type        string      `json:"type"` // boolean, string, select, number, secret
-	Label       string      `json:"label"`
-	Default     interface{} `json:"default,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Placeholder string      `json:"placeholder,omitempty"`
-	Options     []UIOption  `json:"options,omitempty"`
-	Min         *float64    `json:"min,omitempty"`
-	Max         *float64    `json:"max,omitempty"`
-	Required    bool        `json:"required,omitempty"`
-}
-
-// UIOption represents an option for select fields
-type UIOption struct {
-	Value string `json:"value"`
-	Label string `json:"label"`
-}
-
-// UIFieldType defines valid field types for plugin UI
-type UIFieldType string
-
-const (
-	UIFieldTypeBoolean UIFieldType = "boolean"
-	UIFieldTypeString  UIFieldType = "string"
-	UIFieldTypeSelect  UIFieldType = "select"
-	UIFieldTypeNumber  UIFieldType = "number"
-	UIFieldTypeSecret  UIFieldType = "secret"
-)
-
-// Validate validates a PluginCapability
-func (p *PluginCapability) Validate() error {
-	if p.Name == "" {
-		return errors.New("plugin capability name is required")
-	}
-	return nil
-}
-
-// ValidateCapabilities validates a list of capabilities
-func ValidateCapabilities(caps []PluginCapability) error {
-	for i, cap := range caps {
-		if err := cap.Validate(); err != nil {
-			return fmt.Errorf("capability[%d]: %w", i, err)
-		}
-	}
-	return nil
 }
 
 func (Runner) TableName() string {
@@ -183,4 +119,19 @@ func (r *Runner) IsOnline() bool {
 // CanAcceptPod returns true if runner can accept new pods
 func (r *Runner) CanAcceptPod() bool {
 	return r.IsEnabled && r.IsOnline() && r.CurrentPods < r.MaxConcurrentPods
+}
+
+// SupportsAgent returns true if runner supports the given agent type slug
+func (r *Runner) SupportsAgent(agentSlug string) bool {
+	for _, slug := range r.AvailableAgents {
+		if slug == agentSlug {
+			return true
+		}
+	}
+	return false
+}
+
+// CanAcceptPodForAgent returns true if runner can accept a pod for the given agent type
+func (r *Runner) CanAcceptPodForAgent(agentSlug string) bool {
+	return r.CanAcceptPod() && r.SupportsAgent(agentSlug)
 }

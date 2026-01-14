@@ -1,14 +1,8 @@
 package runner
 
 import (
-	"log/slog"
-	"os"
 	"testing"
 )
-
-func newTestLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-}
 
 func TestNewTerminalRouter(t *testing.T) {
 	cm := NewConnectionManager(newTestLogger())

@@ -368,37 +368,6 @@ func (h *RunnerHandler) RevokeRegistrationToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Token revoked"})
 }
 
-// GetPluginOptions returns plugin options for a runner and agent type
-// GET /api/v1/organizations/:slug/runners/:id/plugins?agent_type=claude-code
-func (h *RunnerHandler) GetPluginOptions(c *gin.Context) {
-	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
-		return
-	}
-
-	agentType := c.Query("agent_type")
-
-	tenant := middleware.GetTenant(c)
-
-	// Verify runner belongs to organization
-	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
-		return
-	}
-
-	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-		return
-	}
-
-	// Filter capabilities by agent type if provided
-	plugins := h.runnerService.GetPluginOptions(r, agentType)
-
-	c.JSON(http.StatusOK, gin.H{"plugins": plugins})
-}
-
 // HeartbeatRequest represents runner heartbeat request
 type HeartbeatRequest struct {
 	RunnerID      int64  `json:"runner_id" binding:"required"`

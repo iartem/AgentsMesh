@@ -46,12 +46,11 @@ type HeartbeatBatcher struct {
 
 // HeartbeatItem represents a pending heartbeat update
 type HeartbeatItem struct {
-	RunnerID      int64
-	CurrentPods   int
-	Status        string
-	Version       string
-	Capabilities  []byte // JSON encoded capabilities
-	Timestamp     time.Time
+	RunnerID    int64
+	CurrentPods int
+	Status      string
+	Version     string
+	Timestamp   time.Time
 }
 
 // RedisRunnerStatus represents runner status stored in Redis for real-time queries
@@ -117,7 +116,7 @@ func (b *HeartbeatBatcher) Stop() {
 
 // RecordHeartbeat records a heartbeat for batch processing
 // It immediately updates Redis for real-time status queries, and buffers DB writes
-func (b *HeartbeatBatcher) RecordHeartbeat(ctx context.Context, runnerID int64, currentPods int, status, version string, capabilities []byte) error {
+func (b *HeartbeatBatcher) RecordHeartbeat(ctx context.Context, runnerID int64, currentPods int, status, version string) error {
 	now := time.Now()
 
 	// 1. Immediately update Redis for real-time status queries
@@ -145,12 +144,11 @@ func (b *HeartbeatBatcher) RecordHeartbeat(ctx context.Context, runnerID int64, 
 	// 2. Buffer for batch DB write
 	b.mu.Lock()
 	b.buffer[runnerID] = &HeartbeatItem{
-		RunnerID:     runnerID,
-		CurrentPods:  currentPods,
-		Status:       status,
-		Version:      version,
-		Capabilities: capabilities,
-		Timestamp:    now,
+		RunnerID:    runnerID,
+		CurrentPods: currentPods,
+		Status:      status,
+		Version:     version,
+		Timestamp:   now,
 	}
 	b.mu.Unlock()
 
@@ -281,9 +279,6 @@ func (b *HeartbeatBatcher) flushBatch(ctx context.Context, items []*HeartbeatIte
 		}
 		if item.Version != "" {
 			updates["runner_version"] = item.Version
-		}
-		if item.Capabilities != nil && len(item.Capabilities) > 0 {
-			updates["capabilities"] = item.Capabilities
 		}
 
 		result := tx.Model(&runner.Runner{}).

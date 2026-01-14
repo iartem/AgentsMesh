@@ -30,10 +30,9 @@ func NewRunnerMessageHandler(runner *Runner, store PodStore, conn client.Connect
 
 // OnCreatePod handles create pod requests from server.
 // Implements client.MessageHandler interface.
-// Uses the Sandbox plugin system for environment configuration.
 func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
-	log.Printf("[message_handler] Creating pod: pod_key=%s, command=%s, permission_mode=%s, plugin_config=%v",
-		req.PodKey, req.InitialCommand, req.PermissionMode, req.PluginConfig)
+	log.Printf("[message_handler] Creating pod: pod_key=%s, command=%s, args=%v",
+		req.PodKey, req.LaunchCommand, req.LaunchArgs)
 
 	ctx := context.Background()
 
@@ -43,20 +42,25 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 		return fmt.Errorf("max concurrent pods reached")
 	}
 
-	// Build PluginConfig from both legacy fields and new PluginConfig
-	pluginConfig := h.buildPluginConfig(&req)
-
-	// Use PodBuilder with Sandbox mode
+	// Build pod using new protocol
 	builder := NewPodBuilder(h.runner).
 		WithPodKey(req.PodKey).
-		WithLaunchCommand(req.InitialCommand, nil).
-		WithInitialPrompt(req.InitialPrompt).
-		WithSandbox(pluginConfig)
+		WithNewProtocol(true).
+		WithLaunchCommand(req.LaunchCommand, req.LaunchArgs).
+		WithEnvVars(req.EnvVars).
+		WithFilesToCreate(req.FilesToCreate).
+		WithWorkDirConfig(req.WorkDirConfig).
+		WithInitialPrompt(req.InitialPrompt)
 
 	// Build pod
 	pod, err := builder.Build(ctx)
 	if err != nil {
-		h.sendPodError(req.PodKey, fmt.Sprintf("failed to build pod: %v", err))
+		// Check if it's a PodError with error code
+		if podErr, ok := err.(*client.PodError); ok {
+			h.sendPodErrorWithCode(req.PodKey, podErr)
+		} else {
+			h.sendPodError(req.PodKey, fmt.Sprintf("failed to build pod: %v", err))
+		}
 		return fmt.Errorf("failed to build pod: %w", err)
 	}
 
@@ -66,10 +70,6 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 
 	// Start terminal
 	if err := pod.Terminal.Start(); err != nil {
-		// Cleanup sandbox on failure
-		if h.runner.sandboxManager != nil {
-			h.runner.sandboxManager.Cleanup(req.PodKey)
-		}
 		h.sendPodError(req.PodKey, fmt.Sprintf("failed to start terminal: %v", err))
 		return fmt.Errorf("failed to start terminal: %w", err)
 	}
@@ -78,30 +78,16 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 	h.podStore.Put(req.PodKey, pod)
 	pod.Status = PodStatusRunning
 
-	// Register pod with MCP HTTP Server for tool access (backend communication)
+	// Register pod with MCP HTTP Server for tool access
 	if h.runner.mcpServer != nil {
 		orgSlug := h.conn.GetOrgSlug()
-		h.runner.mcpServer.RegisterPod(req.PodKey, orgSlug, nil, nil, req.InitialCommand)
+		h.runner.mcpServer.RegisterPod(req.PodKey, orgSlug, nil, nil, req.LaunchCommand)
 		log.Printf("[message_handler] Registered pod %s with MCP server (org: %s)", req.PodKey, orgSlug)
-	}
-
-	// Send Shift+Tab if plan mode is requested
-	if req.PermissionMode == "plan" {
-		time.AfterFunc(1*time.Second, func() {
-			// Shift+Tab escape sequence
-			if err := pod.Terminal.Write([]byte("\x1b[Z")); err != nil {
-				log.Printf("[message_handler] Failed to send Shift+Tab: %v", err)
-			}
-		})
 	}
 
 	// Send initial prompt if specified
 	if req.InitialPrompt != "" {
-		delay := 1500 * time.Millisecond
-		if req.PermissionMode == "plan" {
-			delay = 2500 * time.Millisecond // Give time for plan mode to activate
-		}
-		time.AfterFunc(delay, func() {
+		time.AfterFunc(1500*time.Millisecond, func() {
 			if err := pod.Terminal.Write([]byte(req.InitialPrompt + "\n")); err != nil {
 				log.Printf("[message_handler] Failed to send initial prompt: %v", err)
 			}
@@ -114,41 +100,6 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 	log.Printf("[message_handler] Pod created: pod_key=%s, pid=%d, worktree=%s, branch=%s",
 		req.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch)
 	return nil
-}
-
-// buildPluginConfig merges legacy fields with PluginConfig for backward compatibility.
-func (h *RunnerMessageHandler) buildPluginConfig(req *client.CreatePodRequest) map[string]interface{} {
-	config := make(map[string]interface{})
-
-	// Copy legacy fields to PluginConfig for backward compatibility
-	if req.TicketIdentifier != "" {
-		config["ticket_identifier"] = req.TicketIdentifier
-	}
-	if req.WorkingDir != "" {
-		config["working_dir"] = req.WorkingDir
-	}
-	if len(req.EnvVars) > 0 {
-		envMap := make(map[string]interface{})
-		for k, v := range req.EnvVars {
-			envMap[k] = v
-		}
-		config["env_vars"] = envMap
-	}
-	if req.PreparationConfig != nil {
-		if req.PreparationConfig.Script != "" {
-			config["init_script"] = req.PreparationConfig.Script
-		}
-		if req.PreparationConfig.TimeoutSeconds > 0 {
-			config["init_timeout"] = req.PreparationConfig.TimeoutSeconds
-		}
-	}
-
-	// Merge PluginConfig (overrides legacy fields)
-	for k, v := range req.PluginConfig {
-		config[k] = v
-	}
-
-	return config
 }
 
 // OnTerminatePod handles terminate pod requests from server.
@@ -164,13 +115,6 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 	// Stop terminal
 	if pod.Terminal != nil {
 		pod.Terminal.Stop()
-	}
-
-	// Clean up sandbox
-	if h.runner.sandboxManager != nil {
-		if err := h.runner.sandboxManager.Cleanup(req.PodKey); err != nil {
-			log.Printf("[message_handler] Warning: failed to cleanup sandbox: %v", err)
-		}
 	}
 
 	// Unregister pod from MCP HTTP Server
@@ -195,7 +139,7 @@ func (h *RunnerMessageHandler) OnListPods() []client.PodInfo {
 		info := client.PodInfo{
 			PodKey:       s.PodKey,
 			Status:       s.Status,
-			ClaudeStatus: "", // TODO: Get from Claude monitor
+			ClaudeStatus: "",
 		}
 		if s.Terminal != nil {
 			info.Pid = s.Terminal.PID()
@@ -336,60 +280,19 @@ func (h *RunnerMessageHandler) sendPodError(podKey, errorMsg string) {
 	}
 }
 
-// GetCapabilities returns plugin capabilities for heartbeat reporting.
-// Implements client.MessageHandler interface.
-func (h *RunnerMessageHandler) GetCapabilities() []client.PluginCapability {
-	if h.runner.sandboxManager == nil {
-		return nil
+func (h *RunnerMessageHandler) sendPodErrorWithCode(podKey string, podErr *client.PodError) {
+	if h.conn == nil {
+		return
 	}
-
-	luaMgr := h.runner.sandboxManager.GetLuaPluginManager()
-	if luaMgr == nil {
-		return nil
+	event := map[string]interface{}{
+		"pod_key": podKey,
+		"error":   podErr.Message,
+		"code":    podErr.Code,
+		"details": podErr.Details,
 	}
-
-	// Convert luaplugin.PluginCapability to client.PluginCapability
-	luaCaps := luaMgr.GetCapabilities()
-	caps := make([]client.PluginCapability, len(luaCaps))
-	for i, c := range luaCaps {
-		caps[i] = client.PluginCapability{
-			Name:            c.Name,
-			Version:         c.Version,
-			Description:     c.Description,
-			SupportedAgents: c.SupportedAgents,
-			Executable:      c.Executable,
-			Available:       c.Available,
-		}
-		if c.UI != nil {
-			caps[i].UI = &client.UIConfig{
-				Configurable: c.UI.Configurable,
-				Fields:       make([]client.UIField, len(c.UI.Fields)),
-			}
-			for j, f := range c.UI.Fields {
-				caps[i].UI.Fields[j] = client.UIField{
-					Name:        f.Name,
-					Type:        f.Type,
-					Label:       f.Label,
-					Default:     f.Default,
-					Description: f.Description,
-					Placeholder: f.Placeholder,
-					Min:         f.Min,
-					Max:         f.Max,
-					Required:    f.Required,
-				}
-				if len(f.Options) > 0 {
-					caps[i].UI.Fields[j].Options = make([]client.UIOption, len(f.Options))
-					for k, o := range f.Options {
-						caps[i].UI.Fields[j].Options[k] = client.UIOption{
-							Value: o.Value,
-							Label: o.Label,
-						}
-					}
-				}
-			}
-		}
+	if err := h.conn.SendEvent(client.MessageType("error"), event); err != nil {
+		log.Printf("[message_handler] Failed to send error event: %v", err)
 	}
-	return caps
 }
 
 // Ensure RunnerMessageHandler implements client.MessageHandler

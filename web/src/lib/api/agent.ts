@@ -11,6 +11,31 @@ export interface AgentTypeData {
   is_active: boolean;
 }
 
+// Config field option for select type
+export interface ConfigFieldOption {
+  value: string;
+  label: string;
+}
+
+// Config field definition from Backend
+export interface ConfigField {
+  name: string;
+  type: "boolean" | "string" | "select" | "number" | "secret";
+  label: string;
+  default?: unknown;
+  description?: string;
+  placeholder?: string;
+  options?: ConfigFieldOption[];
+  min?: number;
+  max?: number;
+  required?: boolean;
+}
+
+// Config schema returned by Backend
+export interface ConfigSchema {
+  fields: ConfigField[];
+}
+
 // Organization agent default config interface
 export interface OrganizationAgentConfigData {
   id: number;
@@ -71,4 +96,10 @@ export const agentApi = {
     request<{ message: string }>(`${orgPath("/agents")}/${agentTypeId}/default-config`, {
       method: "DELETE",
     }),
+
+  // Get config schema for an agent type (with i18n support)
+  getConfigSchema: (agentTypeId: number, locale?: string) => {
+    const params = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+    return request<{ schema: ConfigSchema }>(`${orgPath("/agents")}/${agentTypeId}/config-schema${params}`);
+  },
 };

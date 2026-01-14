@@ -1,37 +1,5 @@
 import { request, orgPath } from "./base";
 
-// Plugin capability types for dynamic forms
-export interface UIOption {
-  value: string;
-  label: string;
-}
-
-export interface UIField {
-  name: string;
-  type: "boolean" | "string" | "select" | "number" | "secret";
-  label: string;
-  default?: unknown;
-  description?: string;
-  placeholder?: string;
-  options?: UIOption[];
-  min?: number;
-  max?: number;
-  required?: boolean;
-}
-
-export interface UIConfig {
-  configurable: boolean;
-  fields: UIField[];
-}
-
-export interface PluginCapability {
-  name: string;
-  version: string;
-  description: string;
-  supported_agents: string[];
-  ui?: UIConfig;
-}
-
 // Runner interface matching the store
 export interface RunnerData {
   id: number;
@@ -50,7 +18,6 @@ export interface RunnerData {
     cpu_cores?: number;
     hostname?: string;
   };
-  capabilities?: PluginCapability[];
   created_at: string;
   updated_at: string;
   active_pods?: Array<{
@@ -94,10 +61,4 @@ export const runnerApi = {
       method: "POST",
       body: JSON.stringify({}),
     }),
-
-  // Get plugin options for a runner and agent type
-  getPluginOptions: (runnerId: number, agentType?: string) => {
-    const params = agentType ? `?agent_type=${encodeURIComponent(agentType)}` : "";
-    return request<{ plugins: PluginCapability[] }>(`${orgPath("/runners")}/${runnerId}/plugins${params}`);
-  },
 };

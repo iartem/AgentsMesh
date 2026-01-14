@@ -233,46 +233,8 @@ type Runner struct {
 	RunnerVersion     string                 `json:"runner_version,omitempty"`
 	IsEnabled         bool                   `json:"is_enabled"`
 	HostInfo          map[string]interface{} `json:"host_info,omitempty"`
-	Capabilities      []PluginCapability     `json:"capabilities,omitempty"`
 	CreatedAt         string                 `json:"created_at"`
 	UpdatedAt         string                 `json:"updated_at"`
-}
-
-// PluginCapability represents a plugin's capability.
-type PluginCapability struct {
-	Name            string    `json:"name"`
-	Version         string    `json:"version"`
-	Description     string    `json:"description"`
-	SupportedAgents []string  `json:"supported_agents"`
-	Executable      string    `json:"executable,omitempty"` // Required CLI command (if any)
-	Available       bool      `json:"available"`            // Whether the executable is available on this system
-	UI              *UIConfig `json:"ui,omitempty"`
-}
-
-// UIConfig represents the UI configuration for a plugin.
-type UIConfig struct {
-	Configurable bool      `json:"configurable"`
-	Fields       []UIField `json:"fields"`
-}
-
-// UIField represents a single UI field configuration.
-type UIField struct {
-	Name        string      `json:"name"`
-	Type        string      `json:"type"` // boolean, string, select, number, secret
-	Label       string      `json:"label"`
-	Default     interface{} `json:"default,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Placeholder string      `json:"placeholder,omitempty"`
-	Options     []UIOption  `json:"options,omitempty"`
-	Min         *float64    `json:"min,omitempty"`
-	Max         *float64    `json:"max,omitempty"`
-	Required    bool        `json:"required,omitempty"`
-}
-
-// UIOption represents an option for select fields.
-type UIOption struct {
-	Value string `json:"value"`
-	Label string `json:"label"`
 }
 
 // Repository represents a Git repository configuration.

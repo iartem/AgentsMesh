@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -24,11 +25,34 @@ func NewRunnerHandler(
 	connectionManager *runner.ConnectionManager,
 	logger *slog.Logger,
 ) *RunnerHandler {
-	return &RunnerHandler{
+	h := &RunnerHandler{
 		runnerService:     runnerService,
 		connectionManager: connectionManager,
 		logger:            logger,
 	}
+
+	// Set up initialization callback to persist available agents
+	connectionManager.SetInitializedCallback(h.onRunnerInitialized)
+
+	return h
+}
+
+// onRunnerInitialized is called when a runner completes the initialization handshake
+func (h *RunnerHandler) onRunnerInitialized(runnerID int64, availableAgents []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := h.runnerService.UpdateAvailableAgents(ctx, runnerID, availableAgents); err != nil {
+		h.logger.Error("failed to update runner available agents",
+			"runner_id", runnerID,
+			"available_agents", availableAgents,
+			"error", err)
+		return
+	}
+
+	h.logger.Info("runner initialization completed, available agents updated",
+		"runner_id", runnerID,
+		"available_agents", availableAgents)
 }
 
 // HandleRunnerWS handles WebSocket connection from runner

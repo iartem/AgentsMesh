@@ -8,8 +8,8 @@ import (
 	"github.com/anthropics/agentmesh/runner/internal/workspace"
 )
 
-// Note: Worktree functionality is now handled by sandbox plugins (WorktreePlugin)
-// Tests for worktree are in internal/sandbox/plugins/worktree_test.go
+// Note: Worktree functionality is now handled by PodBuilder.setupWorkDir
+// based on WorkDirConfig from Backend.
 
 func TestPodBuilderBuildWithEmptyPodKey(t *testing.T) {
 	runner := &Runner{

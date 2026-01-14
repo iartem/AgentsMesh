@@ -31,6 +31,34 @@ func (s *Service) ListBuiltinAgentTypes(ctx context.Context) ([]*agent.AgentType
 	return types, err
 }
 
+// AgentTypeInfo is a simplified agent type for Runner initialization
+type AgentTypeInfo struct {
+	Slug          string `json:"slug"`
+	Name          string `json:"name"`
+	Executable    string `json:"executable"`
+	LaunchCommand string `json:"launch_command"`
+}
+
+// GetAgentTypesForRunner returns agent types for Runner initialization handshake
+// This implements the runner.AgentTypesProvider interface
+func (s *Service) GetAgentTypesForRunner() []AgentTypeInfo {
+	var types []*agent.AgentType
+	if err := s.db.Where("is_active = ?", true).Find(&types).Error; err != nil {
+		return nil
+	}
+
+	result := make([]AgentTypeInfo, 0, len(types))
+	for _, t := range types {
+		result = append(result, AgentTypeInfo{
+			Slug:          t.Slug,
+			Name:          t.Name,
+			Executable:    t.Executable,
+			LaunchCommand: t.LaunchCommand,
+		})
+	}
+	return result
+}
+
 // GetAgentType returns an agent type by ID
 func (s *Service) GetAgentType(ctx context.Context, id int64) (*agent.AgentType, error) {
 	var agentType agent.AgentType

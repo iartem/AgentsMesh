@@ -11,8 +11,6 @@ import (
 	"github.com/anthropics/agentmesh/runner/internal/config"
 	"github.com/anthropics/agentmesh/runner/internal/mcp"
 	"github.com/anthropics/agentmesh/runner/internal/monitor"
-	"github.com/anthropics/agentmesh/runner/internal/sandbox"
-	"github.com/anthropics/agentmesh/runner/internal/sandbox/plugins"
 	"github.com/anthropics/agentmesh/runner/internal/terminal"
 	"github.com/anthropics/agentmesh/runner/internal/workspace"
 )
@@ -34,9 +32,6 @@ type Runner struct {
 	mcpServer       *mcp.HTTPServer       // MCP HTTP Server for Claude Code
 	claudeMonitor   *monitor.Monitor      // Claude CLI status monitoring
 	termManager     *terminal.Manager     // Enhanced terminal session management
-
-	// Sandbox management
-	sandboxManager *sandbox.Manager // Sandbox lifecycle management
 
 	// Channels for coordination
 	stopChan chan struct{}
@@ -161,15 +156,6 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 		}
 	}()
 
-	// Initialize Sandbox Manager with plugins
-	r.sandboxManager = sandbox.NewManagerWithConfig(sandbox.ManagerConfig{
-		Workspace:      cfg.GetWorkspace(),
-		MCPPort:        mcpPort,
-		UserPluginsDir: cfg.GetPluginsDir(),
-	})
-	r.registerSandboxPlugins(cfg)
-	log.Printf("[runner] Sandbox manager initialized: workspace=%s, plugins_dir=%s", cfg.GetWorkspace(), cfg.GetPluginsDir())
-
 	// Initialize Claude monitor for status tracking
 	r.claudeMonitor = monitor.NewMonitor(5 * time.Second)
 
@@ -179,23 +165,6 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 		defaultShell = "/bin/sh"
 	}
 	r.termManager = terminal.NewManager(defaultShell, cfg.WorkspaceRoot)
-}
-
-// registerSandboxPlugins registers all sandbox plugins in order.
-// Note: MCP, Skills, Env, InitScript plugins have been migrated to Lua plugins.
-// See runner/internal/luaplugin/builtin/ for the Lua implementations.
-func (r *Runner) registerSandboxPlugins(cfg *config.Config) {
-	// Go plugins: Worktree(10) -> TempDir(20)
-	// Lua plugins handle: Env, MCP, Skills, etc. (executed after Go plugins)
-	r.sandboxManager.RegisterPlugin(plugins.NewWorktreePlugin(cfg.GetReposDir()))
-	r.sandboxManager.RegisterPlugin(plugins.NewTempDirPlugin())
-
-	log.Printf("[runner] Registered 2 Go sandbox plugins (Lua plugins loaded separately)")
-}
-
-// GetSandboxManager returns the sandbox manager.
-func (r *Runner) GetSandboxManager() *sandbox.Manager {
-	return r.sandboxManager
 }
 
 // Run starts the runner and blocks until context is cancelled
@@ -256,81 +225,6 @@ func (r *Runner) register(ctx context.Context) (*client.RegistrationResponse, er
 	return client.Register(ctx, req)
 }
 
-// PodStartPayload represents the payload for pod start
-type PodStartPayload struct {
-	PodKey           string            `json:"pod_key"`
-	AgentType        string            `json:"agent_type"`
-	LaunchCommand    string            `json:"launch_command"`
-	LaunchArgs       []string          `json:"launch_args"`
-	EnvVars          map[string]string `json:"env_vars"`
-	RepositoryURL    string            `json:"repository_url"`
-	Branch           string            `json:"branch"`
-	InitialPrompt    string            `json:"initial_prompt"`
-	Rows             int               `json:"rows"`
-	Cols             int               `json:"cols"`
-	TicketIdentifier string            `json:"ticket_identifier,omitempty"`
-	PrepScript       string            `json:"prep_script,omitempty"`
-	PrepTimeout      int               `json:"prep_timeout,omitempty"`
-
-	// PluginConfig is a flexible JSON dict passed to sandbox plugins
-	// Can include: repository_url, branch, ticket_identifier, init_script, env_vars, git_token, etc.
-	PluginConfig map[string]interface{} `json:"plugin_config,omitempty"`
-}
-
-// ToPluginConfig converts PodStartPayload to a plugin config map.
-// This merges explicit fields with any PluginConfig values.
-func (p *PodStartPayload) ToPluginConfig() map[string]interface{} {
-	config := make(map[string]interface{})
-
-	// Copy explicit fields
-	if p.RepositoryURL != "" {
-		config["repository_url"] = p.RepositoryURL
-	}
-	if p.Branch != "" {
-		config["branch"] = p.Branch
-	}
-	if p.TicketIdentifier != "" {
-		config["ticket_identifier"] = p.TicketIdentifier
-	}
-	if p.PrepScript != "" {
-		config["init_script"] = p.PrepScript
-	}
-	if p.PrepTimeout > 0 {
-		config["init_timeout"] = p.PrepTimeout
-	}
-	if len(p.EnvVars) > 0 {
-		envMap := make(map[string]interface{})
-		for k, v := range p.EnvVars {
-			envMap[k] = v
-		}
-		config["env_vars"] = envMap
-	}
-
-	// Merge PluginConfig (can override above values)
-	for k, v := range p.PluginConfig {
-		config[k] = v
-	}
-
-	return config
-}
-
-// PodStopPayload represents the payload for pod stop
-type PodStopPayload struct {
-	PodKey string `json:"pod_key"`
-}
-
-// TerminalInputPayload represents terminal input
-type TerminalInputPayload struct {
-	PodKey string `json:"pod_key"`
-	Data   []byte `json:"data"`
-}
-
-// TerminalResizePayload represents terminal resize
-type TerminalResizePayload struct {
-	PodKey string `json:"pod_key"`
-	Rows   int    `json:"rows"`
-	Cols   int    `json:"cols"`
-}
 
 // stopAllPods stops all active pods
 func (r *Runner) stopAllPods() {

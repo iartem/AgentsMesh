@@ -97,7 +97,7 @@ func main() {
 	}
 
 	// Initialize Runner connection manager and Pod coordinator
-	runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher := initializeRunnerComponents(db, redisClient, appLogger)
+	runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher := initializeRunnerComponents(db, redisClient, appLogger, services.agent)
 
 	// Setup terminal router event publishing for OSC 777 notifications
 	terminalRouter.SetEventBus(eventBus)
@@ -295,9 +295,17 @@ func initializeInfrastructure(cfg *config.Config, appLogger *logger.Logger) (*we
 }
 
 // initializeRunnerComponents initializes runner-related components
-func initializeRunnerComponents(db *gorm.DB, redisClient *redis.Client, appLogger *logger.Logger) (*runner.ConnectionManager, *runner.PodCoordinator, *runner.TerminalRouter, *runner.HeartbeatBatcher) {
+func initializeRunnerComponents(db *gorm.DB, redisClient *redis.Client, appLogger *logger.Logger, agentSvc *agent.Service) (*runner.ConnectionManager, *runner.PodCoordinator, *runner.TerminalRouter, *runner.HeartbeatBatcher) {
 	// Initialize Runner connection manager
 	runnerConnMgr := runner.NewConnectionManager(appLogger.Logger)
+
+	// Setup AgentTypesProvider for initialization handshake
+	agentTypesAdapter := runner.NewAgentServiceAdapter(agentSvc)
+	runnerConnMgr.SetAgentTypesProvider(agentTypesAdapter)
+	runnerConnMgr.SetServerVersion("1.0.0") // TODO: Get from build info
+
+	// Start initialization timeout checker (removes connections that don't complete handshake)
+	runnerConnMgr.StartInitTimeoutChecker()
 
 	// Initialize Terminal router (routes terminal data between frontend and runner)
 	terminalRouter := runner.NewTerminalRouter(runnerConnMgr, appLogger.Logger)
