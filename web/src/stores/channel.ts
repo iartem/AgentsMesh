@@ -75,7 +75,7 @@ interface ChannelState {
   clearError: () => void;
 }
 
-export const useChannelStore = create<ChannelState>((set, get) => ({
+export const useChannelStore = create<ChannelState>((set) => ({
   channels: [],
   currentChannel: null,
   messages: [],
@@ -105,9 +105,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     try {
       const response = await channelApi.get(id);
       set({ currentChannel: response.channel, loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch channel",
+        error: error instanceof Error ? error.message : "Failed to fetch channel",
         loading: false,
       });
     }
@@ -148,8 +148,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
           state.currentChannel?.id === id ? response.channel : state.currentChannel,
       }));
       return response.channel;
-    } catch (error: any) {
-      set({ error: error.message || "Failed to update channel" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to update channel" });
       throw error;
     }
   },
@@ -166,8 +166,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
             ? { ...state.currentChannel, is_archived: true }
             : state.currentChannel,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to archive channel" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to archive channel" });
       throw error;
     }
   },
@@ -184,8 +184,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
             ? { ...state.currentChannel, is_archived: false }
             : state.currentChannel,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to unarchive channel" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to unarchive channel" });
       throw error;
     }
   },
@@ -201,9 +201,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
             : [...state.messages, ...(response.messages || [])],
         messagesLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch messages",
+        error: error instanceof Error ? error.message : "Failed to fetch messages",
         messagesLoading: false,
       });
     }
@@ -216,8 +216,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         messages: [...state.messages, response.message],
       }));
       return response.message;
-    } catch (error: any) {
-      set({ error: error.message || "Failed to send message" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to send message" });
       throw error;
     }
   },
@@ -232,8 +232,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         currentChannel:
           state.currentChannel?.id === channelId ? response.channel : state.currentChannel,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to join channel" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to join channel" });
       throw error;
     }
   },
@@ -248,8 +248,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         currentChannel:
           state.currentChannel?.id === channelId ? response.channel : state.currentChannel,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to leave channel" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to leave channel" });
       throw error;
     }
   },

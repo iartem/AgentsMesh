@@ -132,7 +132,7 @@ describe('cn utility function', () => {
     })
 
     it('should handle number zero', () => {
-      expect(cn('foo', 0 as any)).toBe('foo')
+      expect(cn('foo', 0 as unknown as string)).toBe('foo')
     })
 
     it('should not deduplicate identical non-tailwind classes', () => {

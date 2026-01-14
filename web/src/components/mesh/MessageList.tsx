@@ -6,7 +6,7 @@ interface Message {
   id: number;
   content: string;
   messageType: "text" | "system" | "code" | "command";
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   pod?: {
     podKey: string;

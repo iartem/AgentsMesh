@@ -28,7 +28,7 @@ interface RunnerState {
   clearError: () => void;
 }
 
-export const useRunnerStore = create<RunnerState>((set, get) => ({
+export const useRunnerStore = create<RunnerState>((set) => ({
   runners: [],
   availableRunners: [],
   currentRunner: null,
@@ -40,9 +40,9 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
     try {
       const response = await runnerApi.list(status);
       set({ runners: response.runners || [], loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch runners",
+        error: error instanceof Error ? error.message : "Failed to fetch runners",
         loading: false,
       });
     }
@@ -53,9 +53,9 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
     try {
       const response = await runnerApi.listAvailable();
       set({ availableRunners: response.runners || [], loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch available runners",
+        error: error instanceof Error ? error.message : "Failed to fetch available runners",
         loading: false,
       });
     }
@@ -66,9 +66,9 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
     try {
       const response = await runnerApi.get(id);
       set({ currentRunner: response.runner, loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch runner",
+        error: error instanceof Error ? error.message : "Failed to fetch runner",
         loading: false,
       });
     }

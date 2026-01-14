@@ -95,9 +95,9 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         totalCount: response.total || 0,
         loading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch tickets",
+        error: error instanceof Error ? error.message : "Failed to fetch tickets",
         loading: false,
       });
     }
@@ -108,9 +108,9 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     try {
       const ticket = await ticketApi.get(identifier);
       set({ currentTicket: ticket, loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch ticket",
+        error: error instanceof Error ? error.message : "Failed to fetch ticket",
         loading: false,
       });
     }
@@ -126,9 +126,9 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         loading: false,
       }));
       return ticket;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to create ticket",
+        error: error instanceof Error ? error.message : "Failed to create ticket",
         loading: false,
       });
       throw error;
@@ -148,8 +148,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
             : state.currentTicket,
       }));
       return ticket;
-    } catch (error: any) {
-      set({ error: error.message || "Failed to update ticket" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to update ticket" });
       throw error;
     }
   },
@@ -165,15 +165,15 @@ export const useTicketStore = create<TicketState>((set, get) => ({
             ? null
             : state.currentTicket,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to delete ticket" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to delete ticket" });
       throw error;
     }
   },
 
   updateTicketStatus: async (identifier, status) => {
     try {
-      const ticket = await ticketApi.updateStatus(identifier, status);
+      await ticketApi.updateStatus(identifier, status);
       set((state) => ({
         tickets: state.tickets.map((t) =>
           t.identifier === identifier ? { ...t, status } : t
@@ -183,8 +183,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
             ? { ...state.currentTicket, status }
             : state.currentTicket,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to update ticket status" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to update ticket status" });
       throw error;
     }
   },
@@ -193,8 +193,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     try {
       const response = await ticketApi.listLabels(repositoryId);
       set({ labels: response.labels || [] });
-    } catch (error: any) {
-      set({ error: error.message || "Failed to fetch labels" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to fetch labels" });
     }
   },
 
@@ -205,8 +205,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         labels: [...state.labels, label],
       }));
       return label;
-    } catch (error: any) {
-      set({ error: error.message || "Failed to create label" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to create label" });
       throw error;
     }
   },
@@ -217,8 +217,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       set((state) => ({
         labels: state.labels.filter((l) => l.id !== id),
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to delete label" });
+    } catch (error: unknown) {
+      set({ error: error instanceof Error ? error.message : "Failed to delete label" });
       throw error;
     }
   },

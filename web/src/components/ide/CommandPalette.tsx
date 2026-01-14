@@ -3,9 +3,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
-import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
-import { useIDEStore, type ActivityType, ACTIVITIES } from "@/stores/ide";
+import { useIDEStore } from "@/stores/ide";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { podApi, ticketApi, repositoryApi } from "@/lib/api";
 import {
@@ -17,14 +16,9 @@ import {
   Settings,
   Search,
   Plus,
-  Moon,
-  Sun,
   LogOut,
-  User,
-  Building,
   Command as CommandIcon,
   ArrowRight,
-  Keyboard,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -83,21 +77,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         const searchLower = search.toLowerCase();
         setPods(
           (podsRes.pods || [])
-            .filter((p: any) => p.pod_key.toLowerCase().includes(searchLower))
+            .filter((p: { pod_key: string }) => p.pod_key.toLowerCase().includes(searchLower))
             .slice(0, 5)
         );
         setTickets(
           (ticketsRes.tickets || [])
             .filter(
-              (t: any) =>
-                t.identifier.toLowerCase().includes(searchLower) ||
-                t.title.toLowerCase().includes(searchLower)
+              (ticket: { identifier: string; title: string }) =>
+                ticket.identifier.toLowerCase().includes(searchLower) ||
+                ticket.title.toLowerCase().includes(searchLower)
             )
             .slice(0, 5)
         );
         setRepositories(
           (reposRes.repositories || [])
-            .filter((r: any) => r.full_path.toLowerCase().includes(searchLower))
+            .filter((r: { full_path: string }) => r.full_path.toLowerCase().includes(searchLower))
             .slice(0, 5)
         );
       } catch (error) {
@@ -230,12 +224,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       },
     ],
     [orgSlug, router, logout, t]
-  );
-
-  // All static commands
-  const allCommands = useMemo(
-    () => [...navigationCommands, ...actionCommands],
-    [navigationCommands, actionCommands]
   );
 
   // Handle keyboard shortcut

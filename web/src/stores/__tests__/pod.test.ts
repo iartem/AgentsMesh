@@ -95,7 +95,7 @@ describe("Pod Store", () => {
     });
 
     it("should handle empty response", async () => {
-      vi.mocked(podApi.list).mockResolvedValue({ pods: undefined as any, total: 0 });
+      vi.mocked(podApi.list).mockResolvedValue({ pods: undefined as unknown as typeof mockPod[], total: 0 });
 
       await act(async () => {
         await usePodStore.getState().fetchPods();

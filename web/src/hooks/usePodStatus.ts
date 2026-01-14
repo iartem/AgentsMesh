@@ -62,16 +62,17 @@ export function usePodStatus(podKey: string): UsePodStatusResult {
   useEffect(() => {
     if (!storePod) return;
 
-    setPodStatus(storePod.status);
+    const status = storePod.status;
+    setPodStatus(status);
 
-    if (storePod.status === "running") {
+    if (status === "running") {
       setIsPodReady(true);
       setPodError(null);
-    } else if (storePod.status === "failed" || storePod.status === "terminated") {
+    } else if (status === "failed" || status === "terminated") {
       setIsPodReady(false);
-      setPodError(`Pod ${storePod.status}`);
+      setPodError(`Pod ${status}`);
     }
-  }, [storePod?.status]);
+  }, [storePod]);
 
   return { podStatus, isPodReady, podError };
 }
