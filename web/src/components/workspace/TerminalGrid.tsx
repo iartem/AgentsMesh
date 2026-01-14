@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { useWorkspaceStore, type TerminalPane as TerminalPaneType } from "@/stores/workspace";
+import { useWorkspaceStore } from "@/stores/workspace";
 import { TerminalPane } from "./TerminalPane";
 import { Terminal as TerminalIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,18 +14,63 @@ interface TerminalGridProps {
   className?: string;
 }
 
+/**
+ * 空槽位占位组件
+ */
+function EmptyPaneSlot({ onAddNew }: { onAddNew?: () => void }) {
+  return (
+    <div className="flex items-center justify-center h-full bg-[#252526] rounded-lg border border-dashed border-[#3c3c3c]">
+      {onAddNew && (
+        <Button
+          variant="ghost"
+          className="text-[#808080] hover:text-[#cccccc] hover:bg-[#3c3c3c]"
+          onClick={onAddNew}
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Add Terminal
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * VS Code 风格的拖拽条 - 默认隐藏，hover 时高亮
+ */
+function ResizeHandle({ direction }: { direction: "horizontal" | "vertical" }) {
+  const isHorizontal = direction === "horizontal";
+
+  return (
+    <Separator
+      className={cn(
+        "group relative flex items-center justify-center bg-transparent transition-colors",
+        isHorizontal
+          ? "w-1 cursor-col-resize hover:bg-primary"
+          : "h-1 cursor-row-resize hover:bg-primary"
+      )}
+    >
+      {/* 扩大点击区域 */}
+      <div
+        className={cn(
+          "absolute z-10",
+          isHorizontal ? "w-3 h-full -left-1" : "h-3 w-full -top-1"
+        )}
+      />
+    </Separator>
+  );
+}
+
 export function TerminalGrid({ onPopout, onAddNew, className }: TerminalGridProps) {
   const { panes, activePane, gridLayout, removePane } = useWorkspaceStore();
 
-  // Calculate visible panes based on grid layout
+  // 根据布局计算可见的 panes
   const visiblePanes = useMemo(() => {
     const maxVisible = gridLayout.rows * gridLayout.cols;
 
-    // If we have an active pane, make sure it's included
+    // 确保 activePane 在可见范围内
     if (activePane) {
       const activeIndex = panes.findIndex((p) => p.id === activePane);
       if (activeIndex !== -1) {
-        // Get panes around the active one
         const startIndex = Math.max(0, activeIndex - Math.floor(maxVisible / 2));
         return panes.slice(startIndex, startIndex + maxVisible);
       }
@@ -33,14 +79,27 @@ export function TerminalGrid({ onPopout, onAddNew, className }: TerminalGridProp
     return panes.slice(0, maxVisible);
   }, [panes, activePane, gridLayout]);
 
-  // Calculate grid template
-  const gridStyle = useMemo(() => {
-    return {
-      gridTemplateRows: `repeat(${gridLayout.rows}, 1fr)`,
-      gridTemplateColumns: `repeat(${gridLayout.cols}, 1fr)`,
-    };
-  }, [gridLayout]);
+  // 渲染单个终端面板或空槽位
+  const renderPane = (index: number) => {
+    const pane = visiblePanes[index];
+    if (!pane) {
+      return <EmptyPaneSlot onAddNew={onAddNew} />;
+    }
+    return (
+      <TerminalPane
+        key={pane.id}
+        paneId={pane.id}
+        podKey={pane.podKey}
+        title={pane.title}
+        isActive={pane.id === activePane}
+        onClose={() => removePane(pane.id)}
+        onPopout={onPopout ? () => onPopout(pane.id) : undefined}
+        showHeader={true}
+      />
+    );
+  };
 
+  // 空状态
   if (panes.length === 0) {
     return (
       <div className={cn("flex-1 flex items-center justify-center bg-[#1e1e1e]", className)}>
@@ -64,45 +123,93 @@ export function TerminalGrid({ onPopout, onAddNew, className }: TerminalGridProp
     );
   }
 
-  return (
-    <div
-      className={cn("flex-1 grid gap-1 p-1 bg-[#1e1e1e]", className)}
-      style={gridStyle}
-    >
-      {visiblePanes.map((pane, index) => (
-        <TerminalPane
-          key={pane.id}
-          paneId={pane.id}
-          podKey={pane.podKey}
-          title={pane.title}
-          isActive={pane.id === activePane}
-          onClose={() => removePane(pane.id)}
-          onPopout={onPopout ? () => onPopout(pane.id) : undefined}
-          showHeader={true}
-        />
-      ))}
+  // 1x1 布局 - 单窗口
+  if (gridLayout.type === "1x1") {
+    return (
+      <div className={cn("flex-1 p-1 bg-[#1e1e1e]", className)}>
+        {renderPane(0)}
+      </div>
+    );
+  }
 
-      {/* Fill empty grid cells with placeholder */}
-      {visiblePanes.length < gridLayout.rows * gridLayout.cols &&
-        Array.from({ length: gridLayout.rows * gridLayout.cols - visiblePanes.length }).map(
-          (_, index) => (
-            <div
-              key={`empty-${index}`}
-              className="flex items-center justify-center bg-[#252526] rounded-lg border border-dashed border-[#3c3c3c]"
-            >
-              {onAddNew && (
-                <Button
-                  variant="ghost"
-                  className="text-[#808080] hover:text-[#cccccc] hover:bg-[#3c3c3c]"
-                  onClick={onAddNew}
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Add Terminal
-                </Button>
-              )}
-            </div>
-          )
-        )}
+  // 1x2 布局 - 两列
+  // key 确保布局切换时重置面板状态（符合用户选择的"切换布局时重置为均分"）
+  if (gridLayout.type === "1x2") {
+    return (
+      <Group
+        key="layout-1x2"
+        orientation="horizontal"
+        className={cn("flex-1 p-1 bg-[#1e1e1e]", className)}
+      >
+        <Panel defaultSize={50} minSize={20}>
+          {renderPane(0)}
+        </Panel>
+        <ResizeHandle direction="horizontal" />
+        <Panel defaultSize={50} minSize={20}>
+          {renderPane(1)}
+        </Panel>
+      </Group>
+    );
+  }
+
+  // 2x1 布局 - 两行
+  if (gridLayout.type === "2x1") {
+    return (
+      <Group
+        key="layout-2x1"
+        orientation="vertical"
+        className={cn("flex-1 p-1 bg-[#1e1e1e]", className)}
+      >
+        <Panel defaultSize={50} minSize={20}>
+          {renderPane(0)}
+        </Panel>
+        <ResizeHandle direction="vertical" />
+        <Panel defaultSize={50} minSize={20}>
+          {renderPane(1)}
+        </Panel>
+      </Group>
+    );
+  }
+
+  // 2x2 布局 - 四宫格
+  if (gridLayout.type === "2x2") {
+    return (
+      <Group
+        key="layout-2x2"
+        orientation="vertical"
+        className={cn("flex-1 p-1 bg-[#1e1e1e]", className)}
+      >
+        <Panel defaultSize={50} minSize={20}>
+          <Group orientation="horizontal" className="h-full">
+            <Panel defaultSize={50} minSize={20}>
+              {renderPane(0)}
+            </Panel>
+            <ResizeHandle direction="horizontal" />
+            <Panel defaultSize={50} minSize={20}>
+              {renderPane(1)}
+            </Panel>
+          </Group>
+        </Panel>
+        <ResizeHandle direction="vertical" />
+        <Panel defaultSize={50} minSize={20}>
+          <Group orientation="horizontal" className="h-full">
+            <Panel defaultSize={50} minSize={20}>
+              {renderPane(2)}
+            </Panel>
+            <ResizeHandle direction="horizontal" />
+            <Panel defaultSize={50} minSize={20}>
+              {renderPane(3)}
+            </Panel>
+          </Group>
+        </Panel>
+      </Group>
+    );
+  }
+
+  // Fallback: 使用 1x1 布局
+  return (
+    <div className={cn("flex-1 p-1 bg-[#1e1e1e]", className)}>
+      {renderPane(0)}
     </div>
   );
 }

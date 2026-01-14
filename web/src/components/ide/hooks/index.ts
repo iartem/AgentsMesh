@@ -1,10 +1,15 @@
-export { usePodCreationData } from "./usePodCreationData";
-export type { PodCreationData } from "./usePodCreationData";
+// Re-export from shared pod hooks for backward compatibility
+export {
+  usePodCreationData,
+  usePluginOptions,
+  useFocusTrap,
+  useCreatePodForm,
+  RUNNER_HOST_PROFILE_ID,
+} from "@/components/pod/hooks";
 
-export { usePluginOptions } from "./usePluginOptions";
-export type { PluginOptionsState } from "./usePluginOptions";
-
-export { useFocusTrap } from "./useFocusTrap";
-
-export { useCreatePodForm, RUNNER_HOST_PROFILE_ID } from "./useCreatePodForm";
-export type { CreatePodFormState } from "./useCreatePodForm";
+export type {
+  PodCreationData,
+  PluginOptionsState,
+  CreatePodFormState,
+  FormValidationErrors,
+} from "@/components/pod/hooks";

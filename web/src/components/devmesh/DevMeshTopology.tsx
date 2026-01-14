@@ -19,15 +19,15 @@ import ChannelNode from "./ChannelNode";
 import BindingEdge from "./BindingEdge";
 import { useDevMeshStore, type DevMeshNode, type ChannelInfo, type DevMeshEdge } from "@/stores/devmesh";
 
-// Custom node types - using 'any' to bypass strict type checking
+// Custom node types
 const nodeTypes = {
-  pod: PodNode as any,
-  channel: ChannelNode as any,
+  pod: PodNode as React.ComponentType<unknown>,
+  channel: ChannelNode as React.ComponentType<unknown>,
 };
 
 // Custom edge types
 const edgeTypes = {
-  binding: BindingEdge as any,
+  binding: BindingEdge as React.ComponentType<unknown>,
 };
 
 // Layout algorithm - simple force-directed-like placement

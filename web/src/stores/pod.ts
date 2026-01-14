@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { podApi, PodData } from "@/lib/api/client";
+import { getErrorMessage } from "@/lib/utils";
 
 // Re-export PodData as Pod for backward compatibility
 export type Pod = PodData;
@@ -32,7 +33,7 @@ interface PodState {
   clearError: () => void;
 }
 
-export const usePodStore = create<PodState>((set, get) => ({
+export const usePodStore = create<PodState>((set) => ({
   pods: [],
   currentPod: null,
   loading: false,
@@ -43,9 +44,9 @@ export const usePodStore = create<PodState>((set, get) => ({
     try {
       const response = await podApi.list(filters);
       set({ pods: response.pods || [], loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch pods",
+        error: getErrorMessage(error, "Failed to fetch pods"),
         loading: false,
       });
     }
@@ -56,9 +57,9 @@ export const usePodStore = create<PodState>((set, get) => ({
     try {
       const response = await podApi.get(podKey);
       set({ currentPod: response.pod, loading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to fetch pod",
+        error: getErrorMessage(error, "Failed to fetch pod"),
         loading: false,
       });
     }
@@ -83,9 +84,9 @@ export const usePodStore = create<PodState>((set, get) => ({
         loading: false,
       }));
       return response.pod;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || "Failed to create pod",
+        error: getErrorMessage(error, "Failed to create pod"),
         loading: false,
       });
       throw error;
@@ -104,8 +105,8 @@ export const usePodStore = create<PodState>((set, get) => ({
             ? { ...state.currentPod, status: "terminated" as const }
             : state.currentPod,
       }));
-    } catch (error: any) {
-      set({ error: error.message || "Failed to terminate pod" });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, "Failed to terminate pod") });
       throw error;
     }
   },

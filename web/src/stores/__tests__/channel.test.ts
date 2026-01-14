@@ -106,7 +106,7 @@ describe("Channel Store", () => {
     });
 
     it("should handle empty response", async () => {
-      vi.mocked(channelApi.list).mockResolvedValue({ channels: undefined as any, total: 0 });
+      vi.mocked(channelApi.list).mockResolvedValue({ channels: undefined as unknown as typeof mockChannel[], total: 0 });
 
       await act(async () => {
         await useChannelStore.getState().fetchChannels();

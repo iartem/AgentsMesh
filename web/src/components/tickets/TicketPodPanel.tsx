@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
-import { ticketApi, runnerApi } from "@/lib/api/client";
+import { ticketApi } from "@/lib/api/client";
 import { getPodStatusInfo, getAgentStatusInfo } from "@/stores/devmesh";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useAuthStore } from "@/stores/auth";
-import { Play, ExternalLink, Terminal } from "lucide-react";
+import { Terminal, ExternalLink } from "lucide-react";
+import { CreatePodForm } from "@/components/pod/CreatePodForm";
 
 interface TicketPod {
   pod_key: string;
@@ -20,65 +21,43 @@ interface TicketPod {
   created_by_id: number;
 }
 
-interface Runner {
-  id: number;
-  node_id: string;
-  status: string;
-  current_pods: number;
-  max_concurrent_pods?: number;
-}
-
 interface TicketPodPanelProps {
   ticketIdentifier: string;
   ticketTitle: string;
+  ticketDescription?: string;
+  ticketId?: number;
   onPodCreated?: () => void;
 }
 
 export default function TicketPodPanel({
   ticketIdentifier,
   ticketTitle,
+  ticketDescription,
+  ticketId,
   onPodCreated,
 }: TicketPodPanelProps) {
   const t = useTranslations();
   const [pods, setPods] = useState<TicketPod[]>([]);
-  const [runners, setRunners] = useState<Runner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Create form state
-  const [selectedRunner, setSelectedRunner] = useState<number | null>(null);
-  const [initialPrompt, setInitialPrompt] = useState("");
-  const [model, setModel] = useState("claude-sonnet-4-20250514");
-  const [permissionMode, setPermissionMode] = useState("default");
 
   const fetchPods = useCallback(async () => {
     try {
       const response = await ticketApi.getPods(ticketIdentifier);
       setPods(response.pods || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch pods:", err);
     }
   }, [ticketIdentifier]);
 
-  const fetchRunners = useCallback(async () => {
-    try {
-      const response = await runnerApi.list();
-      setRunners(response.runners?.filter((r) => r.status === "online") || []);
-    } catch (err: any) {
-      console.error("Failed to fetch runners:", err);
-    }
-  }, []);
-
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchPods(), fetchRunners()]);
+      await fetchPods();
       setLoading(false);
     };
     loadData();
-  }, [fetchPods, fetchRunners]);
+  }, [fetchPods]);
 
   // Poll for pod updates
   useEffect(() => {
@@ -86,38 +65,10 @@ export default function TicketPodPanel({
     return () => clearInterval(interval);
   }, [fetchPods]);
 
-  const handleCreatePod = async () => {
-    if (!selectedRunner) {
-      setError(t("tickets.podPanel.selectRunnerRequired"));
-      return;
-    }
-
-    setCreating(true);
-    setError(null);
-
-    try {
-      await ticketApi.createPod(ticketIdentifier, {
-        runner_id: selectedRunner,
-        initial_prompt: initialPrompt || `Work on ticket: ${ticketTitle}`,
-        model,
-        permission_mode: permissionMode,
-      });
-
-      // Reset form
-      setShowCreateForm(false);
-      setSelectedRunner(null);
-      setInitialPrompt("");
-      setModel("claude-sonnet-4-20250514");
-      setPermissionMode("default");
-
-      // Refresh pods
-      await fetchPods();
-      onPodCreated?.();
-    } catch (err: any) {
-      setError(err.message || t("tickets.podPanel.createFailed"));
-    } finally {
-      setCreating(false);
-    }
+  const handlePodCreated = () => {
+    setShowCreateForm(false);
+    fetchPods();
+    onPodCreated?.();
   };
 
   const activePods = pods.filter(
@@ -155,7 +106,6 @@ export default function TicketPodPanel({
         <Button
           size="sm"
           onClick={() => setShowCreateForm(!showCreateForm)}
-          disabled={runners.length === 0}
         >
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -164,93 +114,27 @@ export default function TicketPodPanel({
         </Button>
       </div>
 
-      {/* Create Form */}
+      {/* Create Form - 使用共享的 CreatePodForm */}
       {showCreateForm && (
         <div className="p-4 border-b border-border bg-muted/30">
           <h4 className="text-sm font-medium mb-3">{t("tickets.podPanel.createNewPod")}</h4>
-          <div className="space-y-3">
-            {/* Runner Selection */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.runner")}</label>
-              <select
-                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-                value={selectedRunner || ""}
-                onChange={(e) => setSelectedRunner(Number(e.target.value) || null)}
-              >
-                <option value="">{t("tickets.podPanel.selectRunner")}</option>
-                {runners.map((runner) => (
-                  <option key={runner.id} value={runner.id}>
-                    {runner.node_id} ({runner.current_pods}{runner.max_concurrent_pods ? `/${runner.max_concurrent_pods}` : ""})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Model Selection */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.model")}</label>
-              <select
-                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              >
-                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-                <option value="claude-opus-4-20250514">Claude Opus 4</option>
-                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-              </select>
-            </div>
-
-            {/* Permission Mode */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("tickets.podPanel.permissionMode")}</label>
-              <select
-                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-                value={permissionMode}
-                onChange={(e) => setPermissionMode(e.target.value)}
-              >
-                <option value="default">{t("tickets.podPanel.permissionDefault")}</option>
-                <option value="plan">{t("tickets.podPanel.permissionPlan")}</option>
-                <option value="dangerously-skip-permissions">{t("tickets.podPanel.permissionAutoApprove")}</option>
-              </select>
-            </div>
-
-            {/* Initial Prompt */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                {t("tickets.podPanel.initialPrompt")}
-              </label>
-              <textarea
-                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background resize-none"
-                rows={3}
-                placeholder={t("tickets.podPanel.initialPromptPlaceholder", { title: ticketTitle })}
-                value={initialPrompt}
-                onChange={(e) => setInitialPrompt(e.target.value)}
-              />
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="text-sm text-destructive">{error}</div>
-            )}
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCreateForm(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleCreatePod}
-                disabled={!selectedRunner || creating}
-              >
-                {creating ? t("tickets.podPanel.creating") : t("tickets.podPanel.createPod")}
-              </Button>
-            </div>
-          </div>
+          <CreatePodForm
+            enabled={showCreateForm}
+            config={{
+              scenario: "ticket",
+              context: {
+                ticket: ticketId ? {
+                  id: ticketId,
+                  identifier: ticketIdentifier,
+                  title: ticketTitle,
+                  description: ticketDescription,
+                } : undefined,
+              },
+              promptPlaceholder: t("tickets.podPanel.initialPromptPlaceholder", { title: ticketTitle }),
+              onSuccess: handlePodCreated,
+              onCancel: () => setShowCreateForm(false),
+            }}
+          />
         </div>
       )}
 
@@ -276,17 +160,12 @@ export default function TicketPodPanel({
         )}
 
         {/* Empty State */}
-        {pods.length === 0 && (
+        {pods.length === 0 && !showCreateForm && (
           <div className="px-4 py-8 text-center text-muted-foreground">
             <svg className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-sm">{t("tickets.podPanel.noPods")}</p>
-            {runners.length === 0 && (
-              <p className="text-xs mt-1 text-yellow-600">
-                {t("tickets.podPanel.noRunners")}
-              </p>
-            )}
           </div>
         )}
       </div>

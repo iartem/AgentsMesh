@@ -55,10 +55,9 @@ test-web:
   image: node:20-alpine
   before_script:
     - corepack enable
-    - cd web
-    - pnpm install --frozen-lockfile
   script:
     - cd web
+    - pnpm install --frozen-lockfile
     - pnpm lint
     - pnpm test:run --coverage
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'

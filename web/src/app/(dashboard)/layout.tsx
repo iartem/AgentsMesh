@@ -23,15 +23,6 @@ export default function DashboardLayout({
     }
   }, [token, router, _hasHydrated]);
 
-  // Show loading state while hydrating
-  if (!_hasHydrated) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   // Handle terminal notifications (OSC 777)
   const handleTerminalNotification = useCallback(
     (data: TerminalNotificationData) => {
@@ -54,6 +45,15 @@ export default function DashboardLayout({
     });
     console.log("[Notification] Task completed:", data.pod_key, data.agent_status);
   }, []);
+
+  // Show loading state while hydrating
+  if (!_hasHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!token) {
     return null;

@@ -57,10 +57,10 @@ export function SheetTrigger({ children, asChild }: SheetTriggerProps) {
   const handleClick = () => setOpen(true);
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
+    return React.cloneElement(children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>, {
       onClick: (e: React.MouseEvent) => {
         handleClick();
-        (children as React.ReactElement<any>).props.onClick?.(e);
+        (children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>).props.onClick?.(e);
       },
     });
   }
@@ -212,10 +212,10 @@ export function SheetClose({
   const handleClick = () => setOpen(false);
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
+    return React.cloneElement(children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>, {
       onClick: (e: React.MouseEvent) => {
         handleClick();
-        (children as React.ReactElement<any>).props.onClick?.(e);
+        (children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>).props.onClick?.(e);
       },
     });
   }

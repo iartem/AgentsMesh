@@ -326,6 +326,7 @@ let lastMockWsInstance: MockWebSocket | null = null;
 class TrackedMockWebSocket extends MockWebSocket {
   constructor() {
     super();
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     lastMockWsInstance = this;
   }
 }
@@ -392,7 +393,7 @@ describe("Terminal Connection Pool", () => {
       expect(conn?.listeners.size).toBe(2);
     });
 
-    it("should replay buffer to new listener on existing connection", () => {
+    it('should not replay buffer to new listener on existing connection (backend sends scrollback)', () => {
       const onMessage1 = vi.fn();
       terminalPool.connect("pod-123", onMessage1);
 
@@ -403,11 +404,12 @@ describe("Terminal Connection Pool", () => {
         conn.buffer.push(testData);
       }
 
-      // Add second listener - should receive buffered message
+      // Add second listener - should NOT receive buffered message
+      // (backend will send scrollback data on new WebSocket connection instead)
       const onMessage2 = vi.fn();
       terminalPool.connect("pod-123", onMessage2);
 
-      expect(onMessage2).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
+      expect(onMessage2).not.toHaveBeenCalled();
     });
 
     it("should handle WebSocket open event", () => {

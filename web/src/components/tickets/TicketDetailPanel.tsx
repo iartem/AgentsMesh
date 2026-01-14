@@ -111,9 +111,9 @@ export function TicketDetailPanel({
       try {
         const data = await ticketApi.get(ticketIdentifier);
         setTicket(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to load ticket:", err);
-        setError(err.message || "Failed to load ticket");
+        setError(err instanceof Error ? err.message : "Failed to load ticket");
       } finally {
         setLoading(false);
       }
@@ -132,7 +132,7 @@ export function TicketDetailPanel({
         const updatedTicket = { ...ticket, status: newStatus };
         setTicket(updatedTicket);
         onTicketUpdated?.(updatedTicket);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to update status:", err);
       } finally {
         setUpdating(false);
@@ -151,7 +151,7 @@ export function TicketDetailPanel({
         const updatedTicket = { ...ticket, priority: newPriority };
         setTicket(updatedTicket);
         onTicketUpdated?.(updatedTicket);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to update priority:", err);
       } finally {
         setUpdating(false);

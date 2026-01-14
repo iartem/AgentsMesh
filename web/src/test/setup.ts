@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { vi, beforeAll, afterEach, afterAll } from 'vitest'
+import { vi, afterEach } from 'vitest'
 
 // Mock localStorage for Zustand persist middleware
 const createLocalStorageMock = () => {
@@ -66,7 +66,7 @@ class IntersectionObserverMock {
   disconnect() {}
 }
 
-global.IntersectionObserver = IntersectionObserverMock as any
+global.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver
 
 // Clean up after each test
 afterEach(() => {

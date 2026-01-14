@@ -210,7 +210,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
         {/* Labels */}
         {currentTicket.labels && currentTicket.labels.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {currentTicket.labels.map((label: any) => (
+            {currentTicket.labels.map((label: { id: number; name: string; color: string }) => (
               <span
                 key={label.id}
                 className="px-2 py-1 rounded text-sm"
@@ -327,6 +327,8 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
         <TicketPodPanel
           ticketIdentifier={identifier}
           ticketTitle={currentTicket.title}
+          ticketDescription={currentTicket.description}
+          ticketId={currentTicket.id}
         />
       </div>
 
@@ -398,7 +400,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
             {currentTicket.repository && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t("tickets.detail.repository")}</dt>
-                <dd>{(currentTicket.repository as any).name}</dd>
+                <dd>{(currentTicket.repository as { name: string }).name}</dd>
               </div>
             )}
           </dl>
@@ -409,7 +411,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
           <h3 className="font-medium mb-3">{t("tickets.detail.assignees")}</h3>
           {currentTicket.assignees && currentTicket.assignees.length > 0 ? (
             <div className="space-y-2">
-              {currentTicket.assignees.map((assignee: any) => (
+              {currentTicket.assignees.map((assignee: { id: number; name?: string; username: string }) => (
                 <div key={assignee.id} className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
                     {(assignee.name || assignee.username)[0].toUpperCase()}

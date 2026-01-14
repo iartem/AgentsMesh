@@ -14,6 +14,13 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+// Mock useAuthStore to provide currentOrg
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    currentOrg: { slug: 'test-org' },
+  }),
+}))
+
 // Mock ticket store
 vi.mock('@/stores/ticket', () => ({
   useTicketStore: vi.fn(),
@@ -350,7 +357,7 @@ describe('TicketDetail Component', () => {
       await waitFor(() => {
         const subTicket = screen.getByText('Sub-task 1')
         fireEvent.click(subTicket)
-        expect(mockRouterPush).toHaveBeenCalledWith('/tickets/PROJ-43')
+        expect(mockRouterPush).toHaveBeenCalledWith('/test-org/tickets/PROJ-43')
       })
     })
   })
@@ -404,7 +411,7 @@ describe('TicketDetail Component', () => {
       await waitFor(() => {
         const relatedTicket = screen.getByText('Related ticket')
         fireEvent.click(relatedTicket)
-        expect(mockRouterPush).toHaveBeenCalledWith('/tickets/PROJ-44')
+        expect(mockRouterPush).toHaveBeenCalledWith('/test-org/tickets/PROJ-44')
       })
     })
   })

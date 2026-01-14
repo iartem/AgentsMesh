@@ -120,9 +120,9 @@ export function TicketCreateDialog({
 
       onCreated?.(response.id, response.identifier);
       handleClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to create ticket:", err);
-      setError(err.message || t("tickets.createDialog.createFailed"));
+      setError(err instanceof Error ? err.message : t("tickets.createDialog.createFailed"));
     } finally {
       setLoading(false);
     }

@@ -11,6 +11,13 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+// Mock useAuthStore to provide currentOrg
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    currentOrg: { slug: 'test-org' },
+  }),
+}))
+
 describe('TicketCard Component', () => {
   const baseTicket = {
     id: 1,
@@ -38,7 +45,7 @@ describe('TicketCard Component', () => {
     it('should render ticket identifier as link', () => {
       render(<TicketCard ticket={baseTicket} />)
       const link = screen.getByRole('link', { name: 'PROJ-42' })
-      expect(link).toHaveAttribute('href', '/tickets/PROJ-42')
+      expect(link).toHaveAttribute('href', '/test-org/tickets/PROJ-42')
     })
   })
 
@@ -277,7 +284,8 @@ describe('TicketCard Component', () => {
     it('should handle unknown type gracefully', () => {
       const ticketWithUnknownType = {
         ...baseTicket,
-        type: 'unknown' as any,
+        // @ts-expect-error testing unknown type handling
+        type: 'unknown',
       }
       render(<TicketCard ticket={ticketWithUnknownType} />)
       // Should fall back to task styling (icon)
@@ -287,7 +295,8 @@ describe('TicketCard Component', () => {
     it('should handle unknown status gracefully', () => {
       const ticketWithUnknownStatus = {
         ...baseTicket,
-        status: 'unknown' as any,
+        // @ts-expect-error testing unknown status handling
+        status: 'unknown',
       }
       render(<TicketCard ticket={ticketWithUnknownStatus} />)
       // Should fall back to backlog styling (but translation key may show for unknown status)
@@ -299,7 +308,8 @@ describe('TicketCard Component', () => {
     it('should handle unknown priority gracefully', () => {
       const ticketWithUnknownPriority = {
         ...baseTicket,
-        priority: 'unknown' as any,
+        // @ts-expect-error testing unknown priority handling
+        priority: 'unknown',
       }
       render(<TicketCard ticket={ticketWithUnknownPriority} />)
       // Should fall back to none styling (icon)

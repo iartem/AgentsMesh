@@ -52,7 +52,7 @@ const initialState = {
   error: null,
 };
 
-export const useOrganizationStore = create<OrganizationState>((set, get) => ({
+export const useOrganizationStore = create<OrganizationState>((set) => ({
   ...initialState,
 
   setOrganizations: (organizations) => set({ organizations }),
