@@ -162,76 +162,6 @@ func TestMapCredentialsToEnvVars_OnlyBaseUrl(t *testing.T) {
 	}
 }
 
-// ==================== isPublicProvider Tests ====================
-
-func TestIsPublicProvider_GitHub(t *testing.T) {
-	tests := []struct {
-		name       string
-		baseURL    string
-		expectTrue bool
-	}{
-		{"github.com", "https://github.com", true},
-		{"api.github.com", "https://api.github.com", true},
-		{"enterprise github", "https://github.example.com", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isPublicProvider("github", tt.baseURL)
-			if result != tt.expectTrue {
-				t.Errorf("isPublicProvider('github', '%s') = %v, want %v", tt.baseURL, result, tt.expectTrue)
-			}
-		})
-	}
-}
-
-func TestIsPublicProvider_GitLab(t *testing.T) {
-	tests := []struct {
-		name       string
-		baseURL    string
-		expectTrue bool
-	}{
-		{"gitlab.com", "https://gitlab.com", true},
-		{"self-hosted gitlab", "https://gitlab.example.com", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isPublicProvider("gitlab", tt.baseURL)
-			if result != tt.expectTrue {
-				t.Errorf("isPublicProvider('gitlab', '%s') = %v, want %v", tt.baseURL, result, tt.expectTrue)
-			}
-		})
-	}
-}
-
-func TestIsPublicProvider_Gitee(t *testing.T) {
-	tests := []struct {
-		name       string
-		baseURL    string
-		expectTrue bool
-	}{
-		{"gitee.com", "https://gitee.com", true},
-		{"enterprise gitee", "https://gitee.example.com", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isPublicProvider("gitee", tt.baseURL)
-			if result != tt.expectTrue {
-				t.Errorf("isPublicProvider('gitee', '%s') = %v, want %v", tt.baseURL, result, tt.expectTrue)
-			}
-		})
-	}
-}
-
-func TestIsPublicProvider_UnknownProvider(t *testing.T) {
-	result := isPublicProvider("unknown", "https://unknown.com")
-	if result != false {
-		t.Errorf("isPublicProvider('unknown', 'https://unknown.com') = %v, want false", result)
-	}
-}
-
 // ==================== agentEnvVarMappings Validation Tests ====================
 
 func TestAgentEnvVarMappings_AllAgentsHaveAPIKey(t *testing.T) {
@@ -270,18 +200,14 @@ func TestAgentEnvVarMappings_NoDuplicateEnvVarNames(t *testing.T) {
 // mockUserService implements UserServiceForPod for testing
 type mockUserService struct {
 	// Mock data
-	defaultGitCredential    *user.GitCredential
-	decryptedCredential     *userService.DecryptedCredential
-	decryptedTokens         *userService.DecryptedTokens
-	gitConnection           *user.GitConnection
-	decryptedConnectionToken *userService.DecryptedTokens
+	defaultGitCredential *user.GitCredential
+	decryptedCredential  *userService.DecryptedCredential
+	providerToken        string
 
 	// Error returns
-	getDefaultGitCredentialErr    error
-	getDecryptedCredentialErr     error
-	getDecryptedTokensErr         error
-	getGitConnectionErr           error
-	getDecryptedConnectionTokenErr error
+	getDefaultGitCredentialErr error
+	getDecryptedCredentialErr  error
+	getProviderTokenErr        error
 }
 
 func (m *mockUserService) GetDefaultGitCredential(ctx context.Context, userID int64) (*user.GitCredential, error) {
@@ -298,25 +224,11 @@ func (m *mockUserService) GetDecryptedCredentialToken(ctx context.Context, userI
 	return m.decryptedCredential, nil
 }
 
-func (m *mockUserService) GetDecryptedTokens(ctx context.Context, userID int64, provider string) (*userService.DecryptedTokens, error) {
-	if m.getDecryptedTokensErr != nil {
-		return nil, m.getDecryptedTokensErr
+func (m *mockUserService) GetDecryptedProviderTokenByTypeAndURL(ctx context.Context, userID int64, providerType, baseURL string) (string, error) {
+	if m.getProviderTokenErr != nil {
+		return "", m.getProviderTokenErr
 	}
-	return m.decryptedTokens, nil
-}
-
-func (m *mockUserService) GetGitConnectionByProviderAndURL(ctx context.Context, userID int64, providerType, baseURL string) (*user.GitConnection, error) {
-	if m.getGitConnectionErr != nil {
-		return nil, m.getGitConnectionErr
-	}
-	return m.gitConnection, nil
-}
-
-func (m *mockUserService) GetDecryptedConnectionToken(ctx context.Context, userID, connectionID int64) (*userService.DecryptedTokens, error) {
-	if m.getDecryptedConnectionTokenErr != nil {
-		return nil, m.getDecryptedConnectionTokenErr
-	}
-	return m.decryptedConnectionToken, nil
+	return m.providerToken, nil
 }
 
 // Ensure mockUserService implements UserServiceForPod
@@ -454,11 +366,9 @@ func TestGetUserGitToken_NilUserService(t *testing.T) {
 	}
 }
 
-func TestGetUserGitToken_PublicGitHub_OAuthSuccess(t *testing.T) {
+func TestGetUserGitToken_ProviderTokenSuccess(t *testing.T) {
 	mock := &mockUserService{
-		decryptedTokens: &userService.DecryptedTokens{
-			AccessToken: "gho_oauth123",
-		},
+		providerToken: "gho_oauth123",
 	}
 	h := &PodHandler{userService: mock}
 	c, _ := createCredentialTestContext(1)
@@ -469,117 +379,22 @@ func TestGetUserGitToken_PublicGitHub_OAuthSuccess(t *testing.T) {
 	}
 }
 
-func TestGetUserGitToken_PublicGitHub_OAuthError_FallbackToConnection(t *testing.T) {
+func TestGetUserGitToken_ProviderTokenError(t *testing.T) {
 	mock := &mockUserService{
-		getDecryptedTokensErr: errors.New("no oauth"),
-		gitConnection: &user.GitConnection{
-			ID:           1,
-			UserID:       1,
-			ProviderType: "github",
-			BaseURL:      "https://github.com",
-		},
-		decryptedConnectionToken: &userService.DecryptedTokens{
-			AccessToken: "ghp_pat123",
-		},
+		getProviderTokenErr: errors.New("provider not found"),
 	}
 	h := &PodHandler{userService: mock}
 	c, _ := createCredentialTestContext(1)
 
 	result := h.getUserGitToken(c, 1, "github", "https://github.com")
-	if result != "ghp_pat123" {
-		t.Errorf("Expected 'ghp_pat123', got '%s'", result)
-	}
-}
-
-func TestGetUserGitToken_PublicGitHub_EmptyOAuthToken_FallbackToConnection(t *testing.T) {
-	mock := &mockUserService{
-		decryptedTokens: &userService.DecryptedTokens{
-			AccessToken: "", // Empty token
-		},
-		gitConnection: &user.GitConnection{
-			ID:           1,
-			UserID:       1,
-			ProviderType: "github",
-			BaseURL:      "https://github.com",
-		},
-		decryptedConnectionToken: &userService.DecryptedTokens{
-			AccessToken: "ghp_pat123",
-		},
-	}
-	h := &PodHandler{userService: mock}
-	c, _ := createCredentialTestContext(1)
-
-	result := h.getUserGitToken(c, 1, "github", "https://github.com")
-	if result != "ghp_pat123" {
-		t.Errorf("Expected 'ghp_pat123', got '%s'", result)
-	}
-}
-
-func TestGetUserGitToken_PrivateGitLab_ConnectionSuccess(t *testing.T) {
-	mock := &mockUserService{
-		gitConnection: &user.GitConnection{
-			ID:           1,
-			UserID:       1,
-			ProviderType: "gitlab",
-			BaseURL:      "https://gitlab.company.com",
-		},
-		decryptedConnectionToken: &userService.DecryptedTokens{
-			AccessToken: "glpat_private123",
-		},
-	}
-	h := &PodHandler{userService: mock}
-	c, _ := createCredentialTestContext(1)
-
-	// Private GitLab - doesn't try OAuth first
-	result := h.getUserGitToken(c, 1, "gitlab", "https://gitlab.company.com")
-	if result != "glpat_private123" {
-		t.Errorf("Expected 'glpat_private123', got '%s'", result)
-	}
-}
-
-func TestGetUserGitToken_PrivateGitLab_NoConnection(t *testing.T) {
-	mock := &mockUserService{
-		getGitConnectionErr: errors.New("not found"),
-	}
-	h := &PodHandler{userService: mock}
-	c, _ := createCredentialTestContext(1)
-
-	result := h.getUserGitToken(c, 1, "gitlab", "https://gitlab.company.com")
 	if result != "" {
-		t.Errorf("Expected empty string when no connection, got '%s'", result)
+		t.Errorf("Expected empty string when provider not found, got '%s'", result)
 	}
 }
 
-func TestGetUserGitToken_PrivateGitLab_ConnectionDecryptError(t *testing.T) {
+func TestGetUserGitToken_EmptyToken(t *testing.T) {
 	mock := &mockUserService{
-		gitConnection: &user.GitConnection{
-			ID:           1,
-			UserID:       1,
-			ProviderType: "gitlab",
-			BaseURL:      "https://gitlab.company.com",
-		},
-		getDecryptedConnectionTokenErr: errors.New("decrypt failed"),
-	}
-	h := &PodHandler{userService: mock}
-	c, _ := createCredentialTestContext(1)
-
-	result := h.getUserGitToken(c, 1, "gitlab", "https://gitlab.company.com")
-	if result != "" {
-		t.Errorf("Expected empty string when decrypt fails, got '%s'", result)
-	}
-}
-
-func TestGetUserGitToken_PrivateGitLab_EmptyConnectionToken(t *testing.T) {
-	mock := &mockUserService{
-		gitConnection: &user.GitConnection{
-			ID:           1,
-			UserID:       1,
-			ProviderType: "gitlab",
-			BaseURL:      "https://gitlab.company.com",
-		},
-		decryptedConnectionToken: &userService.DecryptedTokens{
-			AccessToken: "", // Empty
-		},
+		providerToken: "",
 	}
 	h := &PodHandler{userService: mock}
 	c, _ := createCredentialTestContext(1)
@@ -590,30 +405,28 @@ func TestGetUserGitToken_PrivateGitLab_EmptyConnectionToken(t *testing.T) {
 	}
 }
 
-func TestGetUserGitToken_NoCredentialsFound(t *testing.T) {
+func TestGetUserGitToken_PrivateGitLab(t *testing.T) {
 	mock := &mockUserService{
-		getDecryptedTokensErr: errors.New("no oauth"),
-		getGitConnectionErr:   errors.New("no connection"),
+		providerToken: "glpat_private123",
 	}
 	h := &PodHandler{userService: mock}
 	c, _ := createCredentialTestContext(1)
 
-	result := h.getUserGitToken(c, 1, "github", "https://github.com")
-	if result != "" {
-		t.Errorf("Expected empty string when no credentials, got '%s'", result)
+	result := h.getUserGitToken(c, 1, "gitlab", "https://gitlab.company.com")
+	if result != "glpat_private123" {
+		t.Errorf("Expected 'glpat_private123', got '%s'", result)
 	}
 }
 
-func TestGetUserGitToken_NilConnection(t *testing.T) {
+func TestGetUserGitToken_Gitee(t *testing.T) {
 	mock := &mockUserService{
-		getDecryptedTokensErr: errors.New("no oauth"),
-		gitConnection:         nil, // nil connection without error
+		providerToken: "gitee_token_abc",
 	}
 	h := &PodHandler{userService: mock}
 	c, _ := createCredentialTestContext(1)
 
-	result := h.getUserGitToken(c, 1, "github", "https://github.com")
-	if result != "" {
-		t.Errorf("Expected empty string when connection is nil, got '%s'", result)
+	result := h.getUserGitToken(c, 1, "gitee", "https://gitee.com")
+	if result != "gitee_token_abc" {
+		t.Errorf("Expected 'gitee_token_abc', got '%s'", result)
 	}
 }

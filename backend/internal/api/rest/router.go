@@ -83,10 +83,6 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			// User-level routes (no tenant context required)
 			v1.RegisterUserRoutes(protected.Group("/users"), svc.User, svc.Org, svc.AgentType, svc.CredentialProfile, svc.UserConfig, svc.AgentPodSettings, svc.AgentPodAIProvider)
 
-			// User Git connections routes (no tenant context required)
-			gitConnHandler := v1.NewUserGitConnectionHandler(svc.User)
-			gitConnHandler.RegisterRoutes(protected)
-
 			// Organization routes (authenticated, some require org context)
 			// Path changed: /organizations → /orgs
 			v1.RegisterOrganizationRoutes(protected.Group("/orgs"), svc.Org)

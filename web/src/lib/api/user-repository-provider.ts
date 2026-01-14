@@ -8,6 +8,9 @@ export interface RepositoryProviderData {
   name: string;
   base_url: string;
   client_id?: string;
+  has_client_id: boolean;
+  has_bot_token: boolean;
+  has_identity: boolean; // Has linked OAuth identity with access token
   is_default: boolean;
   is_active: boolean;
   created_at: string;

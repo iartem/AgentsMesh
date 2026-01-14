@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -368,6 +369,30 @@ func (s *Service) HandleOAuthCallback(ctx context.Context, provider, code, state
 		return nil, nil, false, err
 	}
 
+	// Save OAuth access token to identity for later API calls
+	if userInfo.AccessToken != "" {
+		if err := s.userService.UpdateIdentityTokens(ctx, u.ID, provider, userInfo.AccessToken, "", nil); err != nil {
+			// Log error but don't block login flow
+			slog.Warn("failed to save OAuth token",
+				"user_id", u.ID,
+				"provider", provider,
+				"error", err,
+			)
+		}
+	}
+
+	// For Git providers (github, gitlab, gitee), ensure a RepositoryProvider exists
+	if provider == "github" || provider == "gitlab" || provider == "gitee" {
+		if err := s.userService.EnsureRepositoryProviderForIdentity(ctx, u.ID, provider); err != nil {
+			// Log error but don't block login flow
+			slog.Warn("failed to create repository provider",
+				"user_id", u.ID,
+				"provider", provider,
+				"error", err,
+			)
+		}
+	}
+
 	// Generate tokens
 	tokens, err := s.GenerateTokenPair(u, 0, "")
 	if err != nil {
@@ -379,11 +404,12 @@ func (s *Service) HandleOAuthCallback(ctx context.Context, provider, code, state
 
 // OAuthUserInfo represents user info from OAuth provider
 type OAuthUserInfo struct {
-	ID        string
-	Username  string
-	Email     string
-	Name      string
-	AvatarURL string
+	ID          string
+	Username    string
+	Email       string
+	Name        string
+	AvatarURL   string
+	AccessToken string // OAuth access token for API calls
 }
 
 // GitHub OAuth helpers
@@ -462,11 +488,12 @@ func handleGitHubCallback(ctx context.Context, cfg OAuthConfig, code string) (*O
 	}
 
 	return &OAuthUserInfo{
-		ID:        fmt.Sprintf("%d", ghUser.ID),
-		Username:  ghUser.Login,
-		Email:     email,
-		Name:      ghUser.Name,
-		AvatarURL: ghUser.AvatarURL,
+		ID:          fmt.Sprintf("%d", ghUser.ID),
+		Username:    ghUser.Login,
+		Email:       email,
+		Name:        ghUser.Name,
+		AvatarURL:   ghUser.AvatarURL,
+		AccessToken: accessToken,
 	}, nil
 }
 
@@ -578,11 +605,12 @@ func handleGoogleCallback(ctx context.Context, cfg OAuthConfig, code string) (*O
 	username := strings.Split(googleUser.Email, "@")[0]
 
 	return &OAuthUserInfo{
-		ID:        googleUser.ID,
-		Username:  username,
-		Email:     googleUser.Email,
-		Name:      googleUser.Name,
-		AvatarURL: googleUser.Picture,
+		ID:          googleUser.ID,
+		Username:    username,
+		Email:       googleUser.Email,
+		Name:        googleUser.Name,
+		AvatarURL:   googleUser.Picture,
+		AccessToken: tokenData.AccessToken,
 	}, nil
 }
 
@@ -652,11 +680,12 @@ func handleGitLabCallback(ctx context.Context, cfg OAuthConfig, code string) (*O
 	}
 
 	return &OAuthUserInfo{
-		ID:        fmt.Sprintf("%d", glUser.ID),
-		Username:  glUser.Username,
-		Email:     glUser.Email,
-		Name:      glUser.Name,
-		AvatarURL: glUser.AvatarURL,
+		ID:          fmt.Sprintf("%d", glUser.ID),
+		Username:    glUser.Username,
+		Email:       glUser.Email,
+		Name:        glUser.Name,
+		AvatarURL:   glUser.AvatarURL,
+		AccessToken: tokenData.AccessToken,
 	}, nil
 }
 
@@ -725,11 +754,12 @@ func handleGiteeCallback(ctx context.Context, cfg OAuthConfig, code string) (*OA
 	}
 
 	return &OAuthUserInfo{
-		ID:        fmt.Sprintf("%d", giteeUser.ID),
-		Username:  giteeUser.Login,
-		Email:     giteeUser.Email,
-		Name:      giteeUser.Name,
-		AvatarURL: giteeUser.AvatarURL,
+		ID:          fmt.Sprintf("%d", giteeUser.ID),
+		Username:    giteeUser.Login,
+		Email:       giteeUser.Email,
+		Name:        giteeUser.Name,
+		AvatarURL:   giteeUser.AvatarURL,
+		AccessToken: tokenData.AccessToken,
 	}, nil
 }
 

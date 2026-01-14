@@ -11,6 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RepositoryResponse represents a repository in API responses
+type RepositoryResponse struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	FullPath      string `json:"full_path"`
+	Description   string `json:"description"`
+	DefaultBranch string `json:"default_branch"`
+	Visibility    string `json:"visibility"`
+	CloneURL      string `json:"clone_url"`
+	SSHCloneURL   string `json:"ssh_clone_url"`
+	WebURL        string `json:"web_url"`
+}
+
 // UserRepositoryProviderHandler handles user repository provider requests
 type UserRepositoryProviderHandler struct {
 	userService *user.Service

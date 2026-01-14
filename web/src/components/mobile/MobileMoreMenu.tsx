@@ -76,10 +76,10 @@ export function MobileMoreMenu({ className }: MobileMoreMenuProps) {
   // Additional menu items
   const additionalItems = [
     {
-      id: "git-connections",
-      labelKey: "mobile.menu.gitConnections",
+      id: "repository-providers",
+      labelKey: "mobile.menu.repositoryProviders",
       icon: GitBranch,
-      route: "/settings/git-connections",
+      route: "/settings/repository-providers",
     },
     {
       id: "profile",

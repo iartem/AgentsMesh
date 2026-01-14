@@ -129,15 +129,6 @@ export type {
   PendingInvitation,
 } from "./invitation";
 
-// Git Connection (User-level)
-export { gitConnectionApi } from "./git-connection";
-export type {
-  GitConnectionData,
-  RemoteRepositoryData,
-  CreateConnectionRequest,
-  UpdateConnectionRequest,
-} from "./git-connection";
-
 // Promo Code
 export { promoCodeApi } from "./promocode";
 export type {

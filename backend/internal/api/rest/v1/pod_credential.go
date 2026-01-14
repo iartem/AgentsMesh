@@ -17,12 +17,8 @@ type UserServiceForPod interface {
 	GetDefaultGitCredential(ctx context.Context, userID int64) (*user.GitCredential, error)
 	GetDecryptedCredentialToken(ctx context.Context, userID, credentialID int64) (*userService.DecryptedCredential, error)
 
-	// OAuth identity methods
-	GetDecryptedTokens(ctx context.Context, userID int64, provider string) (*userService.DecryptedTokens, error)
-
-	// Git connection methods
-	GetGitConnectionByProviderAndURL(ctx context.Context, userID int64, providerType, baseURL string) (*user.GitConnection, error)
-	GetDecryptedConnectionToken(ctx context.Context, userID, connectionID int64) (*userService.DecryptedTokens, error)
+	// Repository provider methods (unified OAuth + PAT)
+	GetDecryptedProviderTokenByTypeAndURL(ctx context.Context, userID int64, providerType, baseURL string) (string, error)
 }
 
 // AgentEnvVarMapping defines how credential fields map to environment variables
@@ -125,9 +121,9 @@ func (h *PodHandler) getUserGitCredential(c *gin.Context, userID int64) *userSer
 // getUserGitToken retrieves the Git access token for the current user
 // Implements "权限跟人走" - credentials follow the person, not the organization
 //
-// Priority:
-// 1. OAuth identity matching provider type (for public providers like github.com, gitlab.com)
-// 2. PAT connection matching provider type + base URL (for private GitLab instances)
+// Uses the unified RepositoryProvider system which handles both:
+// 1. OAuth identity tokens (for providers linked via OAuth login)
+// 2. Bot tokens / PAT (for manually added providers)
 //
 // Returns empty string if no credentials found (Runner will use local Git config)
 func (h *PodHandler) getUserGitToken(c *gin.Context, userID int64, providerType, providerBaseURL string) string {
@@ -137,38 +133,12 @@ func (h *PodHandler) getUserGitToken(c *gin.Context, userID int64, providerType,
 
 	ctx := c.Request.Context()
 
-	// 1. Try OAuth identity first (for github.com, gitlab.com, gitee.com)
-	// OAuth identities only exist for public providers
-	if isPublicProvider(providerType, providerBaseURL) {
-		tokens, err := h.userService.GetDecryptedTokens(ctx, userID, providerType)
-		if err == nil && tokens.AccessToken != "" {
-			return tokens.AccessToken
-		}
+	// Get token from RepositoryProvider (handles both OAuth and PAT)
+	token, err := h.userService.GetDecryptedProviderTokenByTypeAndURL(ctx, userID, providerType, providerBaseURL)
+	if err != nil {
+		// No credentials found - Runner will use its local Git configuration
+		return ""
 	}
 
-	// 2. Try PAT connections (for private GitLab or additional accounts)
-	conn, err := h.userService.GetGitConnectionByProviderAndURL(ctx, userID, providerType, providerBaseURL)
-	if err == nil && conn != nil {
-		decryptedTokens, err := h.userService.GetDecryptedConnectionToken(ctx, userID, conn.ID)
-		if err == nil && decryptedTokens.AccessToken != "" {
-			return decryptedTokens.AccessToken
-		}
-	}
-
-	// No credentials found - Runner will use its local Git configuration
-	return ""
-}
-
-// isPublicProvider checks if the provider is a public provider (github.com, gitlab.com, gitee.com)
-func isPublicProvider(providerType, providerBaseURL string) bool {
-	switch providerType {
-	case "github":
-		return providerBaseURL == "https://github.com" || providerBaseURL == "https://api.github.com"
-	case "gitlab":
-		return providerBaseURL == "https://gitlab.com"
-	case "gitee":
-		return providerBaseURL == "https://gitee.com"
-	default:
-		return false
-	}
+	return token
 }

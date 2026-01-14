@@ -16,6 +16,11 @@ type RepositoryProvider struct {
 	Name         string `gorm:"size:100;not null" json:"name"`         // User-defined name
 	BaseURL      string `gorm:"size:255;not null" json:"base_url"`     // https://github.com, https://gitlab.company.com
 
+	// OAuth identity reference (for OAuth-based providers)
+	// When set, access token is retrieved from the linked Identity
+	IdentityID *int64    `gorm:"index" json:"identity_id,omitempty"`
+	Identity   *Identity `gorm:"foreignKey:IdentityID" json:"identity,omitempty"`
+
 	// OAuth configuration (for API access)
 	ClientID              *string `gorm:"size:255" json:"client_id,omitempty"`
 	ClientSecretEncrypted *string `gorm:"type:text" json:"-"`
@@ -47,6 +52,7 @@ type RepositoryProviderResponse struct {
 	BaseURL      string `json:"base_url"`
 	HasClientID  bool   `json:"has_client_id"`
 	HasBotToken  bool   `json:"has_bot_token"`
+	HasIdentity  bool   `json:"has_identity"`  // Has linked OAuth identity with access token
 	IsDefault    bool   `json:"is_default"`
 	IsActive     bool   `json:"is_active"`
 	CreatedAt    string `json:"created_at"`
@@ -55,6 +61,12 @@ type RepositoryProviderResponse struct {
 
 // ToResponse converts RepositoryProvider to API response
 func (p *RepositoryProvider) ToResponse() *RepositoryProviderResponse {
+	// HasIdentity is true only if linked Identity has an access token
+	hasIdentity := p.IdentityID != nil &&
+		p.Identity != nil &&
+		p.Identity.AccessTokenEncrypted != nil &&
+		*p.Identity.AccessTokenEncrypted != ""
+
 	return &RepositoryProviderResponse{
 		ID:           p.ID,
 		ProviderType: p.ProviderType,
@@ -62,6 +74,7 @@ func (p *RepositoryProvider) ToResponse() *RepositoryProviderResponse {
 		BaseURL:      p.BaseURL,
 		HasClientID:  p.ClientID != nil && *p.ClientID != "",
 		HasBotToken:  p.BotTokenEncrypted != nil && *p.BotTokenEncrypted != "",
+		HasIdentity:  hasIdentity,
 		IsDefault:    p.IsDefault,
 		IsActive:     p.IsActive,
 		CreatedAt:    p.CreatedAt.Format(time.RFC3339),

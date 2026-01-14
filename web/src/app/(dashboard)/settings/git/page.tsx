@@ -237,7 +237,7 @@ export default function GitSettingsPage() {
       {/* Header */}
       <div className="mb-6">
         <Link
-          href="/settings/git-connections"
+          href="/settings/repository-providers"
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
         >
           <ChevronLeft className="w-4 h-4" />

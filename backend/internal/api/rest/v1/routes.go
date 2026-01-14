@@ -344,10 +344,6 @@ func RegisterUserRoutes(rg *gin.RouterGroup, userSvc *user.Service, orgSvc *orga
 	agentCredentialHandler := NewUserAgentCredentialHandler(credentialSvc)
 	agentCredentialHandler.RegisterRoutes(rg)
 
-	// User Git Connections (legacy, for backward compatibility)
-	gitConnectionHandler := NewUserGitConnectionHandler(userSvc)
-	gitConnectionHandler.RegisterRoutes(rg)
-
 	// User search
 	rg.GET("/search", userHandler.SearchUsers)
 }

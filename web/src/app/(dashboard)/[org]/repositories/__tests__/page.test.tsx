@@ -16,15 +16,15 @@ vi.mock("@/lib/api", () => ({
     delete: vi.fn(),
     create: vi.fn(),
   },
-  gitConnectionApi: {
+  userRepositoryProviderApi: {
     list: vi.fn(),
     listRepositories: vi.fn(),
   },
 }));
 
-import { repositoryApi, gitConnectionApi } from "@/lib/api";
+import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 const mockRepositoryApi = vi.mocked(repositoryApi);
-const mockGitConnectionApi = vi.mocked(gitConnectionApi);
+const mockUserRepositoryProviderApi = vi.mocked(userRepositoryProviderApi);
 
 describe("RepositoriesPage", () => {
   const mockRepositories = [
@@ -76,33 +76,41 @@ describe("RepositoriesPage", () => {
     },
   ];
 
-  const mockConnections = [
+  const mockProviders = [
     {
-      id: "oauth:github",
-      type: "oauth" as const,
+      id: 1,
+      user_id: 1,
       provider_type: "github",
-      provider_name: "GitHub",
+      name: "GitHub",
       base_url: "https://github.com",
-      username: "john",
+      has_client_id: false,
+      has_bot_token: false,
+      has_identity: true,
+      is_default: false,
       is_active: true,
       created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
     },
     {
-      id: "connection:1",
-      type: "personal" as const,
+      id: 2,
+      user_id: 1,
       provider_type: "gitlab",
-      provider_name: "Company GitLab",
+      name: "Company GitLab",
       base_url: "https://gitlab.company.com",
-      username: "john.doe",
+      has_client_id: false,
+      has_bot_token: true,
+      has_identity: false,
+      is_default: false,
       is_active: true,
       created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
     },
   ];
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockRepositoryApi.list.mockResolvedValue({ repositories: mockRepositories });
-    mockGitConnectionApi.list.mockResolvedValue({ connections: mockConnections });
+    mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: mockProviders });
     // Mock window.confirm
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
@@ -380,7 +388,7 @@ describe("RepositoriesPage", () => {
       });
     });
 
-    it("should show Git connections in import modal", async () => {
+    it("should show repository providers in import modal", async () => {
       render(<RepositoriesPage />);
 
       await waitFor(() => {
@@ -410,8 +418,8 @@ describe("RepositoriesPage", () => {
       });
     });
 
-    it("should show message when no connections available", async () => {
-      mockGitConnectionApi.list.mockResolvedValue({ connections: [] });
+    it("should show message when no providers available", async () => {
+      mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: [] });
 
       render(<RepositoriesPage />);
 

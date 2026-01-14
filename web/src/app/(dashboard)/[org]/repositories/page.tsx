@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   repositoryApi,
-  gitConnectionApi,
-  RepositoryData,
-  GitConnectionData,
-  RemoteRepositoryData,
+  userRepositoryProviderApi,
+  RepositoryProviderData,
+  UserRemoteRepositoryData,
 } from "@/lib/api";
+import type { RepositoryData } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
 
 export default function RepositoriesPage() {
@@ -295,7 +295,7 @@ export default function RepositoriesPage() {
   );
 }
 
-// Import Repository Modal with Git Connection Integration
+// Import Repository Modal with Repository Provider Integration
 function ImportRepositoryModal({
   onClose,
   onImported,
@@ -305,13 +305,13 @@ function ImportRepositoryModal({
 }) {
   const t = useTranslations();
   const [step, setStep] = useState<"source" | "browse" | "manual" | "confirm">("source");
-  const [connections, setConnections] = useState<GitConnectionData[]>([]);
-  const [selectedConnection, setSelectedConnection] = useState<GitConnectionData | null>(null);
-  const [repositories, setRepositories] = useState<RemoteRepositoryData[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState<RemoteRepositoryData | null>(null);
+  const [providers, setProviders] = useState<RepositoryProviderData[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<RepositoryProviderData | null>(null);
+  const [repositories, setRepositories] = useState<UserRemoteRepositoryData[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<UserRemoteRepositoryData | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [loadingConnections, setLoadingConnections] = useState(true);
+  const [loadingProviders, setLoadingProviders] = useState(true);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -329,28 +329,32 @@ function ImportRepositoryModal({
   const [visibility, setVisibility] = useState("organization");
 
   useEffect(() => {
-    loadConnections();
+    loadProviders();
   }, []);
 
-  const loadConnections = async () => {
+  const loadProviders = async () => {
     try {
-      setLoadingConnections(true);
-      const response = await gitConnectionApi.list();
-      setConnections(response.connections || []);
+      setLoadingProviders(true);
+      const response = await userRepositoryProviderApi.list();
+      // Only show providers that have authentication configured
+      const activeProviders = (response.providers || []).filter(
+        (p) => p.is_active && (p.has_identity || p.has_bot_token)
+      );
+      setProviders(activeProviders);
     } catch (err) {
-      console.error("Failed to load connections:", err);
+      console.error("Failed to load providers:", err);
       setError(t("repositories.modal.failedToLoadConnections"));
     } finally {
-      setLoadingConnections(false);
+      setLoadingProviders(false);
     }
   };
 
   const loadRepositories = useCallback(async () => {
-    if (!selectedConnection) return;
+    if (!selectedProvider) return;
     try {
       setLoadingRepos(true);
       setError(null);
-      const response = await gitConnectionApi.listRepositories(selectedConnection.id, {
+      const response = await userRepositoryProviderApi.listRepositories(selectedProvider.id, {
         page,
         perPage: 20,
         search: search || undefined,
@@ -362,28 +366,28 @@ function ImportRepositoryModal({
     } finally {
       setLoadingRepos(false);
     }
-  }, [selectedConnection, page, search]);
+  }, [selectedProvider, page, search]);
 
   useEffect(() => {
-    if (step === "browse" && selectedConnection) {
+    if (step === "browse" && selectedProvider) {
       loadRepositories();
     }
-  }, [step, selectedConnection, loadRepositories]);
+  }, [step, selectedProvider, loadRepositories]);
 
-  const handleSelectConnection = (conn: GitConnectionData) => {
-    setSelectedConnection(conn);
+  const handleSelectProvider = (provider: RepositoryProviderData) => {
+    setSelectedProvider(provider);
     setStep("browse");
   };
 
-  const handleSelectRepo = (repo: RemoteRepositoryData) => {
+  const handleSelectRepo = (repo: UserRemoteRepositoryData) => {
     setSelectedRepo(repo);
     setManualName(repo.name);
     setManualFullPath(repo.full_path);
     setManualDefaultBranch(repo.default_branch || "main");
     setManualCloneURL(repo.clone_url);
-    if (selectedConnection) {
-      setManualProviderType(selectedConnection.provider_type);
-      setManualBaseURL(selectedConnection.base_url);
+    if (selectedProvider) {
+      setManualProviderType(selectedProvider.provider_type);
+      setManualBaseURL(selectedProvider.base_url);
     }
     setStep("confirm");
   };
@@ -475,7 +479,7 @@ function ImportRepositoryModal({
                 {t("repositories.modal.selectSourceHint")}
               </p>
 
-              {loadingConnections ? (
+              {loadingProviders ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
@@ -483,30 +487,33 @@ function ImportRepositoryModal({
                 <>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">{t("repositories.modal.yourConnections")}</p>
-                    {connections.length === 0 ? (
+                    {providers.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-4">
                         {t("repositories.modal.noConnections")}{" "}
-                        <Link href="/settings/git-connections" className="text-primary hover:underline">
+                        <Link href="/settings/repository-providers" className="text-primary hover:underline">
                           {t("repositories.modal.addOne")}
                         </Link>{" "}
                         {t("repositories.modal.toBrowse")}
                       </p>
                     ) : (
                       <div className="grid grid-cols-2 gap-3">
-                        {connections.map((conn) => (
+                        {providers.map((provider) => (
                           <button
-                            key={conn.id}
-                            onClick={() => handleSelectConnection(conn)}
+                            key={provider.id}
+                            onClick={() => handleSelectProvider(provider)}
                             className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted/50 text-left"
                           >
                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                              {getProviderIcon(conn.provider_type)}
+                              {getProviderIcon(provider.provider_type)}
                             </div>
                             <div>
-                              <div className="font-medium">{conn.provider_name}</div>
+                              <div className="font-medium">{provider.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {conn.username || conn.base_url}
+                                {provider.base_url}
                               </div>
+                              {provider.has_identity && (
+                                <div className="text-xs text-green-600">OAuth</div>
+                              )}
                             </div>
                           </button>
                         ))}
@@ -545,13 +552,13 @@ function ImportRepositoryModal({
           )}
 
           {/* Step 2: Browse Repositories */}
-          {step === "browse" && selectedConnection && (
+          {step === "browse" && selectedProvider && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setStep("source");
-                    setSelectedConnection(null);
+                    setSelectedProvider(null);
                     setRepositories([]);
                   }}
                   className="text-muted-foreground hover:text-foreground"
@@ -561,7 +568,7 @@ function ImportRepositoryModal({
                   </svg>
                 </button>
                 <span className="text-sm text-muted-foreground">
-                  {selectedConnection.provider_name}
+                  {selectedProvider.name}
                 </span>
               </div>
 
