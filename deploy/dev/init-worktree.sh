@@ -14,6 +14,7 @@
 #   ./init-worktree.sh          # 自动检测并生成配置
 #   ./init-worktree.sh --force  # 强制覆盖现有配置
 #   ./init-worktree.sh --info   # 显示当前配置信息
+#   ./init-worktree.sh --clean  # 清理当前 worktree 的 Docker 资源
 #
 # =============================================================================
 
@@ -63,7 +64,12 @@ calculate_port_offset() {
 
     # 使用名称的哈希值计算偏移量
     # 范围: 0-99，每个 worktree 使用 100 个端口的块
-    hash=$(echo -n "$name" | md5sum | cut -c1-4)
+    # macOS 兼容性: 优先使用 md5sum，回退到 md5
+    if command -v md5sum &>/dev/null; then
+        hash=$(echo -n "$name" | md5sum | cut -c1-4)
+    else
+        hash=$(echo -n "$name" | md5 | cut -c1-4)
+    fi
     offset=$((16#$hash % 100))
 
     # 确保偏移量至少为 0（main 分支）或 1（其他分支）
@@ -217,6 +223,38 @@ EOF
     show_info
 }
 
+# 清理 Docker 资源
+clean_resources() {
+    if [[ ! -f "$ENV_FILE" ]]; then
+        error ".env 文件不存在，无法确定要清理的资源"
+        exit 1
+    fi
+
+    source "$ENV_FILE"
+    local project_name="${COMPOSE_PROJECT_NAME:-agentmesh}"
+
+    warn "即将清理以下资源："
+    echo "  - 项目名称: $project_name"
+    echo "  - 容器、网络、卷"
+    echo ""
+
+    read -p "确认清理？此操作不可恢复 [y/N] " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        info "取消清理"
+        exit 0
+    fi
+
+    info "停止并删除容器..."
+    docker compose down -v --remove-orphans 2>/dev/null || true
+
+    info "清理悬空资源..."
+    docker system prune -f --filter "label=com.docker.compose.project=$project_name" 2>/dev/null || true
+
+    success "清理完成"
+}
+
 # 主函数
 main() {
     case "${1:-}" in
@@ -226,18 +264,23 @@ main() {
         --force|-f)
             generate_env "true"
             ;;
+        --clean|-c)
+            clean_resources
+            ;;
         --help|-h)
             echo "用法: $0 [选项]"
             echo ""
             echo "选项:"
             echo "  --info, -i    显示当前配置信息"
             echo "  --force, -f   强制覆盖现有配置"
+            echo "  --clean, -c   清理当前 worktree 的 Docker 资源"
             echo "  --help, -h    显示帮助信息"
             echo ""
             echo "示例:"
             echo "  $0            # 自动检测并生成配置"
             echo "  $0 --force    # 强制覆盖现有配置"
             echo "  $0 --info     # 显示当前配置"
+            echo "  $0 --clean    # 清理 Docker 资源"
             ;;
         *)
             generate_env "false"
