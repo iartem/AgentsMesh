@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/client";
+import { useAuthStore } from "@/stores/auth";
 
 interface Channel {
   id: number;
@@ -46,6 +47,7 @@ export function ChannelList({
   onUnarchive,
 }: ChannelListProps) {
   const t = useTranslations();
+  const { currentOrg } = useAuthStore();
   const [showArchived, setShowArchived] = useState(false);
 
   const filteredChannels = showArchived
@@ -121,7 +123,7 @@ export function ChannelList({
                 {channel.ticket && (
                   <div className="mt-2 text-xs text-muted-foreground">
                     <Link
-                      href={`/tickets/${channel.ticket.identifier}`}
+                      href={`/${currentOrg?.slug}/tickets/${channel.ticket.identifier}`}
                       className="hover:text-primary hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >

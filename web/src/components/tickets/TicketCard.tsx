@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "@/lib/i18n/client";
+import { useAuthStore } from "@/stores/auth";
 import { Ticket } from "@/stores/ticket";
 
 interface TicketCardProps {
@@ -39,6 +40,7 @@ const priorityConfig: Record<string, { icon: string; color: string }> = {
 
 export function TicketCard({ ticket, onClick, showRepository = true }: TicketCardProps) {
   const t = useTranslations();
+  const { currentOrg } = useAuthStore();
   const typeStyle = typeConfig[ticket.type] || typeConfig.task;
   const statusStyle = statusConfig[ticket.status] || statusConfig.backlog;
   const priorityStyle = priorityConfig[ticket.priority] || priorityConfig.none;
@@ -71,7 +73,7 @@ export function TicketCard({ ticket, onClick, showRepository = true }: TicketCar
             {typeStyle.icon}
           </span>
           <Link
-            href={`/tickets/${ticket.identifier}`}
+            href={`/${currentOrg?.slug}/tickets/${ticket.identifier}`}
             className="text-xs text-muted-foreground hover:text-primary font-mono"
             onClick={(e) => e.stopPropagation()}
           >

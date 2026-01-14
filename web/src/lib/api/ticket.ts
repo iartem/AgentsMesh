@@ -86,7 +86,7 @@ export const ticketApi = {
     return response.ticket;
   },
 
-  create: (data: {
+  create: async (data: {
     repositoryId?: number;
     type: string;
     title: string;
@@ -98,8 +98,8 @@ export const ticketApi = {
     assigneeIds?: number[];
     labels?: string[];
     parentId?: number;
-  }) =>
-    request<TicketData>(orgPath("/tickets"), {
+  }) => {
+    const response = await request<{ ticket: TicketData }>(orgPath("/tickets"), {
       method: "POST",
       body: {
         repository_id: data.repositoryId,
@@ -114,7 +114,9 @@ export const ticketApi = {
         labels: data.labels,
         parent_ticket_id: data.parentId,
       },
-    }),
+    });
+    return response.ticket;
+  },
 
   update: (identifier: string, data: {
     title?: string;

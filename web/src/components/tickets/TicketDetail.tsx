@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/stores/auth";
 import { useTicketStore, getStatusInfo, getPriorityInfo, getTypeInfo, Ticket, TicketStatus } from "@/stores/ticket";
 import { ticketApi, TicketRelation, TicketCommit } from "@/lib/api/client";
 import TicketPodPanel from "./TicketPodPanel";
@@ -21,6 +22,7 @@ interface TicketDetailProps {
 export function TicketDetail({ identifier }: TicketDetailProps) {
   const router = useRouter();
   const t = useTranslations();
+  const { currentOrg } = useAuthStore();
   const { currentTicket, fetchTicket, updateTicket, updateTicketStatus, deleteTicket, loading, error } = useTicketStore();
 
   const [subTickets, setSubTickets] = useState<Ticket[]>([]);
@@ -238,7 +240,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
                   <div
                     key={subTicket.id}
                     className="px-4 py-3 hover:bg-muted/50 cursor-pointer"
-                    onClick={() => router.push(`/tickets/${subTicket.identifier}`)}
+                    onClick={() => router.push(`/${currentOrg?.slug}/tickets/${subTicket.identifier}`)}
                   >
                     <div className="flex items-center gap-2">
                       <span className={subType.color}>{subType.icon}</span>
@@ -274,7 +276,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
                   <div
                     key={relation.id}
                     className="px-4 py-3 hover:bg-muted/50 cursor-pointer"
-                    onClick={() => router.push(`/tickets/${targetTicket.identifier}`)}
+                    onClick={() => router.push(`/${currentOrg?.slug}/tickets/${targetTicket.identifier}`)}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground capitalize">

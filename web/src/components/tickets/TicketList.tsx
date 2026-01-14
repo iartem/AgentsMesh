@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "@/lib/i18n/client";
+import { useAuthStore } from "@/stores/auth";
 
 interface Label {
   id: number;
@@ -68,6 +69,7 @@ const priorityConfig: Record<string, { icon: string; color: string; label: strin
 
 export function TicketList({ tickets, loading, onTicketClick }: TicketListProps) {
   const t = useTranslations();
+  const { currentOrg } = useAuthStore();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -139,7 +141,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                     <div>
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/tickets/${ticket.identifier}`}
+                          href={`/${currentOrg?.slug}/tickets/${ticket.identifier}`}
                           className="text-xs text-muted-foreground hover:text-primary font-mono"
                           onClick={(e) => e.stopPropagation()}
                         >
