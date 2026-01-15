@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme";
 import { PWAProvider } from "@/components/pwa";
-import { ApolloProvider } from "@/components/providers";
 import { I18nProviderWrapper } from "@/components/providers/I18nProviderWrapper";
 import { getLocale } from "@/lib/i18n/server";
 import { Toaster } from "sonner";
@@ -62,11 +61,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <I18nProviderWrapper>
-            <ApolloProvider>
-              <PWAProvider>
-                {children}
-              </PWAProvider>
-            </ApolloProvider>
+            <PWAProvider>
+              {children}
+            </PWAProvider>
           </I18nProviderWrapper>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
