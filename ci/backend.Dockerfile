@@ -23,14 +23,17 @@ FROM ${REGISTRY}/library/alpine:3.19
 
 WORKDIR /app
 
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates tzdata
+# Install ca-certificates, tzdata, and golang-migrate
+RUN apk --no-cache add ca-certificates tzdata curl && \
+    curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz && \
+    mv migrate /usr/local/bin/migrate && \
+    chmod +x /usr/local/bin/migrate
 
 # Create non-root user
 RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
 
-# Copy binary from builder
+# Copy binary and migrations from builder
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/migrations /app/migrations
 
@@ -47,5 +50,9 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Run the binary
+# Run the server
+# To run migrations manually:
+#   migrate -path /app/migrations -database "postgres://user:password@host:5432/dbname?sslmode=disable" up
+#   migrate -path /app/migrations -database "postgres://user:password@host:5432/dbname?sslmode=disable" down 1
+#   migrate -path /app/migrations -database "postgres://user:password@host:5432/dbname?sslmode=disable" version
 ENTRYPOINT ["/app/server"]
