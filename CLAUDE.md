@@ -238,10 +238,7 @@ runner/
 
 **Development** (Docker): Run `cd deploy/dev && ./init-worktree.sh` - auto-generates all configs
 
-**Local development** (without Docker):
-- **Backend**: `backend/.env` (copy from `.env.example`)
-- **Web**: `web/.env.local` (copy from `.env.example`)
-- **Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
+**Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
 
 ## GraphQL
 
