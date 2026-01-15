@@ -165,12 +165,26 @@ backend/
 │   │   ├── user/         # User entity
 │   │   ├── organization/ # Organization entity
 │   │   ├── agentpod/     # AgentPod entity
+│   │   ├── agent/        # Agent configuration entity
 │   │   ├── ticket/       # Ticket entity
 │   │   ├── channel/      # Channel entity
-│   │   └── runner/       # Runner entity
+│   │   ├── runner/       # Runner entity
+│   │   ├── billing/      # Billing/subscription entity
+│   │   ├── invitation/   # Organization invitation
+│   │   ├── promocode/    # Promo code entity
+│   │   ├── gitprovider/  # Git provider (OAuth) entity
+│   │   ├── repository/   # Repository entity
+│   │   ├── devmesh/      # DevMesh session entity
+│   │   └── file/         # File storage entity
 │   ├── service/          # Business logic layer
 │   ├── infra/            # Infrastructure (DB, cache)
+│   ├── config/           # Configuration loading
 │   └── middleware/       # Auth, tenant isolation
+├── pkg/                  # Shared packages
+│   ├── auth/             # JWT and OAuth utilities
+│   ├── crypto/           # Encryption utilities
+│   ├── i18n/             # Internationalization
+│   └── audit/            # Audit logging
 └── migrations/           # SQL migrations
 ```
 
@@ -197,19 +211,24 @@ runner/
 ├── cmd/runner/           # Entry point (register/run/service/desktop)
 ├── internal/
 │   ├── runner/           # Core runner logic
-│   │   ├── runner.go     # Main Runner struct
-│   │   ├── pod_handler.go    # Pod command processing
+│   │   ├── runner.go         # Main Runner struct
 │   │   ├── pod_builder.go    # Builder pattern for Pods
-│   │   └── message_handler.go # WebSocket message routing
+│   │   ├── pod_store.go      # Pod storage
+│   │   ├── message_handler.go # WebSocket message routing
+│   │   └── pty_forwarder.go  # Terminal output forwarding
 │   ├── client/           # WebSocket client
+│   │   ├── client.go     # Client implementation
 │   │   ├── connection.go # Auto-reconnect logic
+│   │   ├── message_router.go # Message routing
 │   │   └── protocol.go   # Message types
 │   ├── terminal/         # PTY management (creack/pty)
+│   ├── process/          # Process management
 │   ├── sandbox/          # Sandbox environment
 │   │   └── plugins/      # worktree, tempdir plugins
-│   ├── luaplugin/        # Lua plugin system
-│   ├── mcp/              # Model Context Protocol
-│   └── workspace/        # Git worktree management
+│   ├── mcp/              # Model Context Protocol integration
+│   ├── workspace/        # Git worktree management
+│   ├── tray/             # System tray (desktop mode)
+│   └── console/          # Console UI
 ```
 
 ## Key Concepts
