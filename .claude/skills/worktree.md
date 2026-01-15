@@ -17,7 +17,7 @@ user-invocable: true
 需要以下信息：
 - **分支名称**: 新功能/修复的分支名（如 `feature/add-login`, `fix/user-auth`）
 - **基础分支**: 从哪个分支创建（默认 `main`）
-- **worktree 目录**: 放置位置（默认 `../<repo>-<branch>`）
+- **worktree 目录**: 统一放在 `../AgentMesh-Worktrees/<branch-name>`
 
 ### 2. 创建 Worktree
 
@@ -25,13 +25,17 @@ user-invocable: true
 # 1. 获取最新代码
 git fetch origin
 
-# 2. 创建 worktree 和新分支
-git worktree add -b <branch-name> <worktree-path> origin/<base-branch>
+# 2. 创建 worktrees 目录（如不存在）
+mkdir -p ../AgentMesh-Worktrees
 
-# 3. 进入 worktree 目录
-cd <worktree-path>
+# 3. 创建 worktree 和新分支
+# 分支名中的 / 替换为 - 作为目录名
+git worktree add -b <branch-name> ../AgentMesh-Worktrees/<dir-name> origin/<base-branch>
 
-# 4. 验证状态
+# 4. 进入 worktree 目录
+cd ../AgentMesh-Worktrees/<dir-name>
+
+# 5. 验证状态
 git status
 git log --oneline -3
 ```
@@ -60,7 +64,7 @@ cd deploy/dev
 
 ```
 已创建 worktree:
-- 路径: /Users/xxx/Works/AIO/AgentMesh-feature-user-auth
+- 路径: /Users/xxx/Works/AIO/AgentMesh-Worktrees/feature-user-auth
 - 分支: feature/user-auth (基于 origin/main)
 
 开发环境:
@@ -88,8 +92,9 @@ cd deploy/dev
 ```bash
 # 创建 worktree
 git fetch origin
-git worktree add -b feature/user-auth ../AgentMesh-feature-user-auth origin/main
-cd ../AgentMesh-feature-user-auth
+mkdir -p ../AgentMesh-Worktrees
+git worktree add -b feature/user-auth ../AgentMesh-Worktrees/feature-user-auth origin/main
+cd ../AgentMesh-Worktrees/feature-user-auth
 
 # 初始化开发环境
 cd deploy/dev
@@ -99,7 +104,8 @@ cd deploy/dev
 ## 注意事项
 
 - 分支名遵循约定：`feature/*`, `fix/*`, `refactor/*`, `docs/*`
-- Worktree 目录默认放在仓库同级目录
+- **所有 worktree 统一放在 `../AgentMesh-Worktrees/` 目录下**
+- 目录名使用分支名，将 `/` 替换为 `-`（如 `feature/user-auth` → `feature-user-auth`）
 - 如果分支已存在，使用 `git worktree add <path> <existing-branch>`
 - 每个 worktree 的开发环境端口自动隔离，可并行运行多个
 - 清理前确保所有更改已提交或推送
