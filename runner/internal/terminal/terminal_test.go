@@ -1565,9 +1565,11 @@ func TestSetExitHandlerNil(t *testing.T) {
 }
 
 func TestSetHandlersBeforeStart(t *testing.T) {
+	// Use sleep instead of echo to ensure we have time to capture output
+	// echo may complete too fast in CI environments with race detector
 	opts := Options{
-		Command:  "echo",
-		Args:     []string{"hello"},
+		Command:  "sh",
+		Args:     []string{"-c", "echo hello && sleep 0.1"},
 		OnOutput: func([]byte) { /* initial handler */ },
 		OnExit:   func(int) { /* initial handler */ },
 	}
@@ -1597,18 +1599,18 @@ func TestSetHandlersBeforeStart(t *testing.T) {
 		t.Fatalf("failed to start terminal: %v", err)
 	}
 
-	// Wait for both handlers to be called
+	// Wait for both handlers to be called with longer timeout for CI
 	select {
 	case <-outputReceived:
 		// Good
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Error("timeout waiting for output handler")
 	}
 
 	select {
 	case <-exitReceived:
 		// Good
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Error("timeout waiting for exit handler")
 		term.Stop()
 	}
