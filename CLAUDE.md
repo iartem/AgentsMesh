@@ -240,11 +240,6 @@ runner/
 
 **Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
 
-## GraphQL
-
-GraphQL schema: `backend/internal/api/graphql/schema/*.graphqls`
-Generate code: `cd backend && go generate ./...`
-
 ## Testing Patterns
 
 - Backend: Standard Go testing with `testify`
