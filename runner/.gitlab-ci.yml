@@ -51,18 +51,22 @@ build:desktop:macos:
   before_script:
     # Ensure Go and brew are in PATH for shell executor
     - export PATH="/opt/homebrew/opt/go@1.24/bin:/opt/homebrew/bin:$PATH"
+    # Explicitly set VERSION for shell executor (CI variables may not auto-expand)
+    - export VERSION="${CI_COMMIT_TAG:-dev}"
+    - echo "VERSION=$VERSION"
     - go version
   script:
     - cd runner
+    - export VERSION="${CI_COMMIT_TAG:-dev}"
     # Build arm64 (native)
     - |
-      echo "Building arm64..."
+      echo "Building arm64 (VERSION=$VERSION)..."
       CGO_ENABLED=1 GOARCH=arm64 go build -tags desktop \
         -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         -o runner-desktop-darwin-arm64 ./cmd/runner
     # Build amd64 (cross-compile)
     - |
-      echo "Building amd64..."
+      echo "Building amd64 (VERSION=$VERSION)..."
       CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -tags desktop \
         -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         -o runner-desktop-darwin-amd64 ./cmd/runner
@@ -133,9 +137,14 @@ package:macos-dmg:
       artifacts: true
   before_script:
     - export PATH="/opt/homebrew/bin:$PATH"
+    # Explicitly set VERSION for shell executor (CI variables may not auto-expand)
+    - export VERSION="${CI_COMMIT_TAG:-dev}"
+    - echo "VERSION=$VERSION"
     - brew install create-dmg || true
   script:
     - cd runner
+    - export VERSION="${CI_COMMIT_TAG:-dev}"
+    - echo "Creating DMG with VERSION=$VERSION"
     - |
       # Create .app bundle with universal binary
       APP_NAME="AgentsMesh Runner.app"
@@ -159,6 +168,7 @@ package:macos-dmg:
         --app-drop-link 450 185 \
         "AgentsMesh-Runner-${VERSION}-darwin-universal.dmg" \
         "AgentsMesh Runner.app" || true
+    - ls -la *.dmg
   artifacts:
     paths:
       - runner/*.dmg
