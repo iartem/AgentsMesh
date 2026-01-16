@@ -1,0 +1,32 @@
+id: TC-LOGIN-001
+name: 邮箱密码登录成功
+description: 验证使用有效凭证登录后返回正确的 token 和用户信息
+priority: high
+module: account/auth/login
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户存在且启用 (dev@agentsmesh.local)
+
+steps:
+  - action: 调用登录 API
+    expected: 返回 200，包含 token、refresh_token 和用户信息
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+          expires_in: not_empty
+          user:
+            email: dev@agentsmesh.local
+            username: not_empty

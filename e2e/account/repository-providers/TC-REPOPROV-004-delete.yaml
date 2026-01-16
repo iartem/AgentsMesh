@@ -1,0 +1,88 @@
+id: TC-REPOPROV-004
+name: 删除仓库提供商
+description: 验证删除指定的仓库提供商
+priority: medium
+module: account/repository-providers
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建待删除的提供商
+    expected: 返回 201，获取提供商 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/repository-providers
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          provider_type: github
+          name: Delete Test Provider
+          base_url: https://api.github.com
+          bot_token: ghp_delete_test_token
+      expected:
+        status: 201
+        body:
+          provider:
+            id: not_empty
+      save:
+        provider_id: body.provider.id
+
+  - action: 删除提供商
+    expected: 返回 200，提供商已删除
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/repository-providers/{provider_id}
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          message: contains "deleted"
+
+  - action: 验证提供商已删除
+    verification:
+      type: database
+      query: |
+        SELECT EXISTS(
+          SELECT 1 FROM user_repository_providers WHERE name = 'Delete Test Provider'
+        ) as exists
+      expected:
+        exists: false
+
+  - action: 删除不存在的提供商
+    expected: 返回 404
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/repository-providers/99999999
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 404

@@ -1,0 +1,265 @@
+id: TC-TOKEN-004
+name: 多设备并发登录（各设备 Token 独立有效）
+description: |
+  验证同一账号可以在多个设备同时登录，各设备的 Token 独立有效：
+  1. 设备 A 登录获取 token_A
+  2. 设备 B 登录获取 token_B
+  3. 设备 C 登录获取 token_C
+  4. 验证三个 token 都可以独立使用
+  5. 设备 A 登出，验证 token_A 失效
+  6. 验证 token_B 和 token_C 仍然有效
+  7. 设备 B 刷新 token，验证不影响设备 C
+priority: high
+module: account/auth/token
+type: scenario
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户存在且已验证邮箱
+
+steps:
+  - id: step-1
+    action: 设备 A 登录
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+      save:
+        token_a: body.token
+        refresh_token_a: body.refresh_token
+
+  - id: step-2
+    action: 设备 B 登录（同一账号）
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+      save:
+        token_b: body.token
+        refresh_token_b: body.refresh_token
+
+  - id: step-3
+    action: 设备 C 登录（同一账号）
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+      save:
+        token_c: body.token
+        refresh_token_c: body.refresh_token
+
+  - id: step-4
+    action: 验证三个 token 互不相同
+    verification:
+      type: assert
+      conditions:
+        - "{token_a}" != "{token_b}"
+        - "{token_b}" != "{token_c}"
+        - "{token_a}" != "{token_c}"
+        - "{refresh_token_a}" != "{refresh_token_b}"
+        - "{refresh_token_b}" != "{refresh_token_c}"
+
+  - id: step-5
+    action: 使用 token_A 访问用户信息
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_a}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-6
+    action: 使用 token_B 访问用户信息
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_b}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-7
+    action: 使用 token_C 访问用户信息
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_c}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-8
+    action: 设备 A 登出
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/logout
+        headers:
+          Authorization: Bearer {token_a}
+      expected:
+        status: 200
+
+  - id: step-9
+    action: 验证 token_A 已失效（登出后无法使用）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_a}
+      expected:
+        status: 401
+
+  - id: step-10
+    action: 验证 token_B 仍然有效（设备 A 登出不影响设备 B）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_b}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-11
+    action: 验证 token_C 仍然有效（设备 A 登出不影响设备 C）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_c}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-12
+    action: 设备 B 刷新 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/refresh
+        headers:
+          Content-Type: application/json
+        body:
+          refresh_token: "{refresh_token_b}"
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+      save:
+        token_b_new: body.token
+        refresh_token_b_new: body.refresh_token
+
+  - id: step-13
+    action: 验证设备 B 新 token 有效
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_b_new}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-14
+    action: 验证设备 B 旧 refresh_token 已失效（单次使用）
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/refresh
+        headers:
+          Content-Type: application/json
+        body:
+          refresh_token: "{refresh_token_b}"
+      expected:
+        status: 401
+
+  - id: step-15
+    action: 验证设备 C token 仍然有效（设备 B 刷新不影响设备 C）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {token_c}
+      expected:
+        status: 200
+        body:
+          email: dev@agentsmesh.local
+
+  - id: step-16
+    action: 验证设备 C refresh_token 仍然有效
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/refresh
+        headers:
+          Content-Type: application/json
+        body:
+          refresh_token: "{refresh_token_c}"
+      expected:
+        status: 200
+        body:
+          token: not_empty

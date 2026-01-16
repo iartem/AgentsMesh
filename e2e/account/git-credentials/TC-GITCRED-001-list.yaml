@@ -1,0 +1,54 @@
+id: TC-GITCRED-001
+name: 列出 Git 凭证
+description: 验证 GET /users/git-credentials 返回用户的所有 Git 凭证
+priority: high
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 列出 Git 凭证
+    expected: 返回 200，包含 credentials 数组和 runner_local 信息
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/git-credentials
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          credentials: not_empty
+          runner_local: not_empty
+
+  - action: 不带 token 列出凭证
+    expected: 返回 401 未授权
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/git-credentials
+      expected:
+        status: 401

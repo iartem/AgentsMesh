@@ -1,0 +1,160 @@
+id: TC-PWRST-004
+name: 完整密码重置流程（忘记密码 → 重置 → 登录）
+description: |
+  验证用户从忘记密码到成功使用新密码登录的完整流程：
+  1. 用户在登录页点击"忘记密码"
+  2. 输入邮箱请求重置
+  3. 系统生成重置 token
+  4. 用户打开重置链接页面
+  5. 输入新密码并提交
+  6. 使用新密码成功登录
+priority: high
+module: account/auth/password-reset
+type: scenario
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户存在且已验证邮箱
+
+setup:
+  sql: |
+    -- 确保测试用户存在（使用 dev 用户）
+    UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL
+    WHERE email = 'dev@agentsmesh.local';
+
+steps:
+  - id: step-1
+    action: 打开登录页面并点击忘记密码
+    url: /login
+    verification:
+      type: ui
+      check:
+        - exists: 'link contains "忘记" or link contains "Forgot"'
+      steps:
+        - click: 'link contains "忘记" or link contains "Forgot"'
+      after_check:
+        - url_contains: "/forgot-password"
+
+  - id: step-2
+    action: 在忘记密码页面输入邮箱
+    verification:
+      type: ui
+      check:
+        - exists: 'heading contains "忘记" or heading contains "Forgot" or heading contains "Reset"'
+        - exists: 'textbox "邮箱" or textbox "Email"'
+      steps:
+        - fill: 'textbox "邮箱" or textbox "Email"'
+          value: dev@agentsmesh.local
+        - click: 'button contains "发送" or button contains "Send" or button contains "Reset"'
+      after_check:
+        - one_of:
+            - contains: "已发送"
+            - contains: "sent"
+            - contains: "check your email"
+
+  - id: step-3
+    action: 验证数据库中已生成重置 token
+    verification:
+      type: database
+      query: |
+        SELECT email, password_reset_token IS NOT NULL as has_token,
+               password_reset_expires > NOW() as token_valid
+        FROM users WHERE email = 'dev@agentsmesh.local'
+      expected:
+        email: dev@agentsmesh.local
+        has_token: true
+        token_valid: true
+      save:
+        reset_token: password_reset_token
+
+  - id: step-4
+    action: 从数据库获取重置 token
+    verification:
+      type: database
+      query: |
+        SELECT password_reset_token FROM users WHERE email = 'dev@agentsmesh.local'
+      save:
+        reset_token: password_reset_token
+
+  - id: step-5
+    action: 打开密码重置页面
+    url: /reset-password?token={reset_token}
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'heading contains "重置" or heading contains "Reset"'
+            - exists: 'textbox "新密码" or textbox "New Password" or textbox "Password"'
+
+  - id: step-6
+    action: 输入新密码并提交
+    verification:
+      type: ui
+      steps:
+        - fill: 'textbox "新密码" or textbox "New Password" or textbox "Password"'
+          value: NewTestPass123!
+        - fill: 'textbox "确认" or textbox "Confirm"'
+          value: NewTestPass123!
+          optional: true
+        - click: 'button contains "重置" or button contains "Reset" or button contains "确认"'
+      check:
+        - one_of:
+            - contains: "成功"
+            - contains: "success"
+            - url_contains: "/login"
+
+  - id: step-7
+    action: 验证数据库中重置 token 已清除
+    verification:
+      type: database
+      query: |
+        SELECT password_reset_token IS NULL as token_cleared
+        FROM users WHERE email = 'dev@agentsmesh.local'
+      expected:
+        token_cleared: true
+
+  - id: step-8
+    action: 使用新密码登录
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: NewTestPass123!
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          user:
+            email: dev@agentsmesh.local
+
+  - id: step-9
+    action: 验证旧密码已无法登录
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 401
+
+cleanup:
+  - sql: |
+      -- 恢复原始密码（需要知道原密码 hash 或重新设置）
+      -- 注意：实际环境中应该用更安全的方式处理
+      UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL
+      WHERE email = 'dev@agentsmesh.local';
+  - api:
+      note: |
+        由于密码已改变，需要通过其他方式恢复。
+        建议：在 setup 中备份密码 hash，在 cleanup 中恢复。
+        或者：使用专门的测试用户。

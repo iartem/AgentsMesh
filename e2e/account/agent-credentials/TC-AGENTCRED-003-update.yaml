@@ -1,0 +1,93 @@
+id: TC-AGENTCRED-003
+name: 更新 Agent 凭证配置
+description: 验证更新 Agent 凭证配置名称和密钥
+priority: medium
+module: account/agent-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+  - 存在待更新的配置
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 获取有效的 agent_type_id
+    verification:
+      type: database
+      query: |
+        SELECT id FROM agent_types WHERE is_active = true LIMIT 1
+      expected:
+        id: not_empty
+      save:
+        agent_type_id: id
+
+  - action: 创建测试配置
+    expected: 返回 201，获取配置 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/agent-credentials/types/{agent_type_id}
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Update Test Profile
+          is_runner_host: false
+          credentials:
+            ANTHROPIC_API_KEY: sk-ant-update-test
+      expected:
+        status: 201
+        body:
+          profile:
+            id: not_empty
+      save:
+        profile_id: body.profile.id
+
+  - action: 更新配置名称
+    expected: 返回 200，名称已更新
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/users/agent-credentials/profiles/{profile_id}
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Updated Profile Name
+      expected:
+        status: 200
+        body:
+          profile:
+            name: Updated Profile Name
+
+  - action: 验证数据库已更新
+    verification:
+      type: database
+      query: |
+        SELECT name FROM agent_credential_profiles WHERE name = 'Updated Profile Name'
+      expected:
+        name: Updated Profile Name
+
+cleanup:
+  - sql: |
+      DELETE FROM agent_credential_profiles WHERE name IN ('Update Test Profile', 'Updated Profile Name');

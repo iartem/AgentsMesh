@@ -1,0 +1,53 @@
+id: TC-VERIFY-003
+name: 重发验证邮件
+description: 验证重发验证邮件 API 正常工作
+priority: medium
+module: account/auth/email-verify
+
+preconditions:
+  - 开发环境已启动
+  - 存在未验证邮箱的用户
+
+setup:
+  sql: |
+    INSERT INTO users (email, username, password_hash, name, is_email_verified)
+    VALUES ('resend-e2e@test.local', 'resende2e', '$2a$10$N9qo8uLOickgx2ZMRZoMye.LrFO1VD3cWjvdCMEBzO4Y6bO7zE6.2', 'Resend E2E User', false)
+    ON CONFLICT (email) DO UPDATE SET
+      is_email_verified = false;
+
+steps:
+  - action: 请求重发验证邮件
+    expected: 返回 200，消息表示已发送
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/resend-verification
+        headers:
+          Content-Type: application/json
+        body:
+          email: resend-e2e@test.local
+      expected:
+        status: 200
+        body:
+          message: not_empty
+
+  - action: 使用不存在的邮箱请求重发
+    expected: 返回 200，但不透露邮箱是否存在（安全考虑）
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/resend-verification
+        headers:
+          Content-Type: application/json
+        body:
+          email: nonexistent@test.local
+      expected:
+        status: 200
+        body:
+          message: not_empty
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'resend-e2e@test.local';

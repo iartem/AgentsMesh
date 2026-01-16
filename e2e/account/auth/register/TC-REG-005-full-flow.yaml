@@ -1,0 +1,125 @@
+id: TC-REG-005
+name: 完整注册流程（注册 → 邮箱验证 → Onboarding）
+description: |
+  验证用户从注册到完成 onboarding 的完整流程：
+  1. 用户在注册页面填写信息并提交
+  2. 系统创建用户并发送验证邮件
+  3. 用户点击邮件中的验证链接
+  4. 验证成功后跳转到 onboarding 页面
+  5. 用户完成 onboarding 设置
+priority: high
+module: account/auth/register
+type: scenario
+
+preconditions:
+  - 开发环境已启动
+  - 测试邮箱未被注册
+
+setup:
+  sql: |
+    DELETE FROM organization_members WHERE user_id IN (SELECT id FROM users WHERE email = 'fullflow@test.local');
+    DELETE FROM organizations WHERE created_by IN (SELECT id FROM users WHERE email = 'fullflow@test.local');
+    DELETE FROM users WHERE email = 'fullflow@test.local';
+
+steps:
+  - id: step-1
+    action: 打开注册页面
+    url: /register
+    verification:
+      type: ui
+      check:
+        - exists: 'heading contains "创建" or heading contains "Register"'
+        - exists: 'textbox "邮箱" or textbox "Email"'
+        - exists: 'button contains "创建" or button contains "Register"'
+
+  - id: step-2
+    action: 填写注册表单并提交
+    verification:
+      type: ui
+      steps:
+        - fill: 'textbox "姓名" or textbox "Name"'
+          value: Full Flow Test User
+        - fill: 'textbox "邮箱" or textbox "Email"'
+          value: fullflow@test.local
+        - fill: 'textbox "用户名" or textbox "Username"'
+          value: fullflowuser
+        - fill: 'textbox "密码" or textbox "Password"'
+          value: TestPass12345
+        - fill: 'textbox "确认密码" or textbox "Confirm"'
+          value: TestPass12345
+        - click: 'button contains "创建" or button contains "Register"'
+      check:
+        - url_contains: "/verify-email"
+
+  - id: step-3
+    action: 验证用户已创建且未验证邮箱
+    verification:
+      type: database
+      query: |
+        SELECT email, username, is_email_verified, email_verification_token IS NOT NULL as has_token
+        FROM users WHERE email = 'fullflow@test.local'
+      expected:
+        email: fullflow@test.local
+        username: fullflowuser
+        is_email_verified: false
+        has_token: true
+
+  - id: step-4
+    action: 从数据库获取验证 token 并构造验证 URL
+    verification:
+      type: database
+      query: |
+        SELECT email_verification_token FROM users WHERE email = 'fullflow@test.local'
+      save:
+        verification_token: email_verification_token
+
+  - id: step-5
+    action: 打开邮箱验证链接
+    url: /verify-email?token={verification_token}
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - contains: "验证成功"
+            - contains: "verified"
+            - url_contains: "/onboarding"
+
+  - id: step-6
+    action: 验证数据库中邮箱已验证
+    verification:
+      type: database
+      query: |
+        SELECT is_email_verified, email_verification_token
+        FROM users WHERE email = 'fullflow@test.local'
+      expected:
+        is_email_verified: true
+
+  - id: step-7
+    action: 验证跳转到 onboarding 页面
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - url_contains: "/onboarding"
+            - url_contains: "/workspace"
+            - contains_one_of: ["创建组织", "Create Organization", "欢迎", "Welcome"]
+
+  - id: step-8
+    action: 完成 onboarding（如果有的话）
+    verification:
+      type: ui
+      conditional: url_contains "/onboarding"
+      steps:
+        - fill: 'textbox contains "组织" or textbox contains "Organization"'
+          value: Test Organization
+        - click: 'button contains "创建" or button contains "Create" or button contains "完成"'
+      check:
+        - one_of:
+            - url_contains: "/workspace"
+            - contains_one_of: ["工作区", "Workspace", "Dashboard"]
+
+cleanup:
+  - sql: |
+      DELETE FROM organization_members WHERE user_id IN (SELECT id FROM users WHERE email = 'fullflow@test.local');
+      DELETE FROM organizations WHERE created_by IN (SELECT id FROM users WHERE email = 'fullflow@test.local');
+      DELETE FROM users WHERE email = 'fullflow@test.local';

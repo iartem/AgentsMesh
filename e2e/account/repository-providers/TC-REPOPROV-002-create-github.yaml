@@ -1,0 +1,68 @@
+id: TC-REPOPROV-002
+name: 创建 GitHub 提供商
+description: 验证创建 GitHub 类型的仓库提供商
+priority: high
+module: account/repository-providers
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建 GitHub 提供商
+    expected: 返回 201，提供商创建成功
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/repository-providers
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          provider_type: github
+          name: E2E GitHub Provider
+          base_url: https://api.github.com
+          bot_token: ghp_test_bot_token_e2e
+      expected:
+        status: 201
+        body:
+          provider:
+            name: E2E GitHub Provider
+            provider_type: github
+            base_url: https://api.github.com
+      save:
+        provider_id: body.provider.id
+
+  - action: 验证提供商已创建
+    verification:
+      type: database
+      query: |
+        SELECT name, provider_type, base_url
+        FROM user_repository_providers WHERE name = 'E2E GitHub Provider'
+      expected:
+        name: E2E GitHub Provider
+        provider_type: github
+
+cleanup:
+  - sql: |
+      DELETE FROM user_repository_providers WHERE name = 'E2E GitHub Provider';

@@ -1,0 +1,66 @@
+id: TC-PROF-002
+name: 更新用户名称
+description: 验证 PUT /users/me 可以更新用户名称
+priority: high
+module: account/profile
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    INSERT INTO users (email, username, password_hash, name, is_email_verified)
+    VALUES ('profile-e2e@test.local', 'profilee2e', '$2a$10$N9qo8uLOickgx2ZMRZoMye.LrFO1VD3cWjvdCMEBzO4Y6bO7zE6.2', 'Original Name', true)
+    ON CONFLICT (email) DO UPDATE SET
+      name = 'Original Name';
+
+steps:
+  - action: 登录测试用户
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: profile-e2e@test.local
+          password: password123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 更新用户名称
+    expected: 返回 200，名称已更新
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Updated Name E2E
+      expected:
+        status: 200
+        body:
+          user:
+            name: Updated Name E2E
+
+  - action: 验证数据库已更新
+    verification:
+      type: database
+      query: |
+        SELECT name FROM users WHERE email = 'profile-e2e@test.local'
+      expected:
+        name: Updated Name E2E
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'profile-e2e@test.local';

@@ -101,7 +101,15 @@
       "signIn": "登录",
       "emailSent": "验证邮件已发送！请查收您的收件箱。",
       "resendFailed": "重新发送验证邮件失败，请重试。",
-      "emailMissing": "缺少邮箱地址"
+      "emailMissing": "缺少邮箱地址",
+      "verifying": "正在验证您的邮箱...",
+      "pleaseWait": "请稍候，我们正在验证您的邮箱地址。",
+      "verificationSuccess": "邮箱验证成功！",
+      "verificationSuccessTitle": "邮箱已验证！",
+      "redirecting": "正在跳转到您的工作区...",
+      "verificationFailed": "邮箱验证失败，请重试或申请新的验证链接。",
+      "invalidToken": "此验证链接无效或已过期，请申请新的验证链接。",
+      "alreadyVerifiedError": "此邮箱已完成验证，请直接登录。"
     },
     "onboarding": {
       "welcome": "欢迎！",

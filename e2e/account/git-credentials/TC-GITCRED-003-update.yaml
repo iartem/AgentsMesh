@@ -1,0 +1,83 @@
+id: TC-GITCRED-003
+name: 更新 Git 凭证
+description: 验证更新 Git 凭证名称
+priority: medium
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+  - 存在待更新的凭证
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建测试凭证
+    expected: 返回 201，获取凭证 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/git-credentials
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Update Test Cred
+          credential_type: pat
+          pat: ghp_update_test_token
+          host_pattern: github.com
+      expected:
+        status: 201
+        body:
+          credential:
+            id: not_empty
+      save:
+        credential_id: body.credential.id
+
+  - action: 更新凭证名称
+    expected: 返回 200，名称已更新
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/users/git-credentials/{credential_id}
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Updated Cred Name
+      expected:
+        status: 200
+        body:
+          credential:
+            name: Updated Cred Name
+
+  - action: 验证数据库已更新
+    verification:
+      type: database
+      query: |
+        SELECT name FROM user_git_credentials WHERE name = 'Updated Cred Name'
+      expected:
+        name: Updated Cred Name
+
+cleanup:
+  - sql: |
+      DELETE FROM user_git_credentials WHERE name IN ('Update Test Cred', 'Updated Cred Name');

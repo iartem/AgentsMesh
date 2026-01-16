@@ -1,0 +1,184 @@
+id: TC-GITCRED-007
+name: Git 凭证完整 CRUD 流程（创建 → 查看 → 更新 → 设默认 → 删除）
+description: |
+  验证用户通过 UI 完整管理 Git 凭证的流程：
+  1. 登录并导航到 Git 设置页面
+  2. 创建新的 PAT 凭证
+  3. 验证凭证出现在列表中
+  4. 更新凭证名称
+  5. 将凭证设为默认
+  6. 删除凭证
+  7. 验证凭证从列表移除
+priority: high
+module: account/git-credentials
+type: scenario
+
+preconditions:
+  - 开发环境已启动
+  - 用户已登录
+
+setup:
+  sql: |
+    -- 清理可能存在的测试凭证
+    DELETE FROM user_git_credentials WHERE name LIKE 'E2E Test Credential%';
+
+steps:
+  - id: step-1
+    action: 登录并获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - id: step-2
+    action: 导航到 Git 设置页面
+    url: /settings/git
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'heading contains "Git"'
+            - exists: 'text contains "凭证" or text contains "Credentials"'
+
+  - id: step-3
+    action: 点击添加凭证按钮
+    verification:
+      type: ui
+      steps:
+        - click: 'button contains "添加" or button contains "Add" or button contains "新建"'
+      check:
+        - exists: 'dialog or [role="dialog"]'
+
+  - id: step-4
+    action: 填写凭证信息并保存
+    verification:
+      type: ui
+      steps:
+        - fill: 'textbox "名称" or textbox "Name"'
+          value: E2E Test Credential
+        - fill: 'textbox "Token" or textbox "PAT" or textbox "Personal Access Token"'
+          value: ghp_test_token_12345678901234567890
+        - select: 'combobox "类型" or combobox "Type"'
+          value: github
+          optional: true
+        - click: 'button contains "保存" or button contains "Save" or button contains "创建" or button contains "Add"'
+      check:
+        - not_exists: 'dialog or [role="dialog"]'
+
+  - id: step-5
+    action: 验证凭证出现在列表中
+    verification:
+      type: ui
+      check:
+        - contains: "E2E Test Credential"
+
+  - id: step-6
+    action: 验证数据库中凭证已创建
+    verification:
+      type: database
+      query: |
+        SELECT name, is_default FROM user_git_credentials
+        WHERE name = 'E2E Test Credential'
+      expected:
+        name: E2E Test Credential
+      save:
+        credential_id: id
+
+  - id: step-7
+    action: 点击编辑凭证
+    verification:
+      type: ui
+      steps:
+        - click: 'button[aria-label*="编辑"] or button[aria-label*="Edit"] or row:has-text("E2E Test Credential") button:has-text("编辑")'
+          fallback:
+            - click: 'row:has-text("E2E Test Credential")'
+            - click: 'menuitem "编辑" or menuitem "Edit"'
+      check:
+        - exists: 'dialog or [role="dialog"]'
+
+  - id: step-8
+    action: 更新凭证名称
+    verification:
+      type: ui
+      steps:
+        - clear: 'textbox "名称" or textbox "Name"'
+        - fill: 'textbox "名称" or textbox "Name"'
+          value: E2E Test Credential Updated
+        - click: 'button contains "保存" or button contains "Save" or button contains "更新"'
+      check:
+        - contains: "E2E Test Credential Updated"
+
+  - id: step-9
+    action: 验证数据库中名称已更新
+    verification:
+      type: database
+      query: |
+        SELECT name FROM user_git_credentials
+        WHERE name = 'E2E Test Credential Updated'
+      expected:
+        name: E2E Test Credential Updated
+
+  - id: step-10
+    action: 设置凭证为默认
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Credential Updated") button contains "默认" or button contains "Default"'
+          fallback:
+            - click: 'row:has-text("E2E Test Credential Updated") [aria-label*="更多"]'
+            - click: 'menuitem "设为默认" or menuitem "Set as default"'
+      check:
+        - one_of:
+            - contains: "默认"
+            - contains: "default"
+            - attribute: '[data-default="true"]'
+
+  - id: step-11
+    action: 验证数据库中已设为默认
+    verification:
+      type: database
+      query: |
+        SELECT is_default FROM user_git_credentials
+        WHERE name = 'E2E Test Credential Updated'
+      expected:
+        is_default: true
+
+  - id: step-12
+    action: 删除凭证
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Credential Updated") button contains "删除" or button[aria-label*="删除"]'
+          fallback:
+            - click: 'row:has-text("E2E Test Credential Updated") [aria-label*="更多"]'
+            - click: 'menuitem "删除" or menuitem "Delete"'
+        - click: 'button contains "确认" or button contains "Confirm" or button contains "删除"'
+          in_dialog: true
+      check:
+        - not_contains: "E2E Test Credential Updated"
+
+  - id: step-13
+    action: 验证数据库中凭证已删除
+    verification:
+      type: database
+      query: |
+        SELECT COUNT(*) as count FROM user_git_credentials
+        WHERE name LIKE 'E2E Test Credential%'
+      expected:
+        count: 0
+
+cleanup:
+  - sql: |
+      DELETE FROM user_git_credentials WHERE name LIKE 'E2E Test Credential%';

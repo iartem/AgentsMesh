@@ -1,0 +1,55 @@
+id: TC-VERIFY-001
+name: 邮箱验证成功
+description: 验证使用有效 token 验证邮箱
+priority: high
+module: account/auth/email-verify
+
+preconditions:
+  - 开发环境已启动
+  - 数据库中存在未验证邮箱的用户及其验证 token
+
+notes: |
+  此测试需要先创建一个未验证邮箱的用户，并手动设置验证 token。
+  由于验证 token 是随机生成的，需要在 setup 中直接设置已知的 token。
+
+setup:
+  sql: |
+    -- 创建测试用户（如果不存在）
+    INSERT INTO users (email, username, password_hash, name, is_email_verified, email_verification_token, email_verification_expires_at)
+    VALUES ('verify-e2e@test.local', 'verifye2e', '$2a$10$somehashedpassword', 'Verify E2E User', false, 'test-verify-token-12345', NOW() + INTERVAL '1 hour')
+    ON CONFLICT (email) DO UPDATE SET
+      is_email_verified = false,
+      email_verification_token = 'test-verify-token-12345',
+      email_verification_expires_at = NOW() + INTERVAL '1 hour';
+
+steps:
+  - action: 使用有效 token 验证邮箱
+    expected: 返回 200，邮箱验证成功
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/verify-email
+        headers:
+          Content-Type: application/json
+        body:
+          token: test-verify-token-12345
+      expected:
+        status: 200
+        body:
+          message: contains "verified"
+          user:
+            is_email_verified: true
+
+  - action: 验证数据库已更新
+    verification:
+      type: database
+      query: |
+        SELECT is_email_verified, email_verification_token
+        FROM users WHERE email = 'verify-e2e@test.local'
+      expected:
+        is_email_verified: true
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'verify-e2e@test.local';

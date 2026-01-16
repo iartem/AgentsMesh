@@ -1,0 +1,102 @@
+id: TC-GITCRED-005
+name: 设置默认 Git 凭证
+description: 验证将 Git 凭证设为默认
+priority: high
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建测试凭证
+    expected: 返回 201，获取凭证 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/git-credentials
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Default Test Cred
+          credential_type: pat
+          pat: ghp_default_test_token
+          host_pattern: github.com
+      expected:
+        status: 201
+        body:
+          credential:
+            id: not_empty
+      save:
+        credential_id: body.credential.id
+
+  - action: 设置为默认凭证
+    expected: 返回 200
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/git-credentials/default
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          credential_id: {credential_id}
+      expected:
+        status: 200
+        body:
+          is_runner_local: false
+
+  - action: 验证默认凭证
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/git-credentials/default
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          is_runner_local: false
+          credential:
+            name: Default Test Cred
+
+  - action: 清除默认（回退到 runner_local）
+    expected: 返回 200
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/git-credentials/default
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          message: contains "Runner Local"
+
+cleanup:
+  - sql: |
+      DELETE FROM user_git_credentials WHERE name = 'Default Test Cred';

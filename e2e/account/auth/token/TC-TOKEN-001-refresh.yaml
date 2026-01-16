@@ -1,0 +1,51 @@
+id: TC-TOKEN-001
+name: Token 刷新成功
+description: 验证使用有效的 refresh_token 获取新 token
+priority: high
+module: account/auth/token
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 refresh_token
+
+notes: |
+  测试需要先通过登录获取 refresh_token，然后用它获取新的 token。
+  执行时应先执行 TC-LOGIN-001 获取 refresh_token。
+
+steps:
+  - action: 先登录获取 refresh_token
+    expected: 返回 200，获取 refresh_token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          refresh_token: not_empty
+      save:
+        refresh_token: body.refresh_token
+
+  - action: 使用 refresh_token 获取新 token
+    expected: 返回 200，包含新的 token 和 refresh_token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/refresh
+        headers:
+          Content-Type: application/json
+        body:
+          refresh_token: "{refresh_token}"
+      expected:
+        status: 200
+        body:
+          token: not_empty
+          refresh_token: not_empty
+          expires_in: not_empty

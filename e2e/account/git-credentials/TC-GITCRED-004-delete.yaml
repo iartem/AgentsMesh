@@ -1,0 +1,88 @@
+id: TC-GITCRED-004
+name: 删除 Git 凭证
+description: 验证删除指定的 Git 凭证
+priority: medium
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建待删除的凭证
+    expected: 返回 201，获取凭证 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/git-credentials
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Delete Test Cred
+          credential_type: pat
+          pat: ghp_delete_test_token
+          host_pattern: github.com
+      expected:
+        status: 201
+        body:
+          credential:
+            id: not_empty
+      save:
+        credential_id: body.credential.id
+
+  - action: 删除凭证
+    expected: 返回 200，凭证已删除
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/git-credentials/{credential_id}
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          message: contains "deleted"
+
+  - action: 验证凭证已删除
+    verification:
+      type: database
+      query: |
+        SELECT EXISTS(
+          SELECT 1 FROM user_git_credentials WHERE name = 'Delete Test Cred'
+        ) as exists
+      expected:
+        exists: false
+
+  - action: 删除不存在的凭证
+    expected: 返回 404
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/git-credentials/99999999
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 404

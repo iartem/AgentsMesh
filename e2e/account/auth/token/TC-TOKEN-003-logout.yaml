@@ -1,0 +1,44 @@
+id: TC-TOKEN-003
+name: 登出成功
+description: 验证登出 API 正常工作，token 被撤销
+priority: medium
+module: account/auth/token
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 先登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 调用登出 API
+    expected: 返回 200，消息为 "Logged out successfully"
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/logout
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+      expected:
+        status: 200
+        body:
+          message: contains "Logged out"

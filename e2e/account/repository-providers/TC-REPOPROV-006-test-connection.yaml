@@ -1,0 +1,88 @@
+id: TC-REPOPROV-006
+name: 测试仓库提供商连接
+description: 验证测试仓库提供商连接 API
+priority: high
+module: account/repository-providers
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+notes: |
+  此测试使用无效 token，预期连接测试会失败。
+  真实环境需要有效的 GitHub/GitLab token 才能测试成功。
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建测试提供商
+    expected: 返回 201，获取提供商 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/repository-providers
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          provider_type: github
+          name: Connection Test Provider
+          base_url: https://api.github.com
+          bot_token: ghp_invalid_test_token
+      expected:
+        status: 201
+        body:
+          provider:
+            id: not_empty
+      save:
+        provider_id: body.provider.id
+
+  - action: 测试连接（预期失败，因为 token 无效）
+    expected: 返回 401 或 502（取决于 GitHub API 响应）
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/repository-providers/{provider_id}/test
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        one_of:
+          - status: 401
+          - status: 502
+        body:
+          success: false
+
+  - action: 测试不存在的提供商
+    expected: 返回 404
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/repository-providers/99999999/test
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 404
+
+cleanup:
+  - sql: |
+      DELETE FROM user_repository_providers WHERE name = 'Connection Test Provider';

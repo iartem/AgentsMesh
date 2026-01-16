@@ -1,0 +1,41 @@
+id: TC-VERIFY-002
+name: 邮箱验证失败-无效 token
+description: 验证使用无效或过期 token 时返回错误
+priority: high
+module: account/auth/email-verify
+
+preconditions:
+  - 开发环境已启动
+
+steps:
+  - action: 使用无效 token 验证邮箱
+    expected: 返回 400，错误信息为 "Invalid or expired verification token"
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/verify-email
+        headers:
+          Content-Type: application/json
+        body:
+          token: invalid-verification-token-xyz
+      expected:
+        status: 400
+        body:
+          error: contains "Invalid"
+
+  - action: 提交空 token
+    expected: 返回 400，错误信息包含 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/verify-email
+        headers:
+          Content-Type: application/json
+        body:
+          token: ""
+      expected:
+        status: 400
+        body:
+          error: not_empty

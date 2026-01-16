@@ -1,0 +1,59 @@
+id: TC-PWRST-002
+name: 重置密码成功
+description: 验证使用有效 token 重置密码
+priority: high
+module: account/auth/password-reset
+
+preconditions:
+  - 开发环境已启动
+  - 数据库中存在带有重置 token 的用户
+
+notes: |
+  此测试需要先设置已知的密码重置 token。
+  测试完成后应清理测试数据。
+
+setup:
+  sql: |
+    INSERT INTO users (email, username, password_hash, name, is_email_verified, password_reset_token, password_reset_expires_at)
+    VALUES ('pwreset-e2e@test.local', 'pwresete2e', '$2a$10$N9qo8uLOickgx2ZMRZoMye.LrFO1VD3cWjvdCMEBzO4Y6bO7zE6.2', 'PW Reset E2E User', true, 'test-reset-token-12345', NOW() + INTERVAL '1 hour')
+    ON CONFLICT (email) DO UPDATE SET
+      password_reset_token = 'test-reset-token-12345',
+      password_reset_expires_at = NOW() + INTERVAL '1 hour';
+
+steps:
+  - action: 使用有效 token 重置密码
+    expected: 返回 200，密码重置成功
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/reset-password
+        headers:
+          Content-Type: application/json
+        body:
+          token: test-reset-token-12345
+          new_password: NewTestPass456!
+      expected:
+        status: 200
+        body:
+          message: contains "reset"
+
+  - action: 验证新密码可以登录
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: pwreset-e2e@test.local
+          password: NewTestPass456!
+      expected:
+        status: 200
+        body:
+          token: not_empty
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'pwreset-e2e@test.local';

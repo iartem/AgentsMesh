@@ -1,0 +1,52 @@
+id: TC-REG-001
+name: 注册成功
+description: 验证使用有效信息注册新用户
+priority: high
+module: account/auth/register
+
+preconditions:
+  - 开发环境已启动
+
+setup:
+  sql: |
+    DELETE FROM users WHERE email = 'newuser-e2e@test.local';
+
+steps:
+  - action: 调用注册 API
+    expected: 返回 201，包含 token 和用户信息
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/register
+        headers:
+          Content-Type: application/json
+        body:
+          email: newuser-e2e@test.local
+          username: newusere2e
+          password: TestPass123!
+          name: E2E Test User
+      expected:
+        status: 201
+        body:
+          token: not_empty
+          refresh_token: not_empty
+          user:
+            email: newuser-e2e@test.local
+            username: newusere2e
+            is_email_verified: false
+
+  - action: 验证用户已创建
+    verification:
+      type: database
+      query: |
+        SELECT email, username, is_email_verified
+        FROM users WHERE email = 'newuser-e2e@test.local'
+      expected:
+        email: newuser-e2e@test.local
+        username: newusere2e
+        is_email_verified: false
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'newuser-e2e@test.local';

@@ -1,0 +1,205 @@
+id: TC-REPOPROV-007
+name: 仓库提供商完整 CRUD 流程（创建 → 查看 → 更新 → 测试连接 → 设默认 → 删除）
+description: |
+  验证用户通过 UI 完整管理仓库提供商的流程：
+  1. 登录并导航到仓库提供商设置页面
+  2. 创建新的 GitHub 提供商配置
+  3. 验证提供商出现在列表中
+  4. 更新提供商名称
+  5. 测试连接
+  6. 将提供商设为默认
+  7. 删除提供商
+  8. 验证提供商从列表移除
+priority: high
+module: account/repository-providers
+type: scenario
+
+preconditions:
+  - 开发环境已启动
+  - 用户已登录
+
+setup:
+  sql: |
+    -- 清理可能存在的测试提供商
+    DELETE FROM user_repository_providers WHERE name LIKE 'E2E Test Provider%';
+
+steps:
+  - id: step-1
+    action: 登录并获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - id: step-2
+    action: 导航到仓库提供商设置页面
+    url: /settings/repositories
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'heading contains "仓库" or heading contains "Repository"'
+            - exists: 'heading contains "提供商" or heading contains "Provider"'
+            - exists: 'text contains "GitHub" or text contains "GitLab"'
+
+  - id: step-3
+    action: 点击添加提供商按钮
+    verification:
+      type: ui
+      steps:
+        - click: 'button contains "添加" or button contains "Add" or button contains "新建"'
+      check:
+        - exists: 'dialog or [role="dialog"]'
+
+  - id: step-4
+    action: 选择 GitHub 类型并填写信息
+    verification:
+      type: ui
+      steps:
+        - click: 'button contains "GitHub" or radio "GitHub" or option "GitHub"'
+          optional: true
+        - fill: 'textbox "名称" or textbox "Name"'
+          value: E2E Test Provider
+        - fill: 'textbox "Token" or textbox "Access Token" or textbox "PAT"'
+          value: ghp_test_provider_token_12345678901234567890
+        - fill: 'textbox "URL" or textbox "Base URL"'
+          value: https://github.com
+          optional: true
+        - click: 'button contains "保存" or button contains "Save" or button contains "创建"'
+      check:
+        - not_exists: 'dialog or [role="dialog"]'
+
+  - id: step-5
+    action: 验证提供商出现在列表中
+    verification:
+      type: ui
+      check:
+        - contains: "E2E Test Provider"
+
+  - id: step-6
+    action: 验证数据库中提供商已创建
+    verification:
+      type: database
+      query: |
+        SELECT name, provider_type, is_default FROM user_repository_providers
+        WHERE name = 'E2E Test Provider'
+      expected:
+        name: E2E Test Provider
+        provider_type: github
+      save:
+        provider_id: id
+
+  - id: step-7
+    action: 点击编辑提供商
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Provider") button contains "编辑" or button[aria-label*="编辑"]'
+          fallback:
+            - click: 'row:has-text("E2E Test Provider") button[aria-label*="更多"]'
+            - click: 'menuitem "编辑" or menuitem "Edit"'
+      check:
+        - exists: 'dialog or [role="dialog"]'
+
+  - id: step-8
+    action: 更新提供商名称
+    verification:
+      type: ui
+      steps:
+        - clear: 'textbox "名称" or textbox "Name"'
+        - fill: 'textbox "名称" or textbox "Name"'
+          value: E2E Test Provider Updated
+        - click: 'button contains "保存" or button contains "Save" or button contains "更新"'
+      check:
+        - contains: "E2E Test Provider Updated"
+
+  - id: step-9
+    action: 验证数据库中名称已更新
+    verification:
+      type: database
+      query: |
+        SELECT name FROM user_repository_providers
+        WHERE name = 'E2E Test Provider Updated'
+      expected:
+        name: E2E Test Provider Updated
+
+  - id: step-10
+    action: 测试连接（预期失败，因为 token 无效）
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Provider Updated") button contains "测试" or button contains "Test"'
+          fallback:
+            - click: 'row:has-text("E2E Test Provider Updated") button[aria-label*="更多"]'
+            - click: 'menuitem "测试连接" or menuitem "Test Connection"'
+      check:
+        - one_of:
+            - contains: "连接失败"
+            - contains: "failed"
+            - contains: "无效"
+            - contains: "invalid"
+            - contains: "error"
+
+  - id: step-11
+    action: 设置提供商为默认
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Provider Updated") button contains "默认" or button contains "Default"'
+          fallback:
+            - click: 'row:has-text("E2E Test Provider Updated") button[aria-label*="更多"]'
+            - click: 'menuitem "设为默认" or menuitem "Set as default"'
+      check:
+        - one_of:
+            - contains: "默认"
+            - contains: "default"
+
+  - id: step-12
+    action: 验证数据库中已设为默认
+    verification:
+      type: database
+      query: |
+        SELECT is_default FROM user_repository_providers
+        WHERE name = 'E2E Test Provider Updated'
+      expected:
+        is_default: true
+
+  - id: step-13
+    action: 删除提供商
+    verification:
+      type: ui
+      steps:
+        - click: 'row:has-text("E2E Test Provider Updated") button contains "删除" or button[aria-label*="删除"]'
+          fallback:
+            - click: 'row:has-text("E2E Test Provider Updated") button[aria-label*="更多"]'
+            - click: 'menuitem "删除" or menuitem "Delete"'
+        - click: 'button contains "确认" or button contains "Confirm"'
+          in_dialog: true
+      check:
+        - not_contains: "E2E Test Provider Updated"
+
+  - id: step-14
+    action: 验证数据库中提供商已删除
+    verification:
+      type: database
+      query: |
+        SELECT COUNT(*) as count FROM user_repository_providers
+        WHERE name LIKE 'E2E Test Provider%'
+      expected:
+        count: 0
+
+cleanup:
+  - sql: |
+      DELETE FROM user_repository_providers WHERE name LIKE 'E2E Test Provider%';

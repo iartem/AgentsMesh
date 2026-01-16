@@ -1,0 +1,29 @@
+id: TC-REG-002
+name: 注册失败-邮箱已存在
+description: 验证使用已注册的邮箱注册时返回 409 冲突错误
+priority: high
+module: account/auth/register
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户存在 (dev@agentsmesh.local)
+
+steps:
+  - action: 使用已存在的邮箱调用注册 API
+    expected: 返回 409，错误信息为 "Email already registered"
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/register
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          username: anotheruser
+          password: TestPass123!
+          name: Another User
+      expected:
+        status: 409
+        body:
+          error: contains "Email already"

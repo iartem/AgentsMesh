@@ -101,7 +101,15 @@
       "signIn": "Sign in",
       "emailSent": "Verification email sent! Please check your inbox.",
       "resendFailed": "Failed to resend verification email. Please try again.",
-      "emailMissing": "Email address is missing"
+      "emailMissing": "Email address is missing",
+      "verifying": "Verifying your email...",
+      "pleaseWait": "Please wait while we verify your email address.",
+      "verificationSuccess": "Email verified successfully!",
+      "verificationSuccessTitle": "Email Verified!",
+      "redirecting": "Redirecting you to your workspace...",
+      "verificationFailed": "Failed to verify email. Please try again or request a new verification link.",
+      "invalidToken": "This verification link is invalid or has expired. Please request a new one.",
+      "alreadyVerifiedError": "This email has already been verified. Please sign in."
     },
     "onboarding": {
       "welcome": "Welcome!",

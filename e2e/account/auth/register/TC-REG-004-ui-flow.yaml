@@ -1,0 +1,59 @@
+id: TC-REG-004
+name: 注册页面 UI 流程
+description: 验证注册页面的元素完整性和交互功能
+priority: high
+module: account/auth/register
+
+preconditions:
+  - 开发环境已启动
+  - 用户未登录状态
+
+setup:
+  sql: |
+    DELETE FROM users WHERE email = 'uiregister@test.local';
+
+steps:
+  - action: 导航到注册页面
+    url: /register
+    expected: 页面加载完成，显示注册表单
+    verification:
+      type: ui
+      check:
+        - exists: 'textbox "Email" or textbox "邮箱"'
+        - exists: 'textbox "Username" or textbox "用户名"'
+        - exists: 'textbox "Password" or textbox "密码"'
+        - exists: 'button contains "注册" or button contains "Register" or button contains "Sign up"'
+
+  - action: 检查登录链接存在
+    expected: 页面包含登录链接
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'link contains "登录"'
+            - exists: 'link contains "Login"'
+            - exists: 'link contains "Sign in"'
+
+  - action: 输入有效信息并提交
+    expected: 注册成功后跳转或显示成功消息
+    verification:
+      type: ui
+      steps:
+        - fill: 'textbox "Email" or textbox "邮箱"'
+          value: uiregister@test.local
+        - fill: 'textbox "Username" or textbox "用户名"'
+          value: uiregistertest
+        - fill: 'textbox "Name" or textbox "姓名"'
+          value: UI Register Test
+        - fill: 'textbox "Password" or textbox "密码"'
+          value: TestPass123!
+        - click: 'button contains "注册" or button contains "Register" or button contains "Sign up"'
+      check:
+        - one_of:
+            - url_contains: "/dashboard"
+            - url_contains: "/verify"
+            - contains_one_of: ["成功", "success", "验证邮件"]
+
+cleanup:
+  - sql: |
+      DELETE FROM users WHERE email = 'uiregister@test.local';

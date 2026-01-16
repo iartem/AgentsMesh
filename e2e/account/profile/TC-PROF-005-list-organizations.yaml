@@ -1,0 +1,54 @@
+id: TC-PROF-005
+name: 获取组织列表
+description: 验证 GET /users/me/organizations 返回用户所属组织
+priority: high
+module: account/profile
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+  - 测试用户属于至少一个组织
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 获取用户组织列表
+    expected: 返回 200，包含至少一个组织
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me/organizations
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          organizations: not_empty
+
+  - action: 不带 token 获取组织列表
+    expected: 返回 401 未授权
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me/organizations
+      expected:
+        status: 401

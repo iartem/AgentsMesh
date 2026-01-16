@@ -1,0 +1,98 @@
+id: TC-AGENTCRED-004
+name: 删除 Agent 凭证配置
+description: 验证删除指定的 Agent 凭证配置
+priority: medium
+module: account/agent-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 获取有效的 agent_type_id
+    verification:
+      type: database
+      query: |
+        SELECT id FROM agent_types WHERE is_active = true LIMIT 1
+      expected:
+        id: not_empty
+      save:
+        agent_type_id: id
+
+  - action: 创建待删除的配置
+    expected: 返回 201，获取配置 ID
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/agent-credentials/types/{agent_type_id}
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: Delete Test Profile
+          is_runner_host: false
+          credentials:
+            ANTHROPIC_API_KEY: sk-ant-delete-test
+      expected:
+        status: 201
+        body:
+          profile:
+            id: not_empty
+      save:
+        profile_id: body.profile.id
+
+  - action: 删除配置
+    expected: 返回 200，配置已删除
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/agent-credentials/profiles/{profile_id}
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          message: contains "deleted"
+
+  - action: 验证配置已删除
+    verification:
+      type: database
+      query: |
+        SELECT EXISTS(
+          SELECT 1 FROM agent_credential_profiles WHERE name = 'Delete Test Profile'
+        ) as exists
+      expected:
+        exists: false
+
+  - action: 删除不存在的配置
+    expected: 返回 404
+    verification:
+      type: api
+      request:
+        method: DELETE
+        url: /api/v1/users/agent-credentials/profiles/99999999
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 404

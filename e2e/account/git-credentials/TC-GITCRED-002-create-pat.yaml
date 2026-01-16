@@ -1,0 +1,68 @@
+id: TC-GITCRED-002
+name: 创建 PAT 凭证
+description: 验证创建 Personal Access Token 类型的 Git 凭证
+priority: high
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 创建 PAT 凭证
+    expected: 返回 201，凭证创建成功
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/users/git-credentials
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          name: E2E Test PAT
+          credential_type: pat
+          pat: ghp_test_token_12345
+          host_pattern: github.com
+      expected:
+        status: 201
+        body:
+          credential:
+            name: E2E Test PAT
+            credential_type: pat
+            host_pattern: github.com
+      save:
+        credential_id: body.credential.id
+
+  - action: 验证凭证已创建
+    verification:
+      type: database
+      query: |
+        SELECT name, credential_type, host_pattern
+        FROM user_git_credentials WHERE name = 'E2E Test PAT'
+      expected:
+        name: E2E Test PAT
+        credential_type: pat
+
+cleanup:
+  - sql: |
+      DELETE FROM user_git_credentials WHERE name = 'E2E Test PAT';

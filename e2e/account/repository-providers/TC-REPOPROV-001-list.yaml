@@ -1,0 +1,53 @@
+id: TC-REPOPROV-001
+name: 列出仓库提供商
+description: 验证 GET /users/repository-providers 返回用户的所有仓库提供商
+priority: high
+module: account/repository-providers
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 列出仓库提供商
+    expected: 返回 200，包含 providers 数组
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/repository-providers
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          providers: not_empty
+
+  - action: 不带 token 列出提供商
+    expected: 返回 401 未授权
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/repository-providers
+      expected:
+        status: 401

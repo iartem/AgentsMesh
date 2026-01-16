@@ -1,0 +1,54 @@
+id: TC-GITCRED-006
+name: Git 设置页面 UI 流程
+description: 验证 /settings/git 页面的元素完整性和交互功能
+priority: high
+module: account/git-credentials
+
+preconditions:
+  - 开发环境已启动
+  - 用户已登录
+
+steps:
+  - action: 导航到 Git 设置页面
+    url: /settings/git
+    expected: 页面加载完成
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'heading contains "Git"'
+            - contains: "Git"
+        - one_of:
+            - exists: 'text contains "Runner Local"'
+            - contains: "Runner Local"
+
+  - action: 检查凭证列表区域
+    expected: 显示凭证列表或空状态
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'list'
+            - contains_one_of: ["没有凭证", "No credentials", "添加", "Add"]
+
+  - action: 检查添加按钮存在
+    expected: 存在添加凭证的按钮
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'button contains "添加"'
+            - exists: 'button contains "Add"'
+            - exists: 'button contains "新建"'
+            - exists: 'button contains "Create"'
+
+  - action: 点击添加凭证按钮
+    selector: 'button contains "添加" or button contains "Add" or button contains "新建"'
+    expected: 显示添加对话框或表单
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'dialog'
+            - exists: 'form'
+            - contains_one_of: ["名称", "Name", "类型", "Type"]

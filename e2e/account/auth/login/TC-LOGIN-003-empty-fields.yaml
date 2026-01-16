@@ -1,0 +1,60 @@
+id: TC-LOGIN-003
+name: 登录失败-字段为空
+description: 验证提交空字段时返回 400 请求错误
+priority: medium
+module: account/auth/login
+
+preconditions:
+  - 开发环境已启动
+
+steps:
+  - action: 提交空邮箱调用登录 API
+    expected: 返回 400，错误信息包含 email
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: ""
+          password: somepassword
+      expected:
+        status: 400
+        body:
+          error: not_empty
+
+  - action: 提交空密码调用登录 API
+    expected: 返回 400，错误信息包含 password
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: ""
+      expected:
+        status: 400
+        body:
+          error: not_empty
+
+  - action: 提交无效邮箱格式
+    expected: 返回 400，错误信息包含 email
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: invalid-email-format
+          password: somepassword
+      expected:
+        status: 400
+        body:
+          error: not_empty

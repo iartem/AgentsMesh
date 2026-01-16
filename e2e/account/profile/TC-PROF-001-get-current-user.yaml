@@ -1,0 +1,56 @@
+id: TC-PROF-001
+name: 获取当前用户
+description: 验证 GET /users/me 返回当前登录用户的信息
+priority: high
+module: account/profile
+
+preconditions:
+  - 开发环境已启动
+  - 已获取有效的 access_token
+
+steps:
+  - action: 先登录获取 token
+    expected: 返回 200，获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - action: 获取当前用户信息
+    expected: 返回 200，包含用户完整信息（不含密码哈希）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          user:
+            id: not_empty
+            email: dev@agentsmesh.local
+            username: not_empty
+
+  - action: 不带 token 获取用户信息
+    expected: 返回 401 未授权
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/users/me
+      expected:
+        status: 401

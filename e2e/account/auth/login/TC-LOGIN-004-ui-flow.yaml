@@ -1,0 +1,46 @@
+id: TC-LOGIN-004
+name: 登录页面 UI 流程
+description: 验证登录页面的元素完整性和交互功能
+priority: high
+module: account/auth/login
+
+preconditions:
+  - 开发环境已启动
+  - 用户未登录状态
+
+steps:
+  - action: 导航到登录页面
+    url: /login
+    expected: 页面加载完成，显示登录表单
+    verification:
+      type: ui
+      check:
+        - exists: 'textbox "Email" or textbox "邮箱"'
+        - exists: 'textbox "Password" or textbox "密码"'
+        - exists: 'button contains "登录" or button contains "Login" or button contains "Sign in"'
+
+  - action: 检查注册链接存在
+    expected: 页面包含注册链接
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - exists: 'link contains "注册"'
+            - exists: 'link contains "Register"'
+            - exists: 'link contains "Sign up"'
+
+  - action: 输入有效凭证并提交
+    expected: 登录成功后跳转到仪表板页面
+    verification:
+      type: ui
+      steps:
+        - fill: 'textbox "Email" or textbox "邮箱"'
+          value: dev@agentsmesh.local
+        - fill: 'textbox "Password" or textbox "密码"'
+          value: devpass123
+        - click: 'button contains "登录" or button contains "Login" or button contains "Sign in"'
+      check:
+        - one_of:
+            - url_contains: "/dashboard"
+            - url_contains: "/dev-org"
+            - not_contains: "/login"
