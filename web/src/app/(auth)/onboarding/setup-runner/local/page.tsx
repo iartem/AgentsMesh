@@ -295,17 +295,15 @@ export default function LocalRunnerSetupPage() {
             </div>
             <div className="ml-8 space-y-3">
               <div className="p-4 bg-muted rounded-md">
-                <p className="text-xs text-muted-foreground mb-2"># macOS (Homebrew)</p>
-                <code className="text-sm font-mono text-foreground block whitespace-pre-wrap">
-{`brew tap agentsmesh/tap https://github.com/AgentsMesh/BrewCask
-brew install agentsmesh/tap/agentsmesh-runner`}
+                <p className="text-xs text-muted-foreground mb-2"># macOS / Linux</p>
+                <code className="text-sm font-mono text-foreground block">
+                  curl -fsSL https://agentsmesh.ai/install.sh | sh
                 </code>
               </div>
               <div className="p-4 bg-muted rounded-md">
-                <p className="text-xs text-muted-foreground mb-2"># Linux (Direct download)</p>
-                <code className="text-sm font-mono text-foreground block whitespace-pre-wrap">
-{`curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_*_linux_amd64.tar.gz | tar xz
-sudo mv runner /usr/local/bin/`}
+                <p className="text-xs text-muted-foreground mb-2"># Windows (PowerShell)</p>
+                <code className="text-sm font-mono text-foreground block">
+                  irm https://agentsmesh.ai/install.ps1 | iex
                 </code>
               </div>
               <div className="p-4 bg-muted rounded-md">

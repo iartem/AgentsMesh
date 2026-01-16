@@ -25,54 +25,43 @@ export default function RunnerSetupPage() {
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">Quick Installation</h2>
 
-        <h3 className="text-lg font-medium mb-2 mt-6">macOS (Homebrew) - Recommended</h3>
+        <h3 className="text-lg font-medium mb-2 mt-6">One-Line Install (Recommended)</h3>
+        <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
+          <pre className="text-green-400">{`# macOS / Linux
+curl -fsSL https://agentsmesh.ai/install.sh | sh
+
+# Windows (PowerShell)
+irm https://agentsmesh.ai/install.ps1 | iex`}</pre>
+        </div>
+
+        <h3 className="text-lg font-medium mb-2 mt-6">macOS (Homebrew)</h3>
         <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
           <pre className="text-green-400">{`# Add AgentsMesh tap
 brew tap agentsmesh/tap https://github.com/AgentsMesh/BrewCask
 
 # Install runner
-brew install agentsmesh/tap/agentsmesh-runner
-
-# Register with your server
-runner register --server https://api.agentsmesh.ai --token <YOUR_TOKEN>
-
-# Start the runner
-runner run`}</pre>
-        </div>
-
-        <h3 className="text-lg font-medium mb-2 mt-6">Linux (Direct Download)</h3>
-        <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
-          <pre className="text-green-400">{`# Download and extract (x86_64)
-curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_*_linux_amd64.tar.gz | tar xz
-
-# Move to PATH
-sudo mv runner /usr/local/bin/
-
-# Register with your server
-runner register --server https://api.agentsmesh.ai --token <YOUR_TOKEN>
-
-# Start the runner
-runner run`}</pre>
+brew install agentsmesh/tap/agentsmesh-runner`}</pre>
         </div>
 
         <h3 className="text-lg font-medium mb-2 mt-6">Linux (Package Manager)</h3>
         <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
           <pre className="text-green-400">{`# Debian/Ubuntu
-wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_*_linux_amd64.deb
-sudo dpkg -i agentsmesh-runner_*_linux_amd64.deb
+VERSION=$(curl -s https://api.github.com/repos/AgentsMesh/AgentsMeshRunner/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v\${VERSION}/agentsmesh-runner_\${VERSION}_linux_amd64.deb
+sudo dpkg -i agentsmesh-runner_\${VERSION}_linux_amd64.deb
 
 # RHEL/CentOS/Fedora
-wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_*_linux_amd64.rpm
-sudo rpm -i agentsmesh-runner_*_linux_amd64.rpm`}</pre>
+VERSION=$(curl -s https://api.github.com/repos/AgentsMesh/AgentsMeshRunner/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v\${VERSION}/agentsmesh-runner_\${VERSION}_linux_amd64.rpm
+sudo rpm -i agentsmesh-runner_\${VERSION}_linux_amd64.rpm`}</pre>
         </div>
 
-        <h3 className="text-lg font-medium mb-2 mt-6">Windows</h3>
+        <h3 className="text-lg font-medium mb-2 mt-6">After Installation</h3>
         <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
-          <pre className="text-green-400">{`# Download from GitHub Releases
-# https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest
-
-# Extract and add to PATH, then:
+          <pre className="text-green-400">{`# Register with your server
 runner register --server https://api.agentsmesh.ai --token <YOUR_TOKEN>
+
+# Start the runner
 runner run`}</pre>
         </div>
 
