@@ -30,6 +30,9 @@ build:cli:
   image:
     name: goreleaser/goreleaser:latest
     entrypoint: [""]
+  variables:
+    # GoReleaser requires GITHUB_TOKEN for Homebrew formula update
+    GITHUB_TOKEN: ${GITHUB_RELEASE_TOKEN}
   script:
     - cd runner
     # GoReleaser builds CLI artifacts and updates Homebrew formula
