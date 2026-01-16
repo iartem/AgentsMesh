@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthropics/agentmesh/backend/internal/interfaces"
-	runnerv1 "github.com/anthropics/agentmesh/proto/gen/go/runner/v1"
+	"github.com/anthropics/agentsmesh/backend/internal/interfaces"
+	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/stretchr/testify/assert"
 )
 

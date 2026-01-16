@@ -2,11 +2,11 @@ module github.com/anthropics/agentsmesh/backend
 
 go 1.24.0
 
-replace github.com/anthropics/agentmesh/proto => ../proto
+replace github.com/anthropics/agentsmesh/proto => ../proto
 
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
-	github.com/anthropics/agentmesh/proto v0.0.0
+	github.com/anthropics/agentsmesh/proto v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7

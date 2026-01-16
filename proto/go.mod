@@ -1,4 +1,4 @@
-module github.com/anthropics/agentmesh/proto
+module github.com/anthropics/agentsmesh/proto
 
 go 1.24.0
 

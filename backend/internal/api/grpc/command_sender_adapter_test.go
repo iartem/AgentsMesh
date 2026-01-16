@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/anthropics/agentmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 )
 
 func TestNewGRPCCommandSender(t *testing.T) {

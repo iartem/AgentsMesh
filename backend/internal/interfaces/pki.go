@@ -4,7 +4,7 @@
 package interfaces
 
 import (
-	"github.com/anthropics/agentmesh/backend/internal/infra/pki"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/pki"
 )
 
 // PKICertificateIssuer defines the interface for issuing Runner certificates.

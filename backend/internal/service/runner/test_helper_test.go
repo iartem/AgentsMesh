@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthropics/agentmesh/backend/internal/infra/pki"
-	runnerv1 "github.com/anthropics/agentmesh/proto/gen/go/runner/v1"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/pki"
+	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

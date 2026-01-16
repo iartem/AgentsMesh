@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	runnerv1 "github.com/anthropics/agentmesh/proto/gen/go/runner/v1"
+	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

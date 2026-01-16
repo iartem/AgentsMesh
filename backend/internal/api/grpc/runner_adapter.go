@@ -11,11 +11,11 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
-	"github.com/anthropics/agentmesh/backend/internal/infra/pki"
-	"github.com/anthropics/agentmesh/backend/internal/interfaces"
-	"github.com/anthropics/agentmesh/backend/internal/service/runner"
-	"github.com/anthropics/agentmesh/backend/pkg/audit"
-	runnerv1 "github.com/anthropics/agentmesh/proto/gen/go/runner/v1"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/pki"
+	"github.com/anthropics/agentsmesh/backend/internal/interfaces"
+	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/audit"
+	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
 // Certificate revocation check interval
