@@ -26,25 +26,37 @@ brew install agentsmesh/tap/agentsmesh-runner
 ### macOS/Linux (Direct download)
 
 ```bash
-# Download and install
-curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_darwin_all.tar.gz | tar xz
+# macOS (Universal binary - Intel & Apple Silicon)
+curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_0.2.1_darwin_all.tar.gz | tar xz
+sudo mv runner /usr/local/bin/
+
+# Linux x86_64
+curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_0.2.1_linux_amd64.tar.gz | tar xz
+sudo mv runner /usr/local/bin/
+
+# Linux ARM64
+curl -fsSL https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_0.2.1_linux_arm64.tar.gz | tar xz
 sudo mv runner /usr/local/bin/
 ```
+
+> **Note**: Replace `0.2.1` with the [latest version](https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest).
 
 ### Linux (Debian/Ubuntu)
 
 ```bash
-# Download the latest .deb package
-wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_linux_amd64.deb
-sudo dpkg -i agentsmesh-runner_linux_amd64.deb
+# Download the latest .deb package (x86_64)
+VERSION=$(curl -s https://api.github.com/repos/AgentsMesh/AgentsMeshRunner/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v${VERSION}/agentsmesh-runner_${VERSION}_linux_amd64.deb
+sudo dpkg -i agentsmesh-runner_${VERSION}_linux_amd64.deb
 ```
 
 ### Linux (RHEL/CentOS/Fedora)
 
 ```bash
-# Download the latest .rpm package
-wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/latest/download/agentsmesh-runner_linux_amd64.rpm
-sudo rpm -i agentsmesh-runner_linux_amd64.rpm
+# Download the latest .rpm package (x86_64)
+VERSION=$(curl -s https://api.github.com/repos/AgentsMesh/AgentsMeshRunner/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+wget https://github.com/AgentsMesh/AgentsMeshRunner/releases/download/v${VERSION}/agentsmesh-runner_${VERSION}_linux_amd64.rpm
+sudo rpm -i agentsmesh-runner_${VERSION}_linux_amd64.rpm
 ```
 
 ### Windows
@@ -166,11 +178,15 @@ To create a new release:
 
 ```bash
 # Tag a new version
-git tag v1.0.0
+git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
 
-The GitHub Actions workflow will automatically build and publish to the release repository.
+The GitLab CI pipeline will automatically:
+- Build CLI binaries for all platforms (via GoReleaser)
+- Build Desktop versions (macOS DMG with system tray support)
+- Publish to GitHub Releases
+- Update Homebrew formula
 
 ## License
 
