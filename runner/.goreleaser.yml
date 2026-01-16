@@ -44,13 +44,23 @@ archives:
     files:
       - README.md
       - LICENSE*
+  # Separate archive for macOS universal binary
+  - id: cli-archive-darwin-universal
+    builds:
+      - runner-universal
+    name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_all"
+    files:
+      - README.md
+      - LICENSE*
 
 # macOS universal binary (amd64 + arm64)
 universal_binaries:
   - id: runner-universal
     ids:
       - runner-cli
-    replace: true
+    # replace: false to keep individual darwin builds for the archive
+    # The universal binary will be created as a separate artifact
+    replace: false
     name_template: "runner"
 
 # Linux packages using nfpm
