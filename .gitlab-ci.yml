@@ -1,3 +1,9 @@
+# Include runner release pipeline (triggered by tags)
+include:
+  - local: 'runner/.gitlab-ci.yml'
+    rules:
+      - if: $CI_COMMIT_TAG
+
 variables:
   REGISTRY: registry.corp.agentsmesh.ai
   BACKEND_IMAGE: ${REGISTRY}/agentsmesh/backend
@@ -7,6 +13,8 @@ variables:
 stages:
   - test
   - build
+  - package
+  - release
 
 # =============================================================================
 # Test Stage - Run on MR pipelines
