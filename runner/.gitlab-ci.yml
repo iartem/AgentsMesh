@@ -44,39 +44,43 @@ build:cli:
 # Desktop Builds (require native runners with CGO)
 # =============================================================================
 
-build:desktop:macos-amd64:
+# macOS Desktop build (builds both amd64 and arm64 on arm64 runner)
+build:desktop:macos:
   stage: build
-  tags: [macos, amd64]
+  tags: [macos, xcode]
+  before_script:
+    # Ensure Go and brew are in PATH for shell executor
+    - export PATH="/opt/homebrew/opt/go@1.24/bin:/opt/homebrew/bin:$PATH"
+    - go version
   script:
     - cd runner
+    # Build arm64 (native)
     - |
-      CGO_ENABLED=1 go build -tags desktop \
-        -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        -o runner-desktop-darwin-amd64 ./cmd/runner
-  artifacts:
-    paths:
-      - runner/runner-desktop-darwin-amd64
-    expire_in: 1 day
-  rules:
-    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
-    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
-
-build:desktop:macos-arm64:
-  stage: build
-  tags: [macos, arm64]
-  script:
-    - cd runner
-    - |
-      CGO_ENABLED=1 go build -tags desktop \
+      echo "Building arm64..."
+      CGO_ENABLED=1 GOARCH=arm64 go build -tags desktop \
         -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         -o runner-desktop-darwin-arm64 ./cmd/runner
+    # Build amd64 (cross-compile)
+    - |
+      echo "Building amd64..."
+      CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -tags desktop \
+        -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -o runner-desktop-darwin-amd64 ./cmd/runner
+    # Create universal binary
+    - |
+      echo "Creating universal binary..."
+      lipo -create -output runner-desktop-darwin-universal \
+        runner-desktop-darwin-amd64 \
+        runner-desktop-darwin-arm64
+      file runner-desktop-darwin-*
   artifacts:
     paths:
       - runner/runner-desktop-darwin-arm64
+      - runner/runner-desktop-darwin-amd64
+      - runner/runner-desktop-darwin-universal
     expire_in: 1 day
   rules:
-    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
-    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
+    - if: $CI_COMMIT_TAG
 
 build:desktop:linux:
   stage: build
@@ -123,28 +127,22 @@ build:desktop:windows:
 
 package:macos-dmg:
   stage: package
-  tags: [macos, arm64]
+  tags: [macos, xcode]
   needs:
-    - job: build:desktop:macos-amd64
-      artifacts: true
-    - job: build:desktop:macos-arm64
+    - job: build:desktop:macos
       artifacts: true
   before_script:
+    - export PATH="/opt/homebrew/bin:$PATH"
     - brew install create-dmg || true
   script:
     - cd runner
     - |
-      # Create universal binary
-      lipo -create -output runner-desktop \
-        runner-desktop-darwin-amd64 \
-        runner-desktop-darwin-arm64
-
-      # Create .app bundle
+      # Create .app bundle with universal binary
       APP_NAME="AgentsMesh Runner.app"
       mkdir -p "$APP_NAME/Contents/MacOS"
       mkdir -p "$APP_NAME/Contents/Resources"
 
-      cp runner-desktop "$APP_NAME/Contents/MacOS/runner-desktop"
+      cp runner-desktop-darwin-universal "$APP_NAME/Contents/MacOS/runner-desktop"
       chmod +x "$APP_NAME/Contents/MacOS/runner-desktop"
 
       # Update Info.plist with version
@@ -159,15 +157,14 @@ package:macos-dmg:
         --icon "AgentsMesh Runner.app" 150 185 \
         --hide-extension "AgentsMesh Runner.app" \
         --app-drop-link 450 185 \
-        "AgentsMesh-Runner-${VERSION}.dmg" \
+        "AgentsMesh-Runner-${VERSION}-darwin-universal.dmg" \
         "AgentsMesh Runner.app" || true
   artifacts:
     paths:
       - runner/*.dmg
     expire_in: 1 day
   rules:
-    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
-    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
+    - if: $CI_COMMIT_TAG
 
 package:linux-archive:
   stage: package
@@ -221,13 +218,11 @@ release:github:
   needs:
     - job: build:cli
       artifacts: true
-    # Desktop builds are optional until native runners are configured
     - job: package:macos-dmg
       artifacts: true
-      optional: true
     - job: package:linux-archive
       artifacts: true
-      optional: true
+    # Windows desktop build is optional (requires Windows runner)
     - job: package:windows-archive
       artifacts: true
       optional: true
