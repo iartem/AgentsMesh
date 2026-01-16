@@ -58,7 +58,8 @@ build:desktop:macos-amd64:
       - runner/runner-desktop-darwin-amd64
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_TAG
+    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
+    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
 
 build:desktop:macos-arm64:
   stage: build
@@ -74,7 +75,8 @@ build:desktop:macos-arm64:
       - runner/runner-desktop-darwin-arm64
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_TAG
+    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
+    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
 
 build:desktop:linux:
   stage: build
@@ -112,7 +114,8 @@ build:desktop:windows:
       - runner/runner-desktop-windows-amd64.exe
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_TAG
+    # Only run when DESKTOP_BUILDS is enabled (requires Windows runner)
+    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
 
 # =============================================================================
 # Package Desktop Applications
@@ -163,7 +166,8 @@ package:macos-dmg:
       - runner/*.dmg
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_TAG
+    # Only run when DESKTOP_BUILDS is enabled (requires macOS runner)
+    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
 
 package:linux-archive:
   stage: package
@@ -203,7 +207,8 @@ package:windows-archive:
       - runner/*.zip
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_TAG
+    # Only run when DESKTOP_BUILDS is enabled (requires Windows runner)
+    - if: $CI_COMMIT_TAG && $DESKTOP_BUILDS == "true"
 
 # =============================================================================
 # Release to GitHub
