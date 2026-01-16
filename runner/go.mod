@@ -2,10 +2,10 @@ module github.com/anthropics/agentsmesh/runner
 
 go 1.24.0
 
-replace github.com/anthropics/agentsmesh/proto => ../proto
+replace github.com/anthropics/agentmesh/proto => ../proto
 
 require (
-	github.com/anthropics/agentsmesh/proto v0.0.0
+	github.com/anthropics/agentmesh/proto v0.0.0
 	github.com/creack/pty v1.1.21
 	github.com/getlantern/systray v1.2.2
 	github.com/kardianos/service v1.2.4
