@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,16 +20,28 @@ import (
 
 // mockSendStream is used for testing sendLoop
 type mockSendStream struct {
+	mu       sync.Mutex
 	sendErr  error
 	sentMsgs []*runnerv1.ServerMessage
 }
 
 func (m *mockSendStream) Send(msg *runnerv1.ServerMessage) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.sendErr != nil {
 		return m.sendErr
 	}
 	m.sentMsgs = append(m.sentMsgs, msg)
 	return nil
+}
+
+func (m *mockSendStream) getSentMsgs() []*runnerv1.ServerMessage {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Return a copy to avoid race
+	result := make([]*runnerv1.ServerMessage, len(m.sentMsgs))
+	copy(result, m.sentMsgs)
+	return result
 }
 
 func (m *mockSendStream) Recv() (*runnerv1.RunnerMessage, error) {
@@ -200,9 +213,10 @@ func TestGRPCRunnerAdapter_SendLoop_SuccessfulSend(t *testing.T) {
 	// Stop sendLoop
 	close(done)
 
-	// Verify message was sent
-	assert.Len(t, successStream.sentMsgs, 1)
-	assert.Equal(t, int64(12345), successStream.sentMsgs[0].Timestamp)
+	// Verify message was sent (use thread-safe getter)
+	msgs := successStream.getSentMsgs()
+	assert.Len(t, msgs, 1)
+	assert.Equal(t, int64(12345), msgs[0].Timestamp)
 }
 
 // ==================== receiveLoop Tests ====================
