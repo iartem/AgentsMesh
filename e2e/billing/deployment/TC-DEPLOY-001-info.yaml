@@ -1,0 +1,42 @@
+id: TC-DEPLOY-001
+name: 获取部署信息
+description: 验证获取部署类型和可用支付提供商 API
+priority: medium
+module: billing/deployment
+
+preconditions:
+  - 已获取有效的 access_token
+
+steps:
+  - action: 调用获取部署信息 API
+    expected: 返回部署类型和支付提供商列表
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/deployment
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          deployment_type: one_of [global, cn, onpremise]
+          payment_providers: is_array
+          # 根据部署类型，支付提供商应该不同
+          # global: [stripe]
+          # cn: [alipay, wechat]
+          # onpremise: [license]
+
+  - action: 验证支付提供商与部署类型匹配
+    expected: 支付提供商列表与部署类型一致
+    verification:
+      type: custom
+      logic: |
+        if deployment_type == 'global':
+          assert 'stripe' in payment_providers
+          assert 'alipay' not in payment_providers
+        elif deployment_type == 'cn':
+          assert 'alipay' in payment_providers or 'wechat' in payment_providers
+          assert 'stripe' not in payment_providers
+        elif deployment_type == 'onpremise':
+          assert 'license' in payment_providers

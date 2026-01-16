@@ -1,0 +1,38 @@
+id: TC-INVOICE-001
+name: 获取发票列表
+description: 验证发票历史列表 API 正常工作
+priority: medium
+module: billing/invoice
+
+preconditions:
+  - 组织有活跃订阅
+  - 已获取有效的 access_token
+
+steps:
+  - action: 调用获取发票列表 API
+    expected: 返回发票列表（可能为空）
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/invoices
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          invoices: is_array
+          # 列表可能为空，但结构正确
+          pagination: optional
+
+  - action: 调用获取发票列表 API（带分页参数）
+    expected: 返回分页结果
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/invoices?page=1&per_page=10
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200

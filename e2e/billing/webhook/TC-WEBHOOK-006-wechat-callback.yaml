@@ -1,0 +1,73 @@
+id: TC-WEBHOOK-006
+name: 微信支付 Webhook - 支付成功
+description: 验证微信支付成功回调处理
+priority: high
+module: billing/webhook
+
+preconditions:
+  - 部署类型为 cn
+  - 微信支付 Webhook 端点已配置
+  - 有待处理的支付订单
+
+notes: |
+  微信支付回调使用 XML 格式（V2 API）或 JSON 格式（V3 API）。
+  需要验证签名。测试环境可能需要特殊处理。
+
+setup:
+  sql: |
+    -- 创建一个待处理的微信支付订单
+    INSERT INTO payment_orders (
+      organization_id, order_no, order_type, plan_name, amount, currency,
+      provider, status, created_at
+    ) VALUES (
+      (SELECT id FROM organizations WHERE slug = 'dev-org'),
+      'WECHAT-ORDER-001',
+      'subscription',
+      'pro',
+      19900,
+      'cny',
+      'wechat',
+      'pending',
+      NOW()
+    ) ON CONFLICT (order_no) DO UPDATE SET status = 'pending';
+
+steps:
+  - action: 发送微信支付成功回调（V3 API JSON 格式）
+    expected: 订单状态更新，订阅激活
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/wechat
+        headers:
+          Content-Type: application/json
+          Wechatpay-Signature: "{mock_signature}"
+          Wechatpay-Timestamp: "{timestamp}"
+          Wechatpay-Nonce: "{nonce}"
+          Wechatpay-Serial: "{serial}"
+        body:
+          resource:
+            ciphertext: "{encrypted_data}"  # 加密的支付结果
+            nonce: "{nonce}"
+            associated_data: "{aad}"
+          event_type: TRANSACTION.SUCCESS
+          summary: 支付成功
+      expected:
+        status: 200
+        body:
+          code: SUCCESS
+
+  - action: 验证订单状态已更新
+    expected: 订单状态为 completed
+    verification:
+      type: database
+      query: |
+        SELECT status, wechat_transaction_id
+        FROM payment_orders
+        WHERE order_no = 'WECHAT-ORDER-001'
+      expected:
+        status: completed
+
+cleanup:
+  - sql: |
+      DELETE FROM payment_orders WHERE order_no = 'WECHAT-ORDER-001';

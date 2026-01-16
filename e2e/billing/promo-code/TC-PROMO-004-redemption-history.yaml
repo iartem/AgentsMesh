@@ -1,0 +1,64 @@
+id: TC-PROMO-004
+name: 获取优惠码兑换历史
+description: 验证获取组织优惠码兑换历史 API
+priority: medium
+module: billing/promo-code
+
+preconditions:
+  - 组织有活跃订阅
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 确保有一条兑换记录用于测试
+    INSERT INTO promo_codes (code, name, type, plan_name, duration_months, max_uses, is_active)
+    VALUES ('HISTORY-TEST', 'History Test Code', 'duration', 'pro', 1, 100, true)
+    ON CONFLICT (code) DO NOTHING;
+
+    INSERT INTO promo_code_redemptions (
+      promo_code_id, organization_id, redeemed_by_id, redeemed_at
+    )
+    SELECT
+      pc.id,
+      o.id,
+      u.id,
+      NOW() - INTERVAL '1 day'
+    FROM promo_codes pc, organizations o, users u
+    WHERE pc.code = 'HISTORY-TEST'
+    AND o.slug = 'dev-org'
+    AND u.email = 'dev@agentsmesh.local'
+    ON CONFLICT DO NOTHING;
+
+steps:
+  - action: 调用获取兑换历史 API
+    expected: 返回兑换记录列表
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/promo-codes/history
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          redemptions: is_array
+          # 每条记录应包含
+          # - code: 优惠码
+          # - redeemed_at: 兑换时间
+          # - redeemed_by: 兑换人
+          # - duration_months: 赠送时长
+
+  - action: 验证返回数据结构
+    expected: 每条记录包含必要字段
+    verification:
+      type: custom
+      logic: |
+        for redemption in redemptions:
+          assert 'code' in redemption
+          assert 'redeemed_at' in redemption
+
+cleanup:
+  - sql: |
+      DELETE FROM promo_code_redemptions
+      WHERE promo_code_id = (SELECT id FROM promo_codes WHERE code = 'HISTORY-TEST');

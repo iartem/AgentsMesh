@@ -1,0 +1,52 @@
+id: TC-SEAT-001
+name: 验证席位管理卡片显示
+description: 验证席位管理区域正确显示当前席位使用情况
+priority: high
+module: billing/seats
+
+preconditions:
+  - 组织有活跃的付费订阅
+  - seat_count > 0
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成，显示"席位管理"卡片
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "席位管理"'
+
+  - action: 检查席位使用情况显示
+    expected: 显示 "X / Y 席位已使用" 格式
+    verification:
+      type: ui
+      check:
+        - contains: "席位已使用"
+        - contains: "/"
+
+  - action: 检查可用席位显示
+    expected: 显示 "Z 可用" 格式
+    verification:
+      type: ui
+      check:
+        - contains: "可用"
+
+  - action: 检查方案席位上限提示
+    expected: 显示"您的方案最多允许 N 个席位"
+    verification:
+      type: ui
+      check:
+        - contains: "您的方案最多允许"
+
+  - action: 验证数据一致性
+    expected: UI 显示与数据库一致
+    verification:
+      type: database
+      query: |
+        SELECT s.seat_count,
+               (SELECT COUNT(*) FROM organization_members WHERE organization_id = s.organization_id) as used_seats,
+               sp.max_users
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')

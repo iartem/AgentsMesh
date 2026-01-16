@@ -1,0 +1,36 @@
+id: TC-QUOTA-002
+name: Runner 配额检查
+description: 验证 Runner 配额检查 API 正确返回配额可用性
+priority: high
+module: billing/quota
+
+preconditions:
+  - 组织有活跃订阅
+  - 已获取有效的 access_token
+
+steps:
+  - action: 调用配额检查 API（请求 1 个 Runner）
+    expected: 返回 available = true
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/quota/check?resource=runners&amount=1
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          available: true
+
+  - action: 调用配额检查 API（请求超过上限的 Runner 数）
+    expected: 返回 HTTP 402 Payment Required
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/quota/check?resource=runners&amount=100
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 402

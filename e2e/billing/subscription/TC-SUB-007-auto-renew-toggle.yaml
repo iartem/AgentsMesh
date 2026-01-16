@@ -1,0 +1,78 @@
+id: TC-SUB-007
+name: 自动续费开关
+description: 验证开启/关闭自动续费功能
+priority: high
+module: billing/subscription
+
+preconditions:
+  - 组织有活跃的付费订阅
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 设置组织为 Pro 计划，自动续费开启
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        auto_renew = true
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 查询当前自动续费状态
+    expected: 返回 auto_renew = true
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          auto_renew: true
+
+  - action: 关闭自动续费
+    expected: 自动续费状态更新为 false
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          auto_renew: false
+      expected:
+        status: 200
+        body:
+          auto_renew: false
+
+  - action: 验证数据库状态
+    expected: auto_renew 字段为 false
+    verification:
+      type: database
+      query: |
+        SELECT auto_renew
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        auto_renew: false
+
+  - action: 重新开启自动续费
+    expected: 自动续费状态更新为 true
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          auto_renew: true
+      expected:
+        status: 200
+        body:
+          auto_renew: true

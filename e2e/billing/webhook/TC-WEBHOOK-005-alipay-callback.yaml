@@ -1,0 +1,70 @@
+id: TC-WEBHOOK-005
+name: 支付宝 Webhook - 支付成功
+description: 验证支付宝支付成功回调处理
+priority: high
+module: billing/webhook
+
+preconditions:
+  - 部署类型为 cn
+  - 支付宝 Webhook 端点已配置
+  - 有待处理的支付订单
+
+notes: |
+  支付宝异步通知需要验证签名。
+  测试环境可能需要跳过签名验证或使用沙箱密钥。
+
+setup:
+  sql: |
+    -- 创建一个待处理的支付宝订单
+    INSERT INTO payment_orders (
+      organization_id, order_no, order_type, plan_name, amount, currency,
+      provider, status, created_at
+    ) VALUES (
+      (SELECT id FROM organizations WHERE slug = 'dev-org'),
+      'ALIPAY-ORDER-001',
+      'subscription',
+      'pro',
+      19900,
+      'cny',
+      'alipay',
+      'pending',
+      NOW()
+    ) ON CONFLICT (order_no) DO UPDATE SET status = 'pending';
+
+steps:
+  - action: 发送支付宝支付成功回调
+    expected: 订单状态更新，订阅激活
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/alipay
+        headers:
+          Content-Type: application/x-www-form-urlencoded
+        body:
+          # 支付宝回调使用 form-urlencoded 格式
+          out_trade_no: ALIPAY-ORDER-001
+          trade_no: 2024011522001xxx
+          trade_status: TRADE_SUCCESS
+          total_amount: "199.00"
+          sign: "{mock_sign}"
+          sign_type: RSA2
+      expected:
+        status: 200
+        body: "success"  # 支付宝要求返回 "success" 字符串
+
+  - action: 验证订单状态已更新
+    expected: 订单状态为 completed
+    verification:
+      type: database
+      query: |
+        SELECT status, alipay_trade_no
+        FROM payment_orders
+        WHERE order_no = 'ALIPAY-ORDER-001'
+      expected:
+        status: completed
+        alipay_trade_no: not_empty
+
+cleanup:
+  - sql: |
+      DELETE FROM payment_orders WHERE order_no = 'ALIPAY-ORDER-001';

@@ -88,17 +88,18 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 		return
 	}
 
-	// Check seat quota before inviting
+	// Check seat availability before inviting
+	// This checks purchased seats vs used seats (not plan limits)
 	if h.billingService != nil {
-		if err := h.billingService.CheckQuota(c.Request.Context(), tc.OrganizationID, "users", 1); err != nil {
+		if err := h.billingService.CheckSeatAvailability(c.Request.Context(), tc.OrganizationID, 1); err != nil {
 			if err == billingSvc.ErrQuotaExceeded {
 				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error": "Seat quota exceeded. Please upgrade your plan to invite more members.",
-					"code":  "SEAT_QUOTA_EXCEEDED",
+					"error": "No available seats. Please purchase more seats to invite members.",
+					"code":  "NO_AVAILABLE_SEATS",
 				})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check quota"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check seat availability"})
 			return
 		}
 	}

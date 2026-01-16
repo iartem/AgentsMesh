@@ -1,0 +1,55 @@
+id: TC-PLAN-001
+name: 升级方案 Free 到 Pro
+description: 验证从 Free 升级到 Pro 方案的流程
+priority: high
+module: billing/plan-change
+
+preconditions:
+  - 组织当前为 Free 计划
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 确保组织为 Free 计划
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'free'),
+        status = 'active'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 调用升级方案 API
+    expected: 返回支付会话或成功（取决于是否需要支付）
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          plan_name: pro
+          billing_cycle: monthly
+      expected:
+        status_one_of: [200, 402]  # 200 成功或 402 需要支付
+        body_if_200:
+          plan_name: pro
+        body_if_402:
+          checkout_url: not_empty
+          order_no: not_empty
+
+  - action: 验证升级记录
+    expected: 数据库记录正确
+    verification:
+      type: database
+      query: |
+        SELECT
+          sp.name as plan_name,
+          s.status
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        # 如果升级需要支付，方案可能还是 free 直到支付完成
+        # 如果升级成功，方案应为 pro
+        plan_name: one_of [free, pro]

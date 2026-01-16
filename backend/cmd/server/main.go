@@ -21,11 +21,13 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/logger"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/storage"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/websocket"
+	"github.com/anthropics/agentsmesh/backend/internal/job"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
+	"github.com/anthropics/agentsmesh/backend/internal/service/license"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
@@ -134,16 +136,20 @@ func main() {
 		PromoCode:         services.promoCode,
 		AgentPodSettings:  services.agentpodSettings,
 		AgentPodAIProvider: services.agentpodAIProvider,
+		License:           services.license,
 	}
 
 	// Initialize router
 	router := rest.NewRouter(cfg, svc, db, appLogger.Logger)
 
+	// Initialize and start subscription renewal job scheduler
+	subscriptionScheduler := startSubscriptionJobs(db, &cfg.Payment, services.email, appLogger.Logger)
+
 	// Create and start HTTP server
 	srv := startHTTPServer(cfg, router)
 
 	// Graceful shutdown
-	waitForShutdown(srv, eventBus, heartbeatBatcher, db, redisClient)
+	waitForShutdown(srv, eventBus, heartbeatBatcher, subscriptionScheduler, db, redisClient)
 }
 
 // serviceContainer holds all initialized services
@@ -168,6 +174,8 @@ type serviceContainer struct {
 	promoCode          *promocode.Service
 	agentpodSettings   *agentpod.SettingsService
 	agentpodAIProvider *agentpod.AIProviderService
+	license            *license.Service
+	email              email.Service
 	// NOTE: gitProvider and sshKey removed - now handled via user.Service
 }
 
@@ -188,7 +196,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	credentialProfileSvc := agent.NewCredentialProfileService(db, agentTypeSvc)
 	userConfigSvc := agent.NewUserConfigService(db, agentTypeSvc)
 	repoSvc := repository.NewService(db)
-	billingSvc := billing.NewService(db, "") // Empty stripe key for now
+	billingSvc := billing.NewServiceWithConfig(db, &cfg.Payment)
 	runnerSvc := runner.NewService(db, billingSvc)
 	podSvc := agentpod.NewPodService(db)
 	channelSvc := channel.NewService(db)
@@ -240,6 +248,18 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		slog.Warn("Storage not configured, file upload disabled")
 	}
 
+	// Initialize license service (for OnPremise deployments)
+	var licenseSvc *license.Service
+	if cfg.Payment.IsOnPremise() || cfg.Payment.License.PublicKeyPath != "" {
+		var err error
+		licenseSvc, err = license.NewService(db, &cfg.Payment.License, slog.Default())
+		if err != nil {
+			slog.Warn("Failed to initialize license service", "error", err)
+		} else {
+			slog.Info("License service initialized")
+		}
+	}
+
 	return &serviceContainer{
 		auth:               authSvc,
 		user:               userSvc,
@@ -260,6 +280,8 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		promoCode:          promoCodeSvc,
 		agentpodSettings:   agentpodSettingsSvc,
 		agentpodAIProvider: agentpodAIProviderSvc,
+		license:            licenseSvc,
+		email:              emailSvc,
 	}
 }
 
@@ -351,8 +373,16 @@ func startHTTPServer(cfg *config.Config, handler http.Handler) *http.Server {
 	return srv
 }
 
+// startSubscriptionJobs initializes and starts subscription-related scheduled jobs
+func startSubscriptionJobs(db *gorm.DB, paymentCfg *config.PaymentConfig, emailSvc email.Service, logger *slog.Logger) *job.SubscriptionScheduler {
+	scheduler := job.NewSubscriptionScheduler(db, paymentCfg, emailSvc, logger)
+	scheduler.Start()
+	slog.Info("subscription scheduler started")
+	return scheduler
+}
+
 // waitForShutdown handles graceful shutdown
-func waitForShutdown(srv *http.Server, eventBus *eventbus.EventBus, heartbeatBatcher *runner.HeartbeatBatcher, db *gorm.DB, redisClient *redis.Client) {
+func waitForShutdown(srv *http.Server, eventBus *eventbus.EventBus, heartbeatBatcher *runner.HeartbeatBatcher, subscriptionScheduler *job.SubscriptionScheduler, db *gorm.DB, redisClient *redis.Client) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -365,6 +395,11 @@ func waitForShutdown(srv *http.Server, eventBus *eventbus.EventBus, heartbeatBat
 	if err := srv.Shutdown(ctx); err != nil {
 		slog.Error("Server forced to shutdown", "error", err)
 		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	// Stop subscription scheduler
+	if subscriptionScheduler != nil {
+		subscriptionScheduler.Stop()
 	}
 
 	// Stop heartbeat batcher (flush pending writes)

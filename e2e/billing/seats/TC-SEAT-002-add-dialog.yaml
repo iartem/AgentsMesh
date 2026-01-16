@@ -1,0 +1,38 @@
+id: TC-SEAT-002
+name: 添加席位对话框
+description: 验证点击"添加席位"按钮后显示购买对话框
+priority: high
+module: billing/seats
+
+preconditions:
+  - 组织有活跃的付费订阅
+  - 当前席位未达到方案上限
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 点击"添加席位"按钮
+    selector: 'button "添加席位"'
+    expected: 打开添加席位对话框
+    verification:
+      type: ui
+      check:
+        - contains_one_of: ["添加席位", "购买席位"]
+
+  - action: 验证对话框内容
+    expected: 显示数量选择器、单价信息、确认按钮
+    verification:
+      type: ui
+      check:
+        - exists: '数量输入或选择控件'
+        - exists: 'button "确认" or "购买"'
+
+  - action: 关闭对话框
+    expected: 对话框关闭
+    verification:
+      type: ui
+      action: 点击关闭按钮或按 Escape

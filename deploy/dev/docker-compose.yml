@@ -124,6 +124,32 @@ services:
       - STORAGE_USE_PATH_STYLE=true
       - STORAGE_MAX_FILE_SIZE=10
       - STORAGE_ALLOWED_TYPES=image/jpeg,image/png,image/gif,image/webp,application/pdf
+      # Payment Configuration
+      - DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:-global}
+      # Mock Payment (for testing without real payment providers)
+      - PAYMENT_MOCK=${PAYMENT_MOCK:-false}
+      - PAYMENT_MOCK_BASE_URL=${PAYMENT_MOCK_BASE_URL:-http://localhost}
+      # Stripe
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      # Alipay
+      - ALIPAY_APP_ID=${ALIPAY_APP_ID:-}
+      - ALIPAY_PRIVATE_KEY=${ALIPAY_PRIVATE_KEY:-}
+      - ALIPAY_PUBLIC_KEY=${ALIPAY_PUBLIC_KEY:-}
+      - ALIPAY_NOTIFY_URL=http://localhost:${HTTP_PORT:-80}/api/v1/webhooks/alipay
+      - ALIPAY_RETURN_URL=http://localhost:${HTTP_PORT:-80}
+      - ALIPAY_SANDBOX=${ALIPAY_SANDBOX:-true}
+      # WeChat Pay
+      - WECHAT_APP_ID=${WECHAT_APP_ID:-}
+      - WECHAT_MCH_ID=${WECHAT_MCH_ID:-}
+      - WECHAT_API_KEY=${WECHAT_API_KEY:-}
+      - WECHAT_APIV3_KEY=${WECHAT_APIV3_KEY:-}
+      - WECHAT_NOTIFY_URL=http://localhost:${HTTP_PORT:-80}/api/v1/webhooks/wechat
+      - WECHAT_SANDBOX=${WECHAT_SANDBOX:-true}
+      # License (OnPremise)
+      - LICENSE_PUBLIC_KEY_PATH=${LICENSE_PUBLIC_KEY_PATH:-}
+      - LICENSE_FILE_PATH=${LICENSE_FILE_PATH:-}
     volumes:
       # Mount source code for hot reload
       - ../../backend:/app

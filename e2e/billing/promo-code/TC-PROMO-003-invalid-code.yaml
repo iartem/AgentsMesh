@@ -1,0 +1,30 @@
+id: TC-PROMO-003
+name: 验证无效优惠码
+description: 验证输入不存在的优惠码时显示错误
+priority: high
+module: billing/promo-code
+
+preconditions:
+  - 组织有活跃订阅
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 在输入框中输入 "INVALIDXXX"
+    selector: 'textbox "输入优惠码"'
+    input: INVALIDXXX
+    expected: 输入成功
+    verification:
+      type: ui
+
+  - action: 点击"验证"按钮
+    selector: 'button "验证"'
+    expected: 显示错误消息，提示优惠码无效
+    verification:
+      type: ui
+      check:
+        - contains_one_of: ["无效", "invalid", "不存在", "not found"]

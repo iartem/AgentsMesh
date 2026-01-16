@@ -1,0 +1,38 @@
+id: TC-PROMO-001
+name: 验证优惠码卡片显示
+description: 验证优惠码输入区域正确显示
+priority: high
+module: billing/promo-code
+
+preconditions:
+  - 组织有活跃订阅
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成，显示"优惠码"卡片
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "优惠码"'
+
+  - action: 检查描述文字
+    expected: 显示"输入优惠码获取套餐时长"
+    verification:
+      type: ui
+      check:
+        - contains: "输入优惠码获取套餐时长"
+
+  - action: 检查输入框
+    expected: 存在优惠码输入框
+    verification:
+      type: ui
+      check:
+        - exists: 'textbox "输入优惠码"'
+
+  - action: 检查验证按钮初始状态
+    expected: "验证"按钮为禁用状态（输入框为空时）
+    verification:
+      type: ui
+      check:
+        - exists: 'button "验证" disabled'

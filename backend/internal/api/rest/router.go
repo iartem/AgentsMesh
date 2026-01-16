@@ -63,11 +63,15 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		// Public routes (no auth required)
 		v1.RegisterAuthRoutes(apiV1.Group("/auth"), cfg, svc.Auth, svc.User, emailSvc)
 
+		// Public config endpoints (deployment info for frontend)
+		v1.RegisterPublicConfigRoutes(apiV1.Group("/config"), svc.Billing)
+
 		// Runner registration (uses token-based auth, not JWT)
 		RegisterRunnerAuthRoutes(apiV1.Group("/runners"), svc)
 
 		// Webhook endpoints (no auth required, use token verification)
-		webhookRouter := webhooks.NewWebhookRouter(db, cfg, logger)
+		// Use shared billing service to ensure mock provider sessions are shared
+		webhookRouter := webhooks.NewWebhookRouterWithBillingSvc(db, cfg, logger, svc.Billing)
 		webhookRouter.RegisterRoutes(apiV1.Group("/webhooks"))
 
 		// Public invitation routes (token-based access)

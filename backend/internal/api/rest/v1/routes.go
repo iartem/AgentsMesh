@@ -11,9 +11,10 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
-	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
 	"github.com/anthropics/agentsmesh/backend/internal/service/invitation"
+	"github.com/anthropics/agentsmesh/backend/internal/service/license"
+	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/service/promocode"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
@@ -55,6 +56,7 @@ type Services struct {
 	Invitation        *invitation.Service  // Organization invitations
 	File              *fileservice.Service // File storage service
 	PromoCode         *promocode.Service   // Promo code management
+	License           *license.Service     // License service for OnPremise
 	// NOTE: GitProvider and SSHKey services have been removed (moved to user-level settings)
 }
 
@@ -72,6 +74,9 @@ func RegisterAllRoutes(rg *gin.RouterGroup, cfg *config.Config, svc *Services) {
 
 	// Admin routes (require admin role)
 	RegisterAdminRoutes(rg.Group("/admin"), svc)
+
+	// License routes (for OnPremise deployments)
+	RegisterLicenseHandlers(rg.Group("/license"), svc.License)
 }
 
 // RegisterAdminRoutes registers admin-only routes

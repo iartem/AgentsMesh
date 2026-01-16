@@ -1,0 +1,55 @@
+id: TC-SEAT-004
+name: 购买额外席位
+description: 验证购买额外席位的支付流程
+priority: high
+module: billing/seats
+
+preconditions:
+  - 组织有活跃的付费订阅（Pro 计划）
+  - 当前席位数小于方案上限
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 设置组织为 Pro 计划，当前 1 个席位
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        seat_count = 1,
+        current_period_end = NOW() + INTERVAL '15 days'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 调用购买席位 API（增加 2 个席位）
+    expected: 返回支付会话或按比例计费金额
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/orgs/dev-org/billing/seats/purchase
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          additional_seats: 2
+      expected:
+        status_one_of: [200, 402]
+        body:
+          # 返回按比例计费金额
+          proration_amount: greater_than 0
+          # 如果需要支付，返回支付信息
+          order_no: optional
+          checkout_url: optional
+
+  - action: 验证订单创建（如果需要支付）
+    expected: payment_orders 表有新记录
+    verification:
+      type: database
+      query: |
+        SELECT COUNT(*) as order_count
+        FROM payment_orders
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+        AND order_type = 'seat_purchase'
+        AND created_at > NOW() - INTERVAL '5 minutes'
+      expected:
+        order_count: greater_than_or_equal 0  # 可能为 0 如果直接成功

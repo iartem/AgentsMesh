@@ -1,0 +1,68 @@
+id: TC-PROMO-002
+name: 验证有效优惠码
+description: 验证输入有效优惠码后的兑换流程
+priority: high
+module: billing/promo-code
+
+preconditions:
+  - 组织有活跃订阅
+  - 数据库中存在有效优惠码
+
+setup:
+  sql: |
+    INSERT INTO promo_codes (code, discount_type, discount_value, max_uses, used_count, valid_from, valid_until, is_active)
+    VALUES ('TESTCODE2024', 'days', 30, 100, 0, NOW() - INTERVAL '1 day', NOW() + INTERVAL '30 days', true)
+    ON CONFLICT (code) DO UPDATE SET
+      used_count = 0,
+      valid_until = NOW() + INTERVAL '30 days',
+      is_active = true;
+
+    -- 清除之前的使用记录
+    DELETE FROM promo_code_uses
+    WHERE promo_code_id = (SELECT id FROM promo_codes WHERE code = 'TESTCODE2024')
+    AND organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 在输入框中输入 "TESTCODE2024"
+    selector: 'textbox "输入优惠码"'
+    input: TESTCODE2024
+    expected: 输入成功，"验证"按钮启用
+    verification:
+      type: ui
+      check:
+        - exists: 'button "验证" enabled'
+
+  - action: 点击"验证"按钮
+    selector: 'button "验证"'
+    expected: 显示成功消息
+    verification:
+      type: ui
+      check:
+        - contains_one_of: ["成功", "success"]
+
+  - action: 验证数据库更新
+    expected: promo_code_uses 表新增记录
+    verification:
+      type: database
+      query: |
+        SELECT EXISTS(
+          SELECT 1 FROM promo_code_uses
+          WHERE promo_code_id = (SELECT id FROM promo_codes WHERE code = 'TESTCODE2024')
+          AND organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+        ) as used_by_org
+      expected:
+        used_by_org: true
+
+cleanup:
+  - sql: |
+      DELETE FROM promo_code_uses
+      WHERE promo_code_id = (SELECT id FROM promo_codes WHERE code = 'TESTCODE2024')
+      AND organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+      UPDATE promo_codes SET used_count = 0 WHERE code = 'TESTCODE2024';

@@ -1,0 +1,39 @@
+id: TC-CYCLE-001
+name: 验证计费周期卡片显示
+description: 验证计费周期切换组件正确显示
+priority: high
+module: billing/billing-cycle
+
+preconditions:
+  - 组织有活跃的付费订阅（非 Free 方案）
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成，显示"计费周期"卡片
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "计费周期"'
+
+  - action: 检查描述文字
+    expected: 显示"在月付和年付之间切换。更改将在当前计费周期结束后生效。"
+    verification:
+      type: ui
+      check:
+        - contains: "更改将在当前计费周期结束后生效"
+
+  - action: 检查按钮显示
+    expected: 显示"月付"和"年付 省17%"两个按钮
+    verification:
+      type: ui
+      check:
+        - exists: 'button "月付"'
+        - exists: 'button contains "年付"'
+
+  - action: 验证当前周期按钮状态
+    expected: 当前周期的按钮为禁用状态
+    verification:
+      type: ui
+      check:
+        - exists: 'button disabled'

@@ -1,0 +1,40 @@
+id: TC-USAGE-002
+name: 获取使用量历史
+description: 验证获取使用量历史记录 API 正常工作
+priority: medium
+module: billing/usage
+
+preconditions:
+  - 组织有活跃订阅
+  - 已获取有效的 access_token
+
+steps:
+  - action: 调用获取使用量历史 API（最近 30 天）
+    expected: 返回使用量历史数据
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/usage/history?days=30
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          history: is_array
+          # 每条记录包含日期和各项使用量
+          period:
+            start: not_empty
+            end: not_empty
+
+  - action: 调用获取使用量历史 API（自定义时间范围）
+    expected: 返回指定时间范围的数据
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/usage/history?start=2024-01-01&end=2024-01-31
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200

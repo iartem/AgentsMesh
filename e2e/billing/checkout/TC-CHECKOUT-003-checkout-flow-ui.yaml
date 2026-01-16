@@ -1,0 +1,42 @@
+id: TC-CHECKOUT-003
+name: 结账流程 UI
+description: 验证前端结账流程组件正常工作
+priority: high
+module: billing/checkout
+
+preconditions:
+  - 组织有活跃订阅（Free 计划）
+  - 用户已登录
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 点击"更换方案"按钮
+    selector: 'button "更换方案"'
+    expected: 显示方案选择对话框
+    verification:
+      type: ui
+      check:
+        - exists: "dialog"
+        - contains: "选择方案"
+
+  - action: 选择 Pro 方案
+    selector: 'button contains "Pro"'
+    expected: Pro 方案被选中
+    verification:
+      type: ui
+
+  - action: 点击"确认升级"或"继续"按钮
+    selector: 'button contains "确认" or button contains "继续"'
+    expected: 进入支付流程或跳转到 Stripe
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - url_contains: "stripe.com"  # Stripe Checkout
+            - exists: "img[alt*='QR']"    # 二维码支付
+            - contains: "支付"

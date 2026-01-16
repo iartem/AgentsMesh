@@ -1,0 +1,49 @@
+id: TC-SEAT-005
+name: 购买席位超出方案上限
+description: 验证购买席位数超过方案最大限制时的错误处理
+priority: high
+module: billing/seats
+
+preconditions:
+  - 组织有活跃的付费订阅（Pro 计划，最多 5 席位）
+  - 当前席位数接近上限
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 设置组织为 Pro 计划，当前 4 个席位（接近 5 的上限）
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        seat_count = 4,
+        current_period_end = NOW() + INTERVAL '15 days'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 尝试购买超出上限的席位（增加 5 个，总共 9 个，超过 Pro 的 5 上限）
+    expected: 返回错误，提示超出方案限制
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/orgs/dev-org/billing/seats/purchase
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          additional_seats: 5
+      expected:
+        status: 400
+        body:
+          error: contains_one_of ["超出", "exceed", "limit", "上限", "最多"]
+
+  - action: 验证席位数未变化
+    expected: seat_count 仍为 4
+    verification:
+      type: database
+      query: |
+        SELECT seat_count
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        seat_count: 4

@@ -1,0 +1,50 @@
+id: TC-SUB-002
+name: 验证方案选择对话框
+description: 验证点击"更换方案"后显示的方案列表，确保不显示 OnPremise
+priority: high
+module: billing/subscription
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户已登录
+  - 组织已有活跃订阅
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 点击"更换方案"按钮
+    selector: 'button "更换方案"'
+    expected: 打开方案选择对话框
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "选择方案"'
+
+  - action: 验证显示的方案列表
+    expected: 只显示 Free、Pro、Enterprise 三个方案，不显示 OnPremise
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "Free"'
+        - exists: 'heading "Pro"'
+        - exists: 'heading "Enterprise"'
+        - not_exists: 'heading "OnPremise"'
+
+  - action: 验证当前方案按钮状态
+    expected: 当前方案的按钮显示"当前方案"且为禁用状态
+    verification:
+      type: ui
+      check:
+        - exists: 'button "当前方案" disabled'
+
+  - action: 关闭对话框
+    selector: 'button "✕"'
+    expected: 对话框关闭
+    verification:
+      type: ui
+      check:
+        - not_exists: 'heading "选择方案"'

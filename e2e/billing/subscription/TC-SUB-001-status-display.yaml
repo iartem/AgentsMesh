@@ -1,0 +1,41 @@
+id: TC-SUB-001
+name: 验证当前订阅状态显示
+description: 验证账单页面正确显示当前订阅信息
+priority: high
+module: billing/subscription
+
+preconditions:
+  - 开发环境已启动
+  - 测试用户已登录
+  - 组织已有活跃订阅
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成，显示"当前方案"卡片
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "当前方案"'
+
+  - action: 检查方案名称显示
+    expected: 显示当前方案名称（如 "Pro"）
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "Pro" or "Free" or "Enterprise"'
+
+  - action: 检查订阅状态标签
+    expected: 显示状态标签（Active/Frozen/Canceled）
+    verification:
+      type: ui
+      check:
+        - contains_one_of: ["Active", "Frozen", "Canceled", "已冻结", "已取消"]
+
+  - action: 检查计费周期和续费日期
+    expected: 显示"月付/年付 billing · 续费时间 YYYY/MM/DD"
+    verification:
+      type: ui
+      check:
+        - contains: "billing"
+        - contains: "续费时间"

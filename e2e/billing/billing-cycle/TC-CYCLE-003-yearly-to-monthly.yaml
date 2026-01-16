@@ -1,0 +1,52 @@
+id: TC-CYCLE-003
+name: 从年付切换到月付
+description: 验证从年付切换到月付的流程
+priority: high
+module: billing/billing-cycle
+
+preconditions:
+  - 组织当前为年付订阅 (billing_cycle = 'yearly')
+
+setup:
+  sql: |
+    UPDATE subscriptions
+    SET billing_cycle = 'yearly', next_billing_cycle = NULL
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 验证初始状态
+    expected: "年付"按钮为禁用状态，"月付"按钮可点击
+    verification:
+      type: ui
+      check:
+        - exists: 'button contains "年付" disabled'
+
+  - action: 点击"月付"按钮
+    selector: 'button "月付"'
+    expected: 按钮状态变化
+    verification:
+      type: ui
+
+  - action: 验证数据库更新
+    expected: next_billing_cycle 设置为 'monthly'
+    verification:
+      type: database
+      query: |
+        SELECT billing_cycle, next_billing_cycle
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        billing_cycle: yearly
+        next_billing_cycle: monthly
+
+cleanup:
+  - sql: |
+      UPDATE subscriptions
+      SET billing_cycle = 'monthly', next_billing_cycle = NULL
+      WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')

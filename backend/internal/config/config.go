@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+// DeploymentType represents the deployment environment
+type DeploymentType string
+
+const (
+	DeploymentGlobal    DeploymentType = "global"    // International - Stripe
+	DeploymentCN        DeploymentType = "cn"        // China - Alipay + WeChat Pay
+	DeploymentOnPremise DeploymentType = "onpremise" // Self-hosted - License file
+)
+
 // Config holds all configuration for the application
 type Config struct {
 	Server   ServerConfig
@@ -18,6 +27,117 @@ type Config struct {
 	Log      LogConfig
 	Email    EmailConfig
 	Storage  StorageConfig
+	Payment  PaymentConfig
+}
+
+// PaymentConfig holds payment and billing configuration
+type PaymentConfig struct {
+	DeploymentType DeploymentType
+	MockEnabled    bool   // Enable mock payment provider for testing
+	MockBaseURL    string // Base URL for mock checkout pages
+	Stripe         StripeConfig
+	Alipay         AlipayConfig
+	WeChat         WeChatConfig
+	License        LicenseConfig
+}
+
+// StripeConfig holds Stripe payment configuration
+type StripeConfig struct {
+	SecretKey      string
+	PublishableKey string
+	WebhookSecret  string
+}
+
+// AlipayConfig holds Alipay payment configuration
+type AlipayConfig struct {
+	AppID           string
+	PrivateKey      string
+	AlipayPublicKey string
+	NotifyURL       string
+	ReturnURL       string
+	IsSandbox       bool
+}
+
+// WeChatConfig holds WeChat Pay configuration
+type WeChatConfig struct {
+	AppID      string
+	MchID      string
+	APIKey     string
+	APIv3Key   string
+	CertPath   string
+	KeyPath    string
+	NotifyURL  string
+	IsSandbox  bool
+}
+
+// LicenseConfig holds OnPremise license configuration
+type LicenseConfig struct {
+	PublicKeyPath    string // Path to public key for license verification
+	LicenseFilePath  string // Path to license file
+	LicenseServerURL string // Optional: License server URL for online verification
+}
+
+// IsGlobal returns true if deployment is for international users (Stripe)
+func (c PaymentConfig) IsGlobal() bool {
+	return c.DeploymentType == DeploymentGlobal
+}
+
+// IsCN returns true if deployment is for China users (Alipay + WeChat)
+func (c PaymentConfig) IsCN() bool {
+	return c.DeploymentType == DeploymentCN
+}
+
+// IsOnPremise returns true if deployment is self-hosted (License)
+func (c PaymentConfig) IsOnPremise() bool {
+	return c.DeploymentType == DeploymentOnPremise
+}
+
+// StripeEnabled returns true if Stripe is configured and enabled
+func (c PaymentConfig) StripeEnabled() bool {
+	return c.IsGlobal() && c.Stripe.SecretKey != ""
+}
+
+// AlipayEnabled returns true if Alipay is configured and enabled
+func (c PaymentConfig) AlipayEnabled() bool {
+	return c.IsCN() && c.Alipay.AppID != ""
+}
+
+// WeChatEnabled returns true if WeChat Pay is configured and enabled
+func (c PaymentConfig) WeChatEnabled() bool {
+	return c.IsCN() && c.WeChat.AppID != "" && c.WeChat.MchID != ""
+}
+
+// LicenseEnabled returns true if license verification is enabled
+func (c PaymentConfig) LicenseEnabled() bool {
+	return c.IsOnPremise() && c.License.PublicKeyPath != ""
+}
+
+// IsMockEnabled returns true if mock payment provider is enabled (for testing)
+func (c PaymentConfig) IsMockEnabled() bool {
+	return c.MockEnabled
+}
+
+// GetAvailableProviders returns list of available payment providers
+func (c PaymentConfig) GetAvailableProviders() []string {
+	// If mock is enabled, only return mock provider
+	if c.MockEnabled {
+		return []string{"mock"}
+	}
+
+	var providers []string
+	if c.StripeEnabled() {
+		providers = append(providers, "stripe")
+	}
+	if c.AlipayEnabled() {
+		providers = append(providers, "alipay")
+	}
+	if c.WeChatEnabled() {
+		providers = append(providers, "wechat")
+	}
+	if c.LicenseEnabled() {
+		providers = append(providers, "license")
+	}
+	return providers
 }
 
 // StorageConfig holds object storage configuration (S3-compatible)
@@ -214,6 +334,39 @@ func Load() (*Config, error) {
 			UsePathStyle:   getEnvBool("STORAGE_USE_PATH_STYLE", false),
 			MaxFileSize:    int64(getEnvInt("STORAGE_MAX_FILE_SIZE", 10)),
 			AllowedTypes:   getEnvList("STORAGE_ALLOWED_TYPES", []string{"image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"}),
+		},
+		Payment: PaymentConfig{
+			DeploymentType: DeploymentType(getEnv("DEPLOYMENT_TYPE", "global")),
+			MockEnabled:    getEnvBool("PAYMENT_MOCK", false),
+			MockBaseURL:    getEnv("PAYMENT_MOCK_BASE_URL", ""),
+			Stripe: StripeConfig{
+				SecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
+				PublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
+				WebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
+			},
+			Alipay: AlipayConfig{
+				AppID:           getEnv("ALIPAY_APP_ID", ""),
+				PrivateKey:      getEnv("ALIPAY_PRIVATE_KEY", ""),
+				AlipayPublicKey: getEnv("ALIPAY_PUBLIC_KEY", ""),
+				NotifyURL:       getEnv("ALIPAY_NOTIFY_URL", ""),
+				ReturnURL:       getEnv("ALIPAY_RETURN_URL", ""),
+				IsSandbox:       getEnvBool("ALIPAY_SANDBOX", false),
+			},
+			WeChat: WeChatConfig{
+				AppID:     getEnv("WECHAT_APP_ID", ""),
+				MchID:     getEnv("WECHAT_MCH_ID", ""),
+				APIKey:    getEnv("WECHAT_API_KEY", ""),
+				APIv3Key:  getEnv("WECHAT_APIV3_KEY", ""),
+				CertPath:  getEnv("WECHAT_CERT_PATH", ""),
+				KeyPath:   getEnv("WECHAT_KEY_PATH", ""),
+				NotifyURL: getEnv("WECHAT_NOTIFY_URL", ""),
+				IsSandbox: getEnvBool("WECHAT_SANDBOX", false),
+			},
+			License: LicenseConfig{
+				PublicKeyPath:    getEnv("LICENSE_PUBLIC_KEY_PATH", ""),
+				LicenseFilePath:  getEnv("LICENSE_FILE_PATH", ""),
+				LicenseServerURL: getEnv("LICENSE_SERVER_URL", ""),
+			},
 		},
 	}, nil
 }

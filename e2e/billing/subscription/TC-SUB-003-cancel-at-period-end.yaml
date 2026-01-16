@@ -1,0 +1,64 @@
+id: TC-SUB-003
+name: 取消订阅（周期结束后生效）
+description: 验证取消订阅功能，选择在当前计费周期结束后取消
+priority: high
+module: billing/subscription
+
+preconditions:
+  - 组织有活跃的付费订阅
+  - 订阅状态为 active
+  - cancel_at_period_end 为 false
+
+setup:
+  sql: |
+    UPDATE subscriptions
+    SET status = 'active', cancel_at_period_end = false, canceled_at = NULL
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 点击"取消订阅"按钮
+    selector: 'button "取消订阅"'
+    expected: 打开取消订阅确认对话框
+    verification:
+      type: ui
+      check:
+        - exists: 'heading "取消订阅"'
+
+  - action: 选择"周期结束后取消"选项
+    selector: 'radio "周期结束后取消"'
+    expected: 选项被选中
+    verification:
+      type: ui
+
+  - action: 点击"确认取消"按钮
+    selector: 'button "确认取消"'
+    expected: 对话框关闭，显示成功状态
+    verification:
+      type: database
+      query: |
+        SELECT cancel_at_period_end, status
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        cancel_at_period_end: true
+        status: active
+
+  - action: 验证 UI 状态更新
+    expected: 显示"周期结束后取消"标签和"恢复订阅"按钮
+    verification:
+      type: ui
+      check:
+        - exists: 'button "恢复订阅"'
+        - not_exists: 'button "取消订阅"'
+
+cleanup:
+  - sql: |
+      UPDATE subscriptions
+      SET cancel_at_period_end = false
+      WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')

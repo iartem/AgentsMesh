@@ -7,6 +7,10 @@ import (
 	"github.com/resend/resend-go/v2"
 )
 
+import (
+	"time"
+)
+
 // Service defines the email service interface
 type Service interface {
 	// SendVerificationEmail sends an email verification link
@@ -17,6 +21,12 @@ type Service interface {
 
 	// SendOrgInvitationEmail sends an organization invitation
 	SendOrgInvitationEmail(ctx context.Context, to, orgName, inviterName, token string) error
+}
+
+// RenewalReminderSender is an optional interface for sending renewal reminders
+type RenewalReminderSender interface {
+	// SendRenewalReminder sends a subscription renewal reminder email
+	SendRenewalReminder(ctx context.Context, to, orgName, planName string, expiryDate time.Time, daysRemaining int, orgSlug string) error
 }
 
 // Config holds email service configuration
@@ -150,6 +160,55 @@ func (s *ResendService) SendOrgInvitationEmail(ctx context.Context, to, orgName,
 	return err
 }
 
+// SendRenewalReminder sends subscription renewal reminder via Resend
+func (s *ResendService) SendRenewalReminder(ctx context.Context, to, orgName, planName string, expiryDate time.Time, daysRemaining int, orgSlug string) error {
+	renewURL := fmt.Sprintf("%s/%s/settings?scope=organization&tab=billing", s.baseURL, orgSlug)
+	expiryDateStr := expiryDate.Format("2006-01-02")
+
+	var urgencyClass, urgencyText string
+	switch {
+	case daysRemaining <= 1:
+		urgencyClass = "color: #dc2626;" // red
+		urgencyText = "Your subscription expires tomorrow!"
+	case daysRemaining <= 3:
+		urgencyClass = "color: #ea580c;" // orange
+		urgencyText = fmt.Sprintf("Your subscription expires in %d days", daysRemaining)
+	default:
+		urgencyClass = "color: #ca8a04;" // yellow
+		urgencyText = fmt.Sprintf("Your subscription expires in %d days", daysRemaining)
+	}
+
+	html := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Subscription Renewal Reminder</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h1 style="color: #333;">Subscription Renewal Reminder</h1>
+    <p style="%s font-size: 18px; font-weight: 600;">%s</p>
+    <p style="color: #666; font-size: 16px;">Your <strong>%s</strong> plan for <strong>%s</strong> will expire on <strong>%s</strong>.</p>
+    <p style="color: #666; font-size: 16px;">To continue using all features without interruption, please renew your subscription before the expiry date.</p>
+    <p style="margin: 30px 0;">
+        <a href="%s" style="background-color: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Renew Now</a>
+    </p>
+    <p style="color: #999; font-size: 14px;">Or visit your billing settings: <a href="%s" style="color: #0070f3;">%s</a></p>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+    <p style="color: #999; font-size: 12px;">If you don't renew, your organization will be frozen and you won't be able to create new pods or invite members. Your data will be preserved.</p>
+</body>
+</html>
+`, urgencyClass, urgencyText, planName, orgName, expiryDateStr, renewURL, renewURL, renewURL)
+
+	_, err := s.client.Emails.SendWithContext(ctx, &resend.SendEmailRequest{
+		From:    s.fromAddress,
+		To:      []string{to},
+		Subject: fmt.Sprintf("Subscription Renewal Reminder - %s expires in %d days", orgName, daysRemaining),
+		Html:    html,
+	})
+	return err
+}
+
 // ConsoleService implements email service for development (prints to console)
 type ConsoleService struct {
 	baseURL string
@@ -177,5 +236,15 @@ func (s *ConsoleService) SendOrgInvitationEmail(ctx context.Context, to, orgName
 	fmt.Printf("[EMAIL] Organization invitation to: %s\n", to)
 	fmt.Printf("[EMAIL] Org: %s, Inviter: %s\n", orgName, inviterName)
 	fmt.Printf("[EMAIL] Invite URL: %s\n", inviteURL)
+	return nil
+}
+
+// SendRenewalReminder prints renewal reminder to console
+func (s *ConsoleService) SendRenewalReminder(ctx context.Context, to, orgName, planName string, expiryDate time.Time, daysRemaining int, orgSlug string) error {
+	renewURL := fmt.Sprintf("%s/%s/settings?scope=organization&tab=billing", s.baseURL, orgSlug)
+	fmt.Printf("[EMAIL] Renewal reminder to: %s\n", to)
+	fmt.Printf("[EMAIL] Org: %s, Plan: %s\n", orgName, planName)
+	fmt.Printf("[EMAIL] Expiry: %s, Days remaining: %d\n", expiryDate.Format("2006-01-02"), daysRemaining)
+	fmt.Printf("[EMAIL] Renew URL: %s\n", renewURL)
 	return nil
 }

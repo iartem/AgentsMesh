@@ -1,0 +1,73 @@
+id: TC-WEBHOOK-002
+name: Stripe Webhook - 发票支付成功
+description: 验证 Stripe invoice.paid 事件处理（续费成功）
+priority: high
+module: billing/webhook
+
+preconditions:
+  - 组织有活跃的 Stripe 订阅
+  - Stripe Webhook 端点已配置
+
+notes: |
+  此事件在自动续费成功时触发。
+  需要验证订阅周期是否正确延长。
+
+setup:
+  sql: |
+    -- 设置订阅即将到期
+    UPDATE subscriptions
+    SET status = 'active',
+        payment_provider = 'stripe',
+        stripe_subscription_id = 'sub_test_renewal',
+        current_period_end = NOW() + INTERVAL '1 day'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 发送 Stripe invoice.paid Webhook
+    expected: 订阅周期延长
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/stripe
+        headers:
+          Content-Type: application/json
+          Stripe-Signature: "{mock_signature}"
+        body:
+          type: invoice.paid
+          data:
+            object:
+              id: in_test_xxx
+              subscription: sub_test_renewal
+              billing_reason: subscription_cycle
+              period_end: 1735689600  # 未来时间戳
+              amount_paid: 2000
+              currency: usd
+      expected:
+        status: 200
+
+  - action: 验证订阅周期已延长
+    expected: current_period_end 已更新
+    verification:
+      type: database
+      query: |
+        SELECT
+          status,
+          current_period_end > NOW() + INTERVAL '1 day' as period_extended
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        status: active
+        period_extended: true
+
+  - action: 验证发票记录已创建
+    expected: invoices 表新增记录
+    verification:
+      type: database
+      query: |
+        SELECT COUNT(*) as invoice_count
+        FROM invoices
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+        AND stripe_invoice_id = 'in_test_xxx'
+      expected:
+        invoice_count: 1

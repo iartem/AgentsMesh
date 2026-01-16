@@ -1,0 +1,39 @@
+id: TC-CHECKOUT-002
+name: 查询结账状态
+description: 验证支付状态查询 API 正常工作
+priority: high
+module: billing/checkout
+
+preconditions:
+  - 已创建支付会话（order_no 已知）
+  - 已获取有效的 access_token
+
+steps:
+  - action: 查询待支付订单状态
+    expected: 返回 pending 状态
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/checkout/{order_no}
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          order_no: "{order_no}"
+          status: pending
+          plan_name: not_empty
+          amount: greater_than 0
+
+  - action: 查询不存在的订单
+    expected: 返回 404
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/checkout/INVALID-ORDER-123
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 404

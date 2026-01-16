@@ -1,0 +1,36 @@
+id: TC-SEAT-003
+name: Free 方案席位限制
+description: 验证 Free 方案下无法购买额外席位
+priority: medium
+module: billing/seats
+
+preconditions:
+  - 组织使用 Free 方案
+
+setup:
+  sql: |
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'free'),
+        seat_count = 1
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 检查"添加席位"按钮状态
+    expected: 按钮不存在或禁用，或点击后提示需要升级方案
+    verification:
+      type: ui
+      check:
+        - not_exists: 'button "添加席位" enabled'
+
+cleanup:
+  - sql: |
+      UPDATE subscriptions
+      SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+          seat_count = 4
+      WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')

@@ -1,0 +1,86 @@
+id: TC-WEBHOOK-001
+name: Stripe Webhook - 结账完成
+description: 验证 Stripe checkout.session.completed 事件处理
+priority: high
+module: billing/webhook
+
+preconditions:
+  - Stripe Webhook 端点已配置
+  - 有待处理的支付订单
+
+notes: |
+  此测试需要模拟 Stripe Webhook 调用。
+  在实际测试中，可以使用 Stripe CLI 或构造模拟请求。
+  签名验证在测试环境可能需要跳过或使用测试密钥。
+
+setup:
+  sql: |
+    -- 创建一个待处理的支付订单
+    INSERT INTO payment_orders (
+      organization_id, order_no, order_type, plan_name, amount, currency,
+      provider, status, created_at
+    ) VALUES (
+      (SELECT id FROM organizations WHERE slug = 'dev-org'),
+      'TEST-ORDER-001',
+      'subscription',
+      'pro',
+      2000,
+      'usd',
+      'stripe',
+      'pending',
+      NOW()
+    ) ON CONFLICT (order_no) DO UPDATE SET status = 'pending';
+
+steps:
+  - action: 发送 Stripe checkout.session.completed Webhook
+    expected: 订单状态更新为 completed，订阅激活
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/stripe
+        headers:
+          Content-Type: application/json
+          Stripe-Signature: "{mock_signature}"  # 测试环境需要模拟
+        body:
+          type: checkout.session.completed
+          data:
+            object:
+              id: cs_test_xxx
+              metadata:
+                order_no: TEST-ORDER-001
+                organization_id: "1"
+              payment_status: paid
+              subscription: sub_test_xxx
+      expected:
+        status: 200
+
+  - action: 验证订单状态已更新
+    expected: 订单状态为 completed
+    verification:
+      type: database
+      query: |
+        SELECT status, stripe_session_id
+        FROM payment_orders
+        WHERE order_no = 'TEST-ORDER-001'
+      expected:
+        status: completed
+
+  - action: 验证订阅已激活
+    expected: 订阅状态为 active，方案为 pro
+    verification:
+      type: database
+      query: |
+        SELECT
+          s.status,
+          sp.name as plan_name
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        status: active
+        plan_name: pro
+
+cleanup:
+  - sql: |
+      DELETE FROM payment_orders WHERE order_no = 'TEST-ORDER-001';

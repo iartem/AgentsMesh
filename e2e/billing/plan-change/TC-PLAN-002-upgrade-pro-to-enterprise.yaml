@@ -1,0 +1,53 @@
+id: TC-PLAN-002
+name: 升级方案 Pro 到 Enterprise
+description: 验证从 Pro 升级到 Enterprise 方案的流程（按比例计费）
+priority: high
+module: billing/plan-change
+
+preconditions:
+  - 组织当前为 Pro 计划
+  - 订阅处于活跃状态
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 确保组织为 Pro 计划
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        current_period_end = NOW() + INTERVAL '15 days'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 调用升级方案 API
+    expected: 返回按比例计费的支付金额
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          plan_name: enterprise
+          billing_cycle: monthly
+      expected:
+        status_one_of: [200, 402]
+        body:
+          # 升级需要支付差价
+          proration_amount: greater_than_or_equal 0
+
+  - action: 验证升级状态
+    expected: 订阅标记待升级或已升级
+    verification:
+      type: database
+      query: |
+        SELECT
+          sp.name as current_plan,
+          s.status
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        status: active

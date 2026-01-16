@@ -1,0 +1,53 @@
+id: TC-SEAT-006
+name: 购买席位 UI 流程
+description: 验证前端购买席位的完整流程
+priority: high
+module: billing/seats
+
+preconditions:
+  - 组织有活跃的付费订阅（Pro 计划）
+  - 用户已登录
+
+setup:
+  sql: |
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        seat_count = 2
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 导航到账单设置页面
+    url: /dev-org/settings?scope=organization&tab=billing
+    expected: 页面加载完成
+    verification:
+      type: ui
+
+  - action: 点击"添加席位"按钮
+    selector: 'button "添加席位"'
+    expected: 显示添加席位对话框
+    verification:
+      type: ui
+      check:
+        - exists: "dialog"
+        - contains_one_of: ["添加席位", "购买席位", "Add Seats"]
+
+  - action: 输入要添加的席位数
+    selector: 'input[type="number"]' or 'spinbutton'
+    input: 2
+    expected: 显示费用预览
+    verification:
+      type: ui
+      check:
+        - contains_one_of: ["费用", "金额", "price", "cost", "$"]
+
+  - action: 点击确认按钮
+    selector: 'button contains "确认" or button contains "购买"'
+    expected: 进入支付流程或显示成功消息
+    verification:
+      type: ui
+      check:
+        - one_of:
+            - url_contains: "stripe.com"
+            - contains: "成功"
+            - exists: "img[alt*='QR']"

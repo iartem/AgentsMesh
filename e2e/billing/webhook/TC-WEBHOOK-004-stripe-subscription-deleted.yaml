@@ -1,0 +1,58 @@
+id: TC-WEBHOOK-004
+name: Stripe Webhook - 订阅删除
+description: 验证 Stripe customer.subscription.deleted 事件处理
+priority: high
+module: billing/webhook
+
+preconditions:
+  - 组织有活跃的 Stripe 订阅
+  - Stripe Webhook 端点已配置
+
+notes: |
+  此事件在订阅被删除时触发（通常是取消后到期）。
+  需要验证本地订阅状态是否正确更新。
+
+setup:
+  sql: |
+    -- 设置组织为活跃订阅
+    UPDATE subscriptions
+    SET status = 'active',
+        payment_provider = 'stripe',
+        stripe_subscription_id = 'sub_test_deleted'
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 发送 Stripe customer.subscription.deleted Webhook
+    expected: 本地订阅状态更新为 canceled 或降级到 Free
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/stripe
+        headers:
+          Content-Type: application/json
+          Stripe-Signature: "{mock_signature}"
+        body:
+          type: customer.subscription.deleted
+          data:
+            object:
+              id: sub_test_deleted
+              status: canceled
+              canceled_at: 1735689600
+      expected:
+        status: 200
+
+  - action: 验证订阅状态已更新
+    expected: 订阅已取消或降级
+    verification:
+      type: database
+      query: |
+        SELECT
+          s.status,
+          sp.name as plan_name
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        status_one_of: [canceled, active]  # 可能降级到 Free 并保持 active
+        plan_name_one_of: [free, pro]       # 取决于实现

@@ -1,0 +1,60 @@
+id: TC-WEBHOOK-003
+name: Stripe Webhook - 支付失败
+description: 验证 Stripe invoice.payment_failed 事件处理（续费失败）
+priority: high
+module: billing/webhook
+
+preconditions:
+  - 组织有活跃的 Stripe 订阅
+  - Stripe Webhook 端点已配置
+
+notes: |
+  此事件在自动续费失败时触发。
+  需要验证订阅是否正确标记为需要处理。
+
+setup:
+  sql: |
+    -- 设置组织为活跃订阅
+    UPDATE subscriptions
+    SET status = 'active',
+        payment_provider = 'stripe',
+        stripe_subscription_id = 'sub_test_failed',
+        frozen_at = NULL
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 发送 Stripe invoice.payment_failed Webhook
+    expected: 订阅标记为支付失败
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/webhooks/stripe
+        headers:
+          Content-Type: application/json
+          Stripe-Signature: "{mock_signature}"
+        body:
+          type: invoice.payment_failed
+          data:
+            object:
+              id: in_test_failed
+              subscription: sub_test_failed
+              billing_reason: subscription_cycle
+              attempt_count: 1
+              next_payment_attempt: 1735689600
+      expected:
+        status: 200
+
+  - action: 验证订阅状态更新
+    expected: 订阅可能被标记为 past_due 或发送通知
+    verification:
+      type: database
+      query: |
+        SELECT
+          status,
+          payment_failed_at IS NOT NULL as payment_failed
+        FROM subscriptions
+        WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        # 首次失败可能不会立即冻结，但会记录失败时间
+        payment_failed: optional

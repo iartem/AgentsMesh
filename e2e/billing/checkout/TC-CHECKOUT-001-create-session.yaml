@@ -1,0 +1,46 @@
+id: TC-CHECKOUT-001
+name: 创建支付会话
+description: 验证创建支付结账会话 API 正常工作
+priority: high
+module: billing/checkout
+
+preconditions:
+  - 组织有活跃订阅（Free 计划）
+  - 已获取有效的 access_token
+  - 部署类型为 global（Stripe）
+
+steps:
+  - action: 调用创建结账会话 API（升级到 Pro）
+    expected: 返回支付会话信息
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/orgs/dev-org/billing/checkout
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          plan_name: pro
+          billing_cycle: monthly
+          seat_count: 1
+      expected:
+        status: 200
+        body:
+          order_no: not_empty
+          checkout_url: contains "stripe.com"  # Stripe Checkout URL
+          provider: stripe
+          expires_at: not_empty
+
+  - action: 验证订单记录已创建
+    expected: payment_orders 表新增记录
+    verification:
+      type: database
+      query: |
+        SELECT EXISTS(
+          SELECT 1 FROM payment_orders
+          WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+          AND status = 'pending'
+        ) as order_created
+      expected:
+        order_created: true

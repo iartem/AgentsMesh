@@ -1,0 +1,53 @@
+id: TC-PLAN-004
+name: 降级被席位数阻止
+description: 验证当前席位数超过目标方案上限时禁止降级
+priority: high
+module: billing/plan-change
+
+preconditions:
+  - 组织当前为 Pro 计划
+  - 席位数大于 Free 计划上限（1）
+  - 已获取有效的 access_token
+
+setup:
+  sql: |
+    -- 设置组织为 Pro 计划，席位数为 3（超过 Free 的 1 席位限制）
+    UPDATE subscriptions
+    SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
+        status = 'active',
+        seat_count = 3,
+        downgrade_to_plan = NULL
+    WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
+
+steps:
+  - action: 尝试降级到 Free 方案
+    expected: 返回错误，提示需要先减少席位
+    verification:
+      type: api
+      request:
+        method: PUT
+        url: /api/v1/orgs/dev-org/billing/subscription
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          plan_name: free
+      expected:
+        status: 400
+        body:
+          error: contains_one_of ["席位", "seat", "exceed", "超过"]
+
+  - action: 验证降级未发生
+    expected: downgrade_to_plan 字段为空
+    verification:
+      type: database
+      query: |
+        SELECT
+          sp.name as current_plan,
+          s.downgrade_to_plan
+        FROM subscriptions s
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
+      expected:
+        current_plan: pro
+        downgrade_to_plan: null

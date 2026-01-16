@@ -1,0 +1,37 @@
+id: TC-USAGE-001
+name: 获取当前使用量
+description: 验证获取当前资源使用量 API 正常工作
+priority: medium
+module: billing/usage
+
+preconditions:
+  - 组织有活跃订阅
+  - 已获取有效的 access_token
+
+steps:
+  - action: 调用获取使用量 API
+    expected: 返回各项资源使用情况
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/billing/usage
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          # 用户数
+          users:
+            used: greater_than_or_equal 0
+            limit: greater_than 0
+          # Runner 数
+          runners:
+            used: greater_than_or_equal 0
+            limit: greater_than 0
+          # 仓库数
+          repositories:
+            used: greater_than_or_equal 0
+            limit: greater_than 0
+          # Pod 分钟数（可选）
+          pod_minutes: optional
