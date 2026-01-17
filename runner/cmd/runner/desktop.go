@@ -5,11 +5,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/tray"
 )
 
@@ -17,6 +18,7 @@ import (
 func runDesktop(args []string) {
 	fs := flag.NewFlagSet("desktop", flag.ExitOnError)
 	configFile := fs.String("config", "", "Path to config file (default: ~/.agentsmesh/config.yaml)")
+	logLevel := fs.String("log-level", "", "Log level: debug, info, warn, error (overrides config)")
 
 	fs.Usage = func() {
 		fmt.Println(`Start AgentsMesh Runner in desktop mode with system tray.
@@ -34,6 +36,7 @@ The runner will appear in the system tray with a menu to:
   - View logs
   - Enable/disable auto-start at login
 
+Log file is written to $TMPDIR/agentsmesh/runner.log by default (with rotation).
 The runner must be registered first using 'runner register'.`)
 	}
 
@@ -46,7 +49,8 @@ The runner must be registered first using 'runner register'.`)
 	if cfgFile == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatalf("Failed to get home directory: %v", err)
+			fmt.Fprintf(os.Stderr, "Failed to get home directory: %v\n", err)
+			os.Exit(1)
 		}
 		cfgFile = filepath.Join(home, ".agentsmesh", "config.yaml")
 	}
@@ -61,25 +65,40 @@ The runner must be registered first using 'runner register'.`)
 	// Load configuration
 	cfg, err := config.Load(cfgFile)
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Load gRPC config (certificates)
 	if err := cfg.LoadGRPCConfig(); err != nil {
-		log.Fatalf("Failed to load gRPC config: %v - please re-register the runner", err)
+		fmt.Fprintf(os.Stderr, "Failed to load gRPC config: %v - please re-register the runner\n", err)
+		os.Exit(1)
 	}
+
+	// Override log level from command line if provided
+	if *logLevel != "" {
+		cfg.LogLevel = *logLevel
+	}
+
+	// Initialize logger
+	if err := logger.Init(cfg.GetLogConfig()); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Close()
 
 	// Load org slug
 	if err := cfg.LoadOrgSlug(); err != nil {
-		log.Printf("Warning: Failed to load org slug: %v", err)
+		slog.Warn("Failed to load org slug", "error", err)
 	}
 
 	// Validate config
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Invalid config: %v", err)
+		fmt.Fprintf(os.Stderr, "Invalid config: %v\n", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Starting AgentsMesh Runner %s in desktop mode", version)
+	slog.Info("Starting AgentsMesh Runner in desktop mode", "version", version)
 
 	// Create and run tray app with version info
 	app := tray.NewWithVersion(cfg, version)

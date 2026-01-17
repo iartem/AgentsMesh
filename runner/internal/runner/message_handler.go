@@ -3,10 +3,10 @@ package runner
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
 
 // RunnerMessageHandler implements client.MessageHandler interface.
@@ -29,8 +29,8 @@ func NewRunnerMessageHandler(runner *Runner, store PodStore, conn client.Connect
 // OnCreatePod handles create pod requests from server.
 // Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
-	log.Printf("[message_handler] Creating pod: pod_key=%s, command=%s, args=%v",
-		req.PodKey, req.LaunchCommand, req.LaunchArgs)
+	log := logger.Pod()
+	log.Info("Creating pod", "pod_key", req.PodKey, "command", req.LaunchCommand, "args", req.LaunchArgs)
 
 	ctx := context.Background()
 
@@ -80,14 +80,14 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 	if h.runner.mcpServer != nil {
 		orgSlug := h.conn.GetOrgSlug()
 		h.runner.mcpServer.RegisterPod(req.PodKey, orgSlug, nil, nil, req.LaunchCommand)
-		log.Printf("[message_handler] Registered pod %s with MCP server (org: %s)", req.PodKey, orgSlug)
+		log.Debug("Registered pod with MCP server", "pod_key", req.PodKey, "org", orgSlug)
 	}
 
 	// Send initial prompt if specified
 	if req.InitialPrompt != "" {
 		time.AfterFunc(1500*time.Millisecond, func() {
 			if err := pod.Terminal.Write([]byte(req.InitialPrompt + "\n")); err != nil {
-				log.Printf("[message_handler] Failed to send initial prompt: %v", err)
+				logger.Pod().Warn("Failed to send initial prompt", "error", err)
 			}
 		})
 	}
@@ -95,15 +95,15 @@ func (h *RunnerMessageHandler) OnCreatePod(req client.CreatePodRequest) error {
 	// Notify server that pod is created
 	h.sendPodCreated(req.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch, 80, 24)
 
-	log.Printf("[message_handler] Pod created: pod_key=%s, pid=%d, worktree=%s, branch=%s",
-		req.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch)
+	log.Info("Pod created", "pod_key", req.PodKey, "pid", pod.Terminal.PID(), "worktree", pod.WorktreePath, "branch", pod.Branch)
 	return nil
 }
 
 // OnTerminatePod handles terminate pod requests from server.
 // Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) error {
-	log.Printf("[message_handler] Terminating pod: pod_key=%s", req.PodKey)
+	log := logger.Pod()
+	log.Info("Terminating pod", "pod_key", req.PodKey)
 
 	pod := h.podStore.Delete(req.PodKey)
 	if pod == nil {
@@ -123,7 +123,7 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 	// Notify server
 	h.sendPodTerminated(req.PodKey)
 
-	log.Printf("[message_handler] Pod terminated: pod_key=%s", req.PodKey)
+	log.Info("Pod terminated", "pod_key", req.PodKey)
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (h *RunnerMessageHandler) createOutputHandler(podKey string) func([]byte) {
 
 func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 	return func(exitCode int) {
-		log.Printf("[message_handler] Pod exited: pod_key=%s, exit_code=%d", podKey, exitCode)
+		logger.Pod().Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
 
 		pod := h.podStore.Delete(podKey)
 		if pod != nil {
@@ -210,7 +210,7 @@ func (h *RunnerMessageHandler) sendPodCreated(podKey string, pid int, worktreePa
 	}
 	// Use gRPC-specific method
 	if err := h.conn.SendPodCreated(podKey, int32(pid)); err != nil {
-		log.Printf("[message_handler] Failed to send pod created event: %v", err)
+		logger.Pod().Error("Failed to send pod created event", "error", err)
 	}
 }
 
@@ -220,7 +220,7 @@ func (h *RunnerMessageHandler) sendPodTerminated(podKey string) {
 	}
 	// Use gRPC-specific method with exit code 0 (normal termination)
 	if err := h.conn.SendPodTerminated(podKey, 0, ""); err != nil {
-		log.Printf("[message_handler] Failed to send pod terminated event: %v", err)
+		logger.Pod().Error("Failed to send pod terminated event", "error", err)
 	}
 }
 
@@ -230,7 +230,7 @@ func (h *RunnerMessageHandler) sendTerminalOutput(podKey string, data []byte) {
 	}
 	// Use gRPC-specific method for terminal output
 	if err := h.conn.SendTerminalOutput(podKey, data); err != nil {
-		log.Printf("[message_handler] Failed to send terminal output: %v", err)
+		logger.Terminal().Error("Failed to send terminal output", "error", err)
 	}
 }
 
@@ -240,7 +240,7 @@ func (h *RunnerMessageHandler) sendPtyResized(podKey string, cols, rows uint16) 
 	}
 	// Use gRPC-specific method
 	if err := h.conn.SendPtyResized(podKey, int32(cols), int32(rows)); err != nil {
-		log.Printf("[message_handler] Failed to send pty resized event: %v", err)
+		logger.Terminal().Error("Failed to send pty resized event", "error", err)
 	}
 }
 
@@ -250,7 +250,7 @@ func (h *RunnerMessageHandler) sendPodError(podKey, errorMsg string) {
 	}
 	// Use gRPC-specific method
 	if err := h.conn.SendError(podKey, "error", errorMsg); err != nil {
-		log.Printf("[message_handler] Failed to send error event: %v", err)
+		logger.Pod().Error("Failed to send error event", "error", err)
 	}
 }
 
@@ -260,7 +260,7 @@ func (h *RunnerMessageHandler) sendPodErrorWithCode(podKey string, podErr *clien
 	}
 	// Use gRPC-specific method with error code
 	if err := h.conn.SendError(podKey, podErr.Code, podErr.Message); err != nil {
-		log.Printf("[message_handler] Failed to send error event: %v", err)
+		logger.Pod().Error("Failed to send error event", "error", err)
 	}
 }
 

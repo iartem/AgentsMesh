@@ -3,13 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/anthropics/agentsmesh/runner/internal/workspace"
 )
@@ -121,7 +121,7 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		return nil, fmt.Errorf("launch command is required")
 	}
 
-	log.Printf("[pod_builder] Building pod: pod_key=%s, command=%s", b.podKey, b.launchCommand)
+	logger.Pod().Info("Building pod", "pod_key", b.podKey, "command", b.launchCommand)
 
 	// Setup sandbox and working directory
 	sandboxRoot, workingDir, worktreePath, branchName, err := b.setup(ctx)
@@ -170,7 +170,7 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		Status:        PodStatusInitializing,
 	}
 
-	log.Printf("[pod_builder] Pod built: pod_key=%s, working_dir=%s", b.podKey, workingDir)
+	logger.Pod().Info("Pod built", "pod_key", b.podKey, "working_dir", workingDir)
 
 	return pod, nil
 }
@@ -354,7 +354,7 @@ func (b *PodBuilder) createFiles(sandboxRoot, workDir string) error {
 			}
 		}
 
-		log.Printf("[pod_builder] Created file: %s (mode=%o)", path, mode)
+		logger.Pod().Debug("Created file", "path", path, "mode", fmt.Sprintf("%o", mode))
 	}
 
 	return nil

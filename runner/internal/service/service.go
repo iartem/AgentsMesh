@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -13,8 +12,12 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/runner"
 )
+
+// Module logger for service
+var log = logger.Service()
 
 const (
 	ServiceName        = "agentsmesh-runner"
@@ -49,7 +52,7 @@ func NewProgram(cfg *config.Config) *Program {
 
 // Start is called when the service is started.
 func (p *Program) Start(s service.Service) error {
-	log.Printf("Service starting...")
+	log.Info("Service starting")
 
 	// Create runner instance
 	r, err := runner.New(p.cfg)
@@ -69,7 +72,7 @@ func (p *Program) Start(s service.Service) error {
 		p.sendStatus(Status{Running: true, Connected: true})
 
 		if err := p.runner.Run(p.ctx); err != nil {
-			log.Printf("Runner error: %v", err)
+			log.Error("Runner error", "error", err)
 			p.sendStatus(Status{Running: false, Error: err})
 		}
 	}()
@@ -79,7 +82,7 @@ func (p *Program) Start(s service.Service) error {
 
 // Stop is called when the service is stopped.
 func (p *Program) Stop(s service.Service) error {
-	log.Printf("Service stopping...")
+	log.Info("Service stopping")
 
 	if p.cancel != nil {
 		p.cancel()
@@ -89,7 +92,7 @@ func (p *Program) Stop(s service.Service) error {
 	p.wg.Wait()
 
 	p.sendStatus(Status{Running: false})
-	log.Printf("Service stopped")
+	log.Info("Service stopped")
 	return nil
 }
 
@@ -150,7 +153,7 @@ func Install(configPath string) error {
 		return fmt.Errorf("failed to install service: %w", err)
 	}
 
-	log.Printf("Service installed successfully")
+	log.Info("Service installed successfully")
 	return nil
 }
 
@@ -167,7 +170,7 @@ func Uninstall() error {
 		return fmt.Errorf("failed to uninstall service: %w", err)
 	}
 
-	log.Printf("Service uninstalled successfully")
+	log.Info("Service uninstalled successfully")
 	return nil
 }
 
@@ -184,7 +187,7 @@ func Start() error {
 		return fmt.Errorf("failed to start service: %w", err)
 	}
 
-	log.Printf("Service started")
+	log.Info("Service started")
 	return nil
 }
 
@@ -201,7 +204,7 @@ func Stop() error {
 		return fmt.Errorf("failed to stop service: %w", err)
 	}
 
-	log.Printf("Service stopped")
+	log.Info("Service stopped")
 	return nil
 }
 
@@ -218,7 +221,7 @@ func Restart() error {
 		return fmt.Errorf("failed to restart service: %w", err)
 	}
 
-	log.Printf("Service restarted")
+	log.Info("Service restarted")
 	return nil
 }
 

@@ -3,7 +3,6 @@ package terminal
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/creack/pty"
 
 	"github.com/anthropics/agentsmesh/runner/internal/buffer"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
 
 // Session represents a PTY session.
@@ -127,8 +127,8 @@ func NewSession(cfg *SessionConfig) (*Session, error) {
 		waitDone:     make(chan struct{}),
 	}
 
-	log.Printf("[terminal] Created new PTY session: pty_session_id=%s, command=%s, pid=%d",
-		cfg.ID, cfg.Command, cmd.Process.Pid)
+	logger.Terminal().Info("Created new PTY session",
+		"pty_session_id", cfg.ID, "command", cfg.Command, "pid", cmd.Process.Pid)
 
 	return session, nil
 }
@@ -145,7 +145,7 @@ func (s *Session) Resize(rows, cols uint16) error {
 		return fmt.Errorf("failed to resize pty: %w", err)
 	}
 
-	log.Printf("[terminal] Resized PTY: pty_session_id=%s, rows=%d, cols=%d", s.ID, rows, cols)
+	logger.Terminal().Debug("Resized PTY", "pty_session_id", s.ID, "rows", rows, "cols", cols)
 
 	return nil
 }
@@ -277,12 +277,13 @@ func (s *Session) Close() error {
 		}
 	}
 
+	log := logger.Terminal()
 	// Kill the process
 	if s.Cmd != nil && s.Cmd.Process != nil {
 		// Try graceful termination first
 		if err := s.Cmd.Process.Signal(syscall.SIGTERM); err != nil {
 			// Process may have already exited
-			log.Printf("[terminal] SIGTERM failed for session %s, process may have exited", s.ID)
+			log.Debug("SIGTERM failed for session, process may have exited", "session_id", s.ID)
 		}
 
 		// Wait for process to exit with timeout using the thread-safe WaitProcess method
@@ -291,14 +292,14 @@ func (s *Session) Close() error {
 			// Process already exited (WaitProcess was called by monitorSession)
 		case <-time.After(2 * time.Second):
 			// Timeout, force kill
-			log.Printf("[terminal] Process did not exit gracefully for session %s, force killing", s.ID)
+			log.Warn("Process did not exit gracefully, force killing", "session_id", s.ID)
 			s.Cmd.Process.Kill()
 			// Wait for WaitProcess to complete (will be called by monitorSession or this triggers it)
 			s.WaitProcess()
 		}
 	}
 
-	log.Printf("[terminal] Closed PTY session: pty_session_id=%s", s.ID)
+	log.Debug("Closed PTY session", "pty_session_id", s.ID)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("errors closing session: %v", errs)

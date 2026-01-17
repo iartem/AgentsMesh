@@ -3,12 +3,12 @@ package runner
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp"
 	"github.com/anthropics/agentsmesh/runner/internal/monitor"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
@@ -87,7 +87,7 @@ func New(cfg *config.Config) (*Runner, error) {
 
 	// Load org slug from file if not in config
 	if err := cfg.LoadOrgSlug(); err != nil {
-		log.Printf("Warning: failed to load org slug: %v", err)
+		logger.Runner().Warn("Failed to load org slug", "error", err)
 	}
 
 	// Validate required configuration
@@ -106,7 +106,7 @@ func New(cfg *config.Config) (*Runner, error) {
 	}
 
 	// Create gRPC/mTLS connection
-	log.Printf("[runner] Using gRPC/mTLS connection (endpoint: %s)", cfg.GRPCEndpoint)
+	logger.Runner().Info("Using gRPC/mTLS connection", "endpoint", cfg.GRPCEndpoint)
 
 	grpcConn := client.NewGRPCConnection(
 		cfg.GRPCEndpoint,
@@ -129,8 +129,9 @@ func New(cfg *config.Config) (*Runner, error) {
 	}
 
 	if certInfo.NeedsRenewal {
-		log.Printf("[runner] Warning: Certificate expires in %.0f days on %s",
-			certInfo.DaysUntilExpiry, certInfo.ExpiresAt.Format("2006-01-02"))
+		logger.Runner().Warn("Certificate expires soon",
+			"days_until_expiry", certInfo.DaysUntilExpiry,
+			"expires_at", certInfo.ExpiresAt.Format("2006-01-02"))
 	}
 
 	// Create pod store
@@ -166,11 +167,13 @@ func (r *Runner) WithConnection(conn client.Connection) *Runner {
 
 // initEnhancedComponents initializes optional enhanced components based on config.
 func (r *Runner) initEnhancedComponents(cfg *config.Config) {
+	log := logger.Runner()
+
 	// Initialize MCP manager (for legacy MCP config)
 	r.mcpManager = mcp.NewManager()
 	if cfg.MCPConfigPath != "" {
 		if err := r.mcpManager.LoadConfig(cfg.MCPConfigPath); err != nil {
-			log.Printf("[runner] Warning: failed to load MCP config: %v", err)
+			log.Warn("Failed to load MCP config", "error", err)
 		}
 	}
 
@@ -178,9 +181,9 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 	mcpPort := cfg.GetMCPPort()
 	r.mcpServer = mcp.NewHTTPServer(cfg.ServerURL, mcpPort)
 	go func() {
-		log.Printf("[runner] Starting MCP HTTP Server on port %d", mcpPort)
+		log.Info("Starting MCP HTTP Server", "port", mcpPort)
 		if err := r.mcpServer.Start(); err != nil {
-			log.Printf("[runner] Warning: MCP HTTP Server failed: %v", err)
+			log.Warn("MCP HTTP Server failed", "error", err)
 		}
 	}()
 
@@ -197,7 +200,8 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 
 // Run starts the runner and blocks until context is cancelled
 func (r *Runner) Run(ctx context.Context) error {
-	log.Printf("Runner starting with node_id: %s (org: %s)", r.cfg.NodeID, r.cfg.OrgSlug)
+	log := logger.Runner()
+	log.Info("Runner starting", "node_id", r.cfg.NodeID, "org", r.cfg.OrgSlug)
 
 	// Start connection (includes connect, heartbeat, reconnect loop)
 	r.conn.Start()
@@ -205,7 +209,7 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	// Wait for shutdown
 	<-ctx.Done()
-	log.Println("Shutting down runner...")
+	log.Info("Shutting down runner...")
 
 	// Stop all pods
 	r.stopAllPods()

@@ -6,7 +6,6 @@ package tray
 import (
 	"context"
 	"fmt"
-	"log"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -16,8 +15,12 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
 	"github.com/anthropics/agentsmesh/runner/internal/console"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/runner"
 )
+
+// Module logger for tray
+var log = logger.Tray()
 
 const (
 	// DefaultConsolePort is the default port for the web console.
@@ -80,9 +83,9 @@ func (t *TrayApp) onReady() {
 	// Start web console
 	t.console = console.New(t.cfg, DefaultConsolePort, t.version)
 	if err := t.console.Start(); err != nil {
-		log.Printf("Failed to start web console: %v", err)
+		log.Error("Failed to start web console", "error", err)
 	} else {
-		log.Printf("Web console available at %s", t.console.GetURL())
+		log.Info("Web console available", "url", t.console.GetURL())
 	}
 
 	// Build menu
@@ -111,7 +114,7 @@ func (t *TrayApp) onReady() {
 }
 
 func (t *TrayApp) onExit() {
-	log.Println("Tray exiting...")
+	log.Info("Tray exiting")
 	t.stopRunner()
 
 	// Stop web console
@@ -161,7 +164,7 @@ func (t *TrayApp) startRunner() {
 	// Create runner instance
 	r, err := runner.New(t.cfg)
 	if err != nil {
-		log.Printf("Failed to create runner: %v", err)
+		log.Error("Failed to create runner", "error", err)
 		t.updateStatus(false, false, err)
 		return
 	}
@@ -192,7 +195,7 @@ func (t *TrayApp) startRunner() {
 		}()
 
 		if err := r.Run(t.ctx); err != nil {
-			log.Printf("Runner error: %v", err)
+			log.Error("Runner error", "error", err)
 			t.updateStatus(false, false, err)
 		}
 
@@ -284,7 +287,7 @@ func (t *TrayApp) openWebConsole() {
 
 	if cmd != nil {
 		if err := cmd.Start(); err != nil {
-			log.Printf("Failed to open web console: %v", err)
+			log.Error("Failed to open web console", "error", err)
 		}
 	}
 }
@@ -308,7 +311,7 @@ func (t *TrayApp) openLogs() {
 
 	if cmd != nil {
 		if err := cmd.Start(); err != nil {
-			log.Printf("Failed to open logs: %v", err)
+			log.Error("Failed to open logs", "error", err)
 		}
 	}
 }
@@ -317,10 +320,10 @@ func (t *TrayApp) toggleAutoStart() {
 	if t.autoStartItem.Checked() {
 		t.autoStartItem.Uncheck()
 		// TODO: Remove from system auto-start
-		log.Println("Auto-start disabled")
+		log.Info("Auto-start disabled")
 	} else {
 		t.autoStartItem.Check()
 		// TODO: Add to system auto-start
-		log.Println("Auto-start enabled")
+		log.Info("Auto-start enabled")
 	}
 }
