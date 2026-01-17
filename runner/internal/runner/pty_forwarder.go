@@ -2,11 +2,11 @@ package runner
 
 import (
 	"io"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/buffer"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
@@ -83,7 +83,7 @@ func (f *PTYForwarder) Start() {
 	go f.readLoop()
 	go f.flushLoop()
 
-	log.Printf("[pty_forwarder] Started forwarding: pod_key=%s", f.podKey)
+	logger.Terminal().Debug("Started forwarding", "pod_key", f.podKey)
 }
 
 // Stop stops the forwarder.
@@ -92,14 +92,15 @@ func (f *PTYForwarder) Stop() {
 	if f.flushTicker != nil {
 		f.flushTicker.Stop()
 	}
-	log.Printf("[pty_forwarder] Stopped forwarding: pod_key=%s", f.podKey)
+	logger.Terminal().Debug("Stopped forwarding", "pod_key", f.podKey)
 }
 
 // readLoop continuously reads from PTY and buffers output.
 func (f *PTYForwarder) readLoop() {
+	log := logger.Terminal()
 	// Guard against nil session
 	if f.session == nil {
-		log.Printf("[pty_forwarder] Read loop exiting: session is nil, pod_key=%s", f.podKey)
+		log.Warn("Read loop exiting: session is nil", "pod_key", f.podKey)
 		return
 	}
 
@@ -115,8 +116,7 @@ func (f *PTYForwarder) readLoop() {
 		n, err := f.session.Read(buf)
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("[pty_forwarder] Read error: pod_key=%s, error=%v",
-					f.podKey, err)
+				log.Error("Read error", "pod_key", f.podKey, "error", err)
 			}
 			return
 		}
@@ -175,8 +175,8 @@ func (f *PTYForwarder) flushLocked() {
 		time.Sleep(f.backpressureWait)
 		if f.isBackpressure() {
 			// Still backpressure, skip this flush
-			log.Printf("[pty_forwarder] Backpressure detected, skipping flush: pod_key=%s, buffered=%d",
-				f.podKey, len(data))
+			logger.Terminal().Warn("Backpressure detected, skipping flush",
+				"pod_key", f.podKey, "buffered", len(data))
 			return
 		}
 	}
@@ -184,7 +184,7 @@ func (f *PTYForwarder) flushLocked() {
 	// Send output
 	if !f.handler.SendOutput(f.podKey, data) {
 		f.setBackpressure(true)
-		log.Printf("[pty_forwarder] Backpressure signal received: pod_key=%s", f.podKey)
+		logger.Terminal().Warn("Backpressure signal received", "pod_key", f.podKey)
 		return
 	}
 

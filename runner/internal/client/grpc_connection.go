@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -237,7 +237,7 @@ func (c *GRPCConnection) Connect() error {
 	c.initialized = false
 	c.mu.Unlock()
 
-	log.Printf("[grpc] Connected to server: %s (org: %s) with advancedtls", c.endpoint, c.orgSlug)
+	logger.GRPC().Info("Connected to server with advancedtls", "endpoint", c.endpoint, "org", c.orgSlug)
 	return nil
 }
 
@@ -252,7 +252,7 @@ func (c *GRPCConnection) createAdvancedTLSCredentials() (credentials.TransportCr
 		RefreshDuration: 1 * time.Hour, // Check for file changes every hour
 	})
 	if err != nil {
-		log.Printf("[grpc] Failed to create pemfile identity provider: %v, using fallback", err)
+		logger.GRPC().Warn("Failed to create pemfile identity provider, using fallback", "error", err)
 		return c.createFallbackTLSCredentials()
 	}
 
@@ -263,7 +263,7 @@ func (c *GRPCConnection) createAdvancedTLSCredentials() (credentials.TransportCr
 		RefreshDuration: 24 * time.Hour, // CA changes are rare, check daily
 	})
 	if err != nil {
-		log.Printf("[grpc] Failed to create pemfile root provider: %v, using static CA", err)
+		logger.GRPC().Warn("Failed to create pemfile root provider, using static CA", "error", err)
 		// Fall back to static CA if file watching fails
 		caCert, readErr := os.ReadFile(c.caFile)
 		if readErr != nil {
@@ -496,7 +496,7 @@ func (c *GRPCConnection) connectionLoop() {
 	for {
 		select {
 		case <-c.stopCh:
-			log.Println("[grpc] Connection loop stopped")
+			logger.GRPC().Info("Connection loop stopped")
 			return
 		default:
 		}
@@ -504,8 +504,10 @@ func (c *GRPCConnection) connectionLoop() {
 		// Try to connect
 		if err := c.Connect(); err != nil {
 			delay := c.reconnectStrategy.NextDelay()
-			log.Printf("[grpc] Failed to connect (attempt=%d, error=%v), will retry in %v",
-				c.reconnectStrategy.AttemptCount(), err, delay)
+			logger.GRPC().Warn("Failed to connect, will retry",
+				"attempt", c.reconnectStrategy.AttemptCount(),
+				"error", err,
+				"retry_in", delay)
 
 			select {
 			case <-c.stopCh:
@@ -529,7 +531,7 @@ func (c *GRPCConnection) connectionLoop() {
 		}
 
 		// Wait before reconnecting
-		log.Println("[grpc] Connection closed, will attempt to reconnect")
+		logger.GRPC().Info("Connection closed, will attempt to reconnect")
 		select {
 		case <-c.stopCh:
 			return
@@ -546,12 +548,12 @@ func (c *GRPCConnection) runConnection() {
 	// Add org_slug to metadata for organization routing
 	ctx = metadata.AppendToOutgoingContext(ctx, "x-org-slug", c.orgSlug)
 
-	log.Printf("[grpc] Establishing bidirectional stream with org=%s", c.orgSlug)
+	logger.GRPC().Debug("Establishing bidirectional stream", "org", c.orgSlug)
 
 	// Create bidirectional stream
 	stream, err := c.client.Connect(ctx)
 	if err != nil {
-		log.Printf("[grpc] Failed to establish stream: %v", err)
+		logger.GRPC().Error("Failed to establish stream", "error", err)
 		return
 	}
 
@@ -559,7 +561,7 @@ func (c *GRPCConnection) runConnection() {
 	c.stream = stream
 	c.mu.Unlock()
 
-	log.Printf("[grpc] Bidirectional stream established")
+	logger.GRPC().Info("Bidirectional stream established")
 
 	done := make(chan struct{})
 	readLoopDone := make(chan struct{}) // Signal when readLoop exits
@@ -573,7 +575,7 @@ func (c *GRPCConnection) runConnection() {
 
 	// Perform initialization (blocks until handshake completes or times out)
 	if err := c.performInitialization(ctx); err != nil {
-		log.Printf("[grpc] Initialization failed: %v", err)
+		logger.GRPC().Error("Initialization failed", "error", err)
 		close(done)
 		return
 	}
@@ -588,7 +590,7 @@ func (c *GRPCConnection) runConnection() {
 	go func() {
 		select {
 		case <-c.reconnectCh:
-			log.Printf("[grpc] Reconnection requested for certificate renewal")
+			logger.GRPC().Info("Reconnection requested for certificate renewal")
 			cancel() // Cancel context to trigger reconnection
 		case <-done:
 			return
@@ -600,11 +602,11 @@ func (c *GRPCConnection) runConnection() {
 	// Wait for context cancellation, stop signal, or readLoop exit
 	select {
 	case <-ctx.Done():
-		log.Printf("[grpc] Context cancelled, closing connection")
+		logger.GRPC().Debug("Context cancelled, closing connection")
 	case <-c.stopCh:
-		log.Printf("[grpc] Stop signal received, closing connection")
+		logger.GRPC().Debug("Stop signal received, closing connection")
 	case <-readLoopDone:
-		log.Printf("[grpc] Read loop exited, closing connection")
+		logger.GRPC().Debug("Read loop exited, closing connection")
 	}
 
 	// Signal other goroutines to stop
@@ -613,7 +615,7 @@ func (c *GRPCConnection) runConnection() {
 
 // performInitialization performs the three-phase initialization handshake.
 func (c *GRPCConnection) performInitialization(ctx context.Context) error {
-	log.Println("[grpc] Starting initialization handshake...")
+	logger.GRPC().Debug("Starting initialization handshake...")
 
 	// Phase 1: Send initialize request
 	hostname, _ := os.Hostname()
@@ -637,13 +639,14 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 	if err := c.stream.Send(msg); err != nil {
 		return fmt.Errorf("failed to send initialize: %w", err)
 	}
-	log.Printf("[grpc] Sent initialize request: version=%s, mcp_port=%d", c.runnerVersion, c.mcpPort)
+	logger.GRPC().Debug("Sent initialize request", "version", c.runnerVersion, "mcp_port", c.mcpPort)
 
 	// Phase 2: Wait for initialize_result
 	select {
 	case result := <-c.initResultCh:
-		log.Printf("[grpc] Received initialize_result: server_version=%s, agent_types=%d",
-			result.ServerInfo.Version, len(result.AgentTypes))
+		logger.GRPC().Debug("Received initialize_result",
+			"server_version", result.ServerInfo.Version,
+			"agent_types", len(result.AgentTypes))
 
 		// Phase 3: Check available agents and send initialized
 		availableAgents := c.checkAvailableAgents(result.AgentTypes)
@@ -663,13 +666,13 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 		if err := c.stream.Send(confirmMsg); err != nil {
 			return fmt.Errorf("failed to send initialized: %w", err)
 		}
-		log.Printf("[grpc] Sent initialized: available_agents=%v", availableAgents)
+		logger.GRPC().Debug("Sent initialized", "available_agents", availableAgents)
 
 		c.mu.Lock()
 		c.initialized = true
 		c.mu.Unlock()
 
-		log.Println("[grpc] Initialization completed successfully")
+		logger.GRPC().Info("Initialization completed successfully")
 		return nil
 
 	case <-time.After(c.initTimeout):
@@ -686,21 +689,22 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 // checkAvailableAgents checks which agents are available on this runner.
 func (c *GRPCConnection) checkAvailableAgents(agentTypes []*runnerv1.AgentTypeInfo) []string {
 	var available []string
+	log := logger.GRPC()
 
 	for _, agent := range agentTypes {
 		if agent.Command == "" {
-			log.Printf("[grpc] Agent %s has no command defined, skipping", agent.Slug)
+			log.Debug("Agent has no command defined, skipping", "agent", agent.Slug)
 			continue
 		}
 
 		// Check if executable exists in PATH
 		path, err := exec.LookPath(agent.Command)
 		if err != nil {
-			log.Printf("[grpc] Agent %s: command '%s' not found in PATH", agent.Slug, agent.Command)
+			log.Debug("Agent command not found in PATH", "agent", agent.Slug, "command", agent.Command)
 			continue
 		}
 
-		log.Printf("[grpc] Agent %s: found command at %s", agent.Slug, path)
+		log.Debug("Agent command found", "agent", agent.Slug, "path", path)
 		available = append(available, agent.Slug)
 	}
 
@@ -711,17 +715,18 @@ func (c *GRPCConnection) checkAvailableAgents(agentTypes []*runnerv1.AgentTypeIn
 // The done channel is closed when the loop exits to notify other goroutines.
 func (c *GRPCConnection) readLoop(ctx context.Context, done chan<- struct{}) {
 	defer close(done) // Signal exit to other goroutines
+	log := logger.GRPC()
 	for {
 		msg, err := c.stream.Recv()
 		if err != nil {
 			if err == io.EOF {
-				log.Println("[grpc] Stream ended (EOF)")
+				log.Info("Stream ended (EOF)")
 				return
 			}
 			if status.Code(err) == codes.Canceled {
-				log.Println("[grpc] Stream cancelled")
+				log.Debug("Stream cancelled")
 			} else {
-				log.Printf("[grpc] Stream error: %v", err)
+				log.Error("Stream error", "error", err)
 			}
 			return
 		}
@@ -751,26 +756,27 @@ func (c *GRPCConnection) handleServerMessage(msg *runnerv1.ServerMessage) {
 		c.handleSendPrompt(payload.SendPrompt)
 
 	default:
-		log.Printf("[grpc] Unknown server message type")
+		logger.GRPC().Warn("Unknown server message type")
 	}
 }
 
 // handleInitializeResult handles initialize_result from server.
 func (c *GRPCConnection) handleInitializeResult(result *runnerv1.InitializeResult) {
-	log.Printf("[grpc] Received initialize_result: version=%s", result.ServerInfo.Version)
+	logger.GRPC().Debug("Received initialize_result", "version", result.ServerInfo.Version)
 	// Convert to internal type and send to channel
 	select {
 	case c.initResultCh <- result:
 	default:
-		log.Printf("[grpc] Initialize result channel full, dropping")
+		logger.GRPC().Warn("Initialize result channel full, dropping")
 	}
 }
 
 // handleCreatePod handles create_pod command from server.
 func (c *GRPCConnection) handleCreatePod(cmd *runnerv1.CreatePodCommand) {
-	log.Printf("[grpc] Received create_pod: pod_key=%s", cmd.PodKey)
+	log := logger.GRPC()
+	log.Info("Received create_pod", "pod_key", cmd.PodKey)
 	if c.handler == nil {
-		log.Printf("[grpc] No handler set, ignoring create_pod")
+		log.Warn("No handler set, ignoring create_pod")
 		return
 	}
 
@@ -805,22 +811,23 @@ func (c *GRPCConnection) handleCreatePod(cmd *runnerv1.CreatePodCommand) {
 	}
 
 	if err := c.handler.OnCreatePod(req); err != nil {
-		log.Printf("[grpc] Failed to create pod %s: %v", cmd.PodKey, err)
+		log.Error("Failed to create pod", "pod_key", cmd.PodKey, "error", err)
 		c.sendError(cmd.PodKey, "create_pod_failed", err.Error())
 	}
 }
 
 // handleTerminatePod handles terminate_pod command from server.
 func (c *GRPCConnection) handleTerminatePod(cmd *runnerv1.TerminatePodCommand) {
-	log.Printf("[grpc] Received terminate_pod: pod_key=%s, force=%v", cmd.PodKey, cmd.Force)
+	log := logger.GRPC()
+	log.Info("Received terminate_pod", "pod_key", cmd.PodKey, "force", cmd.Force)
 	if c.handler == nil {
-		log.Printf("[grpc] No handler set, ignoring terminate_pod")
+		log.Warn("No handler set, ignoring terminate_pod")
 		return
 	}
 
 	req := TerminatePodRequest{PodKey: cmd.PodKey}
 	if err := c.handler.OnTerminatePod(req); err != nil {
-		log.Printf("[grpc] Failed to terminate pod %s: %v", cmd.PodKey, err)
+		log.Error("Failed to terminate pod", "pod_key", cmd.PodKey, "error", err)
 	}
 }
 
@@ -835,7 +842,7 @@ func (c *GRPCConnection) handleTerminalInput(cmd *runnerv1.TerminalInputCommand)
 		Data:   cmd.Data, // gRPC uses native bytes, no encoding needed
 	}
 	if err := c.handler.OnTerminalInput(req); err != nil {
-		log.Printf("[grpc] Failed to send terminal input to pod %s: %v", cmd.PodKey, err)
+		logger.GRPC().Error("Failed to send terminal input to pod", "pod_key", cmd.PodKey, "error", err)
 	}
 }
 
@@ -851,13 +858,13 @@ func (c *GRPCConnection) handleTerminalResize(cmd *runnerv1.TerminalResizeComman
 		Rows:   uint16(cmd.Rows),
 	}
 	if err := c.handler.OnTerminalResize(req); err != nil {
-		log.Printf("[grpc] Failed to resize terminal for pod %s: %v", cmd.PodKey, err)
+		logger.GRPC().Error("Failed to resize terminal for pod", "pod_key", cmd.PodKey, "error", err)
 	}
 }
 
 // handleSendPrompt handles send_prompt command from server.
 func (c *GRPCConnection) handleSendPrompt(cmd *runnerv1.SendPromptCommand) {
-	log.Printf("[grpc] Received send_prompt: pod_key=%s", cmd.PodKey)
+	logger.GRPC().Debug("Received send_prompt", "pod_key", cmd.PodKey)
 	// TODO: Implement prompt sending when handler supports it
 }
 
@@ -874,7 +881,7 @@ func (c *GRPCConnection) sendError(podKey, code, message string) {
 		Timestamp: time.Now().UnixMilli(),
 	}
 	if err := c.send(msg); err != nil {
-		log.Printf("[grpc] Failed to send error: %v", err)
+		logger.GRPC().Error("Failed to send error", "error", err)
 	}
 }
 
@@ -896,7 +903,7 @@ func (c *GRPCConnection) writeLoop(ctx context.Context, done <-chan struct{}) {
 
 			if stream != nil {
 				if err := stream.Send(msg); err != nil {
-					log.Printf("[grpc] Failed to send message: %v", err)
+					logger.GRPC().Error("Failed to send message", "error", err)
 					return
 				}
 			}
@@ -952,10 +959,10 @@ func (c *GRPCConnection) sendHeartbeat() {
 		Timestamp: time.Now().UnixMilli(),
 	}
 
-	log.Printf("[grpc] Sending heartbeat with %d pods", len(pods))
+	logger.GRPC().Debug("Sending heartbeat", "pods", len(pods))
 
 	if err := c.send(msg); err != nil {
-		log.Printf("[grpc] Failed to send heartbeat: %v", err)
+		logger.GRPC().Error("Failed to send heartbeat", "error", err)
 	}
 }
 
@@ -980,31 +987,32 @@ func (c *GRPCConnection) certRenewalChecker(ctx context.Context, done <-chan str
 
 // checkCertificateExpiry checks if the certificate needs renewal.
 func (c *GRPCConnection) checkCertificateExpiry() {
+	log := logger.GRPC()
 	daysUntilExpiry, err := c.getCertDaysUntilExpiry()
 	if err != nil {
-		log.Printf("[grpc] Failed to check certificate expiry: %v", err)
+		log.Error("Failed to check certificate expiry", "error", err)
 		return
 	}
 
-	log.Printf("[grpc] Certificate expires in %.0f days", daysUntilExpiry)
+	log.Debug("Certificate expiry check", "days_until_expiry", daysUntilExpiry)
 
 	// Check if renewal is needed (30 days before expiry by default)
 	if daysUntilExpiry <= float64(c.certRenewalDays) {
-		log.Printf("[grpc] Certificate expires in %.0f days, triggering renewal", daysUntilExpiry)
+		log.Info("Certificate expires soon, triggering renewal", "days_until_expiry", daysUntilExpiry)
 
 		// Attempt to renew certificate via REST API
 		if err := c.renewCertificate(); err != nil {
-			log.Printf("[grpc] Certificate renewal failed: %v", err)
+			log.Error("Certificate renewal failed", "error", err)
 			// Don't return here - still check for urgent reconnection
 		} else {
-			log.Printf("[grpc] Certificate renewed successfully, advancedtls will auto-reload")
+			log.Info("Certificate renewed successfully, advancedtls will auto-reload")
 		}
 	}
 
 	// Check if urgent reconnection is needed (7 days before expiry by default)
 	// This ensures long-lived connections use the new certificate
 	if daysUntilExpiry <= float64(c.certUrgentDays) {
-		log.Printf("[grpc] Certificate expires in %.0f days, triggering reconnection to use new certificate", daysUntilExpiry)
+		log.Warn("Certificate expiring urgently, triggering reconnection", "days_until_expiry", daysUntilExpiry)
 		c.triggerReconnect()
 	}
 }
@@ -1106,8 +1114,8 @@ func (c *GRPCConnection) renewCertificate() error {
 		return fmt.Errorf("failed to save new private key: %w", err)
 	}
 
-	log.Printf("[grpc] New certificate saved, expires at: %s",
-		time.Unix(result.ExpiresAt, 0).Format(time.RFC3339))
+	logger.GRPC().Info("New certificate saved",
+		"expires_at", time.Unix(result.ExpiresAt, 0).Format(time.RFC3339))
 
 	return nil
 }
@@ -1117,7 +1125,7 @@ func (c *GRPCConnection) renewCertificate() error {
 func (c *GRPCConnection) triggerReconnect() {
 	select {
 	case c.reconnectCh <- struct{}{}:
-		log.Printf("[grpc] Reconnection triggered")
+		logger.GRPC().Info("Reconnection triggered")
 	default:
 		// Reconnection already pending
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
 	"github.com/anthropics/agentsmesh/runner/internal/console"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/runner"
 )
 
@@ -107,7 +108,8 @@ After successful registration, certificates and configuration will be saved to ~
 
 	// Validate required flags
 	if *serverURL == "" {
-		log.Fatal("Error: --server is required")
+		fmt.Fprintln(os.Stderr, "Error: --server is required")
+		os.Exit(1)
 	}
 
 	// Get node ID
@@ -129,12 +131,14 @@ After successful registration, certificates and configuration will be saved to ~
 	if *token != "" {
 		// Token-based registration
 		if err := registerWithGRPCToken(ctx, *serverURL, *token, nID); err != nil {
-			log.Fatalf("Registration failed: %v", err)
+			fmt.Fprintf(os.Stderr, "Registration failed: %v\n", err)
+			os.Exit(1)
 		}
 	} else {
 		// Interactive registration (Tailscale-style)
 		if err := registerInteractive(ctx, *serverURL, nID); err != nil {
-			log.Fatalf("Registration failed: %v", err)
+			fmt.Fprintf(os.Stderr, "Registration failed: %v\n", err)
+			os.Exit(1)
 		}
 	}
 	fmt.Println("✓ gRPC/mTLS Registration successful!")
@@ -170,7 +174,8 @@ The runner will receive new certificates and can reconnect.`)
 	}
 
 	if *token == "" {
-		log.Fatal("Error: --token is required")
+		fmt.Fprintln(os.Stderr, "Error: --token is required")
+		os.Exit(1)
 	}
 
 	// Load server URL from config if not provided
@@ -182,7 +187,8 @@ The runner will receive new certificates and can reconnect.`)
 		if err == nil && cfg.ServerURL != "" {
 			sURL = cfg.ServerURL
 		} else {
-			log.Fatal("Error: --server is required (no existing configuration found)")
+			fmt.Fprintln(os.Stderr, "Error: --server is required (no existing configuration found)")
+			os.Exit(1)
 		}
 	}
 
@@ -192,13 +198,15 @@ The runner will receive new certificates and can reconnect.`)
 	fmt.Printf("Reactivating runner with server %s...\n", sURL)
 
 	if err := reactivateRunner(ctx, sURL, *token); err != nil {
-		log.Fatalf("Reactivation failed: %v", err)
+		fmt.Fprintf(os.Stderr, "Reactivation failed: %v\n", err)
+		os.Exit(1)
 	}
 }
 
 func runRunner(args []string) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	configFile := fs.String("config", "", "Path to config file (default: ~/.agentsmesh/config.yaml)")
+	logLevel := fs.String("log-level", "", "Log level: debug, info, warn, error (overrides config)")
 
 	fs.Usage = func() {
 		fmt.Println(`Start the AgentsMesh runner.
@@ -211,6 +219,7 @@ Options:`)
 		fmt.Println(`
 The runner must be registered first using 'runner register'.
 Configuration is loaded from ~/.agentsmesh/config.yaml by default.
+Log file is written to $TMPDIR/agentsmesh/runner.log by default (with rotation).
 
 The runner uses gRPC/mTLS for secure communication with the server.`)
 	}
@@ -224,42 +233,62 @@ The runner uses gRPC/mTLS for secure communication with the server.`)
 	if cfgFile == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatalf("Failed to get home directory: %v", err)
+			fmt.Fprintf(os.Stderr, "Failed to get home directory: %v\n", err)
+			os.Exit(1)
 		}
 		cfgFile = filepath.Join(home, ".agentsmesh", "config.yaml")
 	}
 
 	// Check if config exists
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		log.Fatal("Error: Runner not registered. Please run 'runner register' first.")
+		fmt.Fprintln(os.Stderr, "Error: Runner not registered. Please run 'runner register' first.")
+		os.Exit(1)
 	}
 
 	// Load configuration
 	cfg, err := config.Load(cfgFile)
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
+
+	// Override log level from command line if provided
+	if *logLevel != "" {
+		cfg.LogLevel = *logLevel
+	}
+
+	// Initialize logger
+	if err := logger.Init(cfg.GetLogConfig()); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Close()
+
+	log := slog.Default()
 
 	// Load gRPC config (certificates)
 	if err := cfg.LoadGRPCConfig(); err != nil {
-		log.Fatalf("Failed to load gRPC config: %v - please re-register the runner", err)
+		log.Error("Failed to load gRPC config - please re-register the runner", "error", err)
+		os.Exit(1)
 	}
 
 	// Load org slug
 	if err := cfg.LoadOrgSlug(); err != nil {
-		log.Printf("Warning: Failed to load org slug: %v", err)
+		log.Warn("Failed to load org slug", "error", err)
 	}
 
 	// Validate config
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Invalid config: %v", err)
+		log.Error("Invalid config", "error", err)
+		os.Exit(1)
 	}
 
 	if !cfg.UsesGRPC() {
-		log.Fatal("Error: gRPC configuration is required. Please re-register the runner using 'runner register'")
+		log.Error("gRPC configuration is required. Please re-register the runner using 'runner register'")
+		os.Exit(1)
 	}
 
-	log.Printf("Using gRPC/mTLS connection mode (endpoint: %s)", cfg.GRPCEndpoint)
+	log.Info("Using gRPC/mTLS connection mode", "endpoint", cfg.GRPCEndpoint)
 
 	startRunner(cfg)
 }
@@ -268,18 +297,21 @@ The runner uses gRPC/mTLS for secure communication with the server.`)
 const DefaultConsolePort = 19080
 
 func startRunner(cfg *config.Config) {
+	log := logger.Runner()
+
 	// Create runner instance
 	r, err := runner.New(cfg)
 	if err != nil {
-		log.Fatalf("Failed to create runner: %v", err)
+		log.Error("Failed to create runner", "error", err)
+		os.Exit(1)
 	}
 
 	// Start web console
 	consoleServer := console.New(cfg, DefaultConsolePort, version)
 	if err := consoleServer.Start(); err != nil {
-		log.Printf("Warning: Failed to start web console: %v", err)
+		log.Warn("Failed to start web console", "error", err)
 	} else {
-		log.Printf("Web console available at %s", consoleServer.GetURL())
+		log.Info("Web console available", "url", consoleServer.GetURL())
 	}
 
 	// Setup context with cancellation
@@ -292,12 +324,12 @@ func startRunner(cfg *config.Config) {
 
 	go func() {
 		sig := <-sigChan
-		log.Printf("Received signal %v, shutting down...", sig)
+		log.Info("Received signal, shutting down...", "signal", sig)
 		cancel()
 	}()
 
 	// Start runner
-	log.Printf("Starting AgentsMesh Runner %s", version)
+	log.Info("Starting AgentsMesh Runner", "version", version)
 
 	// Update console status when runner state changes
 	consoleServer.UpdateStatus(true, false, 0, 0, "")
@@ -306,10 +338,11 @@ func startRunner(cfg *config.Config) {
 	if err := r.Run(ctx); err != nil {
 		consoleServer.UpdateStatus(false, false, 0, 0, err.Error())
 		consoleServer.AddLog("error", fmt.Sprintf("Runner error: %v", err))
-		log.Fatalf("Runner error: %v", err)
+		log.Error("Runner error", "error", err)
+		os.Exit(1)
 	}
 
 	// Stop web console
 	consoleServer.Stop()
-	log.Println("Runner shutdown complete")
+	log.Info("Runner shutdown complete")
 }

@@ -5,13 +5,17 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
+
+// Module logger for workspace
+var log = logger.Workspace()
 
 // PreparationStep represents a single step in the workspace preparation process.
 // Implements the Strategy pattern for extensible preparation steps.
@@ -126,21 +130,21 @@ func (p *Preparer) Prepare(ctx context.Context, prepCtx *PreparationContext) err
 		return nil
 	}
 
-	log.Printf("[workspace] Starting workspace preparation: pod_id=%s, step_count=%d",
-		prepCtx.PodID, len(p.steps))
+	log.Info("Starting workspace preparation",
+		"pod_id", prepCtx.PodID, "step_count", len(p.steps))
 
 	for i, step := range p.steps {
-		log.Printf("[workspace] Executing preparation step: pod_id=%s, step=%s, step_num=%d, total=%d",
-			prepCtx.PodID, step.Name(), i+1, len(p.steps))
+		log.Info("Executing preparation step",
+			"pod_id", prepCtx.PodID, "step", step.Name(), "step_num", i+1, "total", len(p.steps))
 
 		if err := step.Execute(ctx, prepCtx); err != nil {
-			log.Printf("[workspace] Preparation step failed: pod_id=%s, step=%s, error=%v",
-				prepCtx.PodID, step.Name(), err)
+			log.Error("Preparation step failed",
+				"pod_id", prepCtx.PodID, "step", step.Name(), "error", err)
 			return err
 		}
 	}
 
-	log.Printf("[workspace] Workspace preparation completed: pod_id=%s", prepCtx.PodID)
+	log.Info("Workspace preparation completed", "pod_id", prepCtx.PodID)
 	return nil
 }
 
@@ -186,8 +190,8 @@ func (s *ScriptPreparationStep) Execute(ctx context.Context, prepCtx *Preparatio
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	log.Printf("[workspace] Executing preparation script: pod_id=%s, working_dir=%s, timeout=%s",
-		prepCtx.PodID, prepCtx.WorkingDir, s.timeout.String())
+	log.Info("Executing preparation script",
+		"pod_id", prepCtx.PodID, "working_dir", prepCtx.WorkingDir, "timeout", s.timeout.String())
 
 	// Create command
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", s.script)
@@ -199,8 +203,8 @@ func (s *ScriptPreparationStep) Execute(ctx context.Context, prepCtx *Preparatio
 	outputStr := string(output)
 
 	if err != nil {
-		log.Printf("[workspace] Preparation script failed: pod_id=%s, error=%v, output=%s",
-			prepCtx.PodID, err, outputStr)
+		log.Error("Preparation script failed",
+			"pod_id", prepCtx.PodID, "error", err, "output", outputStr)
 
 		return &PreparationError{
 			Step:   s.Name(),
@@ -209,11 +213,11 @@ func (s *ScriptPreparationStep) Execute(ctx context.Context, prepCtx *Preparatio
 		}
 	}
 
-	log.Printf("[workspace] Preparation script completed: pod_id=%s, output_len=%d",
-		prepCtx.PodID, len(outputStr))
+	log.Info("Preparation script completed",
+		"pod_id", prepCtx.PodID, "output_len", len(outputStr))
 
 	if outputStr != "" {
-		log.Printf("[workspace] Script output: %s", outputStr)
+		log.Debug("Script output", "output", outputStr)
 	}
 
 	return nil

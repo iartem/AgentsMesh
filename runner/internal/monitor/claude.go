@@ -2,12 +2,15 @@
 package monitor
 
 import (
-	"log"
 	"sync"
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/process"
 )
+
+// Module logger for monitor
+var log = logger.Monitor()
 
 // ClaudeStatus represents the status of claude process.
 type ClaudeStatus string
@@ -85,7 +88,7 @@ func (m *Monitor) RegisterPod(podID string, pid int) {
 		UpdatedAt:    time.Now(),
 	}
 
-	log.Printf("[monitor] Registered pod %s (pid: %d) for monitoring", podID, pid)
+	log.Info("Registered pod for monitoring", "pod_id", podID, "pid", pid)
 }
 
 // UnregisterPod removes a pod from monitoring.
@@ -94,7 +97,7 @@ func (m *Monitor) UnregisterPod(podID string) {
 	defer m.mu.Unlock()
 	delete(m.statuses, podID)
 
-	log.Printf("[monitor] Unregistered pod %s from monitoring", podID)
+	log.Info("Unregistered pod from monitoring", "pod_id", podID)
 }
 
 // GetStatus returns the current status of a pod.
@@ -123,7 +126,7 @@ func (m *Monitor) GetAllStatuses() []PodStatus {
 // Start starts the monitoring loop.
 func (m *Monitor) Start() {
 	go m.monitorLoop()
-	log.Printf("[monitor] Started process monitor with interval %v", m.interval)
+	log.Info("Started process monitor", "interval", m.interval)
 }
 
 // Stop stops the monitoring loop.
@@ -133,7 +136,7 @@ func (m *Monitor) Stop() {
 		m.stopped = true
 		m.mu.Unlock()
 		close(m.stopCh)
-		log.Println("[monitor] Stopped process monitor")
+		log.Info("Stopped process monitor")
 	})
 }
 
@@ -180,8 +183,8 @@ func (m *Monitor) checkAllPods() {
 
 		// Collect changes for callback (called after releasing lock)
 		if oldStatus != status.ClaudeStatus {
-			log.Printf("[monitor] Pod %s: Claude status changed from %s to %s",
-				podID, oldStatus, status.ClaudeStatus)
+			log.Info("Claude status changed",
+				"pod_id", podID, "old_status", oldStatus, "new_status", status.ClaudeStatus)
 			changes = append(changes, *status)
 		}
 	}

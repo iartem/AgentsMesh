@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,7 +15,11 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
+
+// Module logger for console
+var log = logger.Console()
 
 //go:embed static/*
 var staticFiles embed.FS
@@ -166,11 +169,11 @@ func (s *Server) Start() error {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Printf("[console] Starting web console on http://127.0.0.1:%d", s.port)
+	log.Info("Starting web console", "url", fmt.Sprintf("http://127.0.0.1:%d", s.port))
 
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("[console] Server error: %v", err)
+			log.Error("Server error", "error", err)
 		}
 	}()
 

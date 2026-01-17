@@ -12,7 +12,7 @@ const (
 	MsgTypePtyResized     MessageType = "pty_resized"
 )
 
-// ==================== Pod 操作数据结构 ====================
+// ==================== Pod Operation Data Structures ====================
 
 // FileToCreate represents a file to be created in the sandbox.
 type FileToCreate struct {
@@ -58,7 +58,7 @@ type PodInfo struct {
 	Pid          int    `json:"pid"`
 }
 
-// ==================== 终端数据结构 ====================
+// ==================== Terminal Data Structures ====================
 
 // TerminalInputRequest is sent to write to PTY.
 type TerminalInputRequest struct {
@@ -73,7 +73,7 @@ type TerminalResizeRequest struct {
 	Rows   uint16 `json:"rows"`
 }
 
-// ==================== 消息处理接口 ====================
+// ==================== Message Handler Interface ====================
 
 // MessageHandler handles incoming messages from server.
 type MessageHandler interface {

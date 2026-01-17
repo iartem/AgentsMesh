@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
 
 // Manager manages workspace directories and git worktrees
@@ -139,7 +141,7 @@ func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch
 	if m.gitConfigPath != "" {
 		if err := m.applyGitConfig(ctx, worktreePath); err != nil {
 			// Non-fatal error
-			fmt.Printf("Warning: failed to apply git config: %v\n", err)
+			logger.Workspace().Warn("Failed to apply git config", "error", err)
 		}
 	}
 
@@ -232,7 +234,8 @@ func (m *Manager) removeWorktreeInternal(ctx context.Context, repoPath, worktree
 	removeCmd.Dir = repoPath
 	if output, err := removeCmd.CombinedOutput(); err != nil {
 		// If git worktree remove fails, try manual removal
-		fmt.Printf("Warning: git worktree remove failed: %s, output: %s\n", err, output)
+		logger.Workspace().Warn("Git worktree remove failed, trying manual removal",
+			"error", err, "output", string(output))
 		return os.RemoveAll(worktreePath)
 	}
 

@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
 )
 
@@ -114,11 +114,12 @@ func (s *HTTPServer) Start() error {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	log.Printf("[mcp_http_server] Starting MCP HTTP server on port %d", s.port)
+	log := logger.MCP()
+	log.Info("Starting MCP HTTP server", "port", s.port)
 
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("[mcp_http_server] Server error: %v", err)
+			log.Error("Server error", "error", err)
 		}
 	}()
 
@@ -150,7 +151,7 @@ func (s *HTTPServer) RegisterPod(podKey, orgSlug string, ticketID, projectID *in
 		Client:       NewBackendClient(s.backendURL, orgSlug, podKey),
 	}
 
-	log.Printf("[mcp_http_server] Registered pod: %s (org: %s)", podKey, orgSlug)
+	logger.MCP().Debug("Registered pod", "pod_key", podKey, "org", orgSlug)
 }
 
 // UnregisterPod removes a pod from the MCP server.
@@ -159,7 +160,7 @@ func (s *HTTPServer) UnregisterPod(podKey string) {
 	defer s.mu.Unlock()
 
 	delete(s.pods, podKey)
-	log.Printf("[mcp_http_server] Unregistered pod: %s", podKey)
+	logger.MCP().Debug("Unregistered pod", "pod_key", podKey)
 }
 
 // GetPod returns pod info for a given pod key.

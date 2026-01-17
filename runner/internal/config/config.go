@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/spf13/viper"
 )
 
@@ -237,12 +238,19 @@ func (c *Config) GetLogPath() string {
 	if c.LogFile != "" {
 		return os.ExpandEnv(c.LogFile)
 	}
-	// Default to ~/.agentsmesh/logs/runner.log
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+	// Default to system temp directory (can be safely deleted)
+	return filepath.Join(os.TempDir(), "agentsmesh", "runner.log")
+}
+
+// GetLogConfig returns the logger configuration.
+func (c *Config) GetLogConfig() logger.Config {
+	return logger.Config{
+		Level:       c.LogLevel,
+		FilePath:    c.GetLogPath(),
+		Format:      "text", // Default to human-readable format
+		MaxFileSize: 10 * 1024 * 1024, // 10MB
+		MaxBackups:  3,                 // Keep 3 backup files
 	}
-	return filepath.Join(home, ".agentsmesh", "logs", "runner.log")
 }
 
 // ==================== gRPC/mTLS Configuration ====================

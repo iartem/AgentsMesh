@@ -2,9 +2,10 @@ package terminal
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
 
 // Manager manages multiple PTY sessions.
@@ -179,7 +180,7 @@ func (m *Manager) monitorSession(session *Session) {
 	// This prevents race condition when Close() is called concurrently
 	session.WaitProcess()
 
-	log.Printf("[terminal] Session process exited: pod_id=%s", session.ID)
+	logger.Terminal().Debug("Session process exited", "pod_id", session.ID)
 
 	// Check if we should call the callback (avoid double invocation)
 	m.mu.Lock()
@@ -224,8 +225,8 @@ func (m *Manager) CleanupStaleSessions(maxIdleTime time.Duration) int {
 		delete(m.closedSessions, id)
 		session.Close()
 
-		log.Printf("[terminal] Cleaned up stale session: pod_id=%s, last_activity=%v",
-			id, session.LastActivity)
+		logger.Terminal().Debug("Cleaned up stale session",
+			"pod_id", id, "last_activity", session.LastActivity)
 	}
 
 	return len(toRemove)

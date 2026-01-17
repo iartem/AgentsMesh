@@ -140,16 +140,16 @@ func InteractiveRegister(ctx context.Context, req InteractiveRegistrationRequest
 		return nil, fmt.Errorf("failed to request auth URL: %w", err)
 	}
 
-	fmt.Printf("\n请在浏览器中打开此链接完成授权:\n\n  %s\n\n", authURL)
-	fmt.Printf("授权链接将在 %d 秒后过期\n\n", expiresIn)
+	fmt.Printf("\nPlease open this link in your browser to authorize:\n\n  %s\n\n", authURL)
+	fmt.Printf("The authorization link will expire in %d seconds\n\n", expiresIn)
 
 	// Try to open browser
 	if err := browser.OpenURL(authURL); err != nil {
-		fmt.Printf("无法自动打开浏览器，请手动复制链接\n")
+		fmt.Printf("Unable to open browser automatically, please copy the link manually\n")
 	}
 
 	// Step 2: Poll for authorization status
-	fmt.Print("等待授权")
+	fmt.Print("Waiting for authorization")
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
@@ -171,7 +171,7 @@ func InteractiveRegister(ctx context.Context, req InteractiveRegistrationRequest
 			}
 
 			if status.Status == "authorized" {
-				fmt.Println("\n\n✅ 授权成功!")
+				fmt.Println("\n\n✅ Authorization successful!")
 				return &InteractiveRegistrationResult{
 					RunnerID:      status.RunnerID,
 					Certificate:   status.Certificate,
