@@ -784,6 +784,10 @@
       "selectLabel": "显示语言",
       "selectHint": "这将更改整个应用的语言。"
     },
+    "theme": {
+      "title": "主题",
+      "description": "选择界面外观主题。"
+    },
     "organizationDetails": {
       "title": "组织详情",
       "nameLabel": "组织名称",

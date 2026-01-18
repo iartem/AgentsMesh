@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
-import { LanguageSettings, NotificationSettings, AgentCredentialsSettings, AgentConfigPage, GitSettingsContent } from "@/components/settings";
+import { LanguageSettings, ThemeSettings, NotificationSettings, AgentCredentialsSettings, AgentConfigPage, GitSettingsContent } from "@/components/settings";
 import { GeneralSettings, MembersSettings, BillingSettings, RunnersSettings } from "@/components/settings/organization";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -66,6 +66,7 @@ function PersonalGeneralSettings() {
   return (
     <div className="space-y-6">
       <LanguageSettings />
+      <ThemeSettings />
     </div>
   );
 }

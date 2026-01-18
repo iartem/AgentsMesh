@@ -784,6 +784,10 @@
       "selectLabel": "Display Language",
       "selectHint": "This will change the language across the entire application."
     },
+    "theme": {
+      "title": "Theme",
+      "description": "Choose your preferred appearance theme."
+    },
     "organizationDetails": {
       "title": "Organization Details",
       "nameLabel": "Organization Name",
