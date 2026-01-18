@@ -7,9 +7,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -205,6 +207,12 @@ func (c *GRPCConnection) GetAvailableAgents() []string {
 
 // Connect establishes a gRPC connection with mTLS using advancedtls for certificate hot-reloading.
 func (c *GRPCConnection) Connect() error {
+	// Parse endpoint to extract host:port (remove scheme like grpcs://)
+	dialTarget, err := parseGRPCEndpoint(c.endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to parse gRPC endpoint: %w", err)
+	}
+
 	// Create advancedtls credentials with file-based certificate reloading
 	creds, err := c.createAdvancedTLSCredentials()
 	if err != nil {
@@ -222,7 +230,7 @@ func (c *GRPCConnection) Connect() error {
 	}
 
 	// Connect to server
-	conn, err := grpc.Dial(c.endpoint, dialOpts...)
+	conn, err := grpc.Dial(dialTarget, dialOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial gRPC server: %w", err)
 	}
@@ -1149,3 +1157,44 @@ func isRetryableError(err error) bool {
 
 // Ensure GRPCConnection implements Connection interface.
 var _ Connection = (*GRPCConnection)(nil)
+
+// ==================== Helper Functions ====================
+
+// parseGRPCEndpoint parses a gRPC endpoint URL and returns the host:port for dialing.
+// Supports formats:
+//   - grpcs://host:port -> host:port (TLS)
+//   - grpc://host:port  -> host:port (plain)
+//   - host:port         -> host:port (as-is)
+func parseGRPCEndpoint(endpoint string) (string, error) {
+	log := logger.GRPC()
+
+	// If it doesn't contain a scheme, assume it's already host:port
+	if !strings.Contains(endpoint, "://") {
+		return endpoint, nil
+	}
+
+	// Parse as URL
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		log.Error("Invalid endpoint URL", "endpoint", endpoint, "error", err)
+		return "", err
+	}
+
+	// Validate scheme
+	switch u.Scheme {
+	case "grpc", "grpcs":
+		// Valid gRPC schemes
+	default:
+		log.Error("Unsupported gRPC scheme", "scheme", u.Scheme, "endpoint", endpoint)
+		return "", fmt.Errorf("unsupported scheme %q", u.Scheme)
+	}
+
+	// Return host:port
+	if u.Host == "" {
+		log.Error("Missing host in endpoint URL", "endpoint", endpoint)
+		return "", fmt.Errorf("missing host in endpoint")
+	}
+
+	log.Debug("Parsed gRPC endpoint", "endpoint", endpoint, "dial_target", u.Host)
+	return u.Host, nil
+}
