@@ -49,15 +49,15 @@ git log --oneline -3
 # 进入 deploy/dev 目录
 cd deploy/dev
 
-# 一键初始化（生成隔离配置 + 启动 Docker + 数据库迁移 + seed 数据）
-./init-worktree.sh
+# 一键启动完整开发环境
+./dev.sh
 ```
 
 脚本会自动：
 - 根据 worktree/分支名生成隔离的 `.env` 配置（端口自动偏移，避免冲突）
-- 启动所有 Docker 服务（PostgreSQL、Redis、MinIO、Backend、Web、Runner）
-- 执行数据库迁移
-- 初始化测试账号 seed 数据
+- 启动 Docker 后端服务（PostgreSQL、Redis、MinIO、Backend、Nginx、Runner）
+- 执行数据库迁移和初始化测试账号 seed 数据
+- 启动本地前端（Next.js + Turbopack，性能更好）
 
 ### 4. 完成后输出
 
@@ -69,15 +69,16 @@ cd deploy/dev
 - 分支: feature/user-auth (基于 origin/main)
 
 开发环境:
-- 访问地址: http://localhost:<port>
+- 前端: http://localhost:3000
+- API:  http://localhost:<port>/api
 - 测试账号: dev@agentsmesh.local / devpass123
 - Adminer: http://localhost:<adminer-port>
 - MinIO: http://localhost:<minio-port>
 
 常用命令:
-- 查看日志: cd deploy/dev && docker compose logs -f backend
-- 停止环境: cd deploy/dev && docker compose down
-- 清理重建: cd deploy/dev && ./init-worktree.sh --clean && ./init-worktree.sh
+- 前端日志: tail -f deploy/dev/web.log
+- 后端日志: cd deploy/dev && docker compose logs -f backend
+- 停止环境: cd deploy/dev && ./dev.sh --clean
 
 完成开发后:
 - 提交代码: git add . && git commit -m "..."
@@ -102,7 +103,7 @@ git log --oneline -3
 
 # 步骤 2: 初始化开发环境 [必须执行，不可跳过]
 cd deploy/dev
-./init-worktree.sh
+./dev.sh
 ```
 
 ## 注意事项
@@ -112,5 +113,6 @@ cd deploy/dev
 - 目录名使用分支名，将 `/` 替换为 `-`（如 `feature/user-auth` → `feature-user-auth`）
 - 如果分支已存在，使用 `git worktree add <path> <existing-branch>`
 - 每个 worktree 的开发环境端口自动隔离，可并行运行多个
+- 前端固定运行在 3000 端口，同时只能运行一个 worktree 的前端
 - 清理前确保所有更改已提交或推送
-- 清理环境：`./init-worktree.sh --clean`
+- 清理环境：`./dev.sh --clean`

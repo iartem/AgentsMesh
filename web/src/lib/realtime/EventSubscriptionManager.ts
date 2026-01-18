@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/auth";
+import { getWsBaseUrl } from "@/lib/env";
 import type {
   EventType,
   EventHandler,
@@ -6,10 +7,7 @@ import type {
   ConnectionState,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
-// Convert http(s):// to ws(s)://
-const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
+const WS_BASE_URL = getWsBaseUrl();
 
 /**
  * Configuration options for EventSubscriptionManager

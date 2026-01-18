@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/client";
 import { useTranslations } from "@/lib/i18n/client";
+import { getOAuthBaseUrl } from "@/lib/env";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -236,9 +237,9 @@ export default function RegisterPage() {
             variant="outline"
             type="button"
             onClick={() => {
-              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+              const oauthUrl = getOAuthBaseUrl();
               const redirectUrl = encodeURIComponent(window.location.origin + "/auth/callback");
-              window.location.href = `${apiUrl}/api/v1/auth/oauth/github?redirect=${redirectUrl}`;
+              window.location.href = `${oauthUrl}/api/v1/auth/oauth/github?redirect=${redirectUrl}`;
             }}
           >
             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">

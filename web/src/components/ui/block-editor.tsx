@@ -6,6 +6,7 @@ import "@blocknote/mantine/style.css";
 import { useEffect, useMemo, useCallback, useSyncExternalStore } from "react";
 import { PartialBlock } from "@blocknote/core";
 import { useAuthStore } from "@/stores/auth";
+import { getApiBaseUrl } from "@/lib/env";
 
 interface BlockEditorProps {
   initialContent?: string; // JSON string
@@ -67,7 +68,7 @@ async function uploadFile(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const API_BASE_URL = getApiBaseUrl();
   const res = await fetch(`${API_BASE_URL}/api/v1/orgs/${currentOrg.slug}/files/upload`, {
     method: "POST",
     headers: {

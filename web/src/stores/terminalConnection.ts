@@ -89,19 +89,27 @@ class TerminalConnectionPool {
   }
 
   private createWebSocket(podKey: string): WebSocket {
-    let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) {
+    // 使用统一的 WebSocket URL 获取逻辑
+    // 动态 import 以避免在模块顶层执行
+    const getWsUrl = (): string => {
+      // 优先使用显式配置的 WS URL
+      if (process.env.NEXT_PUBLIC_WS_URL) {
+        return process.env.NEXT_PUBLIC_WS_URL;
+      }
+      // 从 API URL 推导
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (apiUrl) {
-        wsUrl = apiUrl.replace(/^http/, "ws");
-      } else if (typeof window !== "undefined") {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const host = window.location.hostname;
-        wsUrl = `${protocol}//${host}:8080`;
-      } else {
-        wsUrl = "ws://localhost:8080";
+        return apiUrl.replace(/^http/, "ws");
       }
-    }
+      // 客户端：从当前页面推导
+      if (typeof window !== "undefined") {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = window.location.host;
+        return `${protocol}//${host}`;
+      }
+      return "ws://localhost:8080";
+    };
+    const wsUrl = getWsUrl();
 
     let token = null;
     let orgSlug = null;

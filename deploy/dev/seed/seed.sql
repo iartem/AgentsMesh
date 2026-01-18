@@ -134,7 +134,7 @@ BEGIN
     -- 5. 预注册 Runner (使用证书认证)
     -- =========================================================================
     -- Runner 使用 mTLS 证书认证，不再使用 auth_token_hash
-    -- 证书在 init-worktree.sh 中生成并挂载到 runner 容器
+    -- 证书在 dev.sh 中生成并挂载到 runner 容器
     -- cert_serial_number 在 runner 首次连接时由 backend 自动填充
 
     INSERT INTO runners (

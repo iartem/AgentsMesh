@@ -19,47 +19,46 @@ AgentsMesh is a multi-tenant AI Code Agent collaboration platform supporting Cla
 
 ```bash
 cd deploy/dev
-./init-worktree.sh               # One-click setup: generates .env, starts services, runs migrations, seeds data
+./dev.sh               # One-click: starts Docker backend + local frontend
+./dev.sh --clean       # Stop and clean up everything
 ```
 
 This script automatically:
 1. Generates `.env` with worktree-isolated ports (supports multiple worktrees)
-2. Starts all Docker services
-3. Runs database migrations
-4. Initializes seed data (test account: dev@agentsmesh.local / devpass123)
-
-### Manual Commands
-
-```bash
-cd deploy/dev
-docker compose up -d             # Start all services
-docker compose logs -f           # View logs
-docker compose down              # Stop all services
-docker compose down -v           # Stop and remove volumes
-./init-worktree.sh --clean       # Clean up environment (when things go wrong)
-```
+2. Starts Docker backend services (PostgreSQL, Redis, MinIO, Backend, Nginx, Runner)
+3. Runs database migrations and seeds test data
+4. Starts local frontend (Next.js with Turbopack) for better performance
 
 ### Services & Ports
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **App (Nginx)** | http://localhost | Unified entry point (proxies to web/backend) |
-| **Admin Console** | http://localhost/admin | Internal administration interface |
+| **Frontend** | http://localhost:3000 | Next.js (local, Turbopack) |
+| **API** | http://localhost/api | Backend API via Nginx |
 | **Adminer** | http://localhost:8081 | Database management UI |
 | **MinIO Console** | http://localhost:9001 | S3-compatible storage UI |
 | PostgreSQL | localhost:5432 | Database (user: agentsmesh, pass: agentsmesh_dev) |
 | Redis | localhost:6379 | Cache |
-| MinIO API | localhost:9000 | S3 API endpoint |
+
+Test accounts:
+- **User**: dev@agentsmesh.local / devpass123
+- **Admin**: admin@agentsmesh.local / adminpass123
 
 > **Note**: Ports may vary if using multiple worktrees. Check `.env` for actual ports.
 
+### Logs
+
+```bash
+tail -f deploy/dev/web.log       # Frontend logs
+docker compose logs -f backend   # Backend logs
+docker compose logs -f runner    # Runner logs
+```
+
 ### Hot Reload
 
-All services support hot reload - source code is mounted into containers:
-- **Backend**: Go code changes auto-rebuild via Air
-- **Web**: Next.js fast refresh
-- **Web-Admin**: Next.js fast refresh
-- **Runner**: Go code changes auto-rebuild
+- **Frontend**: Next.js Turbopack fast refresh (local)
+- **Backend**: Go code auto-rebuild via Air (Docker)
+- **Runner**: Go code auto-rebuild (Docker)
 
 ## Build Commands (for CI/testing outside Docker)
 
@@ -112,7 +111,7 @@ Migrations are located in `backend/migrations/` using golang-migrate format.
 **Development** (via Docker):
 ```bash
 cd deploy/dev
-./init-worktree.sh               # Automatically runs all migrations
+./dev.sh               # Automatically runs all migrations
 ```
 
 **Production** (via backend container):
@@ -296,7 +295,7 @@ runner/
 
 ## Configuration
 
-**Development** (Docker): Run `cd deploy/dev && ./init-worktree.sh` - auto-generates all configs
+**Development** (Docker): Run `cd deploy/dev && ./dev.sh` - auto-generates all configs
 
 **Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
 

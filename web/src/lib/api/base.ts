@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/stores/auth";
+import { getApiBaseUrl } from "@/lib/env";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_BASE_URL = getApiBaseUrl();
 
 type RequestMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
