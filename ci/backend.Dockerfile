@@ -1,4 +1,5 @@
 # Build stage
+# Build context should be project root (not backend/)
 ARG REGISTRY=registry.corp.agentsmesh.ai
 FROM ${REGISTRY}/library/golang:1.24-alpine AS builder
 
@@ -7,12 +8,15 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git ca-certificates
 
+# Copy proto module first (required by replace directive in go.mod)
+COPY proto /proto
+
 # Copy go mod files
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY backend/ .
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/server ./cmd/server

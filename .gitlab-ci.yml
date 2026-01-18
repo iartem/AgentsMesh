@@ -138,14 +138,15 @@ build-backend:
   services:
     - docker:dind
   script:
-    - cd backend
-    - docker build --build-arg REGISTRY=${REGISTRY} -f ../ci/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
+    # Build from project root to include proto/ directory
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ci/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
     - docker push ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${BACKEND_IMAGE}:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/**/*
+        - proto/**/*
         - ci/backend.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -180,13 +181,14 @@ build-runner:
   services:
     - docker:dind
   script:
-    - cd runner
-    - docker build --build-arg REGISTRY=${REGISTRY} -f ../ci/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
+    # Build from project root to include proto/ directory
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ci/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
     - docker push ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${RUNNER_IMAGE}:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - runner/**/*
+        - proto/**/*
         - ci/runner.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
