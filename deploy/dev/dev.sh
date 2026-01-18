@@ -80,6 +80,51 @@ generate_ssl_certs() {
     success "SSL 证书生成完成"
 }
 
+# 生成 AI CLI 配置文件
+generate_ai_cli_configs() {
+    local config_dir="$SCRIPT_DIR/ai-cli-configs"
+
+    # Claude Code settings
+    mkdir -p "$config_dir/claude"
+    cat > "$config_dir/claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
+    ],
+    "deny": []
+  },
+  "api_key_helper": null
+}
+EOF
+
+    # Codex CLI config
+    mkdir -p "$config_dir/codex"
+    cat > "$config_dir/codex/config.toml" << 'EOF'
+# Codex CLI configuration for headless mode
+
+[defaults]
+# Allow full auto mode for non-interactive execution
+approval_mode = "full-auto"
+EOF
+
+    # Gemini CLI settings
+    mkdir -p "$config_dir/gemini"
+    cat > "$config_dir/gemini/settings.json" << 'EOF'
+{
+  "sandboxMode": "none",
+  "autoApprove": true
+}
+EOF
+
+    success "生成 AI CLI 配置"
+}
+
 # 生成 .env 配置
 generate_env() {
     local worktree_name=$(get_worktree_name)
@@ -335,24 +380,27 @@ main() {
     # Step 1: 生成 SSL 证书
     generate_ssl_certs
 
-    # Step 2: 生成配置
+    # Step 2: 生成 AI CLI 配置
+    generate_ai_cli_configs
+
+    # Step 3: 生成配置
     generate_env
     source "$ENV_FILE"
 
-    # Step 3: 生成 web/.env.local（支持本地前端开发）
+    # Step 4: 生成 web/.env.local（支持本地前端开发）
     generate_web_env
 
-    # Step 4: 启动服务
+    # Step 5: 启动服务
     info "启动 Docker 服务 (首次可能需要几分钟)..."
     docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$" || true
     success "Docker 服务已启动"
 
-    # Step 4.1: 停止 web/web-admin 容器（前端在本地运行，节省资源）
+    # Step 5.1: 停止 web/web-admin 容器（前端在本地运行，节省资源）
     info "停止 web/web-admin 容器（前端在本地运行）..."
     docker compose stop web web-admin 2>/dev/null || true
     success "web/web-admin 容器已停止"
 
-    # Step 5: 等待 PostgreSQL
+    # Step 6: 等待 PostgreSQL
     local pg_container="${COMPOSE_PROJECT_NAME}-postgres-1"
     info "等待 PostgreSQL 就绪..."
     if ! wait_for_service "$pg_container" "pg_isready -U agentsmesh"; then
@@ -361,17 +409,17 @@ main() {
     fi
     success "PostgreSQL 已就绪"
 
-    # Step 6: 执行迁移
+    # Step 7: 执行迁移
     run_migrations "$pg_container"
 
-    # Step 7: 初始化 seed
+    # Step 8: 初始化 seed
     init_seed "$pg_container"
 
-    # Step 8: 修复 workspace 权限 (runner 容器)
+    # Step 9: 修复 workspace 权限 (runner 容器)
     local runner_container="${COMPOSE_PROJECT_NAME}-runner-1"
     docker exec -u root "$runner_container" chown -R runner:runner /workspace 2>/dev/null || true
 
-    # Step 9: 启动本地前端
+    # Step 10: 启动本地前端
     start_frontend
 
     # 显示结果
