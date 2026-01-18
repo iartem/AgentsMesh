@@ -37,6 +37,14 @@ func NewFileHandler(fileService FileServiceInterface) *FileHandler {
 // UploadFile handles file upload
 // POST /api/v1/orgs/:slug/files/upload
 func (h *FileHandler) UploadFile(c *gin.Context) {
+	slog.Info(">>> UploadFile handler entered")
+
+	if h.fileService == nil {
+		slog.Error("fileService is nil!")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Storage not configured"})
+		return
+	}
+
 	tenant := middleware.GetTenant(c)
 	slog.Info("File upload request received",
 		"org_id", tenant.OrganizationID,
