@@ -29,12 +29,12 @@ This script automatically:
 3. Runs database migrations and seeds test data
 4. Starts local frontend (Next.js with Turbopack) for better performance
 
-### Services & Ports
+### Services & Ports (main worktree)
 
 | Service | URL | Description |
 |---------|-----|-------------|
 | **Frontend** | http://localhost:3000 | Next.js (local, Turbopack) |
-| **API** | http://localhost/api | Backend API via Nginx |
+| **API** | http://localhost:80/api | Backend API via Nginx |
 | **Adminer** | http://localhost:8081 | Database management UI |
 | **MinIO Console** | http://localhost:9001 | S3-compatible storage UI |
 | PostgreSQL | localhost:5432 | Database (user: agentsmesh, pass: agentsmesh_dev) |
@@ -44,7 +44,7 @@ Test accounts:
 - **User**: dev@agentsmesh.local / devpass123
 - **Admin**: admin@agentsmesh.local / adminpass123
 
-> **Note**: Ports may vary if using multiple worktrees. Check `.env` for actual ports.
+> **Note**: All ports are dynamically allocated based on worktree. Check `deploy/dev/.env` for actual ports (e.g., WEB_PORT, HTTP_PORT).
 
 ### Logs
 

@@ -112,7 +112,6 @@ cd deploy/dev
 - **所有 worktree 统一放在 `../AgentsMesh-Worktrees/` 目录下**
 - 目录名使用分支名，将 `/` 替换为 `-`（如 `feature/user-auth` → `feature-user-auth`）
 - 如果分支已存在，使用 `git worktree add <path> <existing-branch>`
-- 每个 worktree 的开发环境端口自动隔离，可并行运行多个
-- 前端固定运行在 3000 端口，同时只能运行一个 worktree 的前端
+- 每个 worktree 的开发环境端口自动隔离（包括前端端口），可并行运行多个
 - 清理前确保所有更改已提交或推送
 - 清理环境：`./dev.sh --clean`

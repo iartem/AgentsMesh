@@ -149,6 +149,7 @@ REDIS_PORT=$((10003 + offset * 50))
 MINIO_API_PORT=$((10004 + offset * 50))
 MINIO_CONSOLE_PORT=$((10005 + offset * 50))
 ADMINER_PORT=$((10006 + offset * 50))
+WEB_PORT=$((10007 + offset * 50))
 
 # Credentials
 POSTGRES_PASSWORD=agentsmesh_dev
@@ -171,7 +172,7 @@ EOF
 generate_web_env() {
     local offset="${PORT_OFFSET:-0}"
     local worktree_name="${WORKTREE_NAME:-main}"
-    local http_port=$((80 + offset * 100))
+    local http_port=$((10000 + offset * 50))
     local web_env_file="$SCRIPT_DIR/../../web/.env.local"
 
     cat > "$web_env_file" << EOF
@@ -258,10 +259,16 @@ init_seed() {
 
 # 清理环境
 clean() {
+    # 读取端口配置
+    if [[ -f "$ENV_FILE" ]]; then
+        source "$ENV_FILE"
+    fi
+    local web_port="${WEB_PORT:-3000}"
+
     # 停止前端进程
-    if lsof -i :3000 &>/dev/null; then
-        info "停止前端服务..."
-        lsof -ti :3000 | xargs kill -9 2>/dev/null || true
+    if lsof -i :"$web_port" &>/dev/null; then
+        info "停止前端服务 (端口: $web_port)..."
+        lsof -ti :"$web_port" | xargs kill -9 2>/dev/null || true
         success "前端服务已停止"
     fi
 
@@ -269,7 +276,6 @@ clean() {
     rm -f "$SCRIPT_DIR/web.log"
 
     if [[ -f "$ENV_FILE" ]]; then
-        source "$ENV_FILE"
         info "清理 Docker 环境: ${COMPOSE_PROJECT_NAME:-agentsmesh}..."
         cd "$SCRIPT_DIR"
         docker compose down -v --remove-orphans 2>/dev/null || true
@@ -289,7 +295,7 @@ show_result() {
     echo "  AgentsMesh 开发环境已就绪!"
     echo "=========================================="
     echo ""
-    echo "  前端:       http://localhost:3000"
+    echo "  前端:       http://localhost:$WEB_PORT"
     echo "  API:        http://localhost:$HTTP_PORT/api"
     echo ""
     echo "  测试账号:   dev@agentsmesh.local / devpass123"
@@ -306,11 +312,13 @@ show_result() {
 
 # 启动本地前端
 start_frontend() {
+    source "$ENV_FILE"
     local web_dir="$SCRIPT_DIR/../../web"
+    local web_port="${WEB_PORT:-3000}"
 
     # 检查是否已有前端进程在运行
-    if lsof -i :3000 &>/dev/null; then
-        warn "端口 3000 已被占用，跳过前端启动"
+    if lsof -i :"$web_port" &>/dev/null; then
+        warn "端口 $web_port 已被占用，跳过前端启动"
         return 0
     fi
 
@@ -332,20 +340,20 @@ start_frontend() {
 
     # 启动前端（后台运行，日志输出到文件）
     local log_file="$SCRIPT_DIR/web.log"
-    info "启动前端服务..."
-    (cd "$web_dir" && nohup pnpm dev --turbopack > "$log_file" 2>&1 &)
+    info "启动前端服务 (端口: $web_port)..."
+    (cd "$web_dir" && nohup pnpm dev --turbopack --port "$web_port" > "$log_file" 2>&1 &)
 
     # 等待前端启动
     local max_wait=30
     for ((i=1; i<=max_wait; i++)); do
-        if curl -s http://localhost:3000 &>/dev/null; then
-            success "前端服务已启动 (http://localhost:3000)"
+        if curl -s "http://localhost:$web_port" &>/dev/null; then
+            success "前端服务已启动 (http://localhost:$web_port)"
             return 0
         fi
         sleep 1
     done
 
-    warn "前端服务启动中，请稍后访问 http://localhost:3000"
+    warn "前端服务启动中，请稍后访问 http://localhost:$web_port"
     echo "  查看日志: tail -f $log_file"
 }
 
@@ -390,15 +398,10 @@ main() {
     # Step 4: 生成 web/.env.local（支持本地前端开发）
     generate_web_env
 
-    # Step 5: 启动服务
+    # Step 5: 启动 Docker 后端服务
     info "启动 Docker 服务 (首次可能需要几分钟)..."
     docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$" || true
     success "Docker 服务已启动"
-
-    # Step 5.1: 停止 web/web-admin 容器（前端在本地运行，节省资源）
-    info "停止 web/web-admin 容器（前端在本地运行）..."
-    docker compose stop web web-admin 2>/dev/null || true
-    success "web/web-admin 容器已停止"
 
     # Step 6: 等待 PostgreSQL
     local pg_container="${COMPOSE_PROJECT_NAME}-postgres-1"
