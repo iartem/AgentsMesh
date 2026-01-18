@@ -160,7 +160,8 @@ type PKIConfig struct {
 // GRPCConfig holds gRPC server configuration for Runner connections
 // gRPC server starts automatically when PKI CA files are configured
 type GRPCConfig struct {
-	Address string // gRPC server listen address (default: :9090)
+	Address  string // gRPC server listen address (default: :9090)
+	Endpoint string // Public gRPC endpoint URL for Runners (e.g., grpcs://api.agentsmesh.cn:9443)
 }
 
 // AdminConfig holds admin console configuration
@@ -410,7 +411,8 @@ func Load() (*Config, error) {
 			ValidityDays:   getEnvInt("PKI_VALIDITY_DAYS", 365),
 		},
 		GRPC: GRPCConfig{
-			Address: getEnv("GRPC_ADDRESS", ":9090"),
+			Address:  getEnv("GRPC_ADDRESS", ":9090"),
+			Endpoint: getEnv("GRPC_ENDPOINT", ""), // e.g., grpcs://api.agentsmesh.cn:9443
 		},
 		Admin: AdminConfig{
 			Enabled:     getEnvBool("ADMIN_ENABLED", true),

@@ -306,6 +306,7 @@ func (h *GRPCRunnerHandler) RegisterWithToken(c *gin.Context) {
 		"private_key":    resp.PrivateKey,
 		"ca_certificate": resp.CACertificate,
 		"org_slug":       resp.OrgSlug,
+		"grpc_endpoint":  h.config.GRPC.Endpoint,
 	})
 }
 
