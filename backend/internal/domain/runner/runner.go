@@ -57,11 +57,11 @@ func (s StringSlice) Value() (driver.Value, error) {
 
 // RegistrationToken represents a token used to register runners
 type RegistrationToken struct {
-	ID             int64  `gorm:"primaryKey" json:"id"`
-	OrganizationID int64  `gorm:"not null;index" json:"organization_id"`
-	TokenHash      string `gorm:"size:255;not null;uniqueIndex" json:"-"`
-	Description    string `gorm:"type:text" json:"description,omitempty"`
-	CreatedByID    int64  `gorm:"not null" json:"created_by_id"`
+	ID             int64   `gorm:"primaryKey" json:"id"`
+	OrganizationID int64   `gorm:"not null;index" json:"organization_id"`
+	TokenHash      string  `gorm:"size:255;not null;uniqueIndex" json:"-"`
+	Description    string  `gorm:"type:text" json:"description,omitempty"`
+	CreatedByID    *int64  `json:"created_by_id,omitempty"`
 
 	IsActive  bool       `gorm:"not null;default:true" json:"is_active"`
 	MaxUses   *int       `json:"max_uses,omitempty"`

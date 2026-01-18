@@ -17,13 +17,14 @@ func TestRegistrationTokenTableName(t *testing.T) {
 func TestRegistrationTokenStruct(t *testing.T) {
 	maxUses := 10
 	expiresAt := time.Now().Add(24 * time.Hour)
+	createdByID := int64(50)
 
 	token := RegistrationToken{
 		ID:             1,
 		OrganizationID: 100,
 		TokenHash:      "hash123",
 		Description:    "Test token",
-		CreatedByID:    50,
+		CreatedByID:    &createdByID,
 		IsActive:       true,
 		MaxUses:        &maxUses,
 		UsedCount:      5,

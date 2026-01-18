@@ -29,7 +29,7 @@ func (s *Service) CreateRegistrationToken(ctx context.Context, orgID, userID int
 		OrganizationID: orgID,
 		TokenHash:      string(tokenHash),
 		Description:    description,
-		CreatedByID:    userID,
+		CreatedByID:    &userID,
 		IsActive:       true,
 		MaxUses:        maxUses,
 		UsedCount:      0,
