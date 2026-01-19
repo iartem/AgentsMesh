@@ -27,12 +27,13 @@ type S3Config struct {
 
 // S3Storage implements Storage interface for S3-compatible services.
 type S3Storage struct {
-	client         *s3.Client
-	presign        *s3.PresignClient
-	bucket         string
-	endpoint       string
-	publicEndpoint string
-	useSSL         bool
+	client             *s3.Client
+	presign            *s3.PresignClient
+	bucket             string
+	endpoint           string
+	publicEndpoint     string // Full URL with scheme (e.g., https://oss-cn-beijing.aliyuncs.com)
+	publicEndpointHost string // Host only without scheme (e.g., oss-cn-beijing.aliyuncs.com)
+	useSSL             bool
 }
 
 // NewS3Storage creates a new S3-compatible storage client.
@@ -83,21 +84,24 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 
 	// Build public endpoint URL if specified
 	publicEndpointURL := endpointURL
+	publicEndpointHost := ""
 	if cfg.PublicEndpoint != "" {
 		scheme := "http"
 		if cfg.UseSSL {
 			scheme = "https"
 		}
 		publicEndpointURL = fmt.Sprintf("%s://%s", scheme, cfg.PublicEndpoint)
+		publicEndpointHost = cfg.PublicEndpoint
 	}
 
 	return &S3Storage{
-		client:         client,
-		presign:        s3.NewPresignClient(client),
-		bucket:         cfg.Bucket,
-		endpoint:       endpointURL,
-		publicEndpoint: publicEndpointURL,
-		useSSL:         cfg.UseSSL,
+		client:             client,
+		presign:            s3.NewPresignClient(client),
+		bucket:             cfg.Bucket,
+		endpoint:           endpointURL,
+		publicEndpoint:     publicEndpointURL,
+		publicEndpointHost: publicEndpointHost,
+		useSSL:             cfg.UseSSL,
 	}, nil
 }
 
@@ -156,7 +160,11 @@ func (s *S3Storage) GetURL(ctx context.Context, key string, expiry time.Duration
 	// This is used when bucket is configured for public/anonymous read access
 	// Use virtual-hosted-style URL: https://bucket.endpoint/key (for Aliyun OSS)
 	if s.publicEndpoint != "" && s.endpoint != "" && s.publicEndpoint != s.endpoint {
-		return fmt.Sprintf("https://%s.%s/%s", s.bucket, s.publicEndpoint, key), nil
+		scheme := "http"
+		if s.useSSL {
+			scheme = "https"
+		}
+		return fmt.Sprintf("%s://%s.%s/%s", scheme, s.bucket, s.publicEndpointHost, key), nil
 	}
 
 	// Otherwise, generate pre-signed URL
