@@ -154,8 +154,9 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 func (s *S3Storage) GetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
 	// If public endpoint differs from internal endpoint, return simple public URL
 	// This is used when bucket is configured for public/anonymous read access
+	// Use virtual-hosted-style URL: https://bucket.endpoint/key (for Aliyun OSS)
 	if s.publicEndpoint != "" && s.endpoint != "" && s.publicEndpoint != s.endpoint {
-		return fmt.Sprintf("%s/%s/%s", s.publicEndpoint, s.bucket, key), nil
+		return fmt.Sprintf("https://%s.%s/%s", s.bucket, s.publicEndpoint, key), nil
 	}
 
 	// Otherwise, generate pre-signed URL
