@@ -99,6 +99,8 @@ func RegisterAdminRoutes(rg *gin.RouterGroup, svc *Services) {
 
 // RegisterOrgScopedRoutes registers organization-scoped routes (require tenant context)
 func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
+	slog.Info("RegisterOrgScopedRoutes called", "file_svc_nil", svc.File == nil)
+
 	// Agents
 	agentHandler := NewAgentHandler(svc.AgentType, svc.CredentialProfile, svc.UserConfig)
 	agents := rg.Group("/agents")
