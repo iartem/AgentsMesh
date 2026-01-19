@@ -1398,7 +1398,16 @@
       "noOutput": "No output yet",
       "noProblems": "No problems detected",
       "noChannels": "No active channels",
-      "noActivity": "No recent activity"
+      "noActivity": "No recent activity",
+      "selectPodFirst": "Select a terminal to view details",
+      "noBindings": "No bindings",
+      "podChannels": "Joined {count} channel(s)",
+      "members": "Members",
+      "incomingBindings": "Incoming Bindings",
+      "outgoingBindings": "Outgoing Bindings",
+      "currentPod": "This Pod",
+      "sendMessagePlaceholder": "Send a message...",
+      "channelDocument": "Channel Document"
     },
     "createPod": {
       "title": "Create New Pod",

@@ -15,7 +15,7 @@ export type ActivityType =
 /**
  * Bottom panel tab types
  */
-export type BottomPanelTab = "output" | "problems" | "channels" | "activity";
+export type BottomPanelTab = "channels" | "activity";
 
 /**
  * IDE UI state management
@@ -71,7 +71,7 @@ export const useIDEStore = create<IDEState>()(
       // Bottom panel - default values
       bottomPanelOpen: false,
       bottomPanelHeight: 200,
-      bottomPanelTab: "output",
+      bottomPanelTab: "channels",
       setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
       setBottomPanelHeight: (height) => set({ bottomPanelHeight: height }),
       setBottomPanelTab: (tab) => set({ bottomPanelTab: tab }),

@@ -550,7 +550,16 @@
       "noOutput": "아직 출력이 없습니다",
       "noProblems": "감지된 문제가 없습니다",
       "noChannels": "활성 채널이 없습니다",
-      "noActivity": "최근 활동이 없습니다"
+      "noActivity": "최근 활동이 없습니다",
+      "selectPodFirst": "세부 정보를 보려면 터미널을 선택하세요",
+      "noBindings": "바인딩 없음",
+      "podChannels": "{count}개 채널에 참여함",
+      "members": "멤버",
+      "incomingBindings": "수신 바인딩",
+      "outgoingBindings": "발신 바인딩",
+      "currentPod": "이 Pod",
+      "sendMessagePlaceholder": "메시지 보내기...",
+      "channelDocument": "채널 문서"
     },
     "createPod": {
       "title": "새 Pod 생성",

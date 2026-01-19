@@ -112,14 +112,14 @@ export function IDEShell({
         <main
           className={cn(
             "flex-1 overflow-auto",
-            bottomPanelOpen ? "" : "pb-8" // Space for collapsed bottom panel
+            activeActivity === "workspace" && bottomPanelOpen ? "" : "pb-8" // Space for collapsed bottom panel (only on workspace)
           )}
         >
           {children}
         </main>
 
-        {/* Bottom Panel */}
-        <BottomPanel />
+        {/* Bottom Panel - only visible on workspace */}
+        {activeActivity === "workspace" && <BottomPanel />}
       </div>
 
       {/* Command Palette */}

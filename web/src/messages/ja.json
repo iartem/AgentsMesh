@@ -550,7 +550,16 @@
       "noOutput": "出力はまだありません",
       "noProblems": "問題は検出されていません",
       "noChannels": "アクティブなチャンネルはありません",
-      "noActivity": "最近のアクティビティはありません"
+      "noActivity": "最近のアクティビティはありません",
+      "selectPodFirst": "詳細を表示するにはターミナルを選択してください",
+      "noBindings": "バインディングなし",
+      "podChannels": "{count}個のチャンネルに参加中",
+      "members": "メンバー",
+      "incomingBindings": "受信バインディング",
+      "outgoingBindings": "送信バインディング",
+      "currentPod": "このPod",
+      "sendMessagePlaceholder": "メッセージを送信...",
+      "channelDocument": "チャンネルドキュメント"
     },
     "createPod": {
       "title": "新しいPodを作成",

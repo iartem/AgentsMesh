@@ -11,6 +11,8 @@ interface ChannelHeaderProps {
   onClose: () => void;
   onRefresh?: () => void;
   loading?: boolean;
+  /** Compact mode for embedded use (e.g., bottom panel) */
+  compact?: boolean;
 }
 
 export function ChannelHeader({
@@ -20,7 +22,38 @@ export function ChannelHeader({
   onClose,
   onRefresh,
   loading,
+  compact = false,
 }: ChannelHeaderProps) {
+  // Compact mode for bottom panel
+  if (compact) {
+    return (
+      <div className="flex items-center justify-between flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <Radio className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+          <span className="font-medium text-xs truncate">#{name}</span>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+            <Users className="w-3 h-3" />
+            <span>{podCount}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default full mode
   return (
     <div className="flex-shrink-0 border-b border-border">
       {/* Main header */}
