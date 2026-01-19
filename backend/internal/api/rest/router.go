@@ -110,7 +110,9 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			orgScoped := protected.Group("/orgs/:slug")
 			orgScoped.Use(middleware.TenantMiddleware(svc.Org))
 			{
+				slog.Info("About to call RegisterOrgScopedRoutes")
 				v1.RegisterOrgScopedRoutes(orgScoped, svc)
+				slog.Info("RegisterOrgScopedRoutes completed")
 
 				// WebSocket endpoints (moved from /ws to /orgs/:slug/ws)
 				wsGroup := orgScoped.Group("/ws")

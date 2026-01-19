@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -99,16 +100,19 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 
 // Upload stores a file in S3.
 func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader, size int64, contentType string) (*FileInfo, error) {
-	input := &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucket),
-		Key:         aws.String(key),
-		Body:        reader,
-		ContentType: aws.String(contentType),
+	// Read all content into memory to avoid chunked encoding
+	// This is required for Aliyun OSS compatibility as it doesn't support aws-chunked encoding
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file content: %w", err)
 	}
 
-	// Set content length if known
-	if size > 0 {
-		input.ContentLength = aws.Int64(size)
+	input := &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(data),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(int64(len(data))),
 	}
 
 	result, err := s.client.PutObject(ctx, input)
