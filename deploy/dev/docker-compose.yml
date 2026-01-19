@@ -172,12 +172,14 @@ services:
       - ./ssl:/app/ssl:ro
     # No external port - accessed via traefik
     # Traefik labels for automatic HTTP routing
+    # 使用 COMPOSE_PROJECT_NAME 作为 router/service 名称前缀，确保多 worktree 隔离
     labels:
       - "traefik.enable=true"
-      # HTTP API routing
-      - "traefik.http.routers.backend-api.rule=PathPrefix(`/api`) || PathPrefix(`/health`)"
-      - "traefik.http.routers.backend-api.entrypoints=web"
-      - "traefik.http.services.backend-api.loadbalancer.server.port=8080"
+      # HTTP API routing - router 名称包含项目名以避免跨 worktree 冲突
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.rule=PathPrefix(`/api`) || PathPrefix(`/health`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.entrypoints=web"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.service=${COMPOSE_PROJECT_NAME:-agentsmesh}-api"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.loadbalancer.server.port=8080"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s

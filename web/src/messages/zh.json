@@ -1398,7 +1398,16 @@
       "noOutput": "暂无输出",
       "noProblems": "未检测到问题",
       "noChannels": "暂无活跃频道",
-      "noActivity": "暂无最近活动"
+      "noActivity": "暂无最近活动",
+      "selectPodFirst": "请先选择一个终端查看详情",
+      "noBindings": "暂无绑定关系",
+      "podChannels": "已加入 {count} 个频道",
+      "members": "成员",
+      "incomingBindings": "入向绑定",
+      "outgoingBindings": "出向绑定",
+      "currentPod": "当前 Pod",
+      "sendMessagePlaceholder": "发送消息...",
+      "channelDocument": "频道文档"
     },
     "createPod": {
       "title": "创建新 Pod",

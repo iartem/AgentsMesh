@@ -549,7 +549,16 @@
       "noOutput": "Sin salida aún",
       "noProblems": "No se detectaron problemas",
       "noChannels": "Sin canales activos",
-      "noActivity": "Sin actividad reciente"
+      "noActivity": "Sin actividad reciente",
+      "selectPodFirst": "Seleccione un terminal para ver detalles",
+      "noBindings": "Sin vínculos",
+      "podChannels": "Unido a {count} canal(es)",
+      "members": "Miembros",
+      "incomingBindings": "Vínculos entrantes",
+      "outgoingBindings": "Vínculos salientes",
+      "currentPod": "Este Pod",
+      "sendMessagePlaceholder": "Enviar un mensaje...",
+      "channelDocument": "Documento del Canal"
     },
     "createPod": {
       "title": "Crear Nuevo Pod",
