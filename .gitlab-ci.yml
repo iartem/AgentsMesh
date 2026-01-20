@@ -221,27 +221,33 @@ build-runner:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Deploy Stage - Per-service deployment to production
+# Deploy Stage - Per-service manual deployment to production
 # =============================================================================
-# Each service has its own deploy job, triggered by changes to that service.
-# Uses CI_COMMIT_SHORT_SHA as version tag for proper rollback support.
+# Each service has its own deploy job with manual trigger (Play button).
+# DEPLOY_VERSION defaults to CI_COMMIT_SHORT_SHA but can be overridden for rollback.
+#
+# Usage:
+#   - Normal deploy: Click Play button, uses current commit SHA
+#   - Rollback: Click Play ▼, modify DEPLOY_VERSION to target SHA, run
 
 # Deploy Backend to China Production
 deploy:cn-prod:backend:
   stage: deploy
   needs:
     - job: build-backend
-      optional: true  # 允许手动触发时跳过
+  when: manual
   tags:
     - deploy
     - linux
+  variables:
+    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://agentsmesh.cn
   script:
-    - echo "Deploying Backend ${CI_COMMIT_SHORT_SHA} to China Production..."
+    - echo "Deploying Backend ${DEPLOY_VERSION} to China Production..."
     - ssh root@aliyun-s001 "cd /opt/agentsmesh && git pull origin main"
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service backend --version ${CI_COMMIT_SHORT_SHA}"
+    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service backend --version ${DEPLOY_VERSION}"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
@@ -253,17 +259,19 @@ deploy:cn-prod:web:
   stage: deploy
   needs:
     - job: build-web
-      optional: true
+  when: manual
   tags:
     - deploy
     - linux
+  variables:
+    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://agentsmesh.cn
   script:
-    - echo "Deploying Web ${CI_COMMIT_SHORT_SHA} to China Production..."
+    - echo "Deploying Web ${DEPLOY_VERSION} to China Production..."
     - ssh root@aliyun-s001 "cd /opt/agentsmesh && git pull origin main"
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service web --version ${CI_COMMIT_SHORT_SHA}"
+    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service web --version ${DEPLOY_VERSION}"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
@@ -274,36 +282,20 @@ deploy:cn-prod:web-admin:
   stage: deploy
   needs:
     - job: build-web-admin
-      optional: true
+  when: manual
   tags:
     - deploy
     - linux
+  variables:
+    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://admin.agentsmesh.cn
   script:
-    - echo "Deploying Web-Admin ${CI_COMMIT_SHORT_SHA} to China Production..."
+    - echo "Deploying Web-Admin ${DEPLOY_VERSION} to China Production..."
     - ssh root@aliyun-s001 "cd /opt/agentsmesh && git pull origin main"
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service web-admin --version ${CI_COMMIT_SHORT_SHA}"
+    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service web-admin --version ${DEPLOY_VERSION}"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - web-admin/**/*
-
-# Manual full deployment (all services with current commit version)
-deploy:cn-prod:full:
-  stage: deploy
-  tags:
-    - deploy
-    - linux
-  environment:
-    name: cn-production
-    url: https://agentsmesh.cn
-  script:
-    - echo "Full deployment ${CI_COMMIT_SHORT_SHA} to China Production..."
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && git pull origin main"
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --version ${CI_COMMIT_SHORT_SHA}"
-    - ssh root@aliyun-s001 "docker service ls --filter name=agentsmesh"
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
