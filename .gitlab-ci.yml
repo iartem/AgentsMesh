@@ -127,7 +127,89 @@ test-runner:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Build Stage - Run on main branch
+# Build Verification - Run on MR pipelines (no push)
+# =============================================================================
+# These jobs verify that the code compiles successfully without pushing images.
+# This catches build errors before merging to main.
+
+# Verify backend build (MR only)
+verify-build-backend:
+  stage: test
+  tags:
+    - amd64
+    - docker
+  image: ${REGISTRY}/library/docker:latest
+  services:
+    - name: ${REGISTRY}/library/docker:dind
+      alias: docker
+  script:
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ci/backend.Dockerfile -t backend-verify:${CI_COMMIT_SHORT_SHA} .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - backend/**/*
+        - proto/**/*
+        - ci/backend.Dockerfile
+
+# Verify web build (MR only)
+verify-build-web:
+  stage: test
+  tags:
+    - amd64
+    - docker
+  image: ${REGISTRY}/library/docker:latest
+  services:
+    - name: ${REGISTRY}/library/docker:dind
+      alias: docker
+  script:
+    - cd web
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - web/**/*
+        - ci/web.Dockerfile
+
+# Verify web-admin build (MR only)
+verify-build-web-admin:
+  stage: test
+  tags:
+    - amd64
+    - docker
+  image: ${REGISTRY}/library/docker:latest
+  services:
+    - name: ${REGISTRY}/library/docker:dind
+      alias: docker
+  script:
+    - cd web-admin
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - web-admin/**/*
+        - ci/web-admin.Dockerfile
+
+# Verify runner build (MR only)
+verify-build-runner:
+  stage: test
+  tags:
+    - amd64
+    - docker
+  image: ${REGISTRY}/library/docker:latest
+  services:
+    - name: ${REGISTRY}/library/docker:dind
+      alias: docker
+  script:
+    - docker build --build-arg REGISTRY=${REGISTRY} -f ci/runner.Dockerfile -t runner-verify:${CI_COMMIT_SHORT_SHA} .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - runner/**/*
+        - proto/**/*
+        - ci/runner.Dockerfile
+
+# =============================================================================
+# Build Stage - Run on main branch (push to registry)
 # =============================================================================
 
 # Build backend image
