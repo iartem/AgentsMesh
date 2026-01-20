@@ -17,6 +17,8 @@ var (
 	ErrPodTerminated = agentpodService.ErrPodTerminated
 	// ErrQuotaExceeded is returned when quota check fails
 	ErrQuotaExceeded = billing.ErrQuotaExceeded
+	// ErrSubscriptionFrozen is returned when subscription is frozen and operations are blocked
+	ErrSubscriptionFrozen = billing.ErrSubscriptionFrozen
 )
 
 // PodServiceForHandler defines the pod service methods needed by PodHandler

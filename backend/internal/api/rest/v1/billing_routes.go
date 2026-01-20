@@ -16,6 +16,9 @@ func RegisterBillingHandlers(rg *gin.RouterGroup, billingService *billingsvc.Ser
 	rg.PUT("/subscription", handler.UpdateSubscription)
 	rg.DELETE("/subscription", handler.CancelSubscription)
 	rg.GET("/plans", handler.ListPlans)
+	rg.GET("/plans/prices", handler.ListPlansWithPrices)           // List all plans with prices for currency
+	rg.GET("/plans/:name/prices", handler.GetPlanPrices)           // Get prices for specific plan
+	rg.GET("/plans/:name/all-prices", handler.GetAllPlanPrices)    // Get all currency prices for specific plan
 	rg.GET("/usage", handler.GetUsage)
 	rg.GET("/usage/history", handler.GetUsageHistory)
 	rg.POST("/quota", handler.SetCustomQuota)
@@ -54,4 +57,8 @@ func RegisterPublicConfigRoutes(rg *gin.RouterGroup, billingService *billingsvc.
 
 	// Deployment info - returns deployment type (global/cn/onpremise) and available payment providers
 	rg.GET("/deployment", handler.GetDeploymentInfo)
+
+	// Public pricing info - returns all plans with prices for landing page (no auth required)
+	// This is the Single Source of Truth for pricing display
+	rg.GET("/pricing", handler.GetPublicPricing)
 }

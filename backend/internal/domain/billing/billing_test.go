@@ -79,7 +79,7 @@ func TestPlanConstants(t *testing.T) {
 		constant string
 		expected string
 	}{
-		{"PlanFree", PlanFree, "free"},
+		{"PlanBased", PlanBased, "based"},
 		{"PlanPro", PlanPro, "pro"},
 		{"PlanEnterprise", PlanEnterprise, "enterprise"},
 		{"PlanOnPremise", PlanOnPremise, "onpremise"},
@@ -492,7 +492,7 @@ func TestSubscriptionIsActive(t *testing.T) {
 }
 
 func TestSubscriptionCanAddSeats(t *testing.T) {
-	freePlan := &SubscriptionPlan{Name: PlanFree}
+	basedPlan := &SubscriptionPlan{Name: PlanBased}
 	proPlan := &SubscriptionPlan{Name: PlanPro}
 
 	tests := []struct {
@@ -502,8 +502,8 @@ func TestSubscriptionCanAddSeats(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "free plan cannot add seats",
-			sub:      Subscription{Plan: freePlan},
+			name:     "based plan cannot add seats",
+			sub:      Subscription{Plan: basedPlan},
 			plan:     nil,
 			expected: false,
 		},
@@ -515,7 +515,7 @@ func TestSubscriptionCanAddSeats(t *testing.T) {
 		},
 		{
 			name:     "explicit plan overrides subscription plan",
-			sub:      Subscription{Plan: freePlan},
+			sub:      Subscription{Plan: basedPlan},
 			plan:     proPlan,
 			expected: true,
 		},

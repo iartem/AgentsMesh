@@ -150,3 +150,23 @@ export function orgPath(path: string): string {
   }
   return `/api/v1/orgs/${currentOrg.slug}${path}`;
 }
+
+// Public API request (no auth required)
+export async function publicRequest<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(response.status, response.statusText, data);
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return {} as T;
+  }
+
+  return JSON.parse(text);
+}

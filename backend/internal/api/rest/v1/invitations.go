@@ -99,6 +99,13 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 				})
 				return
 			}
+			if err == billingSvc.ErrSubscriptionFrozen {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error": "Your subscription has expired. Please renew to continue.",
+					"code":  "SUBSCRIPTION_FROZEN",
+				})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check seat availability"})
 			return
 		}

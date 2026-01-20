@@ -86,12 +86,46 @@ func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.
 		return fmt.Errorf("failed to get plan: %w", err)
 	}
 
-	// Calculate renewal amount
+	// Determine currency based on payment provider
+	// CN providers (Alipay/WeChat) use CNY, others use USD
+	var provider string
+	if sub.PaymentProvider != nil {
+		provider = *sub.PaymentProvider
+	}
+	currency := billing.CurrencyUSD
+	if provider == billing.PaymentProviderAlipay || provider == billing.PaymentProviderWeChat {
+		currency = billing.CurrencyCNY
+	}
+
+	// Get price from plan_prices table (Single Source of Truth)
+	var planPrice billing.PlanPrice
+	if err := j.db.WithContext(ctx).
+		Where("plan_id = ? AND currency = ?", sub.PlanID, currency).
+		First(&planPrice).Error; err != nil {
+		// Fallback to plan's legacy price fields if plan_prices not found
+		j.logger.Warn("plan price not found, using legacy fields",
+			"plan_id", sub.PlanID,
+			"currency", currency,
+		)
+		var amount float64
+		if sub.BillingCycle == billing.BillingCycleYearly {
+			amount = plan.PricePerSeatYearly * float64(sub.SeatCount)
+		} else {
+			amount = plan.PricePerSeatMonthly * float64(sub.SeatCount)
+		}
+		planPrice = billing.PlanPrice{
+			PriceMonthly: amount / float64(sub.SeatCount),
+			PriceYearly:  amount / float64(sub.SeatCount),
+		}
+		currency = billing.CurrencyUSD // Legacy prices are in USD
+	}
+
+	// Calculate renewal amount from plan_prices
 	var amount float64
 	if sub.BillingCycle == billing.BillingCycleYearly {
-		amount = plan.PricePerSeatYearly * float64(sub.SeatCount)
+		amount = planPrice.PriceYearly * float64(sub.SeatCount)
 	} else {
-		amount = plan.PricePerSeatMonthly * float64(sub.SeatCount)
+		amount = planPrice.PriceMonthly * float64(sub.SeatCount)
 	}
 
 	// Generate order number
@@ -99,17 +133,13 @@ func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.
 
 	// Create payment order
 	expiresAt := time.Now().Add(24 * time.Hour)
-	var provider string
-	if sub.PaymentProvider != nil {
-		provider = *sub.PaymentProvider
-	}
 	order := &billing.PaymentOrder{
 		OrganizationID:  sub.OrganizationID,
 		OrderNo:         orderNo,
 		OrderType:       billing.OrderTypeRenewal,
 		PaymentProvider: provider,
 		PaymentMethod:   sub.PaymentMethod,
-		Currency:        "CNY",
+		Currency:        currency,
 		Amount:          amount,
 		ActualAmount:    amount,
 		Status:          billing.OrderStatusPending,
@@ -282,30 +312,65 @@ func (j *SubscriptionRenewJob) extendSubscription(ctx context.Context, sub *bill
 }
 
 // FreezeExpiredSubscriptions freezes subscriptions that have expired without renewal
+// This includes both active subscriptions and trial subscriptions
 // This should be called periodically (e.g., every hour)
 func (j *SubscriptionRenewJob) FreezeExpiredSubscriptions(ctx context.Context) error {
 	j.logger.Info("checking for expired subscriptions to freeze")
 
-	// Find subscriptions that:
+	now := time.Now()
+
+	// Freeze expired active subscriptions
 	// - status is active
 	// - current_period_end has passed
 	// - are not set to cancel (they would have been canceled already)
-	result := j.db.WithContext(ctx).
+	activeResult := j.db.WithContext(ctx).
 		Model(&billing.Subscription{}).
 		Where("status = ?", billing.SubscriptionStatusActive).
-		Where("current_period_end < ?", time.Now()).
+		Where("current_period_end < ?", now).
 		Where("cancel_at_period_end = ?", false).
 		Updates(map[string]interface{}{
 			"status":    billing.SubscriptionStatusFrozen,
-			"frozen_at": time.Now(),
+			"frozen_at": now,
 		})
 
-	if result.Error != nil {
-		return fmt.Errorf("failed to freeze expired subscriptions: %w", result.Error)
+	if activeResult.Error != nil {
+		return fmt.Errorf("failed to freeze expired active subscriptions: %w", activeResult.Error)
 	}
 
-	if result.RowsAffected > 0 {
-		j.logger.Info("froze expired subscriptions", "count", result.RowsAffected)
+	if activeResult.RowsAffected > 0 {
+		j.logger.Info("froze expired active subscriptions", "count", activeResult.RowsAffected)
+	}
+
+	// Freeze expired trial subscriptions
+	// - status is trialing
+	// - current_period_end has passed (trial ended)
+	trialResult := j.db.WithContext(ctx).
+		Model(&billing.Subscription{}).
+		Where("status = ?", billing.SubscriptionStatusTrialing).
+		Where("current_period_end < ?", now).
+		Updates(map[string]interface{}{
+			"status":    billing.SubscriptionStatusFrozen,
+			"frozen_at": now,
+		})
+
+	if trialResult.Error != nil {
+		return fmt.Errorf("failed to freeze expired trial subscriptions: %w", trialResult.Error)
+	}
+
+	if trialResult.RowsAffected > 0 {
+		j.logger.Info("froze expired trial subscriptions", "count", trialResult.RowsAffected)
+	}
+
+	// Also update organization subscription_status for frozen subscriptions
+	if activeResult.RowsAffected > 0 || trialResult.RowsAffected > 0 {
+		j.db.WithContext(ctx).Exec(`
+			UPDATE organizations o
+			SET subscription_status = 'frozen'
+			FROM subscriptions s
+			WHERE s.organization_id = o.id
+			AND s.status = 'frozen'
+			AND o.subscription_status != 'frozen'
+		`)
 	}
 
 	return nil

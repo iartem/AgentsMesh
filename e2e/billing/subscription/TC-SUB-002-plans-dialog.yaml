@@ -25,11 +25,11 @@ steps:
         - exists: 'heading "选择方案"'
 
   - action: 验证显示的方案列表
-    expected: 只显示 Free、Pro、Enterprise 三个方案，不显示 OnPremise
+    expected: 只显示 Based、Pro、Enterprise 三个方案，不显示 OnPremise
     verification:
       type: ui
       check:
-        - exists: 'heading "Free"'
+        - exists: 'heading "Based"'
         - exists: 'heading "Pro"'
         - exists: 'heading "Enterprise"'
         - not_exists: 'heading "OnPremise"'

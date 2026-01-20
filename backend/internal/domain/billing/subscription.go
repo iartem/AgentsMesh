@@ -93,12 +93,30 @@ func (s *Subscription) IsActive() bool {
 	return s.Status == SubscriptionStatusActive && s.FrozenAt == nil
 }
 
-// CanAddSeats returns true if seats can be added (not Free plan)
+// CanAddSeats returns true if seats can be added (not Based plan)
 func (s *Subscription) CanAddSeats(plan *SubscriptionPlan) bool {
 	if plan == nil {
 		plan = s.Plan
 	}
-	return plan != nil && plan.Name != PlanFree
+	// Based plan has fixed 1 seat, cannot add more
+	return plan != nil && plan.Name != PlanBased
+}
+
+// IsTrialing returns true if the subscription is in trial period
+func (s *Subscription) IsTrialing() bool {
+	return s.Status == SubscriptionStatusTrialing
+}
+
+// GetRemainingTrialDays returns the number of days remaining in the trial period
+func (s *Subscription) GetRemainingTrialDays() int {
+	if s.Status != SubscriptionStatusTrialing {
+		return 0
+	}
+	remaining := s.CurrentPeriodEnd.Sub(time.Now()).Hours() / 24
+	if remaining < 0 {
+		return 0
+	}
+	return int(remaining)
 }
 
 // GetAvailableSeats returns the number of available (unused) seats

@@ -19,7 +19,7 @@ func TestHandlePaymentSucceeded(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 
 	// Create order
 	order := &billing.PaymentOrder{
@@ -74,7 +74,7 @@ func TestHandlePaymentSucceededByExternalOrderNo(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 
 	extNo := "ext_order_123"
 	order := &billing.PaymentOrder{
@@ -115,7 +115,7 @@ func TestHandlePaymentSucceededSeatPurchase(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	order := &billing.PaymentOrder{
 		OrganizationID:  1,
@@ -158,7 +158,7 @@ func TestHandlePaymentSucceededPlanUpgrade(t *testing.T) {
 
 	seedTestPlan(t, db)
 	proPlan := seedProPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	order := &billing.PaymentOrder{
 		OrganizationID:  1,
@@ -200,7 +200,7 @@ func TestHandlePaymentSucceededRenewal(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	sub, _ := service.GetSubscription(ctx, 1)
 	originalEnd := sub.CurrentPeriodEnd
@@ -302,7 +302,7 @@ func TestHandleSubscriptionCanceled(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	stripeSubID := "sub_123"
 	sub := &billing.Subscription{
@@ -343,7 +343,7 @@ func TestHandleSubscriptionUpdated(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	stripeSubID := "sub_456"
 	sub := &billing.Subscription{
@@ -397,7 +397,7 @@ func TestHandleRecurringPaymentSuccess(t *testing.T) {
 	seedTestPlan(t, db)
 	seedProPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	proPlan, _ := service.GetPlan(ctx, "pro")
 	now := time.Now()
 	stripeSubID := "sub_recurring"
@@ -453,7 +453,7 @@ func TestHandleRecurringPaymentFailure(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	stripeSubID := "sub_fail_recurring"
 	sub := &billing.Subscription{
@@ -497,7 +497,7 @@ func TestUpgradePlanWithNilPlanID(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	order := &billing.PaymentOrder{
 		OrganizationID:  1,
@@ -534,7 +534,7 @@ func TestActivateSubscriptionWithStripeIDs(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 
 	order := &billing.PaymentOrder{
 		OrganizationID:  1,
@@ -586,7 +586,7 @@ func TestActivateSubscriptionUpdateExisting(t *testing.T) {
 	proPlan := seedProPlan(t, db)
 
 	// Create an existing subscription first
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Get the pro plan ID
 	proPlanID := proPlan.ID
@@ -749,7 +749,7 @@ func TestHandlePaymentSucceededAlreadySucceeded(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 
 	// Create order already in succeeded status
 	now := time.Now()

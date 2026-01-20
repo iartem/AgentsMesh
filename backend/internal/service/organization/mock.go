@@ -80,7 +80,7 @@ func (m *MockService) Create(ctx context.Context, ownerID int64, req *CreateRequ
 		ID:                 m.nextID,
 		Name:               req.Name,
 		Slug:               req.Slug,
-		SubscriptionPlan:   "free",
+		SubscriptionPlan:   "based",
 		SubscriptionStatus: "active",
 	}
 	if req.LogoURL != "" {

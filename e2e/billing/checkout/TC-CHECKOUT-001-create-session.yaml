@@ -5,7 +5,7 @@ priority: high
 module: billing/checkout
 
 preconditions:
-  - 组织有活跃订阅（Free 计划）
+  - 组织有活跃订阅（Based 计划）
   - 已获取有效的 access_token
   - 部署类型为 global（Stripe）
 

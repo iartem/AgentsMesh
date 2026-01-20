@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"gorm.io/gorm"
@@ -16,14 +17,28 @@ var (
 	ErrCannotRemoveOwner    = errors.New("cannot remove organization owner")
 )
 
+// BillingService interface for creating trial subscriptions
+type BillingService interface {
+	CreateTrialSubscription(ctx context.Context, orgID int64, planName string, trialDays int) (*billing.Subscription, error)
+}
+
 // Service handles organization operations
 type Service struct {
-	db *gorm.DB
+	db             *gorm.DB
+	billingService BillingService
 }
 
 // NewService creates a new organization service
 func NewService(db *gorm.DB) *Service {
 	return &Service{db: db}
+}
+
+// NewServiceWithBilling creates a new organization service with billing support
+func NewServiceWithBilling(db *gorm.DB, billingService BillingService) *Service {
+	return &Service{
+		db:             db,
+		billingService: billingService,
+	}
 }
 
 // CreateRequest represents organization creation request
@@ -33,7 +48,7 @@ type CreateRequest struct {
 	LogoURL string
 }
 
-// Create creates a new organization
+// Create creates a new organization with trial subscription
 func (s *Service) Create(ctx context.Context, ownerID int64, req *CreateRequest) (*organization.Organization, error) {
 	// Check if slug already exists
 	var existing organization.Organization
@@ -44,8 +59,8 @@ func (s *Service) Create(ctx context.Context, ownerID int64, req *CreateRequest)
 	org := &organization.Organization{
 		Name:               req.Name,
 		Slug:               req.Slug,
-		SubscriptionPlan:   "free",
-		SubscriptionStatus: "active",
+		SubscriptionPlan:   billing.PlanBased,
+		SubscriptionStatus: billing.SubscriptionStatusTrialing,
 	}
 	if req.LogoURL != "" {
 		org.LogoURL = &req.LogoURL
@@ -62,7 +77,18 @@ func (s *Service) Create(ctx context.Context, ownerID int64, req *CreateRequest)
 			UserID:         ownerID,
 			Role:           organization.RoleOwner,
 		}
-		return tx.Create(member).Error
+		if err := tx.Create(member).Error; err != nil {
+			return err
+		}
+
+		// Create 30-day trial subscription if billing service is available
+		if s.billingService != nil {
+			if _, err := s.billingService.CreateTrialSubscription(ctx, org.ID, billing.PlanBased, billing.DefaultTrialDays); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 
 	if err != nil {

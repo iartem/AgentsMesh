@@ -22,8 +22,8 @@ type Organization struct {
 	LogoURL *string `gorm:"type:text" json:"logo_url,omitempty"`
 
 	// Subscription info
-	SubscriptionPlan   string `gorm:"size:50;not null;default:'free'" json:"subscription_plan"`
-	SubscriptionStatus string `gorm:"size:20;not null;default:'active'" json:"subscription_status"`
+	SubscriptionPlan   string `gorm:"size:50;not null;default:'based'" json:"subscription_plan"`
+	SubscriptionStatus string `gorm:"size:20;not null;default:'trialing'" json:"subscription_status"`
 
 	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`

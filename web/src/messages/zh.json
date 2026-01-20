@@ -382,24 +382,28 @@
       "mostPopular": "最受欢迎",
       "annualDiscount": "年付省20%",
       "perSeat": "/席位",
-      "free": {
-        "name": "免费版",
-        "price": "¥0",
-        "period": "永久免费",
+      "monthly": "月付",
+      "yearly": "年付",
+      "yearlyDiscount": "省17%",
+      "month": "月",
+      "year": "年",
+      "seatMonth": "席位/月",
+      "seatYear": "席位/年",
+      "based": {
+        "name": "基础版",
+        "badge": "30天免费试用",
         "description": "适合个人开发者探索 AI 编程智能体。",
         "features": {
           "0": "1 个席位（单人模式）",
-          "1": "2 个并发 Pod",
+          "1": "5 个并发 Pod",
           "2": "1 个 Runner",
-          "3": "3 个仓库",
+          "3": "5 个仓库",
           "4": "社区支持"
         },
-        "cta": "立即开始"
+        "cta": "开始免费试用"
       },
       "pro": {
         "name": "专业版",
-        "price": "¥139",
-        "period": "每席位/月",
         "description": "适合想要扩展 AI 协作的小型团队。",
         "features": {
           "0": "最多 5 个席位",
@@ -413,8 +417,6 @@
       },
       "enterprise": {
         "name": "企业版",
-        "price": "¥279",
-        "period": "每席位/月",
         "description": "适合需要高级规模和安全性的组织。",
         "features": {
           "0": "最多 50 个席位",

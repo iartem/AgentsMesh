@@ -18,9 +18,9 @@ type PriceCalculation struct {
 	Description  string  `json:"description,omitempty"`
 }
 
-// CalculateSubscriptionPrice calculates the price for a new subscription
-func (s *Service) CalculateSubscriptionPrice(ctx context.Context, planName string, billingCycle string, seats int) (*PriceCalculation, error) {
-	plan, err := s.GetPlan(ctx, planName)
+// CalculateSubscriptionPriceWithCurrency calculates the price for a subscription in specific currency
+func (s *Service) CalculateSubscriptionPriceWithCurrency(ctx context.Context, planName string, currency string, billingCycle string, seats int) (*PriceCalculation, error) {
+	price, err := s.GetPlanPrice(ctx, planName, currency)
 	if err != nil {
 		return nil, err
 	}
@@ -31,21 +31,28 @@ func (s *Service) CalculateSubscriptionPrice(ctx context.Context, planName strin
 
 	var amount float64
 	if billingCycle == billing.BillingCycleYearly {
-		amount = plan.PricePerSeatYearly * float64(seats)
+		amount = price.PriceYearly * float64(seats)
 	} else {
-		amount = plan.PricePerSeatMonthly * float64(seats)
+		amount = price.PriceMonthly * float64(seats)
 		billingCycle = billing.BillingCycleMonthly
 	}
 
 	return &PriceCalculation{
 		Amount:       amount,
 		ActualAmount: amount,
-		Currency:     "usd",
-		PlanID:       plan.ID,
+		Currency:     currency,
+		PlanID:       price.PlanID,
 		Seats:        seats,
 		BillingCycle: billingCycle,
-		Description:  plan.DisplayName + " subscription",
+		Description:  price.Plan.DisplayName + " subscription",
 	}, nil
+}
+
+// CalculateSubscriptionPrice calculates the price for a new subscription
+// Uses USD by default. For multi-currency support, use CalculateSubscriptionPriceWithCurrency.
+func (s *Service) CalculateSubscriptionPrice(ctx context.Context, planName string, billingCycle string, seats int) (*PriceCalculation, error) {
+	// Use USD as default currency for backward compatibility
+	return s.CalculateSubscriptionPriceWithCurrency(ctx, planName, billing.CurrencyUSD, billingCycle, seats)
 }
 
 // CalculateUpgradePrice calculates the prorated price for upgrading to a new plan
@@ -95,7 +102,7 @@ func (s *Service) CalculateUpgradePrice(ctx context.Context, orgID int64, newPla
 	return &PriceCalculation{
 		Amount:       newPrice,
 		ActualAmount: actualAmount,
-		Currency:     "usd",
+		Currency:     billing.CurrencyUSD,
 		PlanID:       newPlan.ID,
 		Seats:        seats,
 		BillingCycle: sub.BillingCycle,
@@ -121,8 +128,8 @@ func (s *Service) CalculateSeatPurchasePrice(ctx context.Context, orgID int64, a
 		return nil, err
 	}
 
-	// Check if plan allows adding seats
-	if plan.Name == billing.PlanFree {
+	// Check if plan allows adding seats (Based plan has fixed 1 seat)
+	if plan.Name == billing.PlanBased {
 		return nil, ErrInvalidPlan
 	}
 
@@ -149,7 +156,7 @@ func (s *Service) CalculateSeatPurchasePrice(ctx context.Context, orgID int64, a
 	return &PriceCalculation{
 		Amount:       amount,
 		ActualAmount: actualAmount,
-		Currency:     "usd",
+		Currency:     billing.CurrencyUSD,
 		PlanID:       sub.PlanID,
 		Seats:        additionalSeats,
 		BillingCycle: sub.BillingCycle,
@@ -192,7 +199,7 @@ func (s *Service) CalculateRenewalPrice(ctx context.Context, orgID int64, newBil
 	return &PriceCalculation{
 		Amount:       amount,
 		ActualAmount: amount,
-		Currency:     "usd",
+		Currency:     billing.CurrencyUSD,
 		PlanID:       plan.ID,
 		Seats:        seats,
 		BillingCycle: billingCycle,
@@ -248,7 +255,7 @@ func (s *Service) CalculateBillingCycleChangePrice(ctx context.Context, orgID in
 	return &PriceCalculation{
 		Amount:       newPrice,
 		ActualAmount: actualAmount,
-		Currency:     "usd",
+		Currency:     billing.CurrencyUSD,
 		PlanID:       plan.ID,
 		Seats:        seats,
 		BillingCycle: newBillingCycle,

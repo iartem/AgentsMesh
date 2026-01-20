@@ -70,17 +70,22 @@ func (s *Service) CheckQuota(ctx context.Context, orgID int64, resource string, 
 
 	var plan *billing.SubscriptionPlan
 	if err != nil {
-		// No subscription found, use Free plan as default
+		// No subscription found, use Based plan as default
 		if errors.Is(err, ErrSubscriptionNotFound) {
-			plan, _ = s.GetPlan(ctx, "free")
+			plan, _ = s.GetPlan(ctx, billing.PlanBased)
 			if plan == nil {
-				// No Free plan in database, allow by default
+				// No Based plan in database, allow by default
 				return nil
 			}
 		} else {
 			return err
 		}
 	} else {
+		// Check frozen status - frozen subscriptions cannot create new resources
+		if sub.IsFrozen() {
+			return ErrSubscriptionFrozen
+		}
+
 		plan = sub.Plan
 		if plan == nil {
 			plan, _ = s.GetPlanByID(ctx, sub.PlanID)

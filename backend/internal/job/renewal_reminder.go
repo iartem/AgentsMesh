@@ -69,7 +69,8 @@ func (j *RenewalReminderJob) sendRemindersForDay(ctx context.Context, days int) 
 	endOfDay := startOfDay.AddDate(0, 0, 1)
 
 	// Find subscriptions expiring on this day
-	// - active status
+	// Includes both active and trialing subscriptions
+	// - active/trialing status
 	// - not set to auto-renew (manual renewal needed)
 	// - not set to cancel at period end
 	var subscriptions []SubscriptionWithOrg
@@ -80,7 +81,7 @@ func (j *RenewalReminderJob) sendRemindersForDay(ctx context.Context, days int) 
 		Joins("JOIN organization_members om ON om.organization_id = o.id AND om.role = 'owner'").
 		Joins("JOIN users u ON u.id = om.user_id").
 		Joins("JOIN subscription_plans sp ON sp.id = s.plan_id").
-		Where("s.status = ?", billing.SubscriptionStatusActive).
+		Where("s.status IN ?", []string{billing.SubscriptionStatusActive, billing.SubscriptionStatusTrialing}).
 		Where("s.auto_renew = ?", false).
 		Where("s.cancel_at_period_end = ?", false).
 		Where("s.current_period_end >= ?", startOfDay).
@@ -96,6 +97,7 @@ func (j *RenewalReminderJob) sendRemindersForDay(ctx context.Context, days int) 
 			j.logger.Error("failed to send reminder email",
 				"subscription_id", sub.ID,
 				"email", sub.OwnerEmail,
+				"status", sub.Status,
 				"error", err,
 			)
 			continue

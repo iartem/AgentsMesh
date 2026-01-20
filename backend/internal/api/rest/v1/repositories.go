@@ -83,6 +83,13 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 				})
 				return
 			}
+			if err == billing.ErrSubscriptionFrozen {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error": "Your subscription has expired. Please renew to continue.",
+					"code":  "SUBSCRIPTION_FROZEN",
+				})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check quota"})
 			return
 		}

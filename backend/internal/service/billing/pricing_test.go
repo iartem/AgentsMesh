@@ -19,7 +19,7 @@ func TestCalculateSubscriptionPrice(t *testing.T) {
 	service := NewService(db, "")
 	ctx := context.Background()
 
-	seedTestPlan(t, db)    // free plan: 0/month
+	seedTestPlan(t, db)    // based plan: 0/month
 	seedProPlan(t, db)     // pro plan: 19.99/month, 199.90/year
 
 	tests := []struct {
@@ -52,11 +52,11 @@ func TestCalculateSubscriptionPrice(t *testing.T) {
 			wantAmount:   99.95,
 		},
 		{
-			name:         "free plan",
-			planName:     "free",
+			name:         "based plan",
+			planName:     "based",
 			billingCycle: billing.BillingCycleMonthly,
 			seats:        1,
-			wantAmount:   0,
+			wantAmount:   9.9, // Based plan is now $9.9/month
 		},
 		{
 			name:         "invalid plan",
@@ -101,19 +101,19 @@ func TestCalculateUpgradePrice(t *testing.T) {
 	service := NewService(db, "")
 	ctx := context.Background()
 
-	seedTestPlan(t, db)      // free plan
-	seedProPlan(t, db)       // pro plan
+	seedTestPlan(t, db)       // based plan ($9.9/month)
+	seedProPlan(t, db)        // pro plan ($19.99/month)
 	seedEnterprisePlan(t, db) // enterprise plan
 
 	// Create a subscription halfway through the period
-	freePlan, _ := service.GetPlan(ctx, "free")
+	basedPlan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
-	periodStart := now.Add(-15 * 24 * time.Hour)  // Started 15 days ago
-	periodEnd := now.Add(15 * 24 * time.Hour)     // Ends in 15 days
+	periodStart := now.Add(-15 * 24 * time.Hour) // Started 15 days ago
+	periodEnd := now.Add(15 * 24 * time.Hour)    // Ends in 15 days
 
 	sub := &billing.Subscription{
 		OrganizationID:     1,
-		PlanID:             freePlan.ID,
+		PlanID:             basedPlan.ID,
 		Status:             billing.SubscriptionStatusActive,
 		BillingCycle:       billing.BillingCycleMonthly,
 		SeatCount:          1,
@@ -122,7 +122,7 @@ func TestCalculateUpgradePrice(t *testing.T) {
 	}
 	db.Create(sub)
 
-	// Test upgrading from free to pro
+	// Test upgrading from based ($9.9) to pro ($19.99)
 	result, err := service.CalculateUpgradePrice(ctx, 1, "pro")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -132,9 +132,10 @@ func TestCalculateUpgradePrice(t *testing.T) {
 	if !almostEqual(result.Amount, 19.99, 0.001) {
 		t.Errorf("expected full amount 19.99, got %f", result.Amount)
 	}
-	// ActualAmount should be roughly half (around 10, allowing for timing)
-	if result.ActualAmount < 8 || result.ActualAmount > 12 {
-		t.Errorf("expected prorated amount around 10, got %f", result.ActualAmount)
+	// Price difference is 19.99 - 9.9 = 10.09
+	// Prorated for half period: 10.09 * 0.5 = ~5.045
+	if result.ActualAmount < 4 || result.ActualAmount > 7 {
+		t.Errorf("expected prorated amount around 5, got %f", result.ActualAmount)
 	}
 }
 
@@ -180,15 +181,15 @@ func TestCalculateSeatPurchasePrice(t *testing.T) {
 	}
 }
 
-func TestCalculateSeatPurchasePrice_FreePlan(t *testing.T) {
+func TestCalculateSeatPurchasePrice_BasedPlan(t *testing.T) {
 	db := setupTestDB(t)
 	service := NewService(db, "")
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
-	// Should fail for free plan
+	// Should fail for based plan (fixed 1 seat, cannot purchase more)
 	_, err := service.CalculateSeatPurchasePrice(ctx, 1, 1)
 	if err != ErrInvalidPlan {
 		t.Errorf("expected ErrInvalidPlan, got %v", err)
@@ -317,6 +318,213 @@ func TestGetPricePreview(t *testing.T) {
 	}
 }
 
+func TestGetPricePreviewUpgrade(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedTestPlan(t, db)
+	seedProPlan(t, db)
+
+	// Create a subscription
+	basedPlan, _ := service.GetPlan(ctx, "based")
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             basedPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          1,
+		CurrentPeriodStart: now.Add(-15 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(15 * 24 * time.Hour),
+	}
+	db.Create(sub)
+
+	// Test upgrade preview
+	result, err := service.GetPricePreview(ctx, 1, billing.OrderTypePlanUpgrade, "pro", "", 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Amount <= 0 {
+		t.Error("expected positive amount for upgrade")
+	}
+}
+
+func TestGetPricePreviewSeatPurchase(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          1,
+		CurrentPeriodStart: now.Add(-10 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(20 * 24 * time.Hour),
+	}
+	db.Create(sub)
+
+	// Test seat purchase preview
+	result, err := service.GetPricePreview(ctx, 1, billing.OrderTypeSeatPurchase, "", "", 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Seats != 2 {
+		t.Errorf("expected 2 seats, got %d", result.Seats)
+	}
+}
+
+func TestGetPricePreviewRenewal(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          2,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(0, 1, 0),
+	}
+	db.Create(sub)
+
+	// Test renewal preview
+	result, err := service.GetPricePreview(ctx, 1, billing.OrderTypeRenewal, "", billing.BillingCycleYearly, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.BillingCycle != billing.BillingCycleYearly {
+		t.Errorf("expected yearly billing cycle, got %s", result.BillingCycle)
+	}
+}
+
+// ===========================================
+// Billing Cycle Change Tests
+// ===========================================
+
+func TestCalculateBillingCycleChangePrice(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	// Create monthly subscription halfway through period
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          2,
+		CurrentPeriodStart: now.Add(-15 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(15 * 24 * time.Hour),
+	}
+	db.Create(sub)
+
+	// Change from monthly to yearly (upgrade - needs payment)
+	result, err := service.CalculateBillingCycleChangePrice(ctx, 1, billing.BillingCycleYearly)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.BillingCycle != billing.BillingCycleYearly {
+		t.Errorf("expected yearly cycle, got %s", result.BillingCycle)
+	}
+	// Yearly is more expensive, so ActualAmount should be positive
+	if result.ActualAmount < 0 {
+		t.Error("expected positive ActualAmount for monthly to yearly change")
+	}
+}
+
+func TestCalculateBillingCycleChangePriceYearlyToMonthly(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	// Create yearly subscription
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleYearly,
+		SeatCount:          1,
+		CurrentPeriodStart: now.Add(-180 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(185 * 24 * time.Hour),
+	}
+	db.Create(sub)
+
+	// Change from yearly to monthly (downgrade - credit applied at renewal)
+	result, err := service.CalculateBillingCycleChangePrice(ctx, 1, billing.BillingCycleMonthly)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.BillingCycle != billing.BillingCycleMonthly {
+		t.Errorf("expected monthly cycle, got %s", result.BillingCycle)
+	}
+	// Monthly is cheaper, ActualAmount should be 0 (credit at renewal)
+	if result.ActualAmount != 0 {
+		t.Errorf("expected 0 ActualAmount for downgrade, got %f", result.ActualAmount)
+	}
+}
+
+func TestCalculateBillingCycleChangePriceSameCycle(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          1,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(0, 1, 0),
+	}
+	db.Create(sub)
+
+	// Same cycle - should return nil
+	result, err := service.CalculateBillingCycleChangePrice(ctx, 1, billing.BillingCycleMonthly)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Error("expected nil result for same billing cycle")
+	}
+}
+
+func TestCalculateBillingCycleChangePriceNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	_, err := service.CalculateBillingCycleChangePrice(ctx, 999, billing.BillingCycleYearly)
+	if err != ErrSubscriptionNotFound {
+		t.Errorf("expected ErrSubscriptionNotFound, got %v", err)
+	}
+}
+
 func TestCalculateRemainingPeriodRatio(t *testing.T) {
 	now := time.Now()
 
@@ -361,5 +569,223 @@ func TestCalculateRemainingPeriodRatio(t *testing.T) {
 				t.Errorf("expected ratio %f (±%f), got %f", tt.wantRatio, tt.tolerance, ratio)
 			}
 		})
+	}
+}
+
+func TestCalculateUpgradePriceYearlyCycle(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedTestPlan(t, db)       // based plan ($99/year)
+	seedProPlan(t, db)        // pro plan ($199.90/year)
+
+	basedPlan, _ := service.GetPlan(ctx, "based")
+	now := time.Now()
+	periodStart := now.Add(-180 * 24 * time.Hour) // 6 months ago
+	periodEnd := now.Add(185 * 24 * time.Hour)    // 6 months left
+
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             basedPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleYearly,
+		SeatCount:          1,
+		CurrentPeriodStart: periodStart,
+		CurrentPeriodEnd:   periodEnd,
+	}
+	db.Create(sub)
+
+	// Upgrade from based ($99/year) to pro ($199.90/year)
+	result, err := service.CalculateUpgradePrice(ctx, 1, "pro")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Full price is 199.90
+	if !almostEqual(result.Amount, 199.90, 0.001) {
+		t.Errorf("expected full amount 199.90, got %f", result.Amount)
+	}
+	// Billing cycle should be yearly
+	if result.BillingCycle != billing.BillingCycleYearly {
+		t.Errorf("expected yearly billing cycle, got %s", result.BillingCycle)
+	}
+}
+
+func TestCalculateUpgradePriceZeroSeats(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedTestPlan(t, db)
+	seedProPlan(t, db)
+
+	basedPlan, _ := service.GetPlan(ctx, "based")
+	now := time.Now()
+
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             basedPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          0, // Zero seats should default to 1
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(0, 1, 0),
+	}
+	db.Create(sub)
+
+	result, err := service.CalculateUpgradePrice(ctx, 1, "pro")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Seats != 1 {
+		t.Errorf("expected seats to default to 1, got %d", result.Seats)
+	}
+}
+
+func TestCalculateUpgradePriceDowngrade(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedTestPlan(t, db)
+	seedProPlan(t, db)
+
+	proPlan, _ := service.GetPlan(ctx, "pro")
+	now := time.Now()
+
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		SeatCount:          1,
+		CurrentPeriodStart: now.Add(-15 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(15 * 24 * time.Hour),
+	}
+	db.Create(sub)
+
+	// Downgrade from pro to based
+	result, err := service.CalculateUpgradePrice(ctx, 1, "based")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// ActualAmount should be 0 for downgrade (handled by different flow)
+	if result.ActualAmount != 0 {
+		t.Errorf("expected ActualAmount 0 for downgrade, got %f", result.ActualAmount)
+	}
+}
+
+func TestCalculateUpgradePriceNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	_, err := service.CalculateUpgradePrice(ctx, 999, "pro")
+	if err != ErrSubscriptionNotFound {
+		t.Errorf("expected ErrSubscriptionNotFound, got %v", err)
+	}
+}
+
+func TestCalculateUpgradePricePlanNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedTestPlan(t, db)
+	service.CreateSubscription(ctx, 1, "based")
+
+	_, err := service.CalculateUpgradePrice(ctx, 1, "nonexistent")
+	if err != ErrPlanNotFound {
+		t.Errorf("expected ErrPlanNotFound, got %v", err)
+	}
+}
+
+func TestCalculateSeatPurchasePriceInvalidSeats(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	_, err := service.CalculateSeatPurchasePrice(ctx, 1, 0)
+	if err != ErrInvalidPlan {
+		t.Errorf("expected ErrInvalidPlan, got %v", err)
+	}
+
+	_, err = service.CalculateSeatPurchasePrice(ctx, 1, -1)
+	if err != ErrInvalidPlan {
+		t.Errorf("expected ErrInvalidPlan, got %v", err)
+	}
+}
+
+func TestCalculateSeatPurchasePriceYearlyCycle(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	now := time.Now()
+	periodStart := now.Add(-182 * 24 * time.Hour)
+	periodEnd := now.Add(183 * 24 * time.Hour)
+
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleYearly,
+		SeatCount:          1,
+		CurrentPeriodStart: periodStart,
+		CurrentPeriodEnd:   periodEnd,
+	}
+	db.Create(sub)
+
+	result, err := service.CalculateSeatPurchasePrice(ctx, 1, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Full price for 2 seats yearly: 199.90 * 2 = 399.80
+	if !almostEqual(result.Amount, 399.80, 0.001) {
+		t.Errorf("expected full amount 399.80, got %f", result.Amount)
+	}
+}
+
+func TestCalculateRenewalPriceNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	_, err := service.CalculateRenewalPrice(ctx, 999, "")
+	if err != ErrSubscriptionNotFound {
+		t.Errorf("expected ErrSubscriptionNotFound, got %v", err)
+	}
+}
+
+func TestCalculateRenewalPriceYearly(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedProPlan(t, db)
+	proPlan, _ := service.GetPlan(ctx, "pro")
+
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             proPlan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleYearly,
+		SeatCount:          1,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(1, 0, 0),
+	}
+	db.Create(sub)
+
+	result, err := service.CalculateRenewalPrice(ctx, 1, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !almostEqual(result.Amount, 199.90, 0.001) {
+		t.Errorf("expected yearly amount 199.90, got %f", result.Amount)
 	}
 }

@@ -29,7 +29,7 @@ func (s *Service) GetSeatUsage(ctx context.Context, orgID int64) (*SeatUsage, er
 		UsedSeats:      int(memberCount),
 		AvailableSeats: sub.SeatCount - int(memberCount),
 		MaxSeats:       plan.MaxUsers,
-		CanAddSeats:    plan.Name != billingdomain.PlanFree,
+		CanAddSeats:    plan.Name != billingdomain.PlanBased, // Based plan has fixed 1 seat
 	}, nil
 }
 

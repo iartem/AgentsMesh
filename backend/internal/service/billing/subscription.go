@@ -45,6 +45,102 @@ func (s *Service) CreateSubscription(ctx context.Context, orgID int64, planName 
 	return sub, nil
 }
 
+// CreateTrialSubscription creates a trial subscription for a new organization
+func (s *Service) CreateTrialSubscription(ctx context.Context, orgID int64, planName string, trialDays int) (*billing.Subscription, error) {
+	plan, err := s.GetPlan(ctx, planName)
+	if err != nil {
+		return nil, err
+	}
+
+	if trialDays <= 0 {
+		trialDays = billing.DefaultTrialDays
+	}
+
+	now := time.Now()
+	periodEnd := now.AddDate(0, 0, trialDays)
+
+	sub := &billing.Subscription{
+		OrganizationID:     orgID,
+		PlanID:             plan.ID,
+		Status:             billing.SubscriptionStatusTrialing,
+		BillingCycle:       billing.BillingCycleMonthly,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   periodEnd,
+		SeatCount:          1,
+	}
+
+	if err := s.db.WithContext(ctx).Create(sub).Error; err != nil {
+		return nil, err
+	}
+
+	sub.Plan = plan
+	return sub, nil
+}
+
+// ActivateTrialSubscription converts a trial subscription to active
+func (s *Service) ActivateTrialSubscription(ctx context.Context, orgID int64, billingCycle string) error {
+	sub, err := s.GetSubscription(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	if sub.Status != billing.SubscriptionStatusTrialing {
+		return nil // Already active or other status
+	}
+
+	now := time.Now()
+	var periodEnd time.Time
+	if billingCycle == billing.BillingCycleYearly {
+		periodEnd = now.AddDate(1, 0, 0)
+	} else {
+		billingCycle = billing.BillingCycleMonthly
+		periodEnd = now.AddDate(0, 1, 0)
+	}
+
+	return s.db.WithContext(ctx).Model(sub).Updates(map[string]interface{}{
+		"status":               billing.SubscriptionStatusActive,
+		"billing_cycle":        billingCycle,
+		"current_period_start": now,
+		"current_period_end":   periodEnd,
+	}).Error
+}
+
+// FreezeSubscription freezes a subscription due to non-payment
+func (s *Service) FreezeSubscription(ctx context.Context, orgID int64) error {
+	now := time.Now()
+	return s.db.WithContext(ctx).Model(&billing.Subscription{}).
+		Where("organization_id = ?", orgID).
+		Updates(map[string]interface{}{
+			"status":    billing.SubscriptionStatusFrozen,
+			"frozen_at": now,
+		}).Error
+}
+
+// UnfreezeSubscription reactivates a frozen subscription
+func (s *Service) UnfreezeSubscription(ctx context.Context, orgID int64, billingCycle string) error {
+	sub, err := s.GetSubscription(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	var periodEnd time.Time
+	if billingCycle == billing.BillingCycleYearly {
+		periodEnd = now.AddDate(1, 0, 0)
+	} else {
+		billingCycle = billing.BillingCycleMonthly
+		periodEnd = now.AddDate(0, 1, 0)
+	}
+
+	return s.db.WithContext(ctx).Model(sub).Updates(map[string]interface{}{
+		"status":               billing.SubscriptionStatusActive,
+		"billing_cycle":        billingCycle,
+		"current_period_start": now,
+		"current_period_end":   periodEnd,
+		"frozen_at":            nil,
+	}).Error
+}
+
 // UpdateSubscription updates subscription plan (handles upgrade/downgrade)
 func (s *Service) UpdateSubscription(ctx context.Context, orgID int64, planName string) (*billing.Subscription, error) {
 	sub, err := s.GetSubscription(ctx, orgID)

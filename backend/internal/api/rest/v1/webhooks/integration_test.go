@@ -35,7 +35,7 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 		id INTEGER PRIMARY KEY,
 		name TEXT NOT NULL,
 		display_name TEXT,
-		tier TEXT DEFAULT 'free',
+		tier TEXT DEFAULT 'based',
 		price_per_seat_monthly REAL DEFAULT 0,
 		price_per_seat_yearly REAL DEFAULT 0,
 		max_users INTEGER DEFAULT 1,
@@ -147,7 +147,7 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 
 	// Seed test data
 	db.Exec(`INSERT INTO subscription_plans (name, display_name, tier, price_per_seat_monthly, price_per_seat_yearly, max_users, max_runners, max_repositories, max_concurrent_pods, included_pod_minutes, is_active)
-		VALUES ('free', 'Free', 'free', 0, 0, 5, 1, 3, 2, 100, TRUE)`)
+		VALUES ('based', 'Based', 'based', 0, 0, 5, 1, 3, 2, 100, TRUE)`)
 	db.Exec(`INSERT INTO subscription_plans (name, display_name, tier, price_per_seat_monthly, price_per_seat_yearly, max_users, max_runners, max_repositories, max_concurrent_pods, included_pod_minutes, is_active)
 		VALUES ('pro', 'Pro', 'pro', 19.99, 199.90, 50, 10, 100, 10, 5000, TRUE)`)
 	db.Exec(`INSERT INTO subscription_plans (name, display_name, tier, price_per_seat_monthly, price_per_seat_yearly, max_users, max_runners, max_repositories, max_concurrent_pods, included_pod_minutes, is_active)

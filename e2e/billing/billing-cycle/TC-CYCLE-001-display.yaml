@@ -5,7 +5,7 @@ priority: high
 module: billing/billing-cycle
 
 preconditions:
-  - 组织有活跃的付费订阅（非 Free 方案）
+  - 组织有活跃的付费订阅（非 Based 方案）
 
 steps:
   - action: 导航到账单设置页面

@@ -18,7 +18,7 @@ e2e/
 │   ├── seats/                         # 席位管理
 │   │   ├── TC-SEAT-001-display.yaml
 │   │   ├── TC-SEAT-002-add-dialog.yaml
-│   │   └── TC-SEAT-003-free-plan-limit.yaml
+│   │   └── TC-SEAT-003-based-plan-limit.yaml
 │   ├── billing-cycle/                 # 计费周期
 │   │   ├── TC-CYCLE-001-display.yaml
 │   │   ├── TC-CYCLE-002-monthly-to-yearly.yaml

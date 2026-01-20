@@ -382,24 +382,28 @@
       "mostPopular": "Most Popular",
       "annualDiscount": "Save 20%",
       "perSeat": "/seat",
-      "free": {
-        "name": "Free",
-        "price": "$0",
-        "period": "forever",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "yearlyDiscount": "Save 17%",
+      "month": "month",
+      "year": "year",
+      "seatMonth": "seat/month",
+      "seatYear": "seat/year",
+      "based": {
+        "name": "Based",
+        "badge": "30-Day Free Trial",
         "description": "Perfect for individual developers exploring AI coding agents.",
         "features": {
           "0": "1 seat (solo mode)",
-          "1": "2 concurrent pods",
+          "1": "5 concurrent pods",
           "2": "1 Runner",
-          "3": "3 repositories",
+          "3": "5 repositories",
           "4": "Community support"
         },
-        "cta": "Get Started"
+        "cta": "Start Free Trial"
       },
       "pro": {
         "name": "Pro",
-        "price": "$20",
-        "period": "per seat/month",
         "description": "For small teams that want to scale AI collaboration.",
         "features": {
           "0": "Up to 5 seats",
@@ -413,8 +417,6 @@
       },
       "enterprise": {
         "name": "Enterprise",
-        "price": "$40",
-        "period": "per seat/month",
         "description": "For organizations requiring advanced scale and security.",
         "features": {
           "0": "Up to 50 seats",

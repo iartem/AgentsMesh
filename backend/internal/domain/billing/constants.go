@@ -2,11 +2,20 @@ package billing
 
 // Plan names
 const (
-	PlanFree       = "free"
+	PlanBased      = "based" // Entry-level paid plan
 	PlanPro        = "pro"
 	PlanEnterprise = "enterprise"
 	PlanOnPremise  = "onpremise"
 )
+
+// Currency constants
+const (
+	CurrencyUSD = "USD"
+	CurrencyCNY = "CNY"
+)
+
+// Default trial period in days
+const DefaultTrialDays = 30
 
 // Subscription status constants
 const (

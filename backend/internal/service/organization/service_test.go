@@ -135,7 +135,7 @@ func TestCreateOrganization(t *testing.T) {
 	if org.Slug != "test-org" {
 		t.Errorf("expected Slug 'test-org', got %s", org.Slug)
 	}
-	if org.SubscriptionPlan != "free" {
+	if org.SubscriptionPlan != "based" {
 		t.Errorf("expected SubscriptionPlan 'free', got %s", org.SubscriptionPlan)
 	}
 }

@@ -23,7 +23,7 @@ setup:
 
 steps:
   - action: 发送 Stripe customer.subscription.deleted Webhook
-    expected: 本地订阅状态更新为 canceled 或降级到 Free
+    expected: 本地订阅状态更新为 canceled 或降级到 Based
     verification:
       type: api
       request:
@@ -54,5 +54,5 @@ steps:
         JOIN subscription_plans sp ON s.plan_id = sp.id
         WHERE s.organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org')
       expected:
-        status_one_of: [canceled, active]  # 可能降级到 Free 并保持 active
-        plan_name_one_of: [free, pro]       # 取决于实现
+        status_one_of: [canceled, active]  # 可能降级到 Based 并保持 active
+        plan_name_one_of: [based, pro]       # 取决于实现

@@ -194,7 +194,7 @@
     "billing": "计费",
     "subscription": "订阅",
     "plan": "套餐",
-    "plan_free": "免费版",
+    "plan_based": "基础版",
     "plan_pro": "专业版",
     "plan_enterprise": "企业版",
     "upgrade": "升级",

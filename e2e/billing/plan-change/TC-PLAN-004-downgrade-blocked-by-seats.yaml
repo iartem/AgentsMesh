@@ -6,12 +6,12 @@ module: billing/plan-change
 
 preconditions:
   - 组织当前为 Pro 计划
-  - 席位数大于 Free 计划上限（1）
+  - 席位数大于 Based 计划上限（1）
   - 已获取有效的 access_token
 
 setup:
   sql: |
-    -- 设置组织为 Pro 计划，席位数为 3（超过 Free 的 1 席位限制）
+    -- 设置组织为 Pro 计划，席位数为 3（超过 Based 的 1 席位限制）
     UPDATE subscriptions
     SET plan_id = (SELECT id FROM subscription_plans WHERE name = 'pro'),
         status = 'active',
@@ -20,7 +20,7 @@ setup:
     WHERE organization_id = (SELECT id FROM organizations WHERE slug = 'dev-org');
 
 steps:
-  - action: 尝试降级到 Free 方案
+  - action: 尝试降级到 Based 方案
     expected: 返回错误，提示需要先减少席位
     verification:
       type: api
@@ -31,7 +31,7 @@ steps:
           Authorization: Bearer {access_token}
           Content-Type: application/json
         body:
-          plan_name: free
+          plan_name: based
       expected:
         status: 400
         body:

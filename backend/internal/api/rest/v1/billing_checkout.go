@@ -112,7 +112,7 @@ func (h *BillingHandler) CreateCheckout(c *gin.Context) {
 		if calcErr != nil {
 			errMsg := "seat purchase calculation failed"
 			if calcErr == billingService.ErrInvalidPlan {
-				errMsg = "cannot add seats to free plan, please upgrade first"
+				errMsg = "cannot add seats to based plan, please upgrade first"
 			} else if calcErr == billingService.ErrQuotaExceeded {
 				errMsg = "exceeds maximum seats for this plan"
 			}

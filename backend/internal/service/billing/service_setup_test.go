@@ -168,6 +168,18 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			expires_at DATETIME,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS plan_prices (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			plan_id INTEGER NOT NULL,
+			currency TEXT NOT NULL,
+			price_monthly REAL NOT NULL,
+			price_yearly REAL NOT NULL,
+			stripe_price_id_monthly TEXT,
+			stripe_price_id_yearly TEXT,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(plan_id, currency)
+		)`,
 	}
 
 	for _, sql := range tables {
@@ -181,20 +193,33 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 func seedTestPlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
 	plan := &billing.SubscriptionPlan{
-		Name:                "free",
-		DisplayName:         "Free Plan",
-		PricePerSeatMonthly: 0,
+		Name:                "based",
+		DisplayName:         "Based Plan",
+		PricePerSeatMonthly: 9.9,
+		PricePerSeatYearly:  99,
 		IncludedPodMinutes:  100,
 		PricePerExtraMinute: 0,
-		MaxUsers:            5,
+		MaxUsers:            1, // Based plan has fixed 1 seat
 		MaxRunners:          1,
-		MaxConcurrentPods:   2,
-		MaxRepositories:     3,
+		MaxConcurrentPods:   5,
+		MaxRepositories:     5,
 		IsActive:            true,
 	}
 	if err := db.Create(plan).Error; err != nil {
 		t.Fatalf("failed to seed plan: %v", err)
 	}
+
+	// Seed plan prices (Single Source of Truth)
+	prices := []billing.PlanPrice{
+		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 9.9, PriceYearly: 99},
+		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 69, PriceYearly: 690},
+	}
+	for _, price := range prices {
+		if err := db.Create(&price).Error; err != nil {
+			t.Fatalf("failed to seed plan price: %v", err)
+		}
+	}
+
 	return plan
 }
 
@@ -215,6 +240,18 @@ func seedProPlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
 	if err := db.Create(plan).Error; err != nil {
 		t.Fatalf("failed to seed pro plan: %v", err)
 	}
+
+	// Seed plan prices (Single Source of Truth)
+	prices := []billing.PlanPrice{
+		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 19.99, PriceYearly: 199.90},
+		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 139, PriceYearly: 1390},
+	}
+	for _, price := range prices {
+		if err := db.Create(&price).Error; err != nil {
+			t.Fatalf("failed to seed pro plan price: %v", err)
+		}
+	}
+
 	return plan
 }
 
@@ -235,6 +272,18 @@ func seedEnterprisePlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
 	if err := db.Create(plan).Error; err != nil {
 		t.Fatalf("failed to seed enterprise plan: %v", err)
 	}
+
+	// Seed plan prices (Single Source of Truth)
+	prices := []billing.PlanPrice{
+		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 99.99, PriceYearly: 999.90},
+		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 690, PriceYearly: 6900},
+	}
+	for _, price := range prices {
+		if err := db.Create(&price).Error; err != nil {
+			t.Fatalf("failed to seed enterprise plan price: %v", err)
+		}
+	}
+
 	return plan
 }
 

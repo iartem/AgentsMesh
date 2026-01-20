@@ -1,4 +1,4 @@
-import { request, orgPath } from "./base";
+import { request, orgPath, publicRequest } from "./base";
 
 // Billing types
 export interface SubscriptionPlan {
@@ -18,6 +18,27 @@ export interface SubscriptionPlan {
   stripe_price_id_monthly?: string;
   stripe_price_id_yearly?: string;
 }
+
+// Multi-currency price for a plan
+export interface PlanPrice {
+  id: number;
+  plan_id: number;
+  currency: string; // USD, CNY
+  price_monthly: number;
+  price_yearly: number;
+  stripe_price_id_monthly?: string;
+  stripe_price_id_yearly?: string;
+  plan?: SubscriptionPlan;
+}
+
+// Plan with price in specific currency
+export interface PlanWithPrice {
+  plan: SubscriptionPlan;
+  price: PlanPrice;
+}
+
+// Currency type
+export type Currency = "USD" | "CNY";
 
 export interface UsageOverview {
   pod_minutes: number;
@@ -128,6 +149,24 @@ export interface DeploymentInfo {
   available_providers: string[];
 }
 
+// Public pricing info (no auth required)
+export interface PublicPlanPricing {
+  name: string;
+  display_name: string;
+  price_monthly: number;
+  price_yearly: number;
+  max_users: number;
+  max_runners: number;
+  max_repositories: number;
+  max_concurrent_pods: number;
+}
+
+export interface PublicPricingResponse {
+  deployment_type: string;
+  currency: Currency;
+  plans: PublicPlanPricing[];
+}
+
 // Billing API
 export const billingApi = {
   // Get billing overview
@@ -161,6 +200,22 @@ export const billingApi = {
   // List available plans
   listPlans: () =>
     request<{ plans: SubscriptionPlan[] }>(orgPath("/billing/plans")),
+
+  // List plans with prices for specific currency
+  listPlansWithPrices: (currency: Currency = "USD") =>
+    request<{ plans: PlanWithPrice[]; currency: string }>(
+      orgPath(`/billing/plans/prices?currency=${currency}`)
+    ),
+
+  // Get prices for a specific plan
+  getPlanPrices: (planName: string, currency: Currency = "USD") =>
+    request<{ price: PlanPrice; currency: string }>(
+      orgPath(`/billing/plans/${planName}/prices?currency=${currency}`)
+    ),
+
+  // Get all currency prices for a plan
+  getAllPlanPrices: (planName: string) =>
+    request<{ prices: PlanPrice[] }>(orgPath(`/billing/plans/${planName}/all-prices`)),
 
   // Get usage
   getUsage: (type?: string) => {
@@ -284,4 +339,16 @@ export const billingApi = {
   // Get deployment type and available providers
   getDeploymentInfo: () =>
     request<DeploymentInfo>(orgPath("/billing/deployment")),
+};
+
+// Public billing API (no auth required)
+// Used for landing page pricing display
+export const publicBillingApi = {
+  // Get public pricing info - Single Source of Truth for pricing display
+  getPricing: () =>
+    publicRequest<PublicPricingResponse>("/api/v1/config/pricing"),
+
+  // Get deployment info
+  getDeploymentInfo: () =>
+    publicRequest<DeploymentInfo>("/api/v1/config/deployment"),
 };

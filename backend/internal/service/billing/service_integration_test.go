@@ -41,10 +41,10 @@ func TestIntegrationCreateSubscriptionFlow(t *testing.T) {
 	service, factory := setupIntegrationTestService(t)
 	ctx := context.Background()
 
-	// 1. Create a free subscription first
-	sub, err := service.CreateSubscription(ctx, 1, "free")
+	// 1. Create a based subscription first
+	sub, err := service.CreateSubscription(ctx, 1, "based")
 	if err != nil {
-		t.Fatalf("failed to create free subscription: %v", err)
+		t.Fatalf("failed to create based subscription: %v", err)
 	}
 	if sub.Status != billing.SubscriptionStatusActive {
 		t.Errorf("expected active status, got %s", sub.Status)
@@ -73,8 +73,8 @@ func TestIntegrationUpgradeWithCheckout(t *testing.T) {
 	service, factory := setupIntegrationTestService(t)
 	ctx := context.Background()
 
-	// 1. Create free subscription
-	service.CreateSubscription(ctx, 1, "free")
+	// 1. Create based subscription
+	service.CreateSubscription(ctx, 1, "based")
 
 	// 2. Get pro plan for upgrade
 	proPlan, _ := service.GetPlan(ctx, "pro")
@@ -139,7 +139,7 @@ func TestIntegrationWebhookPaymentSucceeded(t *testing.T) {
 	c, _ := createTestGinContext()
 
 	// 1. Create subscription
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// 2. Create a payment order
 	proPlan, _ := service.GetPlan(ctx, "pro")
@@ -209,7 +209,7 @@ func TestIntegrationWebhookPaymentFailed(t *testing.T) {
 	c, _ := createTestGinContext()
 
 	// 1. Create subscription
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// 2. Create a payment order
 	proPlan, _ := service.GetPlan(ctx, "pro")
@@ -754,13 +754,13 @@ func TestIntegrationRecurringPaymentWithDowngrade(t *testing.T) {
 	ctx := context.Background()
 	c, _ := createTestGinContext()
 
-	// 1. Create pro subscription with pending downgrade to free
+	// 1. Create pro subscription with pending downgrade to based
 	proPlan, _ := service.GetPlan(ctx, "pro")
-	freePlan, _ := service.GetPlan(ctx, "free")
+	basedPlan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	stripeSubID := "sub_downgrade"
 	stripeCusID := "cus_downgrade"
-	downgradePlan := "free"
+	downgradePlan := "based"
 
 	sub := &billing.Subscription{
 		OrganizationID:       1,
@@ -784,7 +784,7 @@ func TestIntegrationRecurringPaymentWithDowngrade(t *testing.T) {
 		Provider:       "mock",
 		SubscriptionID: stripeSubID,
 		CustomerID:     stripeCusID,
-		Amount:         freePlan.PricePerSeatMonthly, // Paying free price
+		Amount:         basedPlan.PricePerSeatMonthly, // Paying based price
 		Currency:       "USD",
 		Status:         billing.OrderStatusSucceeded,
 	}
@@ -797,8 +797,8 @@ func TestIntegrationRecurringPaymentWithDowngrade(t *testing.T) {
 
 	// 4. Verify downgrade applied
 	updatedSub, _ := service.GetSubscription(ctx, 1)
-	if updatedSub.PlanID != freePlan.ID {
-		t.Errorf("expected plan to be downgraded to free, got plan ID %d", updatedSub.PlanID)
+	if updatedSub.PlanID != basedPlan.ID {
+		t.Errorf("expected plan to be downgraded to based, got plan ID %d", updatedSub.PlanID)
 	}
 	if updatedSub.DowngradeToPlan != nil {
 		t.Error("expected DowngradeToPlan to be cleared")
@@ -1105,7 +1105,7 @@ func TestIntegrationPaymentSucceededByExternalOrderNo(t *testing.T) {
 	ctx := context.Background()
 	c, _ := createTestGinContext()
 
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	proPlan, _ := service.GetPlan(ctx, "pro")
 	externalNo := "mock_cs_external_123"
@@ -1180,7 +1180,7 @@ func TestIntegrationUpgradePlanWithNilPlanID(t *testing.T) {
 	ctx := context.Background()
 	c, _ := createTestGinContext()
 
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Create invalid order with nil plan ID
 	order := &billing.PaymentOrder{
@@ -1271,7 +1271,7 @@ func TestIntegrationPaymentFailedByExternalOrderNo(t *testing.T) {
 	ctx := context.Background()
 	c, _ := createTestGinContext()
 
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	proPlan, _ := service.GetPlan(ctx, "pro")
 	externalNo := "mock_cs_external_fail"

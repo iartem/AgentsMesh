@@ -23,7 +23,7 @@ steps:
     verification:
       type: ui
       check:
-        - exists: 'heading "Pro" or "Free" or "Enterprise"'
+        - exists: 'heading "Pro" or "Based" or "Enterprise"'
 
   - action: 检查订阅状态标签
     expected: 显示状态标签（Active/Frozen/Canceled）

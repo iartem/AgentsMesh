@@ -18,7 +18,7 @@ func TestRecordUsage(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	err := service.RecordUsage(ctx, 1, "pod_minutes", 5.0, billing.UsageMetadata{})
 	if err != nil {
@@ -32,7 +32,7 @@ func TestGetUsage(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	service.RecordUsage(ctx, 1, "pod_minutes", 5.0, billing.UsageMetadata{})
 	service.RecordUsage(ctx, 1, "pod_minutes", 3.0, billing.UsageMetadata{})
@@ -52,7 +52,7 @@ func TestGetUsageHistory(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	service.RecordUsage(ctx, 1, "pod_minutes", 5.0, billing.UsageMetadata{})
 
@@ -71,7 +71,7 @@ func TestGetUsageHistoryAllTypes(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	service.RecordUsage(ctx, 1, "pod_minutes", 5.0, billing.UsageMetadata{})
 	service.RecordUsage(ctx, 1, "storage_gb", 1.0, billing.UsageMetadata{})
@@ -91,7 +91,7 @@ func TestCheckQuotaWithinLimit(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	err := service.CheckQuota(ctx, 1, "users", 1)
 	if err != nil {
@@ -105,7 +105,7 @@ func TestCheckQuotaExceeded(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db) // max_users = 5
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Add existing members to exceed quota
 	for i := 0; i < 5; i++ {
@@ -148,7 +148,7 @@ func TestCheckQuotaCustomQuota(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 	service.SetCustomQuota(ctx, 1, "users", 100)
 
 	// Should allow up to 100 users now
@@ -165,7 +165,7 @@ func TestCheckQuotaNoSubscription(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	// No subscription - should use free plan defaults
+	// No subscription - should use based plan defaults
 	err := service.CheckQuota(ctx, 999, "users", 1)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
@@ -178,7 +178,7 @@ func TestCheckQuotaAllResourceTypes(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	resources := []string{"users", "runners", "concurrent_pods", "repositories", "pod_minutes", "unknown"}
 	for _, resource := range resources {
@@ -196,7 +196,7 @@ func TestCheckSeatAvailability(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	sub := &billing.Subscription{
 		OrganizationID:     1,
@@ -231,7 +231,7 @@ func TestCheckSeatAvailabilityWithPendingInvitations(t *testing.T) {
 
 	seedTestPlan(t, db)
 
-	plan, _ := service.GetPlan(ctx, "free")
+	plan, _ := service.GetPlan(ctx, "based")
 	now := time.Now()
 	sub := &billing.Subscription{
 		OrganizationID:     1,
@@ -283,7 +283,7 @@ func TestSetCustomQuota(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	err := service.SetCustomQuota(ctx, 1, "users", 100)
 	if err != nil {
@@ -340,7 +340,7 @@ func TestGetSeatUsage(t *testing.T) {
 		t.Errorf("expected 3 available seats, got %d", usage.AvailableSeats)
 	}
 	if !usage.CanAddSeats {
-		t.Error("expected CanAddSeats to be true for non-free plan")
+		t.Error("expected CanAddSeats to be true for non-based plan")
 	}
 }
 
@@ -350,14 +350,14 @@ func TestGetSeatUsageFreePlan(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	usage, err := service.GetSeatUsage(ctx, 1)
 	if err != nil {
 		t.Fatalf("failed to get seat usage: %v", err)
 	}
 	if usage.CanAddSeats {
-		t.Error("expected CanAddSeats to be false for free plan")
+		t.Error("expected CanAddSeats to be false for based plan")
 	}
 }
 
@@ -411,7 +411,7 @@ func TestGetBillingOverview(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Add some resources
 	db.Exec("INSERT INTO organization_members (organization_id, user_id, role) VALUES (1, 1, 'owner')")
@@ -423,7 +423,7 @@ func TestGetBillingOverview(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get billing overview: %v", err)
 	}
-	if overview.Plan.Name != "free" {
+	if overview.Plan.Name != "based" {
 		t.Errorf("expected plan 'free', got %s", overview.Plan.Name)
 	}
 	if overview.Usage.Users != 1 {
@@ -463,7 +463,7 @@ func TestCheckQuotaRunners(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db) // max_runners = 1
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Add one runner
 	db.Exec("INSERT INTO runners (organization_id, name) VALUES (1, 'runner1')")
@@ -480,12 +480,13 @@ func TestCheckQuotaConcurrentPods(t *testing.T) {
 	service := NewService(db, "")
 	ctx := context.Background()
 
-	seedTestPlan(t, db) // max_concurrent_pods = 2
-	service.CreateSubscription(ctx, 1, "free")
+	seedTestPlan(t, db) // max_concurrent_pods = 5 (based plan)
+	service.CreateSubscription(ctx, 1, "based")
 
-	// Add two running pods
-	db.Exec("INSERT INTO pods (organization_id, name, status) VALUES (1, 'pod1', 'running')")
-	db.Exec("INSERT INTO pods (organization_id, name, status) VALUES (1, 'pod2', 'initializing')")
+	// Add five running pods to reach the limit
+	for i := 1; i <= 5; i++ {
+		db.Exec("INSERT INTO pods (organization_id, name, status) VALUES (1, ?, 'running')", "pod"+string(rune('0'+i)))
+	}
 
 	// Should fail to add another
 	err := service.CheckQuota(ctx, 1, "concurrent_pods", 1)
@@ -499,11 +500,11 @@ func TestCheckQuotaRepositories(t *testing.T) {
 	service := NewService(db, "")
 	ctx := context.Background()
 
-	seedTestPlan(t, db) // max_repositories = 3
-	service.CreateSubscription(ctx, 1, "free")
+	seedTestPlan(t, db) // max_repositories = 5 (based plan)
+	service.CreateSubscription(ctx, 1, "based")
 
-	// Add three repositories
-	for i := 1; i <= 3; i++ {
+	// Add five repositories to reach the limit
+	for i := 1; i <= 5; i++ {
 		db.Exec("INSERT INTO repositories (organization_id, name) VALUES (1, ?)", "repo"+string(rune('0'+i)))
 	}
 
@@ -520,7 +521,7 @@ func TestCheckQuotaWithCustomQuotaExceeded(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 	service.SetCustomQuota(ctx, 1, "users", 2) // Override to 2 users
 
 	// Add 2 members
@@ -540,7 +541,7 @@ func TestCheckQuotaPodMinutes(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db) // included_pod_minutes = 100
-	service.CreateSubscription(ctx, 1, "free")
+	service.CreateSubscription(ctx, 1, "based")
 
 	// Record 100 minutes of usage
 	service.RecordUsage(ctx, 1, "pod_minutes", 100.0, billing.UsageMetadata{})
@@ -619,5 +620,61 @@ func TestGetBillingOverviewWithNilPlan(t *testing.T) {
 	}
 	if overview.Plan == nil {
 		t.Error("expected plan to be loaded")
+	}
+}
+
+func TestCheckQuotaFrozenSubscription(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	plan := seedTestPlan(t, db)
+
+	// Create frozen subscription
+	now := time.Now()
+	frozenAt := now.Add(-24 * time.Hour)
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             plan.ID,
+		Status:             billing.SubscriptionStatusFrozen,
+		BillingCycle:       billing.BillingCycleMonthly,
+		CurrentPeriodStart: now.Add(-30 * 24 * time.Hour),
+		CurrentPeriodEnd:   now.Add(-24 * time.Hour),
+		FrozenAt:           &frozenAt,
+	}
+	db.Create(sub)
+
+	// Should return ErrSubscriptionFrozen
+	err := service.CheckQuota(ctx, 1, "users", 1)
+	if err != ErrSubscriptionFrozen {
+		t.Errorf("expected ErrSubscriptionFrozen, got %v", err)
+	}
+}
+
+func TestCheckQuotaWithUnlimitedCustomQuota(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db, "")
+	ctx := context.Background()
+
+	seedEnterprisePlan(t, db) // Enterprise has unlimited users (-1)
+
+	plan, _ := service.GetPlan(ctx, "enterprise")
+	now := time.Now()
+	sub := &billing.Subscription{
+		OrganizationID:     1,
+		PlanID:             plan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(0, 1, 0),
+	}
+	db.Create(sub)
+
+	// Set custom quota to -1 (unlimited), which should skip custom check and fall through to plan limit (-1 = unlimited)
+	service.SetCustomQuota(ctx, 1, "users", -1)
+
+	// Should allow unlimited users via plan's -1 limit
+	err := service.CheckQuota(ctx, 1, "users", 1000)
+	if err != nil {
+		t.Errorf("expected no error for unlimited quota, got %v", err)
 	}
 }
