@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
-import { getServerUrl } from "@/lib/env";
+import { useServerUrl } from "@/hooks/useServerUrl";
 
 export default function GettingStartedPage() {
-  const serverUrl = useMemo(() => getServerUrl(), []);
+  const serverUrl = useServerUrl();
 
   return (
     <div>

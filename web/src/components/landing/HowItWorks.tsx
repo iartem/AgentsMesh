@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import { useTranslations } from "@/lib/i18n/client";
-import { getServerUrl } from "@/lib/env";
+import { useServerUrl } from "@/hooks/useServerUrl";
 
 export function HowItWorks() {
   const t = useTranslations();
-  const serverUrl = useMemo(() => getServerUrl(), []);
+  const serverUrl = useServerUrl();
 
   const steps = [
     {

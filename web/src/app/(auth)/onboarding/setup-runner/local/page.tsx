@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { runnerApi, RunnerData } from "@/lib/api/runner";
-import { getServerUrl } from "@/lib/env";
+import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "@/lib/i18n/client";
 
 export default function LocalRunnerSetupPage() {
   const router = useRouter();
   const t = useTranslations();
   const { currentOrg } = useAuthStore();
+  const serverUrl = useServerUrl();
   const [token, setToken] = useState<string | null>(null);
   const [tokenCopied, setTokenCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -299,19 +300,19 @@ export default function LocalRunnerSetupPage() {
               <div className="p-4 bg-muted rounded-md">
                 <p className="text-xs text-muted-foreground mb-2"># macOS / Linux</p>
                 <code className="text-sm font-mono text-foreground block">
-                  curl -fsSL {getServerUrl()}/install.sh | sh
+                  curl -fsSL {serverUrl}/install.sh | sh
                 </code>
               </div>
               <div className="p-4 bg-muted rounded-md">
                 <p className="text-xs text-muted-foreground mb-2"># Windows (PowerShell)</p>
                 <code className="text-sm font-mono text-foreground block">
-                  irm {getServerUrl()}/install.ps1 | iex
+                  irm {serverUrl}/install.ps1 | iex
                 </code>
               </div>
               <div className="p-4 bg-muted rounded-md">
                 <p className="text-xs text-muted-foreground mb-2"># {t("auth.onboarding.localRunner.startRunnerComment")}</p>
                 <code className="text-sm font-mono text-foreground block whitespace-pre-wrap">
-{`agentsmesh-runner register --server ${getServerUrl()} --token <your-token>
+{`agentsmesh-runner register --server ${serverUrl} --token <your-token>
 agentsmesh-runner run`}
                 </code>
               </div>

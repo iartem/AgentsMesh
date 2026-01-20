@@ -22,7 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getServerUrl } from "@/lib/env";
+import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "@/lib/i18n/client";
 
 export default function RunnersPage() {
@@ -31,6 +31,7 @@ export default function RunnersPage() {
   const [loading, setLoading] = useState(true);
   const [showAddRunnerModal, setShowAddRunnerModal] = useState(false);
   const [selectedRunner, setSelectedRunner] = useState<RunnerData | null>(null);
+  const serverUrl = useServerUrl();
 
   useEffect(() => {
     loadData();
@@ -345,6 +346,7 @@ export default function RunnersPage() {
             setShowAddRunnerModal(false);
             loadData();
           }}
+          serverUrl={serverUrl}
         />
       )}
 
@@ -405,10 +407,12 @@ function AddRunnerModal({
   t,
   onClose,
   onCreated,
+  serverUrl,
 }: {
   t: (key: string, params?: Record<string, string | number>) => string;
   onClose: () => void;
   onCreated: () => void;
+  serverUrl: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
@@ -436,7 +440,7 @@ function AddRunnerModal({
 
   const copyCommand = () => {
     if (generatedToken) {
-      const command = `agentsmesh-runner register --server ${getServerUrl()} --token ${generatedToken}\nagentsmesh-runner run`;
+      const command = `agentsmesh-runner register --server ${serverUrl} --token ${generatedToken}\nagentsmesh-runner run`;
       navigator.clipboard.writeText(command);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -489,7 +493,7 @@ function AddRunnerModal({
                   <span>Terminal</span>
                 </div>
                 <code className="text-green-600 dark:text-green-400 text-sm font-mono block whitespace-pre-wrap">
-{`agentsmesh-runner register --server ${getServerUrl()} --token ${generatedToken.substring(0, 16)}...
+{`agentsmesh-runner register --server ${serverUrl} --token ${generatedToken.substring(0, 16)}...
 agentsmesh-runner run`}
                 </code>
                 <Button

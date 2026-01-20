@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { getServerUrl } from "@/lib/env";
+import { useServerUrl } from "@/hooks/useServerUrl";
 
 export default function RunnerSetupPage() {
-  const serverUrl = useMemo(() => getServerUrl(), []);
+  const serverUrl = useServerUrl();
 
   return (
     <div>
