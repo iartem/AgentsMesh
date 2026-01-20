@@ -4,7 +4,7 @@ import { request, orgPath } from "./base";
 export interface PodData {
   id: number;
   pod_key: string;
-  status: "initializing" | "running" | "paused" | "terminated" | "failed";
+  status: "initializing" | "running" | "paused" | "disconnected" | "orphaned" | "completed" | "terminated" | "error" | "failed";
   agent_status: string;
   initial_prompt?: string;
   branch_name?: string;
