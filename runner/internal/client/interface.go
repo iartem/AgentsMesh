@@ -23,7 +23,8 @@ type Connection interface {
 	// SendPodTerminated sends a pod_terminated event to the server.
 	SendPodTerminated(podKey string, exitCode int32, errorMsg string) error
 
-	// SendTerminalOutput sends terminal output to the server with backpressure.
+	// SendTerminalOutput sends terminal output to the server.
+	// Non-blocking: drops silently if buffer is full (TUI frames are expendable).
 	SendTerminalOutput(podKey string, data []byte) error
 
 	// SendPtyResized sends a PTY resize event to the server.
