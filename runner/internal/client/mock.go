@@ -257,5 +257,10 @@ func (m *MockConnection) Reset() {
 	m.stopped = false
 }
 
+// QueueUsage returns the mock queue usage (always 0 for testing).
+func (m *MockConnection) QueueUsage() float64 {
+	return 0.0
+}
+
 // Ensure MockConnection implements Connection interface
 var _ Connection = (*MockConnection)(nil)

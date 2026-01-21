@@ -2,9 +2,11 @@ package runner
 
 import (
 	"testing"
+	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Tests for event sending methods and helper functions
@@ -150,10 +152,25 @@ func TestCreateOutputHandler(t *testing.T) {
 
 	handler := NewRunnerMessageHandler(runner, store, mockConn)
 
-	outputHandler := handler.createOutputHandler("pod-1")
+	// Create a SmartAggregator for the test
+	agg := terminal.NewSmartAggregator(
+		func(data []byte) {
+			handler.sendTerminalOutput("pod-1", data)
+		},
+		func() float64 { return 0 },
+	)
+
+	outputHandler := handler.createOutputHandler("pod-1", agg)
 
 	// Call the handler
 	outputHandler([]byte("test output"))
+
+	// Flush the aggregator to ensure data is sent
+	agg.Stop()
+
+	// Wait a bit for the async flush callback to complete
+	// SmartAggregator calls onFlush in a goroutine to avoid deadlock
+	time.Sleep(50 * time.Millisecond)
 
 	// Verify output was sent
 	events := mockConn.GetEvents()
@@ -179,13 +196,19 @@ func TestCreateExitHandler(t *testing.T) {
 
 	handler := NewRunnerMessageHandler(runner, store, mockConn)
 
+	// Create a SmartAggregator for the test
+	agg := terminal.NewSmartAggregator(
+		func(data []byte) {},
+		func() float64 { return 0 },
+	)
+
 	// Add pod
 	store.Put("exit-pod", &Pod{
 		ID:     "exit-pod",
 		Status: PodStatusRunning,
 	})
 
-	exitHandler := handler.createExitHandler("exit-pod")
+	exitHandler := handler.createExitHandler("exit-pod", agg)
 
 	// Call the handler
 	exitHandler(0)

@@ -49,7 +49,7 @@ type Pod struct {
 	Branch           string
 	WorktreePath     string
 	Terminal         *terminal.Terminal
-	OutputAggregator *terminal.OutputAggregator // Aggregates PTY output to reduce message frequency
+	Aggregator       *terminal.SmartAggregator // Output aggregator for adaptive frame rate
 	StartedAt        time.Time
 	Status           string              // Pod status - use statusMu for thread-safe access
 	statusMu         sync.RWMutex        // Protects Status field

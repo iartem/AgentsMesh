@@ -58,16 +58,20 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("failed to build pod: %w", err)
 	}
 
-	// Create output aggregator to reduce gRPC message frequency
-	// Aggregates PTY output with 16ms window / 16KB buffer before sending
-	aggregator := h.createOutputAggregator(cmd.PodKey)
-	pod.OutputAggregator = aggregator
+	// Create SmartAggregator for this pod
+	// The aggregator buffers terminal output and adapts frame rate based on queue pressure
+	pod.Aggregator = terminal.NewSmartAggregator(
+		func(data []byte) {
+			h.sendTerminalOutput(cmd.PodKey, data)
+		},
+		func() float64 {
+			return h.conn.QueueUsage()
+		},
+	)
 
-	// Set output handler to write to aggregator instead of directly sending
-	pod.Terminal.SetOutputHandler(func(data []byte) {
-		aggregator.Write(data)
-	})
-	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey))
+	// Set output/exit handlers - output goes through SmartAggregator
+	pod.Terminal.SetOutputHandler(h.createOutputHandler(cmd.PodKey, pod.Aggregator))
+	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey, pod.Aggregator))
 
 	// Start terminal
 	if err := pod.Terminal.Start(); err != nil {
@@ -104,9 +108,9 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	// Stop output aggregator first to flush any remaining data
-	if pod.OutputAggregator != nil {
-		pod.OutputAggregator.Stop()
+	// Stop aggregator first to flush pending output
+	if pod.Aggregator != nil {
+		pod.Aggregator.Stop()
 	}
 
 	// Stop terminal
@@ -199,30 +203,27 @@ func (h *RunnerMessageHandler) OnTerminalRedraw(req client.TerminalRedrawRequest
 
 // Helper methods
 
-// createOutputAggregator creates an OutputAggregator that aggregates PTY output
-// before sending to reduce gRPC message frequency from 4000-6700/s to ~60/s.
-func (h *RunnerMessageHandler) createOutputAggregator(podKey string) *terminal.OutputAggregator {
-	return terminal.NewOutputAggregator(func(data []byte) {
-		h.sendTerminalOutput(podKey, data)
-	})
-}
-
-func (h *RunnerMessageHandler) createOutputHandler(podKey string) func([]byte) {
+// createOutputHandler creates an output handler that routes through SmartAggregator.
+// The aggregator buffers output and adapts frame rate based on queue pressure.
+func (h *RunnerMessageHandler) createOutputHandler(podKey string, agg *terminal.SmartAggregator) func([]byte) {
 	return func(data []byte) {
-		h.sendTerminalOutput(podKey, data)
+		// Route through SmartAggregator for adaptive frame rate
+		agg.Write(data)
 	}
 }
 
-func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
+// createExitHandler creates an exit handler that stops the aggregator and notifies server.
+func (h *RunnerMessageHandler) createExitHandler(podKey string, agg *terminal.SmartAggregator) func(int) {
 	return func(exitCode int) {
 		logger.Pod().Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
 
+		// Stop aggregator to flush any pending output
+		if agg != nil {
+			agg.Stop()
+		}
+
 		pod := h.podStore.Delete(podKey)
 		if pod != nil {
-			// Stop output aggregator to flush remaining data before notifying server
-			if pod.OutputAggregator != nil {
-				pod.OutputAggregator.Stop()
-			}
 			pod.SetStatus(PodStatusStopped)
 		}
 

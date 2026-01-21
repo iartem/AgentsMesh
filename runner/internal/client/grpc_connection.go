@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
@@ -22,15 +23,11 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/tls/certprovider"
 	"google.golang.org/grpc/credentials/tls/certprovider/pemfile"
-	"google.golang.org/grpc/encoding/gzip" // Register gzip compressor
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/status"
 )
-
-// Ensure gzip compressor is registered
-var _ = gzip.Name
 
 // GRPCProtocolVersion is the current gRPC protocol version.
 const GRPCProtocolVersion = 2
@@ -79,12 +76,17 @@ type GRPCConnection struct {
 	runnerVersion string
 	mcpPort       int
 
-	// Lifecycle
-	sendCh        chan *runnerv1.RunnerMessage // Send channel for messages (typed for safety)
+	// Lifecycle - Priority-based channels for message sending
+	// Control messages (heartbeat, pod events) have higher priority than terminal output
+	controlCh     chan *runnerv1.RunnerMessage // High priority: heartbeat, pod_created, pod_terminated, etc.
+	terminalCh    chan *runnerv1.RunnerMessage // Low priority: terminal_output, agent_status
 	stopCh        chan struct{}
 	stopOnce      sync.Once
 	reconnectOnce sync.Once      // Ensures only one reconnection attempt
 	reconnectCh   chan struct{}  // Signal to trigger reconnection
+
+	// Stuck detection for writeLoop
+	lastSendTime atomic.Int64
 
 	// Certificate renewal
 	certRenewalCheckInterval time.Duration
@@ -157,7 +159,8 @@ func NewGRPCConnection(endpoint, nodeID, orgSlug, certFile, keyFile, caFile stri
 		heartbeatInterval:        30 * time.Second,
 		initTimeout:              30 * time.Second,
 		reconnectStrategy:        NewReconnectStrategy(5*time.Second, 5*time.Minute),
-		sendCh:                   make(chan *runnerv1.RunnerMessage, 1000),
+		controlCh:                make(chan *runnerv1.RunnerMessage, 100),  // Small buffer for control messages
+		terminalCh:               make(chan *runnerv1.RunnerMessage, 1000), // Large buffer for terminal output
 		stopCh:                   make(chan struct{}),
 		reconnectCh:              make(chan struct{}, 1),
 		initResultCh:             make(chan *runnerv1.InitializeResult, 1),
@@ -231,9 +234,6 @@ func (c *GRPCConnection) Connect() error {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		// Enable gzip compression for all calls to reduce bandwidth
-		// Especially effective for terminal output which is highly compressible text
-		grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)),
 	}
 
 	// Connect to server
@@ -387,11 +387,11 @@ func (c *GRPCConnection) Stop() {
 	})
 }
 
-// send queues a message for sending through the sendCh channel.
-// This method is thread-safe and should be used by all public Send* methods
-// to avoid direct stream.Send() calls which are not goroutine-safe.
+// sendControl queues a control message (high priority).
+// Control messages include: heartbeat, pod_created, pod_terminated, pty_resized, error.
+// These messages should never be blocked by terminal output.
 // Returns error if connection is closed, stopped, or channel is full.
-func (c *GRPCConnection) send(msg *runnerv1.RunnerMessage) error {
+func (c *GRPCConnection) sendControl(msg *runnerv1.RunnerMessage) error {
 	c.mu.Lock()
 	if c.stream == nil {
 		c.mu.Unlock()
@@ -400,20 +400,20 @@ func (c *GRPCConnection) send(msg *runnerv1.RunnerMessage) error {
 	c.mu.Unlock()
 
 	select {
-	case c.sendCh <- msg:
+	case c.controlCh <- msg:
 		return nil
 	case <-c.stopCh:
 		return fmt.Errorf("connection stopped")
 	default:
-		return fmt.Errorf("send buffer full")
+		return fmt.Errorf("control buffer full")
 	}
 }
 
-// sendWithBackpressure queues a message with backpressure support.
-// Unlike send(), this method blocks until the message is queued or timeout expires.
-// Use this for critical messages (like terminal output) that should not be dropped.
-// Returns error if connection is closed, stopped, or timeout expires.
-func (c *GRPCConnection) sendWithBackpressure(msg *runnerv1.RunnerMessage, timeout time.Duration) error {
+// sendTerminal queues a terminal message (low priority).
+// Terminal messages include: terminal_output, agent_status.
+// These messages are dropped silently if buffer is full (TUI frames are expendable).
+// Returns nil even when dropped to avoid blocking callers.
+func (c *GRPCConnection) sendTerminal(msg *runnerv1.RunnerMessage) error {
 	c.mu.Lock()
 	if c.stream == nil {
 		c.mu.Unlock()
@@ -422,16 +422,18 @@ func (c *GRPCConnection) sendWithBackpressure(msg *runnerv1.RunnerMessage, timeo
 	c.mu.Unlock()
 
 	select {
-	case c.sendCh <- msg:
+	case c.terminalCh <- msg:
 		return nil
 	case <-c.stopCh:
 		return fmt.Errorf("connection stopped")
-	case <-time.After(timeout):
-		return fmt.Errorf("send timeout after %v (buffer full, queue length: %d)", timeout, len(c.sendCh))
+	default:
+		// TUI frames are expendable - drop silently to avoid blocking
+		logger.GRPC().Debug("Terminal output dropped (buffer full)")
+		return nil
 	}
 }
 
-// SendPodCreated sends a pod_created event to the server.
+// SendPodCreated sends a pod_created event to the server (control message).
 func (c *GRPCConnection) SendPodCreated(podKey string, pid int32) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_PodCreated{
@@ -442,10 +444,10 @@ func (c *GRPCConnection) SendPodCreated(podKey string, pid int32) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendControl(msg)
 }
 
-// SendPodTerminated sends a pod_terminated event to the server.
+// SendPodTerminated sends a pod_terminated event to the server (control message).
 func (c *GRPCConnection) SendPodTerminated(podKey string, exitCode int32, errorMsg string) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_PodTerminated{
@@ -457,12 +459,11 @@ func (c *GRPCConnection) SendPodTerminated(podKey string, exitCode int32, errorM
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendControl(msg)
 }
 
-// SendTerminalOutput sends terminal output to the server.
-// Uses backpressure with 5s timeout to avoid dropping terminal data when buffer is full.
-// This ensures terminal output is reliably delivered even under high throughput scenarios.
+// SendTerminalOutput sends terminal output to the server (terminal message).
+// Non-blocking: drops silently if buffer is full (TUI frames are expendable).
 func (c *GRPCConnection) SendTerminalOutput(podKey string, data []byte) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_TerminalOutput{
@@ -473,12 +474,10 @@ func (c *GRPCConnection) SendTerminalOutput(podKey string, data []byte) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	// Use backpressure to avoid dropping terminal output
-	// 5 second timeout provides sufficient time for buffer to drain during high throughput
-	return c.sendWithBackpressure(msg, 5*time.Second)
+	return c.sendTerminal(msg)
 }
 
-// SendAgentStatus sends an agent status change event to the server.
+// SendAgentStatus sends an agent status change event to the server (terminal message).
 func (c *GRPCConnection) SendAgentStatus(podKey string, status string) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_AgentStatus{
@@ -489,10 +488,10 @@ func (c *GRPCConnection) SendAgentStatus(podKey string, status string) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendTerminal(msg)
 }
 
-// SendPtyResized sends a PTY resize event to the server.
+// SendPtyResized sends a PTY resize event to the server (control message).
 func (c *GRPCConnection) SendPtyResized(podKey string, cols, rows int32) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_PtyResized{
@@ -504,10 +503,10 @@ func (c *GRPCConnection) SendPtyResized(podKey string, cols, rows int32) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendControl(msg)
 }
 
-// SendError sends an error event to the server.
+// SendError sends an error event to the server (control message).
 func (c *GRPCConnection) SendError(podKey, code, message string) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_Error{
@@ -519,10 +518,10 @@ func (c *GRPCConnection) SendError(podKey, code, message string) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendControl(msg)
 }
 
-// SendPodInitProgress sends a pod initialization progress event to the server.
+// SendPodInitProgress sends a pod initialization progress event to the server (control message).
 func (c *GRPCConnection) SendPodInitProgress(podKey, phase string, progress int32, message string) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_PodInitProgress{
@@ -535,17 +534,23 @@ func (c *GRPCConnection) SendPodInitProgress(podKey, phase string, progress int3
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	return c.send(msg)
+	return c.sendControl(msg)
 }
 
-// QueueLength returns the current send queue length.
+// QueueLength returns the current terminal send queue length.
 func (c *GRPCConnection) QueueLength() int {
-	return len(c.sendCh)
+	return len(c.terminalCh)
 }
 
-// QueueCapacity returns the send queue capacity.
+// QueueCapacity returns the terminal send queue capacity.
 func (c *GRPCConnection) QueueCapacity() int {
-	return cap(c.sendCh)
+	return cap(c.terminalCh)
+}
+
+// QueueUsage returns the terminal queue usage ratio (0.0 to 1.0).
+// Used by SmartAggregator to adapt frame rate based on queue pressure.
+func (c *GRPCConnection) QueueUsage() float64 {
+	return float64(len(c.terminalCh)) / float64(cap(c.terminalCh))
 }
 
 // connectionLoop manages the connection lifecycle with auto-reconnection.
@@ -915,7 +920,7 @@ func (c *GRPCConnection) handleSendPrompt(cmd *runnerv1.SendPromptCommand) {
 	// TODO: Implement prompt sending when handler supports it
 }
 
-// sendError sends an error event back to the server (internal use).
+// sendError sends an error event back to the server (internal use, control message).
 func (c *GRPCConnection) sendError(podKey, code, message string) {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_Error{
@@ -927,14 +932,23 @@ func (c *GRPCConnection) sendError(podKey, code, message string) {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	if err := c.send(msg); err != nil {
+	if err := c.sendControl(msg); err != nil {
 		logger.GRPC().Error("Failed to send error", "error", err)
 	}
 }
 
-// writeLoop sends messages to the gRPC stream.
+// writeLoop sends messages to the gRPC stream with priority scheduling.
+// Control messages (heartbeat, pod events) have higher priority than terminal output.
 // This is the ONLY goroutine that calls stream.Send() to ensure thread-safety.
+// Includes stuck detection: triggers reconnect if no successful send for 30 seconds.
 func (c *GRPCConnection) writeLoop(ctx context.Context, done <-chan struct{}) {
+	log := logger.GRPC()
+	stuckTicker := time.NewTicker(10 * time.Second)
+	defer stuckTicker.Stop()
+
+	// Initialize last send time
+	c.lastSendTime.Store(time.Now().UnixNano())
+
 	for {
 		select {
 		case <-c.stopCh:
@@ -943,18 +957,53 @@ func (c *GRPCConnection) writeLoop(ctx context.Context, done <-chan struct{}) {
 			return
 		case <-ctx.Done():
 			return
-		case msg := <-c.sendCh:
-			c.mu.Lock()
-			stream := c.stream
-			c.mu.Unlock()
 
-			if stream != nil {
-				if err := stream.Send(msg); err != nil {
-					logger.GRPC().Error("Failed to send message", "error", err)
-					return
-				}
+		case <-stuckTicker.C:
+			// Stuck detection: if no successful send for 30 seconds, trigger reconnect
+			lastSend := time.Unix(0, c.lastSendTime.Load())
+			if time.Since(lastSend) > 30*time.Second {
+				log.Error("WriteLoop stuck for 30s, triggering reconnect")
+				c.triggerReconnect()
+				return
+			}
+
+		case msg := <-c.controlCh:
+			// Control messages have highest priority
+			c.sendAndRecord(msg)
+
+		default:
+			// No control messages pending - use nested select for priority
+			select {
+			case <-c.stopCh:
+				return
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case msg := <-c.controlCh:
+				// Double-check for control messages (priority)
+				c.sendAndRecord(msg)
+			case msg := <-c.terminalCh:
+				// Process terminal messages when no control messages pending
+				c.sendAndRecord(msg)
 			}
 		}
+	}
+}
+
+// sendAndRecord sends a message and records the send time for stuck detection.
+func (c *GRPCConnection) sendAndRecord(msg *runnerv1.RunnerMessage) {
+	c.mu.Lock()
+	stream := c.stream
+	c.mu.Unlock()
+
+	if stream != nil {
+		if err := stream.Send(msg); err != nil {
+			logger.GRPC().Error("Failed to send message", "error", err)
+			return
+		}
+		// Update last successful send time
+		c.lastSendTime.Store(time.Now().UnixNano())
 	}
 }
 
@@ -980,7 +1029,7 @@ func (c *GRPCConnection) heartbeatLoop(ctx context.Context, done <-chan struct{}
 	}
 }
 
-// sendHeartbeat sends a heartbeat message.
+// sendHeartbeat sends a heartbeat message (control message - never blocked by terminal output).
 func (c *GRPCConnection) sendHeartbeat() {
 	var pods []*runnerv1.PodInfo
 
@@ -1008,7 +1057,7 @@ func (c *GRPCConnection) sendHeartbeat() {
 
 	logger.GRPC().Debug("Sending heartbeat", "pods", len(pods))
 
-	if err := c.send(msg); err != nil {
+	if err := c.sendControl(msg); err != nil {
 		logger.GRPC().Error("Failed to send heartbeat", "error", err)
 	}
 }
