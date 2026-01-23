@@ -37,6 +37,10 @@ type Client struct {
 	tlsKey    string // PEM encoded private key
 	tlsExpiry string // Certificate expiry time (RFC3339)
 
+	// Certificate storage paths
+	certFile string // Path to save certificate PEM
+	keyFile  string // Path to save private key PEM
+
 	// Latency tracking for load balancing
 	lastLatencyMs int // Last measured heartbeat round-trip latency
 
@@ -56,6 +60,8 @@ type ClientConfig struct {
 	RelayRegion       string
 	RelayCapacity     int
 	AutoIP            bool
+	CertFile          string // Path to save/load certificate PEM
+	KeyFile           string // Path to save/load private key PEM
 }
 
 // NewClient creates a new backend client
@@ -87,10 +93,19 @@ func NewClientWithConfig(cfg ClientConfig) *Client {
 		relayRegion:       cfg.RelayRegion,
 		relayCapacity:     cfg.RelayCapacity,
 		autoIP:            cfg.AutoIP,
+		certFile:          cfg.CertFile,
+		keyFile:           cfg.KeyFile,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 		logger: slog.With("component", "backend_client"),
+	}
+
+	// Try to load existing certificate from files
+	if cfg.CertFile != "" && cfg.KeyFile != "" {
+		if err := c.loadCertificateFiles(); err == nil {
+			c.logger.Info("Loaded existing TLS certificate from files")
+		}
 	}
 
 	return c
@@ -339,6 +354,12 @@ func (c *Client) SendHeartbeat(ctx context.Context, connections int) error {
 			c.tlsKey = heartbeatResp.TLSKey
 			c.tlsExpiry = heartbeatResp.TLSExpiry
 			c.mu.Unlock()
+
+			// Save certificate to files for persistence across restarts
+			if err := c.saveCertificateFiles(heartbeatResp.TLSCert, heartbeatResp.TLSKey); err != nil {
+				c.logger.Warn("Failed to save certificate files", "error", err)
+			}
+
 			c.logger.Info("TLS certificate received from heartbeat", "expiry", heartbeatResp.TLSExpiry)
 		}
 	}
@@ -473,4 +494,46 @@ func (c *Client) GetTLSExpiry() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.tlsExpiry
+}
+
+// saveCertificateFiles saves certificate and key to files
+func (c *Client) saveCertificateFiles(cert, key string) error {
+	if c.certFile == "" || c.keyFile == "" {
+		return nil // No paths configured, skip saving
+	}
+
+	if err := os.WriteFile(c.certFile, []byte(cert), 0644); err != nil {
+		return fmt.Errorf("failed to write certificate file: %w", err)
+	}
+
+	if err := os.WriteFile(c.keyFile, []byte(key), 0600); err != nil {
+		return fmt.Errorf("failed to write key file: %w", err)
+	}
+
+	c.logger.Info("Certificate files saved", "cert_file", c.certFile, "key_file", c.keyFile)
+	return nil
+}
+
+// loadCertificateFiles loads certificate and key from files
+func (c *Client) loadCertificateFiles() error {
+	if c.certFile == "" || c.keyFile == "" {
+		return fmt.Errorf("certificate paths not configured")
+	}
+
+	certData, err := os.ReadFile(c.certFile)
+	if err != nil {
+		return fmt.Errorf("failed to read certificate file: %w", err)
+	}
+
+	keyData, err := os.ReadFile(c.keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to read key file: %w", err)
+	}
+
+	c.mu.Lock()
+	c.tlsCert = string(certData)
+	c.tlsKey = string(keyData)
+	c.mu.Unlock()
+
+	return nil
 }

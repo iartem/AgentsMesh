@@ -44,6 +44,8 @@ func New(cfg *config.Config) *Server {
 		RelayRegion:       cfg.Relay.Region,
 		RelayCapacity:     cfg.Relay.Capacity,
 		AutoIP:            cfg.Relay.AutoIP,
+		CertFile:          cfg.Server.TLS.CertFile,
+		KeyFile:           cfg.Server.TLS.KeyFile,
 	})
 
 	// Create server instance first (for closure capture)

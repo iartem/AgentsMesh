@@ -214,22 +214,8 @@ func Load() (*Config, error) {
 		}
 	}
 
-	// Validate TLS configuration
-	if cfg.Server.TLS.Enabled {
-		if cfg.Server.TLS.CertFile == "" {
-			return nil, fmt.Errorf("TLS_CERT_FILE is required when TLS is enabled")
-		}
-		if cfg.Server.TLS.KeyFile == "" {
-			return nil, fmt.Errorf("TLS_KEY_FILE is required when TLS is enabled")
-		}
-		// Check if files exist
-		if _, err := os.Stat(cfg.Server.TLS.CertFile); os.IsNotExist(err) {
-			return nil, fmt.Errorf("TLS certificate file not found: %s", cfg.Server.TLS.CertFile)
-		}
-		if _, err := os.Stat(cfg.Server.TLS.KeyFile); os.IsNotExist(err) {
-			return nil, fmt.Errorf("TLS key file not found: %s", cfg.Server.TLS.KeyFile)
-		}
-	}
+	// Note: TLS certificate validation is skipped because we support dynamic certificate loading from Backend via ACME.
+	// The server will use GetCertificate callback to load certificate from backend client or fall back to files if available.
 
 	return &cfg, nil
 }
