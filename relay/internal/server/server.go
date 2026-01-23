@@ -125,47 +125,43 @@ func (s *Server) Start(ctx context.Context) error {
 	// Check if we should use TLS
 	useTLS := s.cfg.Server.TLS.Enabled
 
-	// Check if backend provided a TLS certificate (ACME)
-	if s.backendClient.HasTLSCertificate() {
-		certPEM, keyPEM := s.backendClient.GetTLSCertificate()
-		cert, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
-		if err != nil {
-			s.logger.Error("Failed to load TLS certificate from backend", "error", err)
-		} else {
-			s.httpServer.TLSConfig = &tls.Config{
-				Certificates: []tls.Certificate{cert},
-			}
-			useTLS = true
-			s.logger.Info("Using TLS certificate from backend (ACME)",
-				"expiry", s.backendClient.GetTLSExpiry())
-		}
-	}
-
 	if useTLS {
-		if s.httpServer.TLSConfig != nil {
-			// Use certificate from backend (already loaded in TLSConfig)
-			s.logger.Info("Starting relay server with TLS (certificate from backend)",
-				"address", s.cfg.Server.Address())
-			go func() {
-				// ListenAndServeTLS with empty cert/key paths uses TLSConfig
-				if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-					errCh <- err
+		// Use GetCertificate callback to dynamically load certificate from backend
+		// This allows certificate to be updated via heartbeat without server restart
+		s.httpServer.TLSConfig = &tls.Config{
+			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				// First try to get certificate from backend client (ACME)
+				if s.backendClient.HasTLSCertificate() {
+					certPEM, keyPEM := s.backendClient.GetTLSCertificate()
+					cert, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
+					if err != nil {
+						s.logger.Error("Failed to load TLS certificate from backend", "error", err)
+					} else {
+						return &cert, nil
+					}
 				}
-			}()
-		} else {
-			// Use certificate files from config
-			s.logger.Info("Starting relay server with TLS",
-				"address", s.cfg.Server.Address(),
-				"cert_file", s.cfg.Server.TLS.CertFile)
-			go func() {
-				if err := s.httpServer.ListenAndServeTLS(
-					s.cfg.Server.TLS.CertFile,
-					s.cfg.Server.TLS.KeyFile,
-				); err != nil && err != http.ErrServerClosed {
-					errCh <- err
+
+				// Fall back to certificate files if configured
+				if s.cfg.Server.TLS.CertFile != "" && s.cfg.Server.TLS.KeyFile != "" {
+					cert, err := tls.LoadX509KeyPair(s.cfg.Server.TLS.CertFile, s.cfg.Server.TLS.KeyFile)
+					if err != nil {
+						return nil, fmt.Errorf("failed to load certificate files: %w", err)
+					}
+					return &cert, nil
 				}
-			}()
+
+				return nil, fmt.Errorf("no TLS certificate available")
+			},
 		}
+
+		s.logger.Info("Starting relay server with TLS (dynamic certificate loading)",
+			"address", s.cfg.Server.Address())
+		go func() {
+			// ListenAndServeTLS with empty cert/key paths uses TLSConfig.GetCertificate
+			if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				errCh <- err
+			}
+		}()
 	} else {
 		s.logger.Info("Starting relay server", "address", s.cfg.Server.Address())
 		go func() {

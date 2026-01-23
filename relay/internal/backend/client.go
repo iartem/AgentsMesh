@@ -127,6 +127,17 @@ type HeartbeatRequest struct {
 	CPUUsage    float64 `json:"cpu_usage"`
 	MemoryUsage float64 `json:"memory_usage"`
 	LatencyMs   int     `json:"latency_ms,omitempty"` // Heartbeat round-trip latency
+	NeedCert    bool    `json:"need_cert,omitempty"`  // Whether relay needs TLS certificate
+}
+
+// HeartbeatResponse represents heartbeat response
+type HeartbeatResponse struct {
+	Status string `json:"status"`
+
+	// TLS certificate (if ACME is enabled on backend)
+	TLSCert   string `json:"tls_cert,omitempty"`
+	TLSKey    string `json:"tls_key,omitempty"`
+	TLSExpiry string `json:"tls_expiry,omitempty"`
 }
 
 // SessionClosedRequest represents session closed notification
@@ -263,6 +274,7 @@ func (c *Client) SendHeartbeat(ctx context.Context, connections int) error {
 		return fmt.Errorf("relay not registered")
 	}
 	lastLatency := c.lastLatencyMs
+	needCert := c.tlsCert == "" || c.tlsKey == "" // Request cert if we don't have one
 	c.mu.RUnlock()
 
 	// Get CPU and memory usage (simplified)
@@ -276,6 +288,7 @@ func (c *Client) SendHeartbeat(ctx context.Context, connections int) error {
 		CPUUsage:    0, // CPU usage would need more sophisticated measurement
 		MemoryUsage: memoryUsage,
 		LatencyMs:   lastLatency, // Send last measured latency
+		NeedCert:    needCert,
 	}
 
 	body, err := json.Marshal(req)
@@ -315,6 +328,19 @@ func (c *Client) SendHeartbeat(ctx context.Context, connections int) error {
 			return fmt.Errorf("relay not found, need to re-register")
 		}
 		return fmt.Errorf("heartbeat failed with status: %d", resp.StatusCode)
+	}
+
+	// Parse response to check for certificate
+	var heartbeatResp HeartbeatResponse
+	if err := json.NewDecoder(resp.Body).Decode(&heartbeatResp); err == nil {
+		if heartbeatResp.TLSCert != "" && heartbeatResp.TLSKey != "" {
+			c.mu.Lock()
+			c.tlsCert = heartbeatResp.TLSCert
+			c.tlsKey = heartbeatResp.TLSKey
+			c.tlsExpiry = heartbeatResp.TLSExpiry
+			c.mu.Unlock()
+			c.logger.Info("TLS certificate received from heartbeat", "expiry", heartbeatResp.TLSExpiry)
+		}
 	}
 
 	return nil

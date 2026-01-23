@@ -65,6 +65,7 @@ type HeartbeatRequest struct {
 	CPUUsage    float64 `json:"cpu_usage"`
 	MemoryUsage float64 `json:"memory_usage"`
 	LatencyMs   int     `json:"latency_ms,omitempty"` // Heartbeat round-trip latency in milliseconds
+	NeedCert    bool    `json:"need_cert,omitempty"`  // Whether relay needs TLS certificate
 }
 
 // SessionClosedRequest is the session closed notification
@@ -176,6 +177,16 @@ func (h *RelayHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// HeartbeatResponse is the relay heartbeat response
+type HeartbeatResponse struct {
+	Status string `json:"status"`
+
+	// TLS certificate (if ACME is enabled and relay doesn't have current cert)
+	TLSCert   string `json:"tls_cert,omitempty"`
+	TLSKey    string `json:"tls_key,omitempty"`
+	TLSExpiry string `json:"tls_expiry,omitempty"`
+}
+
 // Heartbeat handles relay heartbeat
 // POST /api/internal/relays/heartbeat
 func (h *RelayHandler) Heartbeat(c *gin.Context) {
@@ -190,7 +201,22 @@ func (h *RelayHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	response := HeartbeatResponse{Status: "ok"}
+
+	// Include TLS certificate only if relay needs it and ACME is enabled
+	if req.NeedCert && h.acmeManager != nil {
+		cert, key, expiry, err := h.acmeManager.GetCertificatePEM()
+		if err == nil && cert != "" {
+			response.TLSCert = cert
+			response.TLSKey = key
+			response.TLSExpiry = expiry.Format(time.RFC3339)
+			h.logger.Info("TLS certificate included in heartbeat response",
+				"relay_id", req.RelayID,
+				"cert_expiry", expiry)
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // Unregister handles graceful relay unregistration
