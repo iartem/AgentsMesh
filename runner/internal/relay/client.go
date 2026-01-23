@@ -174,23 +174,29 @@ func (c *Client) Start() {
 func (c *Client) Stop() {
 	c.stopOnce.Do(func() {
 		c.logger.Info("Stopping relay client")
+
+		// Mark as disconnected immediately so HasRelayClient() returns false
+		// This allows new subscribe_terminal to create a fresh connection
+		c.connected.Store(false)
+
 		close(c.stopCh)
 		c.cancel()
 
-		// Wait for read/write loops to exit first to avoid race on conn.WriteMessage
-		c.wg.Wait()
-
+		// Close connection to unblock readLoop immediately
 		c.connMu.Lock()
 		if c.conn != nil {
-			// Send close message (safe now that loops have exited)
-			c.conn.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			// Close connection to interrupt any pending reads
 			c.conn.Close()
-			c.conn = nil
 		}
 		c.connMu.Unlock()
 
-		c.connected.Store(false)
+		// Wait for read/write loops to exit
+		c.wg.Wait()
+
+		// Clean up connection reference
+		c.connMu.Lock()
+		c.conn = nil
+		c.connMu.Unlock()
 	})
 }
 
