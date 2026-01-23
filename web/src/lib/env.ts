@@ -38,7 +38,7 @@ function getPrimaryDomain(): string | undefined {
 /**
  * 是否使用 HTTPS
  */
-function useHttps(): boolean {
+function isHttpsEnabled(): boolean {
   return process.env.NEXT_PUBLIC_USE_HTTPS === "true";
 }
 
@@ -48,7 +48,7 @@ function useHttps(): boolean {
 function deriveHttpUrl(): string | undefined {
   const domain = getPrimaryDomain();
   if (!domain) return undefined;
-  const protocol = useHttps() ? "https" : "http";
+  const protocol = isHttpsEnabled() ? "https" : "http";
   return `${protocol}://${domain}`;
 }
 
@@ -58,7 +58,7 @@ function deriveHttpUrl(): string | undefined {
 function deriveWsUrl(): string | undefined {
   const domain = getPrimaryDomain();
   if (!domain) return undefined;
-  const protocol = useHttps() ? "wss" : "ws";
+  const protocol = isHttpsEnabled() ? "wss" : "ws";
   return `${protocol}://${domain}`;
 }
 

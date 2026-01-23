@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach, Mock } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 // Mock WebSocket
 class MockWebSocket {
@@ -51,8 +51,8 @@ describe("terminalConnection", () => {
     vi.useFakeTimers();
     // Re-import to get fresh singleton
     vi.resetModules();
-    const module = await import("@/stores/terminalConnection");
-    terminalPool = module.terminalPool;
+    const importedModule = await import("@/stores/terminalConnection");
+    terminalPool = importedModule.terminalPool;
   });
 
   afterEach(() => {
