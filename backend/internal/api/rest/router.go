@@ -3,6 +3,7 @@ package rest
 import (
 	"log/slog"
 
+	"github.com/anthropics/agentsmesh/backend/internal/api/rest/internal"
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/webhooks"
@@ -12,6 +13,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
+	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -62,11 +64,12 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 	})
 
 	// Initialize email service
+	// BaseURL is derived from PrimaryDomain
 	emailSvc := email.NewService(email.Config{
 		Provider:    cfg.Email.Provider,
 		ResendKey:   cfg.Email.ResendKey,
 		FromAddress: cfg.Email.FromAddress,
-		BaseURL:     cfg.Email.BaseURL,
+		BaseURL:     cfg.FrontendURL(), // Derived from PrimaryDomain
 	})
 
 	// API v1
@@ -115,15 +118,11 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 				v1.RegisterOrgScopedRoutes(orgScoped, svc)
 				slog.Info("RegisterOrgScopedRoutes completed")
 
-				// WebSocket endpoints (moved from /ws to /orgs/:slug/ws)
+				// WebSocket endpoints for real-time events
+				// Note: Terminal WebSocket has been moved to Relay architecture
+				// Use GET /pods/:key/terminal/connect to get Relay URL and token
 				wsGroup := orgScoped.Group("/ws")
 				{
-					terminalHandler := ws.NewTerminalHandler(svc.Hub, svc.Pod)
-					if svc.TerminalRouter != nil {
-						terminalHandler.SetTerminalRouter(svc.TerminalRouter)
-					}
-					wsGroup.GET("/terminal/:pod_key", terminalHandler.HandleTerminal)
-
 					eventHandler := ws.NewEventsHandler(svc.Hub)
 					wsGroup.GET("/events", eventHandler.HandleEvents)
 				}
@@ -207,9 +206,32 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 	if cfg.Admin.IsEnabled() {
 		dbWrapper := database.NewGormWrapper(db)
 		adminSvc := adminservice.NewService(dbWrapper)
+		var commandSender runner.RunnerCommandSender
+		if svc.PodCoordinator != nil {
+			commandSender = svc.PodCoordinator.GetCommandSender()
+		}
 		admin.RegisterRoutes(r, cfg, dbWrapper, &admin.Services{
-			Auth:  svc.Auth,
-			Admin: adminSvc,
+			Auth:          svc.Auth,
+			Admin:         adminSvc,
+			RelayManager:  svc.RelayManager,
+			CommandSender: commandSender,
+			PodService:    svc.Pod,
+		})
+	}
+
+	// Internal API routes (Relay communication)
+	if svc.RelayManager != nil {
+		var commandSender runner.RunnerCommandSender
+		if svc.PodCoordinator != nil {
+			commandSender = svc.PodCoordinator.GetCommandSender()
+		}
+		internal.RegisterRelayRoutes(r.Group("/api/internal/relays"), &internal.RelayRouterDeps{
+			RelayManager:   svc.RelayManager,
+			DNSService:     svc.RelayDNSService,
+			ACMEManager:    svc.RelayACMEManager,
+			CommandSender:  commandSender,
+			PodService:     svc.Pod,
+			InternalSecret: cfg.Server.InternalAPISecret,
 		})
 	}
 

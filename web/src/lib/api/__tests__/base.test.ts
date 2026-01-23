@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Get the expected API URL - should match what base.ts uses
-const EXPECTED_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const EXPECTED_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000";
 
 import { request, ApiError, orgPath } from "../base";
 

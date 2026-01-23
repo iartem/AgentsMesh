@@ -11,6 +11,7 @@ import {
   LogOut,
   Shield,
   Tag,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
@@ -36,6 +37,11 @@ const navItems = [
     title: "Runners",
     href: "/runners",
     icon: Server,
+  },
+  {
+    title: "Relays",
+    href: "/relays",
+    icon: Radio,
   },
   {
     title: "Promo Codes",

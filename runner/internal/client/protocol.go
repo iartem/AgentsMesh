@@ -54,6 +54,23 @@ type TerminalRedrawRequest struct {
 	PodKey string `json:"pod_key"`
 }
 
+// SubscribeTerminalRequest is sent when a browser wants to observe the terminal via Relay.
+// The Runner should connect to the specified Relay URL and start streaming terminal output.
+type SubscribeTerminalRequest struct {
+	PodKey          string `json:"pod_key"`
+	RelayURL        string `json:"relay_url"`
+	SessionID       string `json:"session_id"`
+	RunnerToken     string `json:"runner_token"` // JWT token for Relay authentication
+	IncludeSnapshot bool   `json:"include_snapshot"`
+	SnapshotHistory int32  `json:"snapshot_history"`
+}
+
+// UnsubscribeTerminalRequest is sent when all browsers have disconnected from the terminal.
+// The Runner should disconnect from the Relay.
+type UnsubscribeTerminalRequest struct {
+	PodKey string `json:"pod_key"`
+}
+
 // ==================== Message Handler Interface ====================
 
 // MessageHandler handles incoming messages from server.
@@ -66,4 +83,14 @@ type MessageHandler interface {
 	OnTerminalInput(req TerminalInputRequest) error
 	OnTerminalResize(req TerminalResizeRequest) error
 	OnTerminalRedraw(req TerminalRedrawRequest) error
+
+	// OnSubscribeTerminal handles subscribe terminal command from server.
+	// This notifies the Runner that a browser wants to observe the terminal via Relay.
+	// The Runner should connect to the specified Relay URL and start streaming terminal output.
+	OnSubscribeTerminal(req SubscribeTerminalRequest) error
+
+	// OnUnsubscribeTerminal handles unsubscribe terminal command from server.
+	// This notifies the Runner that all browsers have disconnected.
+	// The Runner should disconnect from the Relay.
+	OnUnsubscribeTerminal(req UnsubscribeTerminalRequest) error
 }

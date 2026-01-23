@@ -1,7 +1,30 @@
 /**
  * Terminal WebSocket connection management
  * Handles connection pooling, reconnection, and message buffering
+ *
+ * Architecture:
+ * - Browser connects to Relay (not Backend) for terminal data
+ * - Control flow: Browser -> Backend (REST) -> Runner (gRPC)
+ * - Data flow: Browser <-> Relay <-> Runner (WebSocket)
  */
+
+import { podApi } from "@/lib/api/pod";
+
+/**
+ * Relay message types (binary protocol)
+ * Must match relay/internal/protocol/message.go
+ */
+const MsgType = {
+  Snapshot: 0x01,           // Complete terminal snapshot
+  Output: 0x02,             // Terminal output (raw PTY data)
+  Input: 0x03,              // User input to terminal
+  Resize: 0x04,             // Terminal resize
+  Ping: 0x05,               // Ping for keepalive
+  Pong: 0x06,               // Pong response
+  Control: 0x07,            // Control messages (JSON)
+  RunnerDisconnected: 0x08, // Runner disconnected notification
+  RunnerReconnected: 0x09,  // Runner reconnected notification
+} as const;
 
 /**
  * Terminal connection state
@@ -17,6 +40,12 @@ export interface TerminalConnection {
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   pendingResize?: { rows: number; cols: number };
   ptySize?: { rows: number; cols: number };
+  // Relay connection info
+  relayUrl: string;
+  sessionId: string;
+  relayToken: string;
+  // Runner status
+  runnerDisconnected: boolean;
 }
 
 /**
@@ -28,7 +57,33 @@ export interface ConnectionHandle {
 }
 
 /**
- * Terminal connection pool for managing WebSocket connections
+ * Encode a message with type prefix (Relay binary protocol)
+ */
+function encodeMessage(msgType: number, payload: Uint8Array | string): Uint8Array {
+  const payloadBytes = typeof payload === "string"
+    ? new TextEncoder().encode(payload)
+    : payload;
+  const message = new Uint8Array(1 + payloadBytes.length);
+  message[0] = msgType;
+  message.set(payloadBytes, 1);
+  return message;
+}
+
+/**
+ * Decode a message with type prefix (Relay binary protocol)
+ */
+function decodeMessage(data: Uint8Array): { type: number; payload: Uint8Array } {
+  if (data.length < 1) {
+    return { type: 0, payload: new Uint8Array(0) };
+  }
+  return {
+    type: data[0],
+    payload: data.slice(1),
+  };
+}
+
+/**
+ * Terminal connection pool for managing WebSocket connections to Relay
  */
 class TerminalConnectionPool {
   private connections: Map<string, TerminalConnection> = new Map();
@@ -42,20 +97,23 @@ class TerminalConnectionPool {
     return this.connections.get(podKey);
   }
 
-  connect(podKey: string, onMessage: (data: Uint8Array | string) => void): ConnectionHandle {
+  async connect(podKey: string, onMessage: (data: Uint8Array | string) => void): Promise<ConnectionHandle> {
     let conn = this.connections.get(podKey);
 
     if (conn) {
       conn.listeners.add(onMessage);
-      // Note: Don't replay buffer here - backend will send scrollback data on new WebSocket connection
-      // The buffer is only used for data continuity during brief disconnections within the same session
       return {
         send: (data: string) => this.send(podKey, data),
         disconnect: () => this.removeListener(podKey, onMessage),
       };
     }
 
-    const ws = this.createWebSocket(podKey);
+    // Get Relay connection info from Backend
+    const relayInfo = await podApi.getTerminalConnection(podKey);
+    console.log(`Got Relay connection info for ${podKey}:`, relayInfo.relay_url);
+
+    const ws = this.createRelayWebSocket(podKey, relayInfo);
+
     conn = {
       ws,
       podKey,
@@ -65,6 +123,10 @@ class TerminalConnectionPool {
       listeners: new Set([onMessage]),
       reconnectAttempts: 0,
       reconnectTimer: null,
+      relayUrl: relayInfo.relay_url,
+      sessionId: relayInfo.session_id,
+      relayToken: relayInfo.token,
+      runnerDisconnected: false,
     };
 
     this.connections.set(podKey, conn);
@@ -76,43 +138,17 @@ class TerminalConnectionPool {
     };
   }
 
-  private createWebSocket(podKey: string): WebSocket {
-    // 使用统一的 WebSocket URL 获取逻辑
-    // 动态 import 以避免在模块顶层执行
-    const getWsUrl = (): string => {
-      // 优先使用显式配置的 WS URL
-      if (process.env.NEXT_PUBLIC_WS_URL) {
-        return process.env.NEXT_PUBLIC_WS_URL;
-      }
-      // 从 API URL 推导
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (apiUrl) {
-        return apiUrl.replace(/^http/, "ws");
-      }
-      // 客户端：从当前页面推导
-      if (typeof window !== "undefined") {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const host = window.location.host;
-        return `${protocol}//${host}`;
-      }
-      return "ws://localhost:8080";
-    };
-    const wsUrl = getWsUrl();
-
-    let token = null;
-    let orgSlug = null;
-    try {
-      const authData = localStorage.getItem("agentsmesh-auth");
-      if (authData) {
-        const parsed = JSON.parse(authData);
-        token = parsed.state?.token;
-        orgSlug = parsed.state?.currentOrg?.slug;
-      }
-    } catch (e) {
-      console.error("Failed to parse auth data:", e);
-    }
-
-    const ws = new WebSocket(`${wsUrl}/api/v1/orgs/${orgSlug}/ws/terminal/${podKey}?token=${token}`);
+  /**
+   * Create WebSocket connection to Relay server
+   */
+  private createRelayWebSocket(
+    podKey: string,
+    relayInfo: { relay_url: string; token: string; session_id: string }
+  ): WebSocket {
+    // Connect to Relay browser endpoint with token auth
+    const url = `${relayInfo.relay_url}/browser/terminal?token=${encodeURIComponent(relayInfo.token)}&session=${encodeURIComponent(relayInfo.session_id)}`;
+    console.log(`Connecting to Relay: ${relayInfo.relay_url} for pod ${podKey}`);
+    const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     return ws;
   }
@@ -124,6 +160,7 @@ class TerminalConnectionPool {
         c.status = "connected";
         c.lastActivity = Date.now();
         c.reconnectAttempts = 0;
+        console.log(`Terminal WebSocket connected to Relay for ${podKey}`);
         if (c.pendingResize) {
           this.doSendResize(podKey, c.pendingResize.rows, c.pendingResize.cols);
           c.pendingResize = undefined;
@@ -136,35 +173,7 @@ class TerminalConnectionPool {
       if (!c) return;
 
       c.lastActivity = Date.now();
-      let data: Uint8Array | string;
-      if (event.data instanceof ArrayBuffer) {
-        data = new Uint8Array(event.data);
-      } else {
-        data = event.data;
-      }
-
-      if (typeof data === "string") {
-        try {
-          const msg = JSON.parse(data);
-          if (msg.type === "pty_resized" && typeof msg.cols === "number" && typeof msg.rows === "number") {
-            c.ptySize = { rows: msg.rows, cols: msg.cols };
-            return;
-          }
-        } catch {
-          // Not JSON, continue as terminal output
-        }
-      }
-
-      if (typeof data !== "string") {
-        c.buffer.push(data);
-        if (c.buffer.length > this.maxBufferSize) {
-          c.buffer.shift();
-        }
-      }
-
-      for (const listener of c.listeners) {
-        listener(data);
-      }
+      this.handleRelayMessage(c, event.data);
     };
 
     ws.onerror = (error) => {
@@ -182,6 +191,7 @@ class TerminalConnectionPool {
       const c = this.connections.get(podKey);
       if (c) {
         c.status = "disconnected";
+        console.log(`Terminal WebSocket disconnected for ${podKey}`);
         if (c.listeners.size > 0) {
           this.scheduleReconnect(podKey);
         }
@@ -189,15 +199,92 @@ class TerminalConnectionPool {
     };
   }
 
+  /**
+   * Handle messages from Relay (binary protocol with type prefix)
+   */
+  private handleRelayMessage(conn: TerminalConnection, data: ArrayBuffer | string): void {
+    if (typeof data === "string") {
+      // Relay should send binary, but handle string for debugging
+      console.warn("Received string message from Relay, expected binary");
+      return;
+    }
+
+    const bytes = new Uint8Array(data);
+    const { type, payload } = decodeMessage(bytes);
+
+    // Debug logging for troubleshooting
+    console.log(`[Relay] Received message: type=${type}, payload_len=${payload.length}`);
+
+    switch (type) {
+      case MsgType.Output: {
+        // Raw terminal output - forward directly to xterm
+        conn.buffer.push(payload);
+        if (conn.buffer.length > this.maxBufferSize) {
+          conn.buffer.shift();
+        }
+        console.log(`[Relay] Forwarding to ${conn.listeners.size} listeners, payload_len=${payload.length}`);
+        for (const listener of conn.listeners) {
+          listener(payload);
+        }
+        break;
+      }
+      case MsgType.Control: {
+        // Control messages (JSON)
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload));
+          if (msg.type === "pty_resized") {
+            conn.ptySize = { rows: msg.rows, cols: msg.cols };
+          }
+        } catch (e) {
+          console.error("Failed to parse control message:", e);
+        }
+        break;
+      }
+      case MsgType.RunnerDisconnected: {
+        // Runner has disconnected from Relay, waiting for reconnection
+        console.warn(`Runner disconnected for pod ${conn.podKey}`);
+        conn.runnerDisconnected = true;
+        // Display disconnection message in terminal
+        const disconnectMsg = new TextEncoder().encode(
+          "\r\n\x1b[33m⚠ Runner disconnected. Waiting for reconnection...\x1b[0m\r\n"
+        );
+        for (const listener of conn.listeners) {
+          listener(disconnectMsg);
+        }
+        break;
+      }
+      case MsgType.RunnerReconnected: {
+        // Runner has reconnected to Relay
+        console.log(`Runner reconnected for pod ${conn.podKey}`);
+        conn.runnerDisconnected = false;
+        // Display reconnection message in terminal
+        const reconnectMsg = new TextEncoder().encode(
+          "\r\n\x1b[32m✓ Runner reconnected.\x1b[0m\r\n"
+        );
+        for (const listener of conn.listeners) {
+          listener(reconnectMsg);
+        }
+        break;
+      }
+      case MsgType.Pong:
+        // Pong response - ignore
+        break;
+      default:
+        console.warn(`Unknown message type from Relay: ${type}`);
+    }
+  }
+
   send(podKey: string, data: string): void {
     const conn = this.connections.get(podKey);
     if (conn && conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.send(JSON.stringify({ type: "input", data }));
+      // Relay binary protocol: MsgType.Input + raw data
+      const message = encodeMessage(MsgType.Input, data);
+      conn.ws.send(message);
       conn.lastActivity = Date.now();
     }
   }
 
-  sendResize(podKey: string, rows: number, cols: number): void {
+  sendResize(podKey: string, cols: number, rows: number): void {
     if (rows <= 0 || cols <= 0) return;
 
     const existingTimer = this.resizeDebounceTimers.get(podKey);
@@ -206,25 +293,33 @@ class TerminalConnectionPool {
     }
 
     const timer = setTimeout(() => {
-      this.doSendResize(podKey, rows, cols);
+      this.doSendResize(podKey, cols, rows);
       this.resizeDebounceTimers.delete(podKey);
     }, this.resizeDebounceMs);
 
     this.resizeDebounceTimers.set(podKey, timer);
   }
 
-  private doSendResize(podKey: string, rows: number, cols: number): void {
+  private doSendResize(podKey: string, cols: number, rows: number): void {
     const conn = this.connections.get(podKey);
     if (!conn) return;
 
     if (conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.send(JSON.stringify({ type: "resize", rows, cols }));
+      // Relay binary protocol: MsgType.Resize + 4 bytes (cols: uint16 BE, rows: uint16 BE)
+      const payload = new Uint8Array(4);
+      payload[0] = (cols >> 8) & 0xff;
+      payload[1] = cols & 0xff;
+      payload[2] = (rows >> 8) & 0xff;
+      payload[3] = rows & 0xff;
+      const message = encodeMessage(MsgType.Resize, payload);
+      conn.ws.send(message);
+      console.log(`[Relay] Sent resize: cols=${cols}, rows=${rows}`);
     } else if (conn.ws.readyState === WebSocket.CONNECTING) {
       conn.pendingResize = { rows, cols };
     }
   }
 
-  forceResize(podKey: string, rows: number, cols: number): void {
+  forceResize(podKey: string, cols: number, rows: number): void {
     if (rows <= 0 || cols <= 0) return;
 
     const existingTimer = this.resizeDebounceTimers.get(podKey);
@@ -235,7 +330,15 @@ class TerminalConnectionPool {
 
     const conn = this.connections.get(podKey);
     if (conn && conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.send(JSON.stringify({ type: "resize", rows, cols }));
+      // Relay binary protocol: MsgType.Resize + 4 bytes (cols: uint16 BE, rows: uint16 BE)
+      const payload = new Uint8Array(4);
+      payload[0] = (cols >> 8) & 0xff;
+      payload[1] = cols & 0xff;
+      payload[2] = (rows >> 8) & 0xff;
+      payload[3] = rows & 0xff;
+      const message = encodeMessage(MsgType.Resize, payload);
+      conn.ws.send(message);
+      console.log(`[Relay] Sent forceResize: cols=${cols}, rows=${rows}`);
     }
   }
 
@@ -288,14 +391,13 @@ class TerminalConnectionPool {
     }, delay);
   }
 
-  private reconnect(podKey: string): void {
+  private async reconnect(podKey: string): Promise<void> {
     const oldConn = this.connections.get(podKey);
     if (!oldConn || oldConn.listeners.size === 0) return;
 
     console.log(`Reconnecting terminal for ${podKey}...`);
 
     const listeners = new Set(oldConn.listeners);
-    // Note: Don't preserve buffer on reconnect - backend will send full scrollback data
     const reconnectAttempts = oldConn.reconnectAttempts;
 
     if (oldConn.ws.readyState === WebSocket.OPEN || oldConn.ws.readyState === WebSocket.CONNECTING) {
@@ -305,7 +407,7 @@ class TerminalConnectionPool {
 
     const firstListener = listeners.values().next().value;
     if (firstListener) {
-      this.connect(podKey, firstListener);
+      await this.connect(podKey, firstListener);
 
       const newConn = this.connections.get(podKey);
       if (newConn) {
@@ -313,7 +415,6 @@ class TerminalConnectionPool {
           if (l !== firstListener) newConn.listeners.add(l);
         });
         newConn.reconnectAttempts = reconnectAttempts;
-        // buffer starts fresh - backend sends scrollback on new connection
       }
     }
   }
@@ -331,6 +432,10 @@ class TerminalConnectionPool {
   isConnected(podKey: string): boolean {
     const conn = this.connections.get(podKey);
     return conn?.status === "connected" && conn.ws.readyState === WebSocket.OPEN;
+  }
+
+  isRunnerDisconnected(podKey: string): boolean {
+    return this.connections.get(podKey)?.runnerDisconnected ?? false;
   }
 }
 

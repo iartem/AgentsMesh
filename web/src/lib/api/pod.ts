@@ -63,6 +63,8 @@ export const podApi = {
     branch_name?: string;
     config_overrides?: Record<string, unknown>;
     credential_profile_id?: number; // User's credential profile ID (undefined = RunnerHost mode)
+    cols?: number; // Terminal columns (from xterm.js)
+    rows?: number; // Terminal rows (from xterm.js)
   }) =>
     request<{ message: string; pod: PodData }>(
       orgPath("/pods"),
@@ -82,6 +84,16 @@ export const podApi = {
     request<{ pod_key: string; ws_url: string; status: string }>(
       `${orgPath("/pods")}/${key}/connect`
     ),
+
+  // Get terminal connection info via Relay
+  // Returns Relay URL and token for WebSocket connection
+  getTerminalConnection: (key: string) =>
+    request<{
+      relay_url: string;
+      token: string;
+      session_id: string;
+      pod_key: string;
+    }>(`${orgPath("/pods")}/${key}/terminal/connect`),
 
   // Terminal control - observe terminal output
   observeTerminal: (key: string, lines?: number) => {

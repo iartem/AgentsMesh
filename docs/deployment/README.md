@@ -29,9 +29,9 @@ docker compose up -d
 # Apply database migrations
 docker compose exec backend ./migrate up
 
-# Access the application
-# Web: http://localhost:3000
-# API: http://localhost:8080
+# Access the application (ports from deploy/dev/.env)
+# Web: http://localhost:10007
+# API: http://localhost:10000/api (via Traefik)
 ```
 
 ### Production Environment

@@ -9,7 +9,18 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/websocket"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/gin-gonic/gin"
+	gorillaWs "github.com/gorilla/websocket"
 )
+
+// WebSocket upgrader configuration
+var upgrader = gorillaWs.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// Allow all origins in development, configure properly in production
+		return true
+	},
+}
 
 // EventsHandler handles events WebSocket connections
 type EventsHandler struct {

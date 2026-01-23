@@ -92,9 +92,10 @@ func TestSmartAggregator_DiscardOldFrames(t *testing.T) {
 			mu.Unlock()
 			done <- struct{}{}
 		},
-		func() float64 { return 0.8 }, // High pressure - triggers frame discard
+		func() float64 { return 0.3 }, // Moderate pressure - allows flush but triggers frame discard
 		WithSmartBaseDelay(10*time.Millisecond),
 	)
+	defer agg.Stop()
 
 	// Write data with clear screen sequence in the middle
 	// old frame + clear screen + new frame
@@ -105,7 +106,7 @@ func TestSmartAggregator_DiscardOldFrames(t *testing.T) {
 	// Wait for flush
 	select {
 	case <-done:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(200 * time.Millisecond):
 		t.Fatal("Timeout waiting for flush")
 	}
 
@@ -322,4 +323,280 @@ func TestSmartAggregator_IsStopped(t *testing.T) {
 
 	// Double stop should not panic
 	agg.Stop()
+}
+
+func TestSmartAggregator_BufferLimitEnforced(t *testing.T) {
+	// Test that buffer never exceeds maxSize even without clear screen signals
+	// This simulates `find /` style output (no ESC[2J)
+	maxSize := 1000
+	var totalFlushed int64
+	var mu sync.Mutex
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			mu.Lock()
+			totalFlushed += int64(len(data))
+			mu.Unlock()
+		},
+		func() float64 { return 0.9 }, // High pressure - delays flush
+		WithSmartMaxSize(maxSize),
+		WithSmartBaseDelay(50*time.Millisecond),
+	)
+
+	// Write much more data than maxSize without any clear screen
+	totalWritten := 0
+	for i := 0; i < 100; i++ {
+		chunk := bytes.Repeat([]byte("x"), 200) // 200 bytes per write
+		agg.Write(chunk)
+		totalWritten += len(chunk)
+
+		// Buffer should never exceed maxSize
+		if agg.BufferLen() > maxSize {
+			t.Errorf("Buffer exceeded maxSize: %d > %d", agg.BufferLen(), maxSize)
+		}
+	}
+
+	agg.Stop()
+
+	t.Logf("✅ Buffer limit test: wrote %d bytes, buffer never exceeded %d",
+		totalWritten, maxSize)
+}
+
+func TestSmartAggregator_BufferLimitWithClearScreen(t *testing.T) {
+	// Test that clear screen detection still works with buffer limit
+	maxSize := 500
+	var lastFlush []byte
+	var mu sync.Mutex
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			mu.Lock()
+			lastFlush = make([]byte, len(data))
+			copy(lastFlush, data)
+			mu.Unlock()
+		},
+		func() float64 { return 0.5 }, // Medium pressure
+		WithSmartMaxSize(maxSize),
+		WithSmartBaseDelay(10*time.Millisecond),
+	)
+
+	// Write old frame + clear screen + new frame
+	agg.Write(bytes.Repeat([]byte("old"), 100)) // 300 bytes
+	agg.Write([]byte("\x1b[2J"))                 // Clear screen
+	agg.Write([]byte("new frame content"))       // New frame
+
+	// Wait for flush
+	time.Sleep(50 * time.Millisecond)
+	agg.Stop()
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Should contain the clear screen and new content
+	if !bytes.Contains(lastFlush, []byte("\x1b[2J")) {
+		t.Error("Clear screen should be preserved")
+	}
+	if !bytes.Contains(lastFlush, []byte("new frame content")) {
+		t.Error("New frame content should be preserved")
+	}
+	// Old content should be discarded
+	if bytes.Contains(lastFlush, []byte("oldoldold")) {
+		t.Error("Old frame content should be discarded")
+	}
+}
+
+func TestSmartAggregator_LargeChunkExceedsMaxSize(t *testing.T) {
+	// Test behavior when a single write exceeds maxSize
+	maxSize := 100
+	var flushed []byte
+	var mu sync.Mutex
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			mu.Lock()
+			flushed = append(flushed, data...)
+			mu.Unlock()
+		},
+		func() float64 { return 0 },
+		WithSmartMaxSize(maxSize),
+		WithSmartBaseDelay(10*time.Millisecond),
+	)
+
+	// First write some normal data
+	agg.Write([]byte("prefix"))
+
+	// Then write a chunk larger than maxSize
+	largeChunk := bytes.Repeat([]byte("L"), 200)
+	agg.Write(largeChunk)
+
+	// Buffer should still be capped at maxSize
+	if agg.BufferLen() > maxSize {
+		t.Errorf("Buffer exceeded maxSize after large write: %d > %d",
+			agg.BufferLen(), maxSize)
+	}
+
+	agg.Stop()
+	time.Sleep(20 * time.Millisecond)
+
+	t.Logf("✅ Large chunk test: buffer stayed within %d limit", maxSize)
+}
+
+// NOTE: compressSpaces was removed because it doesn't work for TUI apps.
+// CSI CUF (\x1b[nC) only moves the cursor - it does NOT overwrite existing content.
+// TUI apps rely on spaces to clear old content during redraws.
+// The correct solution requires a full VirtualTerminal implementation.
+// Now we use serialize mode with VirtualTerminal.Serialize() for proper space compression.
+
+// TestSmartAggregator_SerializeMode tests the serialize mode functionality
+// where Write() only marks pending data and flushLocked() calls the serialize callback
+func TestSmartAggregator_SerializeMode(t *testing.T) {
+	var mu sync.Mutex
+	var flushedData []byte
+	var flushCount int
+
+	// Simulated VirtualTerminal serialized output
+	serializedOutput := []byte("Hello\x1b[5CWorld")
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			mu.Lock()
+			flushedData = append(flushedData, data...)
+			flushCount++
+			mu.Unlock()
+		},
+		func() float64 { return 0.0 },
+		WithSmartBaseDelay(10*time.Millisecond),
+		// Serialize callback returns compressed data
+		WithSerializeCallback(func() []byte {
+			return serializedOutput
+		}),
+	)
+
+	// Write with nil data - in serialize mode, data is ignored
+	agg.Write(nil)
+
+	// Wait for flush
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	result := flushedData
+	count := flushCount
+	mu.Unlock()
+
+	// Verify serialized output was sent
+	if !bytes.Equal(result, serializedOutput) {
+		t.Errorf("Expected serialized output %q, got %q", serializedOutput, result)
+	}
+
+	if count != 1 {
+		t.Errorf("Expected 1 flush, got %d", count)
+	}
+
+	agg.Stop()
+	t.Logf("✅ Serialize mode test: correctly sent serialized output")
+}
+
+// TestSmartAggregator_SerializeModeNoPendingData tests that flush is skipped when no pending data
+func TestSmartAggregator_SerializeModeNoPendingData(t *testing.T) {
+	var flushCount int
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			flushCount++
+		},
+		func() float64 { return 0.0 },
+		WithSmartBaseDelay(5*time.Millisecond),
+		WithSerializeCallback(func() []byte {
+			return []byte("should not be called if no pending data")
+		}),
+	)
+
+	// Force flush without any Write() - should not flush
+	agg.Flush()
+
+	if flushCount != 0 {
+		t.Errorf("Expected 0 flushes when no pending data, got %d", flushCount)
+	}
+
+	agg.Stop()
+	t.Logf("✅ Serialize mode no-pending-data test: correctly skipped flush")
+}
+
+// TestSmartAggregator_SerializeModeMultipleWrites tests aggregation with multiple writes
+func TestSmartAggregator_SerializeModeMultipleWrites(t *testing.T) {
+	var mu sync.Mutex
+	var flushCount int
+	var callbackCount int
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			mu.Lock()
+			flushCount++
+			mu.Unlock()
+		},
+		func() float64 { return 0.0 },
+		WithSmartBaseDelay(50*time.Millisecond),
+		WithSerializeCallback(func() []byte {
+			mu.Lock()
+			callbackCount++
+			mu.Unlock()
+			return []byte("serialized")
+		}),
+	)
+
+	// Multiple rapid writes should be aggregated
+	for i := 0; i < 10; i++ {
+		agg.Write(nil)
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// Wait for flush
+	time.Sleep(100 * time.Millisecond)
+
+	mu.Lock()
+	fc := flushCount
+	cc := callbackCount
+	mu.Unlock()
+
+	// Should have aggregated multiple writes into fewer flushes
+	if fc == 0 {
+		t.Errorf("Expected at least 1 flush, got 0")
+	}
+	if fc > 3 {
+		t.Errorf("Expected aggregation, but got %d flushes for 10 writes", fc)
+	}
+	if cc != fc {
+		t.Errorf("Callback count (%d) should match flush count (%d)", cc, fc)
+	}
+
+	agg.Stop()
+	t.Logf("✅ Serialize mode aggregation test: %d flushes for 10 writes", fc)
+}
+
+// TestSmartAggregator_SerializeModeEmptyCallback tests handling of empty callback result
+func TestSmartAggregator_SerializeModeEmptyCallback(t *testing.T) {
+	var flushCount int
+
+	agg := NewSmartAggregator(
+		func(data []byte) {
+			flushCount++
+		},
+		func() float64 { return 0.0 },
+		WithSmartBaseDelay(5*time.Millisecond),
+		// Callback returns empty data
+		WithSerializeCallback(func() []byte {
+			return nil
+		}),
+	)
+
+	agg.Write(nil)
+	time.Sleep(20 * time.Millisecond)
+
+	// Should not call onFlush when callback returns empty data
+	if flushCount != 0 {
+		t.Errorf("Expected 0 flushes when callback returns nil, got %d", flushCount)
+	}
+
+	agg.Stop()
+	t.Logf("✅ Serialize mode empty callback test: correctly skipped empty data")
 }

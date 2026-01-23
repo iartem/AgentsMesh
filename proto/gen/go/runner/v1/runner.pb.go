@@ -968,6 +968,8 @@ type ServerMessage struct {
 	//	*ServerMessage_TerminalResize
 	//	*ServerMessage_SendPrompt
 	//	*ServerMessage_TerminalRedraw
+	//	*ServerMessage_SubscribeTerminal
+	//	*ServerMessage_UnsubscribeTerminal
 	Payload       isServerMessage_Payload `protobuf_oneof:"payload"`
 	Timestamp     int64                   `protobuf:"varint,15,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1074,6 +1076,24 @@ func (x *ServerMessage) GetTerminalRedraw() *TerminalRedrawCommand {
 	return nil
 }
 
+func (x *ServerMessage) GetSubscribeTerminal() *SubscribeTerminalCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_SubscribeTerminal); ok {
+			return x.SubscribeTerminal
+		}
+	}
+	return nil
+}
+
+func (x *ServerMessage) GetUnsubscribeTerminal() *UnsubscribeTerminalCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_UnsubscribeTerminal); ok {
+			return x.UnsubscribeTerminal
+		}
+	}
+	return nil
+}
+
 func (x *ServerMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -1113,6 +1133,14 @@ type ServerMessage_TerminalRedraw struct {
 	TerminalRedraw *TerminalRedrawCommand `protobuf:"bytes,7,opt,name=terminal_redraw,json=terminalRedraw,proto3,oneof"`
 }
 
+type ServerMessage_SubscribeTerminal struct {
+	SubscribeTerminal *SubscribeTerminalCommand `protobuf:"bytes,8,opt,name=subscribe_terminal,json=subscribeTerminal,proto3,oneof"`
+}
+
+type ServerMessage_UnsubscribeTerminal struct {
+	UnsubscribeTerminal *UnsubscribeTerminalCommand `protobuf:"bytes,9,opt,name=unsubscribe_terminal,json=unsubscribeTerminal,proto3,oneof"`
+}
+
 func (*ServerMessage_InitializeResult) isServerMessage_Payload() {}
 
 func (*ServerMessage_CreatePod) isServerMessage_Payload() {}
@@ -1126,6 +1154,10 @@ func (*ServerMessage_TerminalResize) isServerMessage_Payload() {}
 func (*ServerMessage_SendPrompt) isServerMessage_Payload() {}
 
 func (*ServerMessage_TerminalRedraw) isServerMessage_Payload() {}
+
+func (*ServerMessage_SubscribeTerminal) isServerMessage_Payload() {}
+
+func (*ServerMessage_UnsubscribeTerminal) isServerMessage_Payload() {}
 
 // InitializeResult 初始化响应
 type InitializeResult struct {
@@ -1320,6 +1352,8 @@ type CreatePodCommand struct {
 	FilesToCreate []*FileToCreate        `protobuf:"bytes,5,rep,name=files_to_create,json=filesToCreate,proto3" json:"files_to_create,omitempty"`
 	SandboxConfig *SandboxConfig         `protobuf:"bytes,6,opt,name=sandbox_config,json=sandboxConfig,proto3" json:"sandbox_config,omitempty"` // 替代原 work_dir_config
 	InitialPrompt string                 `protobuf:"bytes,7,opt,name=initial_prompt,json=initialPrompt,proto3" json:"initial_prompt,omitempty"`
+	Cols          int32                  `protobuf:"varint,8,opt,name=cols,proto3" json:"cols,omitempty"` // 终端列数（由浏览器传入）
+	Rows          int32                  `protobuf:"varint,9,opt,name=rows,proto3" json:"rows,omitempty"` // 终端行数（由浏览器传入）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1401,6 +1435,20 @@ func (x *CreatePodCommand) GetInitialPrompt() string {
 		return x.InitialPrompt
 	}
 	return ""
+}
+
+func (x *CreatePodCommand) GetCols() int32 {
+	if x != nil {
+		return x.Cols
+	}
+	return 0
+}
+
+func (x *CreatePodCommand) GetRows() int32 {
+	if x != nil {
+		return x.Rows
+	}
+	return 0
 }
 
 // FileToCreate 要创建的文件或目录
@@ -1860,6 +1908,138 @@ func (x *TerminalRedrawCommand) GetPodKey() string {
 	return ""
 }
 
+// SubscribeTerminalCommand 订阅终端命令
+// Backend 通知 Runner 有观察者要订阅终端，Runner 应连接到 Relay
+type SubscribeTerminalCommand struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PodKey          string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
+	RelayUrl        string                 `protobuf:"bytes,2,opt,name=relay_url,json=relayUrl,proto3" json:"relay_url,omitempty"`                       // Relay WebSocket URL (wss://relay.example.com)
+	SessionId       string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`                    // 会话 ID，用于 Relay 匹配 Browser 和 Runner
+	IncludeSnapshot bool                   `protobuf:"varint,4,opt,name=include_snapshot,json=includeSnapshot,proto3" json:"include_snapshot,omitempty"` // 是否发送快照
+	SnapshotHistory int32                  `protobuf:"varint,5,opt,name=snapshot_history,json=snapshotHistory,proto3" json:"snapshot_history,omitempty"` // 快照历史行数
+	RunnerToken     string                 `protobuf:"bytes,6,opt,name=runner_token,json=runnerToken,proto3" json:"runner_token,omitempty"`              // Runner 认证 Token（JWT）
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SubscribeTerminalCommand) Reset() {
+	*x = SubscribeTerminalCommand{}
+	mi := &file_runner_v1_runner_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeTerminalCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeTerminalCommand) ProtoMessage() {}
+
+func (x *SubscribeTerminalCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeTerminalCommand.ProtoReflect.Descriptor instead.
+func (*SubscribeTerminalCommand) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SubscribeTerminalCommand) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+func (x *SubscribeTerminalCommand) GetRelayUrl() string {
+	if x != nil {
+		return x.RelayUrl
+	}
+	return ""
+}
+
+func (x *SubscribeTerminalCommand) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SubscribeTerminalCommand) GetIncludeSnapshot() bool {
+	if x != nil {
+		return x.IncludeSnapshot
+	}
+	return false
+}
+
+func (x *SubscribeTerminalCommand) GetSnapshotHistory() int32 {
+	if x != nil {
+		return x.SnapshotHistory
+	}
+	return 0
+}
+
+func (x *SubscribeTerminalCommand) GetRunnerToken() string {
+	if x != nil {
+		return x.RunnerToken
+	}
+	return ""
+}
+
+// UnsubscribeTerminalCommand 取消订阅终端命令
+// Backend 通知 Runner 所有观察者已离开，Runner 应断开与 Relay 的连接
+type UnsubscribeTerminalCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PodKey        string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnsubscribeTerminalCommand) Reset() {
+	*x = UnsubscribeTerminalCommand{}
+	mi := &file_runner_v1_runner_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnsubscribeTerminalCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnsubscribeTerminalCommand) ProtoMessage() {}
+
+func (x *UnsubscribeTerminalCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnsubscribeTerminalCommand.ProtoReflect.Descriptor instead.
+func (*UnsubscribeTerminalCommand) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *UnsubscribeTerminalCommand) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
 var File_runner_v1_runner_proto protoreflect.FileDescriptor
 
 const file_runner_v1_runner_proto_rawDesc = "" +
@@ -1934,7 +2114,7 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12\x1a\n" +
 	"\bprogress\x18\x03 \x01(\x05R\bprogress\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\"\xae\x04\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\xe0\x05\n" +
 	"\rServerMessage\x12J\n" +
 	"\x11initialize_result\x18\x01 \x01(\v2\x1b.runner.v1.InitializeResultH\x00R\x10initializeResult\x12<\n" +
 	"\n" +
@@ -1944,7 +2124,9 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\x0fterminal_resize\x18\x05 \x01(\v2 .runner.v1.TerminalResizeCommandH\x00R\x0eterminalResize\x12?\n" +
 	"\vsend_prompt\x18\x06 \x01(\v2\x1c.runner.v1.SendPromptCommandH\x00R\n" +
 	"sendPrompt\x12K\n" +
-	"\x0fterminal_redraw\x18\a \x01(\v2 .runner.v1.TerminalRedrawCommandH\x00R\x0eterminalRedraw\x12\x1c\n" +
+	"\x0fterminal_redraw\x18\a \x01(\v2 .runner.v1.TerminalRedrawCommandH\x00R\x0eterminalRedraw\x12T\n" +
+	"\x12subscribe_terminal\x18\b \x01(\v2#.runner.v1.SubscribeTerminalCommandH\x00R\x11subscribeTerminal\x12Z\n" +
+	"\x14unsubscribe_terminal\x18\t \x01(\v2%.runner.v1.UnsubscribeTerminalCommandH\x00R\x13unsubscribeTerminal\x12\x1c\n" +
 	"\ttimestamp\x18\x0f \x01(\x03R\ttimestampB\t\n" +
 	"\apayload\"\xcc\x01\n" +
 	"\x10InitializeResult\x12)\n" +
@@ -1961,7 +2143,7 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\acommand\x18\x03 \x01(\tR\acommand\x12!\n" +
-	"\fdefault_args\x18\x04 \x03(\tR\vdefaultArgs\"\x9d\x03\n" +
+	"\fdefault_args\x18\x04 \x03(\tR\vdefaultArgs\"\xc5\x03\n" +
 	"\x10CreatePodCommand\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12%\n" +
 	"\x0elaunch_command\x18\x02 \x01(\tR\rlaunchCommand\x12\x1f\n" +
@@ -1970,7 +2152,9 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\benv_vars\x18\x04 \x03(\v2(.runner.v1.CreatePodCommand.EnvVarsEntryR\aenvVars\x12?\n" +
 	"\x0ffiles_to_create\x18\x05 \x03(\v2\x17.runner.v1.FileToCreateR\rfilesToCreate\x12?\n" +
 	"\x0esandbox_config\x18\x06 \x01(\v2\x18.runner.v1.SandboxConfigR\rsandboxConfig\x12%\n" +
-	"\x0einitial_prompt\x18\a \x01(\tR\rinitialPrompt\x1a:\n" +
+	"\x0einitial_prompt\x18\a \x01(\tR\rinitialPrompt\x12\x12\n" +
+	"\x04cols\x18\b \x01(\x05R\x04cols\x12\x12\n" +
+	"\x04rows\x18\t \x01(\x05R\x04rows\x1a:\n" +
 	"\fEnvVarsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"s\n" +
@@ -2004,6 +2188,16 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x16\n" +
 	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"0\n" +
 	"\x15TerminalRedrawCommand\x12\x17\n" +
+	"\apod_key\x18\x01 \x01(\tR\x06podKey\"\xe8\x01\n" +
+	"\x18SubscribeTerminalCommand\x12\x17\n" +
+	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x1b\n" +
+	"\trelay_url\x18\x02 \x01(\tR\brelayUrl\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x03 \x01(\tR\tsessionId\x12)\n" +
+	"\x10include_snapshot\x18\x04 \x01(\bR\x0fincludeSnapshot\x12)\n" +
+	"\x10snapshot_history\x18\x05 \x01(\x05R\x0fsnapshotHistory\x12!\n" +
+	"\frunner_token\x18\x06 \x01(\tR\vrunnerToken\"5\n" +
+	"\x1aUnsubscribeTerminalCommand\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey2R\n" +
 	"\rRunnerService\x12A\n" +
 	"\aConnect\x12\x18.runner.v1.RunnerMessage\x1a\x18.runner.v1.ServerMessage(\x010\x01B\x9a\x01\n" +
@@ -2022,35 +2216,37 @@ func file_runner_v1_runner_proto_rawDescGZIP() []byte {
 	return file_runner_v1_runner_proto_rawDescData
 }
 
-var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_runner_v1_runner_proto_goTypes = []any{
-	(*RunnerMessage)(nil),         // 0: runner.v1.RunnerMessage
-	(*InitializeRequest)(nil),     // 1: runner.v1.InitializeRequest
-	(*RunnerInfo)(nil),            // 2: runner.v1.RunnerInfo
-	(*InitializedConfirm)(nil),    // 3: runner.v1.InitializedConfirm
-	(*HeartbeatData)(nil),         // 4: runner.v1.HeartbeatData
-	(*PodInfo)(nil),               // 5: runner.v1.PodInfo
-	(*PodCreatedEvent)(nil),       // 6: runner.v1.PodCreatedEvent
-	(*PodTerminatedEvent)(nil),    // 7: runner.v1.PodTerminatedEvent
-	(*TerminalOutputEvent)(nil),   // 8: runner.v1.TerminalOutputEvent
-	(*AgentStatusEvent)(nil),      // 9: runner.v1.AgentStatusEvent
-	(*PtyResizedEvent)(nil),       // 10: runner.v1.PtyResizedEvent
-	(*ErrorEvent)(nil),            // 11: runner.v1.ErrorEvent
-	(*PodInitProgressEvent)(nil),  // 12: runner.v1.PodInitProgressEvent
-	(*ServerMessage)(nil),         // 13: runner.v1.ServerMessage
-	(*InitializeResult)(nil),      // 14: runner.v1.InitializeResult
-	(*ServerInfo)(nil),            // 15: runner.v1.ServerInfo
-	(*AgentTypeInfo)(nil),         // 16: runner.v1.AgentTypeInfo
-	(*CreatePodCommand)(nil),      // 17: runner.v1.CreatePodCommand
-	(*FileToCreate)(nil),          // 18: runner.v1.FileToCreate
-	(*SandboxConfig)(nil),         // 19: runner.v1.SandboxConfig
-	(*TerminatePodCommand)(nil),   // 20: runner.v1.TerminatePodCommand
-	(*TerminalInputCommand)(nil),  // 21: runner.v1.TerminalInputCommand
-	(*TerminalResizeCommand)(nil), // 22: runner.v1.TerminalResizeCommand
-	(*SendPromptCommand)(nil),     // 23: runner.v1.SendPromptCommand
-	(*TerminalRedrawCommand)(nil), // 24: runner.v1.TerminalRedrawCommand
-	nil,                           // 25: runner.v1.ErrorEvent.DetailsEntry
-	nil,                           // 26: runner.v1.CreatePodCommand.EnvVarsEntry
+	(*RunnerMessage)(nil),              // 0: runner.v1.RunnerMessage
+	(*InitializeRequest)(nil),          // 1: runner.v1.InitializeRequest
+	(*RunnerInfo)(nil),                 // 2: runner.v1.RunnerInfo
+	(*InitializedConfirm)(nil),         // 3: runner.v1.InitializedConfirm
+	(*HeartbeatData)(nil),              // 4: runner.v1.HeartbeatData
+	(*PodInfo)(nil),                    // 5: runner.v1.PodInfo
+	(*PodCreatedEvent)(nil),            // 6: runner.v1.PodCreatedEvent
+	(*PodTerminatedEvent)(nil),         // 7: runner.v1.PodTerminatedEvent
+	(*TerminalOutputEvent)(nil),        // 8: runner.v1.TerminalOutputEvent
+	(*AgentStatusEvent)(nil),           // 9: runner.v1.AgentStatusEvent
+	(*PtyResizedEvent)(nil),            // 10: runner.v1.PtyResizedEvent
+	(*ErrorEvent)(nil),                 // 11: runner.v1.ErrorEvent
+	(*PodInitProgressEvent)(nil),       // 12: runner.v1.PodInitProgressEvent
+	(*ServerMessage)(nil),              // 13: runner.v1.ServerMessage
+	(*InitializeResult)(nil),           // 14: runner.v1.InitializeResult
+	(*ServerInfo)(nil),                 // 15: runner.v1.ServerInfo
+	(*AgentTypeInfo)(nil),              // 16: runner.v1.AgentTypeInfo
+	(*CreatePodCommand)(nil),           // 17: runner.v1.CreatePodCommand
+	(*FileToCreate)(nil),               // 18: runner.v1.FileToCreate
+	(*SandboxConfig)(nil),              // 19: runner.v1.SandboxConfig
+	(*TerminatePodCommand)(nil),        // 20: runner.v1.TerminatePodCommand
+	(*TerminalInputCommand)(nil),       // 21: runner.v1.TerminalInputCommand
+	(*TerminalResizeCommand)(nil),      // 22: runner.v1.TerminalResizeCommand
+	(*SendPromptCommand)(nil),          // 23: runner.v1.SendPromptCommand
+	(*TerminalRedrawCommand)(nil),      // 24: runner.v1.TerminalRedrawCommand
+	(*SubscribeTerminalCommand)(nil),   // 25: runner.v1.SubscribeTerminalCommand
+	(*UnsubscribeTerminalCommand)(nil), // 26: runner.v1.UnsubscribeTerminalCommand
+	nil,                                // 27: runner.v1.ErrorEvent.DetailsEntry
+	nil,                                // 28: runner.v1.CreatePodCommand.EnvVarsEntry
 }
 var file_runner_v1_runner_proto_depIdxs = []int32{
 	1,  // 0: runner.v1.RunnerMessage.initialize:type_name -> runner.v1.InitializeRequest
@@ -2065,7 +2261,7 @@ var file_runner_v1_runner_proto_depIdxs = []int32{
 	12, // 9: runner.v1.RunnerMessage.pod_init_progress:type_name -> runner.v1.PodInitProgressEvent
 	2,  // 10: runner.v1.InitializeRequest.runner_info:type_name -> runner.v1.RunnerInfo
 	5,  // 11: runner.v1.HeartbeatData.pods:type_name -> runner.v1.PodInfo
-	25, // 12: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
+	27, // 12: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
 	14, // 13: runner.v1.ServerMessage.initialize_result:type_name -> runner.v1.InitializeResult
 	17, // 14: runner.v1.ServerMessage.create_pod:type_name -> runner.v1.CreatePodCommand
 	20, // 15: runner.v1.ServerMessage.terminate_pod:type_name -> runner.v1.TerminatePodCommand
@@ -2073,18 +2269,20 @@ var file_runner_v1_runner_proto_depIdxs = []int32{
 	22, // 17: runner.v1.ServerMessage.terminal_resize:type_name -> runner.v1.TerminalResizeCommand
 	23, // 18: runner.v1.ServerMessage.send_prompt:type_name -> runner.v1.SendPromptCommand
 	24, // 19: runner.v1.ServerMessage.terminal_redraw:type_name -> runner.v1.TerminalRedrawCommand
-	15, // 20: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
-	16, // 21: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
-	26, // 22: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
-	18, // 23: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
-	19, // 24: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
-	0,  // 25: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
-	13, // 26: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
-	26, // [26:27] is the sub-list for method output_type
-	25, // [25:26] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	25, // 20: runner.v1.ServerMessage.subscribe_terminal:type_name -> runner.v1.SubscribeTerminalCommand
+	26, // 21: runner.v1.ServerMessage.unsubscribe_terminal:type_name -> runner.v1.UnsubscribeTerminalCommand
+	15, // 22: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
+	16, // 23: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
+	28, // 24: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
+	18, // 25: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
+	19, // 26: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
+	0,  // 27: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
+	13, // 28: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
+	28, // [28:29] is the sub-list for method output_type
+	27, // [27:28] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_runner_v1_runner_proto_init() }
@@ -2112,6 +2310,8 @@ func file_runner_v1_runner_proto_init() {
 		(*ServerMessage_TerminalResize)(nil),
 		(*ServerMessage_SendPrompt)(nil),
 		(*ServerMessage_TerminalRedraw)(nil),
+		(*ServerMessage_SubscribeTerminal)(nil),
+		(*ServerMessage_UnsubscribeTerminal)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2119,7 +2319,7 @@ func file_runner_v1_runner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_runner_v1_runner_proto_rawDesc), len(file_runner_v1_runner_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

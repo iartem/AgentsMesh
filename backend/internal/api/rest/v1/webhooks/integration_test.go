@@ -166,20 +166,20 @@ func createMockRouter(t *testing.T) (*WebhookRouter, *gorm.DB, *payment.Factory)
 	registry := NewHandlerRegistry(logger)
 	SetupDefaultHandlers(registry, logger)
 
-	// Create payment config with mock enabled
-	paymentCfg := &config.PaymentConfig{
-		DeploymentType: config.DeploymentGlobal,
-		MockEnabled:    true,
-		MockBaseURL:    "http://localhost:3000",
-	}
-
-	// Create billing service with mock
-	billingSvc := billingService.NewServiceWithConfig(db, paymentCfg)
-	factory := billingSvc.GetPaymentFactory()
-
+	// Create full config with mock payment enabled
 	cfg := &config.Config{
-		Payment: *paymentCfg,
+		PrimaryDomain: "localhost:3000",
+		UseHTTPS:      false,
+		Payment: config.PaymentConfig{
+			DeploymentType: config.DeploymentGlobal,
+			MockEnabled:    true,
+			MockBaseURL:    "http://localhost:3000",
+		},
 	}
+
+	// Create billing service with mock (uses full config for URL derivation)
+	billingSvc := billingService.NewServiceWithConfig(db, cfg)
+	factory := billingSvc.GetPaymentFactory()
 
 	return &WebhookRouter{
 		db:             db,

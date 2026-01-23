@@ -64,6 +64,10 @@ type ConfigBuildRequest struct {
 	// Runtime info (provided by Runner during handshake)
 	MCPPort int
 	PodKey  string
+
+	// Terminal size (from browser)
+	Cols int32
+	Rows int32
 }
 
 // ConfigBuilder builds pod configurations from agent type templates
@@ -154,6 +158,8 @@ func (b *ConfigBuilder) BuildPodCommand(ctx context.Context, req *ConfigBuildReq
 		FilesToCreate: filesToCreate,
 		SandboxConfig: sandboxConfig,
 		InitialPrompt: req.InitialPrompt,
+		Cols:          req.Cols,
+		Rows:          req.Rows,
 	}
 
 	// 13. Allow post-processing by the builder

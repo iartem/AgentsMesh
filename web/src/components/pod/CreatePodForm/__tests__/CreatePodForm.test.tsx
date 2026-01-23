@@ -199,7 +199,7 @@ describe("CreatePodForm", () => {
       fireEvent.click(screen.getByText("ide.createPod.create"));
 
       await waitFor(() => {
-        expect(mockFormSubmit).toHaveBeenCalledWith(1, {}, { ticketId: undefined, initialPrompt: "test prompt" });
+        expect(mockFormSubmit).toHaveBeenCalledWith(1, {}, { ticketId: undefined, initialPrompt: "test prompt", cols: 120, rows: 40 });
       });
     });
 
@@ -216,7 +216,7 @@ describe("CreatePodForm", () => {
       fireEvent.click(screen.getByText("ide.createPod.create"));
 
       await waitFor(() => {
-        expect(mockFormSubmit).toHaveBeenCalledWith(1, {}, { ticketId: 123, initialPrompt: "test prompt" });
+        expect(mockFormSubmit).toHaveBeenCalledWith(1, {}, { ticketId: 123, initialPrompt: "test prompt", cols: 120, rows: 40 });
       });
     });
 

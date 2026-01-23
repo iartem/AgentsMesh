@@ -13,7 +13,7 @@ The platform supports multi-tenancy, OAuth authentication, and real-time termina
 
 - Production: `https://api.agentsmesh.io/api/v1`
 - Staging: `https://staging-api.agentsmesh.example.com/api/v1`
-- Development: `http://localhost:8080/api/v1`
+- Development: `http://localhost:10000/api/v1` (via Traefik)
 
 ## Authentication
 
@@ -306,18 +306,18 @@ service RunnerService {
 
 ## WebSocket Endpoints (Web Client)
 
-### Terminal WebSocket
+### Terminal WebSocket (via Relay)
 
 ```
-ws://localhost:8080/ws/terminal/{pod_key}?token=<jwt>
+ws://localhost:10000/relay/terminal/{pod_key}?token=<jwt>
 ```
 
-Connect to a pod's terminal for real-time input/output. The backend bridges WebSocket to gRPC stream.
+Connect to a pod's terminal for real-time input/output via Relay service.
 
 ### Events WebSocket
 
 ```
-ws://localhost:8080/ws/events
+ws://localhost:10000/api/v1/orgs/{slug}/ws/events
 ```
 
 Subscribe to real-time events. Supports filtering by event type.

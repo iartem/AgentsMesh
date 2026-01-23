@@ -49,21 +49,28 @@ func NewService(db *gorm.DB, stripeKey string) *Service {
 }
 
 // NewServiceWithConfig creates a new billing service with full configuration
-func NewServiceWithConfig(db *gorm.DB, cfg *config.PaymentConfig) *Service {
+// appConfig is needed for URL derivation (AlipayNotifyURL, WeChatNotifyURL, etc.)
+// If appConfig is nil, returns a service with no payment providers configured.
+func NewServiceWithConfig(db *gorm.DB, appConfig *config.Config) *Service {
 	svc := &Service{
-		db:            db,
-		paymentConfig: cfg,
+		db: db,
 	}
 
-	if cfg != nil {
-		// Use NewFactoryWithDB to support license provider
-		svc.paymentFactory = payment.NewFactoryWithDB(cfg, db)
-		svc.stripeEnabled = cfg.StripeEnabled()
+	// Handle nil config gracefully - return service without payment providers
+	if appConfig == nil {
+		return svc
+	}
 
-		// Set Stripe key if enabled
-		if cfg.StripeEnabled() {
-			stripe.Key = cfg.Stripe.SecretKey
-		}
+	cfg := &appConfig.Payment
+	svc.paymentConfig = cfg
+
+	// Use NewFactoryWithDB to support license provider and URL derivation
+	svc.paymentFactory = payment.NewFactoryWithDB(appConfig, db)
+	svc.stripeEnabled = cfg.StripeEnabled()
+
+	// Set Stripe key if enabled
+	if cfg.StripeEnabled() {
+		stripe.Key = cfg.Stripe.SecretKey
 	}
 
 	return svc

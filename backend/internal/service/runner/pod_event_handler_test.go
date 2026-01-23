@@ -534,3 +534,55 @@ func TestReconcilePodsCompletedNotAffected(t *testing.T) {
 		t.Errorf("completed pod should not be affected: got %q", status)
 	}
 }
+
+func TestHandlePodInitProgress(t *testing.T) {
+	pc, _, _ := setupPodEventHandlerDeps(t)
+
+	// Track callback invocation
+	var callbackPodKey, callbackPhase, callbackMessage string
+	var callbackProgress int
+	pc.SetInitProgressCallback(func(podKey, phase string, progress int, message string) {
+		callbackPodKey = podKey
+		callbackPhase = phase
+		callbackProgress = progress
+		callbackMessage = message
+	})
+
+	// Handle pod init progress event
+	data := &runnerv1.PodInitProgressEvent{
+		PodKey:   "init-pod-1",
+		Phase:    "pulling_image",
+		Progress: 50,
+		Message:  "Pulling container image...",
+	}
+
+	pc.handlePodInitProgress(1, data)
+
+	// Verify callback was called with correct data
+	if callbackPodKey != "init-pod-1" {
+		t.Errorf("callback podKey: got %q, want %q", callbackPodKey, "init-pod-1")
+	}
+	if callbackPhase != "pulling_image" {
+		t.Errorf("callback phase: got %q, want %q", callbackPhase, "pulling_image")
+	}
+	if callbackProgress != 50 {
+		t.Errorf("callback progress: got %d, want %d", callbackProgress, 50)
+	}
+	if callbackMessage != "Pulling container image..." {
+		t.Errorf("callback message: got %q", callbackMessage)
+	}
+}
+
+func TestHandlePodInitProgressNoCallback(t *testing.T) {
+	pc, _, _ := setupPodEventHandlerDeps(t)
+
+	// No callback set - should not panic
+	data := &runnerv1.PodInitProgressEvent{
+		PodKey:   "init-pod-2",
+		Phase:    "init",
+		Progress: 10,
+	}
+
+	// This should not panic
+	pc.handlePodInitProgress(1, data)
+}

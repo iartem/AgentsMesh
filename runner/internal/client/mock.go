@@ -213,6 +213,28 @@ func (m *MockConnection) SimulateTerminalRedraw(req TerminalRedrawRequest) error
 	return nil
 }
 
+// SimulateSubscribeTerminal simulates server sending a subscribe_terminal message.
+func (m *MockConnection) SimulateSubscribeTerminal(req SubscribeTerminalRequest) error {
+	m.mu.Lock()
+	handler := m.handler
+	m.mu.Unlock()
+	if handler != nil {
+		return handler.OnSubscribeTerminal(req)
+	}
+	return nil
+}
+
+// SimulateUnsubscribeTerminal simulates server sending an unsubscribe_terminal message.
+func (m *MockConnection) SimulateUnsubscribeTerminal(req UnsubscribeTerminalRequest) error {
+	m.mu.Lock()
+	handler := m.handler
+	m.mu.Unlock()
+	if handler != nil {
+		return handler.OnUnsubscribeTerminal(req)
+	}
+	return nil
+}
+
 // GetPods returns pods from handler (if available).
 func (m *MockConnection) GetPods() []PodInfo {
 	m.mu.Lock()

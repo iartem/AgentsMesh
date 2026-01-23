@@ -4,8 +4,8 @@ import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockProvider,
   mockGitLabProvider,
-  mockRepository,
-  mockCreatedRepository,
+  createListRepositoriesResponse,
+  createRepositoryResponse,
 } from "./ImportRepositoryModal.utils";
 
 // Mock the API
@@ -35,9 +35,9 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
       providers: [mockProvider, mockGitLabProvider],
     });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue({
-      repositories: [mockRepository],
-    });
+    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
+      createListRepositoriesResponse()
+    );
   });
 
   it("should navigate to confirm step after selecting repository", async () => {
@@ -110,7 +110,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
   });
 
   it("should allow setting ticket prefix", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue(mockCreatedRepository);
+    vi.mocked(repositoryApi.create).mockResolvedValue(createRepositoryResponse());
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />

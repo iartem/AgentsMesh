@@ -23,7 +23,8 @@ type Provider struct {
 }
 
 // NewProvider creates a new Alipay provider
-func NewProvider(cfg *config.AlipayConfig) (*Provider, error) {
+// notifyURL and returnURL are derived from the application's primary domain
+func NewProvider(cfg *config.AlipayConfig, notifyURL, returnURL string) (*Provider, error) {
 	client, err := alipay.New(cfg.AppID, cfg.PrivateKey, !cfg.IsSandbox)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create alipay client: %w", err)
@@ -37,8 +38,8 @@ func NewProvider(cfg *config.AlipayConfig) (*Provider, error) {
 	return &Provider{
 		client:    client,
 		appID:     cfg.AppID,
-		notifyURL: cfg.NotifyURL,
-		returnURL: cfg.ReturnURL,
+		notifyURL: notifyURL,
+		returnURL: returnURL,
 	}, nil
 }
 

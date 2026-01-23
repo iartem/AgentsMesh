@@ -100,7 +100,7 @@ export function useTerminal(
     scheduler.attach(term);
     schedulerRef.current = scheduler;
 
-    // Connect to WebSocket pool
+    // Connect to WebSocket pool (async for Relay mode)
     // Use scheduler to batch writes into animation frames
     const handleMessage = (data: Uint8Array | string) => {
       if (data instanceof Uint8Array) {
@@ -110,7 +110,24 @@ export function useTerminal(
       }
     };
 
-    connectionRef.current = terminalPool.connect(podKey, handleMessage);
+    // Async connection setup
+    let isMounted = true;
+    (async () => {
+      try {
+        const handle = await terminalPool.connect(podKey, handleMessage);
+        if (isMounted) {
+          connectionRef.current = handle;
+        } else {
+          // Component unmounted before connection completed
+          handle.disconnect();
+        }
+      } catch (error) {
+        console.error("Failed to connect terminal:", error);
+        if (isMounted) {
+          setConnectionStatus("error");
+        }
+      }
+    })();
 
     // Update connection status
     const checkStatus = () => {
@@ -129,7 +146,7 @@ export function useTerminal(
 
     // Handle resize - save disposable for cleanup
     const resizeDisposable = term.onResize(({ rows, cols }) => {
-      terminalPool.sendResize(podKey, rows, cols);
+      terminalPool.sendResize(podKey, cols, rows);
     });
 
     // Store disposables for explicit cleanup
@@ -140,6 +157,7 @@ export function useTerminal(
 
     // Cleanup
     return () => {
+      isMounted = false;  // Prevent late connection from being stored
       clearInterval(statusInterval);
       // Explicitly dispose event listeners before disposing terminal
       disposablesRef.current.forEach(d => d.dispose());
@@ -198,7 +216,7 @@ export function useTerminal(
   // Sync terminal size to PTY
   const syncSize = () => {
     if (xtermRef.current) {
-      terminalPool.forceResize(podKey, xtermRef.current.rows, xtermRef.current.cols);
+      terminalPool.forceResize(podKey, xtermRef.current.cols, xtermRef.current.rows);
     }
   };
 

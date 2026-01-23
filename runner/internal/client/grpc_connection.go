@@ -18,6 +18,7 @@ import (
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -88,6 +89,11 @@ type GRPCConnection struct {
 	// Stuck detection for writeLoop
 	lastSendTime atomic.Int64
 
+	// Rate limiting for terminal output (bytes per second)
+	// Default: 100KB/s to avoid overwhelming slow server connections
+	terminalRateLimiter *rate.Limiter
+	terminalRateLimit   int // bytes per second
+
 	// Certificate renewal
 	certRenewalCheckInterval time.Duration
 	certExpiryWarningDays    int
@@ -123,6 +129,15 @@ func WithGRPCRunnerVersion(version string) GRPCConnectionOption {
 func WithGRPCMCPPort(port int) GRPCConnectionOption {
 	return func(c *GRPCConnection) {
 		c.mcpPort = port
+	}
+}
+
+// WithGRPCTerminalRateLimit sets the terminal output rate limit in bytes per second.
+// Default is 100KB/s. Set to 0 to disable rate limiting.
+// Recommended: Set to ~80% of server upload bandwidth to leave room for control messages.
+func WithGRPCTerminalRateLimit(bytesPerSecond int) GRPCConnectionOption {
+	return func(c *GRPCConnection) {
+		c.terminalRateLimit = bytesPerSecond
 	}
 }
 
@@ -170,10 +185,19 @@ func NewGRPCConnection(endpoint, nodeID, orgSlug, certFile, keyFile, caFile stri
 		certExpiryWarningDays:    30,
 		certRenewalDays:          30,  // Renew 30 days before expiry
 		certUrgentDays:           7,   // Urgent reconnection 7 days before expiry
+		terminalRateLimit:        50 * 1024, // Default: 50KB/s (conservative for shared bandwidth)
 	}
 
 	for _, opt := range opts {
 		opt(c)
+	}
+
+	// Initialize rate limiter if rate limit is set
+	if c.terminalRateLimit > 0 {
+		// rate.Limit is tokens per second, burst allows one maxSize message
+		c.terminalRateLimiter = rate.NewLimiter(rate.Limit(c.terminalRateLimit), c.terminalRateLimit)
+		logger.GRPC().Info("Terminal output rate limiting enabled",
+			"rate_limit", fmt.Sprintf("%dKB/s", c.terminalRateLimit/1024))
 	}
 
 	return c
@@ -214,6 +238,16 @@ func (c *GRPCConnection) GetAvailableAgents() []string {
 
 // Connect establishes a gRPC connection with mTLS using advancedtls for certificate hot-reloading.
 func (c *GRPCConnection) Connect() error {
+	// Close existing connection if any (important for reconnection)
+	// This prevents resource leaks and TLS session conflicts
+	c.mu.Lock()
+	if c.conn != nil {
+		logger.GRPC().Debug("Closing existing gRPC connection before reconnect")
+		c.conn.Close()
+		c.conn = nil
+	}
+	c.mu.Unlock()
+
 	// Parse endpoint to extract host:port (remove scheme like grpcs://)
 	dialTarget, err := parseGRPCEndpoint(c.endpoint)
 	if err != nil {
@@ -413,22 +447,41 @@ func (c *GRPCConnection) sendControl(msg *runnerv1.RunnerMessage) error {
 // Terminal messages include: terminal_output, agent_status.
 // These messages are dropped silently if buffer is full (TUI frames are expendable).
 // Returns nil even when dropped to avoid blocking callers.
+//
+// IMPORTANT: Messages are rejected before initialization completes.
+// This prevents queue buildup during reconnection handshake, which could
+// cause gRPC flow control to block the initialize_result response.
 func (c *GRPCConnection) sendTerminal(msg *runnerv1.RunnerMessage) error {
 	c.mu.Lock()
-	if c.stream == nil {
-		c.mu.Unlock()
+	stream := c.stream
+	initialized := c.initialized
+	c.mu.Unlock()
+
+	// Reject messages before initialization completes
+	// During reconnection, old Pods may still produce output, but sending it
+	// before handshake completes can block the gRPC stream and cause deadlock
+	if !initialized {
+		logger.Terminal().Debug("sendTerminal: not initialized, dropping message")
+		return nil // Silent drop, not an error
+	}
+
+	if stream == nil {
+		logger.Terminal().Debug("sendTerminal: stream not connected")
 		return fmt.Errorf("stream not connected")
 	}
-	c.mu.Unlock()
 
 	select {
 	case c.terminalCh <- msg:
+		logger.Terminal().Debug("sendTerminal: message queued",
+			"queue_len", len(c.terminalCh))
 		return nil
 	case <-c.stopCh:
+		logger.Terminal().Debug("sendTerminal: connection stopped")
 		return fmt.Errorf("connection stopped")
 	default:
-		// TUI frames are expendable - drop silently to avoid blocking
-		logger.GRPC().Debug("Terminal output dropped (buffer full)")
+		// TUI frames are expendable - drop silently
+		logger.GRPC().Debug("Terminal output dropped (queue full)",
+			"queue_usage", c.QueueUsage())
 		return nil
 	}
 }
@@ -465,6 +518,22 @@ func (c *GRPCConnection) SendPodTerminated(podKey string, exitCode int32, errorM
 // SendTerminalOutput sends terminal output to the server (terminal message).
 // Non-blocking: drops silently if buffer is full (TUI frames are expendable).
 func (c *GRPCConnection) SendTerminalOutput(podKey string, data []byte) error {
+	// Apply rate limiting if enabled
+	// This prevents overwhelming servers with limited bandwidth
+	if c.terminalRateLimiter != nil {
+		// WaitN blocks until we have enough tokens for this message
+		// Use a context with timeout to avoid blocking forever
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := c.terminalRateLimiter.WaitN(ctx, len(data))
+		cancel()
+		if err != nil {
+			// Rate limit timeout - drop the message (TUI frames are expendable)
+			logger.Terminal().Debug("SendTerminalOutput: rate limit timeout, dropping",
+				"pod_key", podKey, "data_len", len(data))
+			return nil
+		}
+	}
+
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_TerminalOutput{
 			TerminalOutput: &runnerv1.TerminalOutputEvent{
@@ -474,6 +543,11 @@ func (c *GRPCConnection) SendTerminalOutput(podKey string, data []byte) error {
 		},
 		Timestamp: time.Now().UnixMilli(),
 	}
+
+	logger.Terminal().Debug("SendTerminalOutput called",
+		"pod_key", podKey, "data_len", len(data),
+		"queue_len", len(c.terminalCh), "queue_cap", cap(c.terminalCh))
+
 	return c.sendTerminal(msg)
 }
 
@@ -548,9 +622,28 @@ func (c *GRPCConnection) QueueCapacity() int {
 }
 
 // QueueUsage returns the terminal queue usage ratio (0.0 to 1.0).
-// Used by SmartAggregator to adapt frame rate based on queue pressure.
+// Used for monitoring queue pressure.
 func (c *GRPCConnection) QueueUsage() float64 {
 	return float64(len(c.terminalCh)) / float64(cap(c.terminalCh))
+}
+
+// drainTerminalQueue clears all pending messages in the terminal queue.
+// Called before reconnection to discard stale terminal output.
+// TUI frames are expendable - old frames are irrelevant after reconnection.
+func (c *GRPCConnection) drainTerminalQueue() {
+	drained := 0
+	for {
+		select {
+		case <-c.terminalCh:
+			drained++
+		default:
+			if drained > 0 {
+				logger.GRPC().Info("Drained stale terminal queue before reconnection",
+					"messages_dropped", drained)
+			}
+			return
+		}
+	}
 }
 
 // connectionLoop manages the connection lifecycle with auto-reconnection.
@@ -606,6 +699,13 @@ func (c *GRPCConnection) connectionLoop() {
 func (c *GRPCConnection) runConnection() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Clear terminal queue before establishing new connection
+	// Old terminal output is stale after reconnection and would:
+	// 1. Delay initialization by flooding the new stream
+	// 2. Potentially cause immediate timeout if backend is slow
+	// TUI frames are expendable - users will see fresh output after reconnection
+	c.drainTerminalQueue()
 
 	// Add org_slug to metadata for organization routing
 	ctx = metadata.AppendToOutgoingContext(ctx, "x-org-slug", c.orgSlug)
@@ -671,13 +771,47 @@ func (c *GRPCConnection) runConnection() {
 		logger.GRPC().Debug("Read loop exited, closing connection")
 	}
 
+	// Clear stream to prevent sending to disconnected stream
+	// This ensures sendTerminal/sendControl will reject new messages during reconnect
+	c.mu.Lock()
+	c.stream = nil
+	c.mu.Unlock()
+
 	// Signal other goroutines to stop
 	close(done)
+}
+
+// sendWithTimeout sends a message with a timeout to prevent blocking forever.
+// This is used for critical messages like initialization where we can't afford to block.
+func (c *GRPCConnection) sendWithTimeout(msg *runnerv1.RunnerMessage, timeout time.Duration) error {
+	c.mu.Lock()
+	stream := c.stream
+	c.mu.Unlock()
+
+	if stream == nil {
+		return fmt.Errorf("stream not connected")
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- stream.Send(msg)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(timeout):
+		return fmt.Errorf("send timed out after %v", timeout)
+	}
 }
 
 // performInitialization performs the three-phase initialization handshake.
 func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 	logger.GRPC().Debug("Starting initialization handshake...")
+
+	// Use a shorter timeout for initialization messages (5s)
+	// This ensures we fail fast if stream.Send() is blocking
+	const initSendTimeout = 5 * time.Second
 
 	// Phase 1: Send initialize request
 	hostname, _ := os.Hostname()
@@ -693,12 +827,12 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 		},
 	}
 
-	// Send initialize request via stream
+	// Send initialize request via stream (with timeout)
 	msg := &runnerv1.RunnerMessage{
 		Payload:   &runnerv1.RunnerMessage_Initialize{Initialize: initReq},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	if err := c.stream.Send(msg); err != nil {
+	if err := c.sendWithTimeout(msg, initSendTimeout); err != nil {
 		return fmt.Errorf("failed to send initialize: %w", err)
 	}
 	logger.GRPC().Debug("Sent initialize request", "version", c.runnerVersion, "mcp_port", c.mcpPort)
@@ -716,7 +850,7 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 		c.availableAgents = availableAgents
 		c.mu.Unlock()
 
-		// Send initialized confirmation via stream
+		// Send initialized confirmation via stream (with timeout)
 		confirmMsg := &runnerv1.RunnerMessage{
 			Payload: &runnerv1.RunnerMessage_Initialized{
 				Initialized: &runnerv1.InitializedConfirm{
@@ -725,7 +859,7 @@ func (c *GRPCConnection) performInitialization(ctx context.Context) error {
 			},
 			Timestamp: time.Now().UnixMilli(),
 		}
-		if err := c.stream.Send(confirmMsg); err != nil {
+		if err := c.sendWithTimeout(confirmMsg, initSendTimeout); err != nil {
 			return fmt.Errorf("failed to send initialized: %w", err)
 		}
 		logger.GRPC().Debug("Sent initialized", "available_agents", availableAgents)
@@ -819,6 +953,12 @@ func (c *GRPCConnection) handleServerMessage(msg *runnerv1.ServerMessage) {
 
 	case *runnerv1.ServerMessage_SendPrompt:
 		c.handleSendPrompt(payload.SendPrompt)
+
+	case *runnerv1.ServerMessage_SubscribeTerminal:
+		c.handleSubscribeTerminal(payload.SubscribeTerminal)
+
+	case *runnerv1.ServerMessage_UnsubscribeTerminal:
+		c.handleUnsubscribeTerminal(payload.UnsubscribeTerminal)
 
 	default:
 		logger.GRPC().Warn("Unknown server message type")
@@ -920,6 +1060,47 @@ func (c *GRPCConnection) handleSendPrompt(cmd *runnerv1.SendPromptCommand) {
 	// TODO: Implement prompt sending when handler supports it
 }
 
+// handleSubscribeTerminal handles subscribe_terminal command from server.
+// This notifies the Runner that a browser wants to observe the terminal via Relay.
+func (c *GRPCConnection) handleSubscribeTerminal(cmd *runnerv1.SubscribeTerminalCommand) {
+	log := logger.GRPC()
+	log.Info("Received subscribe_terminal", "pod_key", cmd.PodKey, "relay_url", cmd.RelayUrl, "session_id", cmd.SessionId)
+	if c.handler == nil {
+		log.Warn("No handler set, ignoring subscribe_terminal")
+		return
+	}
+
+	req := SubscribeTerminalRequest{
+		PodKey:          cmd.PodKey,
+		RelayURL:        cmd.RelayUrl,
+		SessionID:       cmd.SessionId,
+		RunnerToken:     cmd.RunnerToken,
+		IncludeSnapshot: cmd.IncludeSnapshot,
+		SnapshotHistory: cmd.SnapshotHistory,
+	}
+	if err := c.handler.OnSubscribeTerminal(req); err != nil {
+		log.Error("Failed to subscribe terminal", "pod_key", cmd.PodKey, "error", err)
+	}
+}
+
+// handleUnsubscribeTerminal handles unsubscribe_terminal command from server.
+// This notifies the Runner that all browsers have disconnected.
+func (c *GRPCConnection) handleUnsubscribeTerminal(cmd *runnerv1.UnsubscribeTerminalCommand) {
+	log := logger.GRPC()
+	log.Info("Received unsubscribe_terminal", "pod_key", cmd.PodKey)
+	if c.handler == nil {
+		log.Warn("No handler set, ignoring unsubscribe_terminal")
+		return
+	}
+
+	req := UnsubscribeTerminalRequest{
+		PodKey: cmd.PodKey,
+	}
+	if err := c.handler.OnUnsubscribeTerminal(req); err != nil {
+		log.Error("Failed to unsubscribe terminal", "pod_key", cmd.PodKey, "error", err)
+	}
+}
+
 // sendError sends an error event back to the server (internal use, control message).
 func (c *GRPCConnection) sendError(podKey, code, message string) {
 	msg := &runnerv1.RunnerMessage{
@@ -985,25 +1166,73 @@ func (c *GRPCConnection) writeLoop(ctx context.Context, done <-chan struct{}) {
 				c.sendAndRecord(msg)
 			case msg := <-c.terminalCh:
 				// Process terminal messages when no control messages pending
+				log.Debug("writeLoop: sending terminal message",
+					"queue_len", len(c.terminalCh))
 				c.sendAndRecord(msg)
 			}
 		}
 	}
 }
 
-// sendAndRecord sends a message and records the send time for stuck detection.
+// sendAndRecord sends a message with a hard timeout to prevent writeLoop from blocking forever.
+// If stream.Send() doesn't complete within sendTimeout, the message is abandoned and we continue.
+// This prevents a slow/stuck stream.Send() from blocking all message processing.
+//
+// Key insight: gRPC stream.Send() can block indefinitely due to flow control.
+// We cannot cancel it, but we can stop waiting and move on.
 func (c *GRPCConnection) sendAndRecord(msg *runnerv1.RunnerMessage) {
 	c.mu.Lock()
 	stream := c.stream
 	c.mu.Unlock()
 
-	if stream != nil {
-		if err := stream.Send(msg); err != nil {
-			logger.GRPC().Error("Failed to send message", "error", err)
+	if stream == nil {
+		logger.GRPC().Warn("sendAndRecord: stream is nil, dropping message")
+		return
+	}
+
+	// Use a goroutine with timeout to prevent blocking forever
+	// The send operation runs in a goroutine, and we wait with a timeout
+	const sendTimeout = 5 * time.Second
+
+	type sendResult struct {
+		err     error
+		elapsed time.Duration
+	}
+
+	resultCh := make(chan sendResult, 1)
+	start := time.Now()
+
+	go func() {
+		err := stream.Send(msg)
+		resultCh <- sendResult{err: err, elapsed: time.Since(start)}
+	}()
+
+	select {
+	case result := <-resultCh:
+		// Send completed (success or failure)
+		if result.err != nil {
+			logger.GRPC().Error("Failed to send message", "error", result.err, "elapsed", result.elapsed)
 			return
 		}
+
+		// Log slow sends for diagnosis
+		if result.elapsed > 100*time.Millisecond {
+			logger.GRPC().Warn("Slow stream.Send()", "elapsed", result.elapsed,
+				"terminal_queue", len(c.terminalCh))
+		}
+
 		// Update last successful send time
 		c.lastSendTime.Store(time.Now().UnixNano())
+
+	case <-time.After(sendTimeout):
+		// Send timed out - the goroutine is still running but we move on
+		// This prevents writeLoop from being blocked forever
+		logger.GRPC().Error("stream.Send() timed out, abandoning message and triggering reconnect",
+			"timeout", sendTimeout, "terminal_queue", len(c.terminalCh))
+
+		// Trigger reconnect to recover from degraded connection
+		// The stuck goroutine will eventually complete or error when stream is closed
+		c.triggerReconnect()
 	}
 }
 

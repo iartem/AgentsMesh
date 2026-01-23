@@ -618,3 +618,47 @@ func TestConnectionManager_InitTimeoutLoop(t *testing.T) {
 	assert.Equal(t, int64(0), cm.ConnectionCount())
 	assert.Equal(t, int64(1), failedRunnerID)
 }
+
+func TestConnectionManager_HandlePodInitProgress(t *testing.T) {
+	cm := NewRunnerConnectionManager(newTestLogger())
+	defer cm.Close()
+
+	var called bool
+	var receivedRunnerID int64
+	var receivedData *runnerv1.PodInitProgressEvent
+	cm.SetPodInitProgressCallback(func(runnerID int64, data *runnerv1.PodInitProgressEvent) {
+		called = true
+		receivedRunnerID = runnerID
+		receivedData = data
+	})
+
+	event := &runnerv1.PodInitProgressEvent{
+		PodKey:   "test-pod",
+		Phase:    "pulling_image",
+		Progress: 50,
+		Message:  "Pulling container image...",
+	}
+
+	cm.HandlePodInitProgress(1, event)
+
+	assert.True(t, called)
+	assert.Equal(t, int64(1), receivedRunnerID)
+	assert.Equal(t, "test-pod", receivedData.PodKey)
+	assert.Equal(t, "pulling_image", receivedData.Phase)
+	assert.Equal(t, int32(50), receivedData.Progress)
+}
+
+func TestConnectionManager_HandlePodInitProgress_NoCallback(t *testing.T) {
+	cm := NewRunnerConnectionManager(newTestLogger())
+	defer cm.Close()
+
+	// No callback set - should not panic
+	event := &runnerv1.PodInitProgressEvent{
+		PodKey:   "test-pod",
+		Phase:    "init",
+		Progress: 10,
+	}
+
+	// This should not panic
+	cm.HandlePodInitProgress(1, event)
+}

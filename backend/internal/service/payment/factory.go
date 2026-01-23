@@ -16,21 +16,24 @@ import (
 
 // Factory creates payment providers based on configuration
 type Factory struct {
-	config          *config.PaymentConfig
+	appConfig       *config.Config            // Full app config for URL derivation
+	config          *config.PaymentConfig     // Payment config
 	db              *gorm.DB
 	mockProvider    *mockprovider.Provider    // Singleton mock provider instance
 	licenseProvider *licenseprovider.Provider // Singleton license provider instance
 }
 
 // NewFactoryWithDB creates a new payment provider factory with database support
-func NewFactoryWithDB(cfg *config.PaymentConfig, db *gorm.DB) *Factory {
-	f := &Factory{config: cfg, db: db}
+// appConfig is needed for URL derivation (AlipayNotifyURL, WeChatNotifyURL, etc.)
+func NewFactoryWithDB(appConfig *config.Config, db *gorm.DB) *Factory {
+	cfg := &appConfig.Payment
+	f := &Factory{appConfig: appConfig, config: cfg, db: db}
 
 	// Initialize mock provider if enabled
 	if cfg.MockEnabled {
 		baseURL := cfg.MockBaseURL
 		if baseURL == "" {
-			baseURL = "http://localhost:3000" // Default to local frontend
+			baseURL = appConfig.FrontendURL() // Use derived frontend URL
 		}
 		f.mockProvider = mockprovider.NewProvider(baseURL)
 	}
@@ -67,13 +70,18 @@ func (f *Factory) GetProvider(providerName string) (Provider, error) {
 		if !f.config.AlipayEnabled() {
 			return nil, fmt.Errorf("alipay is not configured")
 		}
-		return alipayprovider.NewProvider(&f.config.Alipay)
+		// URLs are derived from appConfig.PrimaryDomain
+		return alipayprovider.NewProvider(&f.config.Alipay,
+			f.appConfig.AlipayNotifyURL(),
+			f.appConfig.AlipayReturnURL())
 
 	case billing.PaymentProviderWeChat:
 		if !f.config.WeChatEnabled() {
 			return nil, fmt.Errorf("wechat is not configured")
 		}
-		return wechatprovider.NewProvider(&f.config.WeChat)
+		// URL is derived from appConfig.PrimaryDomain
+		return wechatprovider.NewProvider(&f.config.WeChat,
+			f.appConfig.WeChatNotifyURL())
 
 	case billing.PaymentProviderLicense:
 		if !f.config.LicenseEnabled() {

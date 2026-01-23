@@ -580,6 +580,49 @@ func (a *GRPCRunnerAdapter) SendPrompt(runnerID int64, podKey, prompt string) er
 	return conn.SendMessage(msg)
 }
 
+// SendSubscribeTerminal sends a subscribe terminal command to a pod.
+// This notifies the runner that a browser wants to observe the terminal via Relay.
+func (a *GRPCRunnerAdapter) SendSubscribeTerminal(runnerID int64, podKey, relayURL, sessionID, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
+	conn := a.connManager.GetConnection(runnerID)
+	if conn == nil {
+		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
+	}
+
+	msg := &runnerv1.ServerMessage{
+		Payload: &runnerv1.ServerMessage_SubscribeTerminal{
+			SubscribeTerminal: &runnerv1.SubscribeTerminalCommand{
+				PodKey:          podKey,
+				RelayUrl:        relayURL,
+				SessionId:       sessionID,
+				RunnerToken:     runnerToken,
+				IncludeSnapshot: includeSnapshot,
+				SnapshotHistory: snapshotHistory,
+			},
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return conn.SendMessage(msg)
+}
+
+// SendUnsubscribeTerminal sends an unsubscribe terminal command to a pod.
+// This notifies the runner that all browsers have disconnected and it should disconnect from Relay.
+func (a *GRPCRunnerAdapter) SendUnsubscribeTerminal(runnerID int64, podKey string) error {
+	conn := a.connManager.GetConnection(runnerID)
+	if conn == nil {
+		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
+	}
+
+	msg := &runnerv1.ServerMessage{
+		Payload: &runnerv1.ServerMessage_UnsubscribeTerminal{
+			UnsubscribeTerminal: &runnerv1.UnsubscribeTerminalCommand{
+				PodKey: podKey,
+			},
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return conn.SendMessage(msg)
+}
+
 // IsConnected checks if a Runner is connected.
 func (a *GRPCRunnerAdapter) IsConnected(runnerID int64) bool {
 	return a.connManager.IsConnected(runnerID)

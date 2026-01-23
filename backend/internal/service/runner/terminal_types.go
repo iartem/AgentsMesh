@@ -3,9 +3,6 @@ package runner
 import (
 	"context"
 	"sync"
-
-	"github.com/anthropics/agentsmesh/backend/internal/infra/terminal"
-	"github.com/gorilla/websocket"
 )
 
 const (
@@ -18,23 +15,7 @@ const (
 
 	// DefaultTerminalRows is the default terminal height
 	DefaultTerminalRows = 24
-
-	// DefaultVirtualTerminalHistory is the default scrollback history lines
-	DefaultVirtualTerminalHistory = 10000
 )
-
-// TerminalMessage represents a message to send to the frontend client
-type TerminalMessage struct {
-	Data   []byte
-	IsJSON bool // true for JSON control messages, false for binary terminal output
-}
-
-// TerminalClient represents a frontend WebSocket client connected to a terminal
-type TerminalClient struct {
-	Conn   *websocket.Conn
-	PodKey string
-	Send   chan TerminalMessage
-}
 
 // PtySize represents the current PTY terminal size
 type PtySize struct {
@@ -49,20 +30,17 @@ type PodInfoGetter interface {
 }
 
 // terminalShard holds a subset of terminal data with its own lock
+// Note: After Relay migration, VirtualTerminal and client management moved to Runner/Relay
 type terminalShard struct {
-	podRunnerMap     map[string]int64
-	terminalClients  map[string]map[*TerminalClient]bool
-	virtualTerminals map[string]*terminal.VirtualTerminal
-	ptySize          map[string]*PtySize
-	mu               sync.RWMutex
+	podRunnerMap map[string]int64   // pod -> runner mapping
+	ptySize      map[string]*PtySize // pod -> PTY size
+	mu           sync.RWMutex
 }
 
 // newTerminalShard creates a new terminal shard with initialized maps
 func newTerminalShard() *terminalShard {
 	return &terminalShard{
-		podRunnerMap:     make(map[string]int64),
-		terminalClients:  make(map[string]map[*TerminalClient]bool),
-		virtualTerminals: make(map[string]*terminal.VirtualTerminal),
-		ptySize:          make(map[string]*PtySize),
+		podRunnerMap: make(map[string]int64),
+		ptySize:      make(map[string]*PtySize),
 	}
 }

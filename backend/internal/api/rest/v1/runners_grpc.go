@@ -47,10 +47,8 @@ func (h *GRPCRunnerHandler) RequestAuthURL(c *gin.Context) {
 		return
 	}
 
-	frontendURL := h.config.FrontendURL
-	if frontendURL == "" {
-		frontendURL = "http://localhost:3000"
-	}
+	// FrontendURL is derived from PrimaryDomain
+	frontendURL := h.config.FrontendURL()
 
 	resp, err := h.runnerService.RequestAuthURL(c.Request.Context(), &runner.RequestAuthURLRequest{
 		MachineKey: req.MachineKey,
@@ -170,10 +168,8 @@ func (h *GRPCRunnerHandler) GenerateGRPCToken(c *gin.Context) {
 		return
 	}
 
-	serverURL := h.config.ServerURL
-	if serverURL == "" {
-		serverURL = "http://localhost"
-	}
+	// BaseURL is derived from PrimaryDomain
+	serverURL := h.config.BaseURL()
 
 	resp, err := h.runnerService.GenerateGRPCRegistrationToken(
 		c.Request.Context(),

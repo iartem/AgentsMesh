@@ -87,34 +87,55 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # =============================================================================
+      # Unified Domain Configuration - Single source of truth
+      # All URLs (OAuth callbacks, webhooks, etc.) are derived from PRIMARY_DOMAIN
+      # =============================================================================
+      - PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-localhost:10000}
+      - USE_HTTPS=${USE_HTTPS:-false}
+      # =============================================================================
       # Database
+      # =============================================================================
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=agentsmesh
       - DB_PASSWORD=${POSTGRES_PASSWORD:-agentsmesh_dev}
       - DB_NAME=agentsmesh
       - DB_SSLMODE=disable
+      # =============================================================================
       # Redis
+      # =============================================================================
       - REDIS_URL=redis://redis:6379
+      # =============================================================================
       # Auth
+      # =============================================================================
       - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-dev-internal-secret}
+      # =============================================================================
       # Server
+      # =============================================================================
       - SERVER_ADDRESS=:8080
       - DEBUG=true
-      # CORS: 包含本地前端开发服务器
       - CORS_ALLOWED_ORIGINS=http://localhost:${HTTP_PORT:-10000},http://127.0.0.1:${HTTP_PORT:-10000},http://localhost:${WEB_PORT:-10007},http://127.0.0.1:${WEB_PORT:-10007},http://localhost,http://127.0.0.1,http://192.168.100.189
+      # =============================================================================
       # Logging
+      # =============================================================================
       - LOG_LEVEL=debug
       - LOG_FORMAT=text
       - LOG_FILE=/app/logs/agentsmesh.log
+      # =============================================================================
       # Email
+      # =============================================================================
       - EMAIL_PROVIDER=console
-      - FRONTEND_BASE_URL=http://localhost:${HTTP_PORT:-80}
-      # OAuth - GitHub
+      # Note: BaseURL is derived from PRIMARY_DOMAIN
+      # =============================================================================
+      # OAuth (ClientID/Secret only - RedirectURLs derived from PRIMARY_DOMAIN)
+      # =============================================================================
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-      - GITHUB_REDIRECT_URL=http://localhost:${HTTP_PORT:-80}/api/v1/auth/oauth/github/callback
+      # =============================================================================
       # Storage (MinIO/S3)
+      # =============================================================================
       - STORAGE_ENDPOINT=minio:9000
       - STORAGE_PUBLIC_ENDPOINT=localhost:${MINIO_API_PORT:-9000}
       - STORAGE_REGION=us-east-1
@@ -125,37 +146,35 @@ services:
       - STORAGE_USE_PATH_STYLE=true
       - STORAGE_MAX_FILE_SIZE=10
       - STORAGE_ALLOWED_TYPES=image/jpeg,image/png,image/gif,image/webp,application/pdf
-      # Payment Configuration
+      # =============================================================================
+      # Payment (NotifyURLs/ReturnURLs derived from PRIMARY_DOMAIN)
+      # =============================================================================
       - DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:-global}
-      # Mock Payment (for testing without real payment providers)
       - PAYMENT_MOCK=${PAYMENT_MOCK:-false}
-      - PAYMENT_MOCK_BASE_URL=${PAYMENT_MOCK_BASE_URL:-http://localhost}
       # Stripe
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      # Alipay
+      # Alipay (NotifyURL/ReturnURL derived from PRIMARY_DOMAIN)
       - ALIPAY_APP_ID=${ALIPAY_APP_ID:-}
       - ALIPAY_PRIVATE_KEY=${ALIPAY_PRIVATE_KEY:-}
       - ALIPAY_PUBLIC_KEY=${ALIPAY_PUBLIC_KEY:-}
-      - ALIPAY_NOTIFY_URL=http://localhost:${HTTP_PORT:-80}/api/v1/webhooks/alipay
-      - ALIPAY_RETURN_URL=http://localhost:${HTTP_PORT:-80}
       - ALIPAY_SANDBOX=${ALIPAY_SANDBOX:-true}
-      # WeChat Pay
+      # WeChat Pay (NotifyURL derived from PRIMARY_DOMAIN)
       - WECHAT_APP_ID=${WECHAT_APP_ID:-}
       - WECHAT_MCH_ID=${WECHAT_MCH_ID:-}
       - WECHAT_API_KEY=${WECHAT_API_KEY:-}
       - WECHAT_APIV3_KEY=${WECHAT_APIV3_KEY:-}
-      - WECHAT_NOTIFY_URL=http://localhost:${HTTP_PORT:-80}/api/v1/webhooks/wechat
       - WECHAT_SANDBOX=${WECHAT_SANDBOX:-true}
       # License (OnPremise)
       - LICENSE_PUBLIC_KEY_PATH=${LICENSE_PUBLIC_KEY_PATH:-}
       - LICENSE_FILE_PATH=${LICENSE_FILE_PATH:-}
+      # =============================================================================
       # PKI for gRPC + mTLS Runner communication
+      # =============================================================================
       - PKI_CA_CERT_FILE=/app/ssl/ca.crt
       - PKI_CA_KEY_FILE=/app/ssl/ca.key
       - PKI_VALIDITY_DAYS=365
-      # gRPC server
       - GRPC_ADDRESS=:9090
     volumes:
       # Mount source code for hot reload
@@ -259,6 +278,69 @@ services:
     entrypoint: ["/usr/local/bin/runner-entrypoint.sh"]
     # Runner communicates with backend via gRPC through traefik (TLS passthrough)
 
+  # Relay server for terminal data streaming (Browser <-> Relay <-> Runner)
+  # Separates control flow (Backend) from data flow (Relay) for scalability
+  relay:
+    build:
+      context: ../..
+      dockerfile: deploy/dev/relay.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # Server configuration
+      - SERVER_ADDRESS=:8090
+      - WS_READ_BUFFER_SIZE=4096
+      - WS_WRITE_BUFFER_SIZE=4096
+      # JWT secret for token verification (must match backend)
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      # Backend communication for registration and notifications
+      - BACKEND_URL=http://backend:8080
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-dev-internal-secret}
+      # Relay identification
+      - RELAY_ID=dev-relay-1
+      - RELAY_REGION=local
+      - RELAY_CAPACITY=1000
+      # =============================================================================
+      # Unified Domain Configuration - RELAY_URL is derived from PRIMARY_DOMAIN
+      # Public URL for browsers: ws(s)://{PRIMARY_DOMAIN}/relay
+      # =============================================================================
+      - PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-localhost:10000}
+      - USE_HTTPS=${USE_HTTPS:-false}
+      # Internal URL for runners (Docker network, direct connection) - must be explicit
+      - RELAY_INTERNAL_URL=ws://relay:8090
+      # Session management
+      - SESSION_KEEP_ALIVE_DURATION=30s
+      - DEBUG=true
+    volumes:
+      # Mount source code for hot reload
+      - ../../relay:/app
+      # Mount proto module (if needed)
+      - ../../proto:/proto
+      # Persist Go modules cache
+      - relay-go-mod-cache:/go/pkg/mod
+      # Persist build cache
+      - relay-go-build-cache:/root/.cache/go-build
+    # No external port - accessed via Traefik path routing (/relay/*)
+    # Traefik labels for automatic WebSocket routing
+    labels:
+      - "traefik.enable=true"
+      # WebSocket routing for relay with path stripping
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.rule=PathPrefix(`/relay`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.entrypoints=web"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.service=${COMPOSE_PROJECT_NAME:-agentsmesh}-relay"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.middlewares=${COMPOSE_PROJECT_NAME:-agentsmesh}-relay-strip"
+      # Strip /relay prefix before forwarding to relay service
+      - "traefik.http.middlewares.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay-strip.stripprefix.prefixes=/relay"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.loadbalancer.server.port=8090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
   # Traefik reverse proxy (unified entry point)
   traefik:
     image: traefik:v3.2
@@ -291,3 +373,6 @@ volumes:
   runner_claude_config:
   runner_codex_config:
   runner_gemini_config:
+  # Relay volumes
+  relay-go-mod-cache:
+  relay-go-build-cache:

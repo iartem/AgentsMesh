@@ -327,6 +327,7 @@ func (h *AuthHandler) OAuthCallback(provider string) gin.HandlerFunc {
 
 // getOAuthConfig returns OAuth configuration for a provider
 func (h *AuthHandler) getOAuthConfig(provider string) *oauth.Config {
+	// RedirectURLs are derived from PrimaryDomain
 	switch provider {
 	case "github":
 		if h.config.OAuth.GitHub.ClientID == "" {
@@ -335,7 +336,7 @@ func (h *AuthHandler) getOAuthConfig(provider string) *oauth.Config {
 		return oauth.NewGitHubConfig(
 			h.config.OAuth.GitHub.ClientID,
 			h.config.OAuth.GitHub.ClientSecret,
-			h.config.OAuth.GitHub.RedirectURL,
+			h.config.GitHubRedirectURL(),
 		)
 	case "google":
 		if h.config.OAuth.Google.ClientID == "" {
@@ -344,7 +345,7 @@ func (h *AuthHandler) getOAuthConfig(provider string) *oauth.Config {
 		return oauth.NewGoogleConfig(
 			h.config.OAuth.Google.ClientID,
 			h.config.OAuth.Google.ClientSecret,
-			h.config.OAuth.Google.RedirectURL,
+			h.config.GoogleRedirectURL(),
 		)
 	case "gitlab":
 		if h.config.OAuth.GitLab.ClientID == "" {
@@ -353,7 +354,7 @@ func (h *AuthHandler) getOAuthConfig(provider string) *oauth.Config {
 		return oauth.NewGitLabConfig(
 			h.config.OAuth.GitLab.ClientID,
 			h.config.OAuth.GitLab.ClientSecret,
-			h.config.OAuth.GitLab.RedirectURL,
+			h.config.GitLabRedirectURL(),
 			h.config.OAuth.GitLab.BaseURL,
 		)
 	case "gitee":
@@ -363,7 +364,7 @@ func (h *AuthHandler) getOAuthConfig(provider string) *oauth.Config {
 		return oauth.NewGiteeConfig(
 			h.config.OAuth.Gitee.ClientID,
 			h.config.OAuth.Gitee.ClientSecret,
-			h.config.OAuth.Gitee.RedirectURL,
+			h.config.GiteeRedirectURL(),
 		)
 	default:
 		return nil

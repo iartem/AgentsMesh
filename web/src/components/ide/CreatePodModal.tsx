@@ -124,10 +124,19 @@ export function CreatePodModal({ open, onClose, onCreated, ticketContext }: Crea
 
   // Handle form submission
   const handleCreate = async () => {
+    // Use reasonable default terminal size for initial PTY creation
+    // Terminal will resize immediately after connection via fit addon
+    const defaultCols = 120;
+    const defaultRows = 40;
+
     await form.submit(
       selectedRunner?.id || null,
       configValues,
-      ticketContext ? { ticketId: ticketContext.id } : undefined
+      {
+        ticketId: ticketContext?.id,
+        cols: defaultCols,
+        rows: defaultRows,
+      }
     );
   };
 

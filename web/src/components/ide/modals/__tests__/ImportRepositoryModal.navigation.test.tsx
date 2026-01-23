@@ -4,7 +4,8 @@ import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockProvider,
   mockGitLabProvider,
-  mockRepository,
+  createListRepositoriesResponse,
+  createRepositoryResponse,
   mockCreatedRepository,
 } from "./ImportRepositoryModal.utils";
 
@@ -35,18 +36,20 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
       providers: [mockProvider, mockGitLabProvider],
     });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue({
-      repositories: [mockRepository],
-    });
+    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
+      createListRepositoriesResponse()
+    );
   });
 
   it("should complete manual import flow successfully", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue({
-      ...mockCreatedRepository,
-      name: "test-repo",
-      full_path: "test/repo",
-      clone_url: "https://github.com/test/repo.git",
-    });
+    vi.mocked(repositoryApi.create).mockResolvedValue(
+      createRepositoryResponse({
+        ...mockCreatedRepository,
+        name: "test-repo",
+        full_path: "test/repo",
+        clone_url: "https://github.com/test/repo.git",
+      })
+    );
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />
@@ -96,10 +99,12 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
   });
 
   it("should allow changing visibility in confirm step", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue({
-      ...mockCreatedRepository,
-      visibility: "private",
-    });
+    vi.mocked(repositoryApi.create).mockResolvedValue(
+      createRepositoryResponse({
+        ...mockCreatedRepository,
+        visibility: "private",
+      })
+    );
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />

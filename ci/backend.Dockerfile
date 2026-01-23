@@ -5,6 +5,10 @@ FROM ${REGISTRY}/library/golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# Use China Go proxy for faster module downloads
+ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+ENV GOSUMDB=sum.golang.google.cn
+
 # Install dependencies
 RUN apk add --no-cache git ca-certificates
 

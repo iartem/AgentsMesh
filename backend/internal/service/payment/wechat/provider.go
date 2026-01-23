@@ -31,7 +31,8 @@ type Provider struct {
 }
 
 // NewProvider creates a new WeChat Pay provider
-func NewProvider(cfg *config.WeChatConfig) (*Provider, error) {
+// notifyURL is derived from the application's primary domain
+func NewProvider(cfg *config.WeChatConfig, notifyURL string) (*Provider, error) {
 	// Load merchant private key
 	privateKey, err := utils.LoadPrivateKeyWithPath(cfg.KeyPath)
 	if err != nil {
@@ -62,7 +63,7 @@ func NewProvider(cfg *config.WeChatConfig) (*Provider, error) {
 		appID:      cfg.AppID,
 		mchID:      cfg.MchID,
 		apiV3Key:   cfg.APIv3Key,
-		notifyURL:  cfg.NotifyURL,
+		notifyURL:  notifyURL,
 		privateKey: privateKey,
 	}, nil
 }

@@ -90,9 +90,11 @@ AgentsMesh/
    ```
 
 5. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8080
-   - Adminer (DB UI): http://localhost:8081
+   - Frontend: http://localhost:10007
+   - API (via Traefik): http://localhost:10000/api
+   - Adminer (DB UI): http://localhost:10006
+
+   > **Note**: Ports are dynamically allocated. Check `deploy/dev/.env` for actual ports.
 
 ### Database Migrations
 
@@ -188,7 +190,9 @@ GOOGLE_CLIENT_SECRET=
 ### Frontend Environment Variables
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
+# Unified Domain Configuration (all URLs derived from these two variables)
+PRIMARY_DOMAIN=localhost:10000
+USE_HTTPS=false
 ```
 
 ## License

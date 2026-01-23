@@ -1,9 +1,7 @@
 package runner
 
 import (
-	"strings"
 	"testing"
-	"time"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
@@ -43,15 +41,6 @@ func TestTerminalRouterRegisterPod(t *testing.T) {
 	if runnerID != 100 {
 		t.Errorf("runnerID = %d, want 100", runnerID)
 	}
-
-	// Check virtual terminal is created
-	shard := tr.getShard("pod-1")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-	if vt == nil {
-		t.Error("virtual terminal should be created")
-	}
 }
 
 func TestTerminalRouterUnregisterPod(t *testing.T) {
@@ -66,15 +55,6 @@ func TestTerminalRouterUnregisterPod(t *testing.T) {
 	// Check pod is unregistered
 	if tr.IsPodRegistered("pod-1") {
 		t.Error("pod should be unregistered")
-	}
-
-	// Check virtual terminal is removed
-	shard := tr.getShard("pod-1")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-	if vt != nil {
-		t.Error("virtual terminal should be removed")
 	}
 }
 
@@ -112,100 +92,12 @@ func TestTerminalRouterGetRunnerID(t *testing.T) {
 	}
 }
 
-func TestTerminalRouterGetClientCount(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// No clients
-	count := tr.GetClientCount("pod-1")
-	if count != 0 {
-		t.Errorf("count = %d, want 0", count)
-	}
-
-	// Add some mock clients using shard
-	shard := tr.getShard("pod-1")
-	shard.mu.Lock()
-	shard.terminalClients["pod-1"] = map[*TerminalClient]bool{
-		{PodKey: "pod-1"}: true,
-		{PodKey: "pod-1"}: true,
-	}
-	shard.mu.Unlock()
-
-	count = tr.GetClientCount("pod-1")
-	if count != 2 {
-		t.Errorf("count = %d, want 2", count)
-	}
-}
-
-func TestTerminalRouterGetRecentOutput(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// No virtual terminal
-	output := tr.GetRecentOutput("nonexistent", 10)
-	if output != nil {
-		t.Error("should return nil for nonexistent pod")
-	}
-
-	// Register pod
-	tr.RegisterPod("pod-1", 100)
-	shard := tr.getShard("pod-1")
-
-	// Feed data to virtual terminal
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-	vt.Feed([]byte("Hello, World!"))
-
-	// Get processed output
-	output = tr.GetRecentOutput("pod-1", 10)
-	if output == nil {
-		t.Error("should return processed output")
-	}
-}
-
-func TestTerminalRouterGetScreenSnapshot(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// No virtual terminal
-	snapshot := tr.GetScreenSnapshot("nonexistent")
-	if snapshot != "" {
-		t.Error("should return empty string for nonexistent pod")
-	}
-
-	// Register pod
-	tr.RegisterPod("pod-1", 100)
-
-	// Feed some data
-	shard := tr.getShard("pod-1")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-	vt.Feed([]byte("Hello, World!"))
-
-	snapshot = tr.GetScreenSnapshot("pod-1")
-	if snapshot != "Hello, World!" {
-		t.Errorf("snapshot = %q, want %q", snapshot, "Hello, World!")
-	}
-}
-
 func TestTerminalRouterPtyResized(t *testing.T) {
 	cm := NewRunnerConnectionManager(newTestLogger())
 	tr := NewTerminalRouter(cm, newTestLogger())
 
 	// Register pod with default size (80x24)
 	tr.RegisterPod("pod-1", 100)
-
-	shard := tr.getShard("pod-1")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-
-	// Verify initial size
-	if vt.Cols() != DefaultTerminalCols || vt.Rows() != DefaultTerminalRows {
-		t.Errorf("initial size = %dx%d, want %dx%d", vt.Cols(), vt.Rows(), DefaultTerminalCols, DefaultTerminalRows)
-	}
 
 	// Simulate pty_resized callback (using Proto type)
 	tr.handlePtyResized(100, &runnerv1.PtyResizedEvent{
@@ -214,31 +106,14 @@ func TestTerminalRouterPtyResized(t *testing.T) {
 		Rows:   40,
 	})
 
-	// Verify resized
-	if vt.Cols() != 120 || vt.Rows() != 40 {
-		t.Errorf("resized size = %dx%d, want 120x40", vt.Cols(), vt.Rows())
+	// Verify size is stored
+	cols, rows, ok := tr.GetPtySize("pod-1")
+	if !ok {
+		t.Error("should find PTY size")
 	}
-}
-
-func TestTerminalRouterClearTerminal(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Clear nonexistent - should not panic
-	tr.ClearTerminal("nonexistent")
-
-	// Register and clear
-	tr.RegisterPod("pod-1", 100)
-
-	// Feed some data to the virtual terminal
-	shard := tr.getShard("pod-1")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["pod-1"]
-	shard.mu.RUnlock()
-	vt.Feed([]byte("test data"))
-
-	// Clear should not panic
-	tr.ClearTerminal("pod-1")
+	if cols != 120 || rows != 40 {
+		t.Errorf("PTY size = %dx%d, want 120x40", cols, rows)
+	}
 }
 
 func TestTerminalRouterRouteInputNoRunner(t *testing.T) {
@@ -301,56 +176,20 @@ func TestTerminalRouterHandleTerminalOutput(t *testing.T) {
 	tr.RegisterPod("pod-1", 100)
 
 	// Handle output with no clients (using Proto type)
+	// After Relay migration, this only triggers OSC detection
 	tr.handleTerminalOutput(100, &runnerv1.TerminalOutputEvent{
 		PodKey: "pod-1",
 		Data:   []byte("test output"),
 	})
 
-	// Check virtual terminal has the data
-	output := tr.GetRecentOutput("pod-1", 10)
-	if !strings.Contains(string(output), "test output") {
-		t.Errorf("output = %q, should contain %q", output, "test output")
+	// Pod should still be registered
+	if !tr.IsPodRegistered("pod-1") {
+		t.Error("pod should still be registered")
 	}
 }
 
-// TestTerminalRouterAutoCreateVTOnOutput tests that VT is auto-created on terminal output
-// This is critical for server restart recovery - VT must be created when output arrives
-func TestTerminalRouterAutoCreateVTOnOutput(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Verify pod is not registered
-	if tr.IsPodRegistered("unregistered-pod") {
-		t.Error("pod should not be registered initially")
-	}
-
-	// Send terminal output without prior registration (simulates server restart scenario)
-	tr.handleTerminalOutput(200, &runnerv1.TerminalOutputEvent{
-		PodKey: "unregistered-pod",
-		Data:   []byte("output after restart"),
-	})
-
-	// VT should be auto-created
-	if !tr.IsPodRegistered("unregistered-pod") {
-		t.Error("pod should be auto-registered after output")
-	}
-
-	// Runner ID should be recorded
-	runnerID, ok := tr.GetRunnerID("unregistered-pod")
-	if !ok || runnerID != 200 {
-		t.Errorf("runner ID = %d, want 200", runnerID)
-	}
-
-	// Output should be captured
-	output := tr.GetRecentOutput("unregistered-pod", 10)
-	if !strings.Contains(string(output), "output after restart") {
-		t.Errorf("output = %q, should contain %q", output, "output after restart")
-	}
-}
-
-// TestTerminalRouterAutoCreateVTOnResize tests that VT is auto-created on PTY resize
-// This is critical for server restart recovery - resize often arrives before output
-func TestTerminalRouterAutoCreateVTOnResize(t *testing.T) {
+// TestTerminalRouterAutoRegisterOnResize tests that pod is auto-registered on PTY resize
+func TestTerminalRouterAutoRegisterOnResize(t *testing.T) {
 	cm := NewRunnerConnectionManager(newTestLogger())
 	tr := NewTerminalRouter(cm, newTestLogger())
 
@@ -366,7 +205,7 @@ func TestTerminalRouterAutoCreateVTOnResize(t *testing.T) {
 		Rows:   50,
 	})
 
-	// VT should be auto-created
+	// Pod should be auto-registered
 	if !tr.IsPodRegistered("resize-pod") {
 		t.Error("pod should be auto-registered after resize")
 	}
@@ -377,37 +216,13 @@ func TestTerminalRouterAutoCreateVTOnResize(t *testing.T) {
 		t.Errorf("runner ID = %d, want 300", runnerID)
 	}
 
-	// VT should have correct size
-	shard := tr.getShard("resize-pod")
-	shard.mu.RLock()
-	vt := shard.virtualTerminals["resize-pod"]
-	shard.mu.RUnlock()
-
-	if vt == nil {
-		t.Fatal("virtual terminal should exist")
+	// PTY size should be stored
+	cols, rows, ok := tr.GetPtySize("resize-pod")
+	if !ok {
+		t.Error("PTY size should be stored")
 	}
-	if vt.Cols() != 150 || vt.Rows() != 50 {
-		t.Errorf("VT size = %dx%d, want 150x50", vt.Cols(), vt.Rows())
-	}
-}
-
-func TestTerminalClientStruct(t *testing.T) {
-	client := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage, 256),
-	}
-
-	if client.PodKey != "pod-1" {
-		t.Errorf("PodKey = %s, want pod-1", client.PodKey)
-	}
-	if client.Send == nil {
-		t.Error("Send channel should be initialized")
-	}
-}
-
-func TestDefaultVirtualTerminalHistory(t *testing.T) {
-	if DefaultVirtualTerminalHistory != 10000 {
-		t.Errorf("DefaultVirtualTerminalHistory = %d, want %d", DefaultVirtualTerminalHistory, 10000)
+	if cols != 150 || rows != 50 {
+		t.Errorf("PTY size = %dx%d, want 150x50", cols, rows)
 	}
 }
 
@@ -497,97 +312,6 @@ func TestTerminalRouterSetPodInfoGetter(t *testing.T) {
 	}
 }
 
-// Note: ConnectClient and DisconnectClient require websocket.Conn
-// These are tested via integration tests with actual WebSocket connections.
-// Here we test the internal client management by directly manipulating shard data.
-
-func TestTerminalRouterClientManagement(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Register pod first
-	tr.RegisterPod("pod-1", 100)
-
-	// Manually add a client to test GetClientCount
-	shard := tr.getShard("pod-1")
-	client := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage, 256),
-	}
-
-	shard.mu.Lock()
-	if shard.terminalClients["pod-1"] == nil {
-		shard.terminalClients["pod-1"] = make(map[*TerminalClient]bool)
-	}
-	shard.terminalClients["pod-1"][client] = true
-	shard.mu.Unlock()
-
-	// Verify client is tracked
-	count := tr.GetClientCount("pod-1")
-	if count != 1 {
-		t.Errorf("client count = %d, want 1", count)
-	}
-
-	// Manually remove the client
-	shard.mu.Lock()
-	delete(shard.terminalClients["pod-1"], client)
-	shard.mu.Unlock()
-
-	// Verify disconnected
-	count = tr.GetClientCount("pod-1")
-	if count != 0 {
-		t.Errorf("client count = %d, want 0", count)
-	}
-}
-
-func TestTerminalRouterHandleTerminalOutputWithClients(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Register pod
-	tr.RegisterPod("pod-1", 100)
-
-	// Manually add a client (since ConnectClient requires websocket)
-	shard := tr.getShard("pod-1")
-	client := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage, 256),
-	}
-	shard.mu.Lock()
-	if shard.terminalClients["pod-1"] == nil {
-		shard.terminalClients["pod-1"] = make(map[*TerminalClient]bool)
-	}
-	shard.terminalClients["pod-1"][client] = true
-	shard.mu.Unlock()
-
-	// Handle output (using Proto type)
-	outputData := []byte("hello world")
-	tr.handleTerminalOutput(100, &runnerv1.TerminalOutputEvent{
-		PodKey: "pod-1",
-		Data:   outputData,
-	})
-
-	// Verify client received the message
-	select {
-	case msg := <-client.Send:
-		if string(msg.Data) != string(outputData) {
-			t.Errorf("message data = %q, want %q", msg.Data, outputData)
-		}
-		// TerminalMessage with IsJSON=false is binary terminal output
-		if msg.IsJSON {
-			t.Error("message should not be JSON for terminal output")
-		}
-	default:
-		t.Error("client should have received output message")
-	}
-
-	// Verify virtual terminal also has the data
-	output := tr.GetRecentOutput("pod-1", 10)
-	if !strings.Contains(string(output), string(outputData)) {
-		t.Errorf("output = %q, should contain %q", output, outputData)
-	}
-}
-
 func TestTerminalRouterRouteInputWithMockSender(t *testing.T) {
 	cm := NewRunnerConnectionManager(newTestLogger())
 	tr := NewTerminalRouter(cm, newTestLogger())
@@ -632,312 +356,49 @@ func TestTerminalRouterRouteResizeWithMockSender(t *testing.T) {
 	}
 }
 
-func TestTerminalRouterConnectDisconnectClient(t *testing.T) {
+func TestTerminalRouterEnsurePodRegistered(t *testing.T) {
 	cm := NewRunnerConnectionManager(newTestLogger())
 	tr := NewTerminalRouter(cm, newTestLogger())
 
-	// Register pod first
-	tr.RegisterPod("pod-1", 100)
+	// Ensure pod is registered
+	tr.EnsurePodRegistered("pod-1", 100)
 
-	// ConnectClient with nil websocket (allowed for testing purposes)
-	client, err := tr.ConnectClient("pod-1", nil)
-	if err != nil {
-		t.Fatalf("ConnectClient error: %v", err)
-	}
-	if client == nil {
-		t.Fatal("client should not be nil")
-	}
-	if client.PodKey != "pod-1" {
-		t.Errorf("client.PodKey = %s, want pod-1", client.PodKey)
-	}
-	if client.Send == nil {
-		t.Error("client.Send should be initialized")
+	// Check pod is registered
+	if !tr.IsPodRegistered("pod-1") {
+		t.Error("pod should be registered")
 	}
 
-	// Verify client count
-	count := tr.GetClientCount("pod-1")
-	if count != 1 {
-		t.Errorf("client count = %d, want 1", count)
+	// Check runner ID is stored
+	runnerID, ok := tr.GetRunnerID("pod-1")
+	if !ok {
+		t.Error("should find runner ID")
 	}
-
-	// Disconnect client
-	tr.DisconnectClient(client)
-
-	// Verify client is removed
-	count = tr.GetClientCount("pod-1")
-	if count != 0 {
-		t.Errorf("client count after disconnect = %d, want 0", count)
+	if runnerID != 100 {
+		t.Errorf("runnerID = %d, want 100", runnerID)
 	}
 }
 
-func TestTerminalRouterConnectClientWithPtySize(t *testing.T) {
+func TestTerminalRouterGetPtySize(t *testing.T) {
 	cm := NewRunnerConnectionManager(newTestLogger())
 	tr := NewTerminalRouter(cm, newTestLogger())
 
-	// Register pod
+	// Not found - returns defaults
+	cols, rows, ok := tr.GetPtySize("nonexistent")
+	if ok {
+		t.Error("should not find nonexistent pod")
+	}
+	if cols != DefaultTerminalCols || rows != DefaultTerminalRows {
+		t.Errorf("default size = %dx%d, want %dx%d", cols, rows, DefaultTerminalCols, DefaultTerminalRows)
+	}
+
+	// Register with size
 	tr.RegisterPodWithSize("pod-1", 100, 120, 40)
 
-	// Simulate runner reporting PTY size via HandlePtyResized
-	// Note: ptySize is set by handlePtyResized callback, not RegisterPodWithSize
-	cm.HandlePtyResized(100, &runnerv1.PtyResizedEvent{
-		PodKey: "pod-1",
-		Cols:   120,
-		Rows:   40,
-	})
-
-	// ConnectClient - should receive pty_resized message
-	client, err := tr.ConnectClient("pod-1", nil)
-	if err != nil {
-		t.Fatalf("ConnectClient error: %v", err)
+	cols, rows, ok = tr.GetPtySize("pod-1")
+	if !ok {
+		t.Error("should find pod PTY size")
 	}
-
-	// Client should receive pty_resized message with current size
-	select {
-	case msg := <-client.Send:
-		if !msg.IsJSON {
-			t.Error("expected JSON message")
-		}
-		// Verify it's a pty_resized message
-		if len(msg.Data) == 0 {
-			t.Error("message data should not be empty")
-		}
-	default:
-		t.Error("client should have received pty_resized message")
+	if cols != 120 || rows != 40 {
+		t.Errorf("PTY size = %dx%d, want 120x40", cols, rows)
 	}
-
-	tr.DisconnectClient(client)
-}
-
-func TestTerminalRouterSendPtyResizedToClient(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Create client manually
-	client := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage, 256),
-	}
-
-	// Send pty_resized
-	tr.sendPtyResizedToClient(client, 120, 40)
-
-	// Verify message received
-	select {
-	case msg := <-client.Send:
-		if !msg.IsJSON {
-			t.Error("expected JSON message")
-		}
-		// Verify message contains expected data
-		expected := `"type":"pty_resized"`
-		if len(msg.Data) < len(expected) {
-			t.Error("message too short")
-		}
-	default:
-		t.Error("client should have received pty_resized message")
-	}
-}
-
-func TestTerminalRouterSendPtyResizedToClientChannelFull(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Create client with full channel (unbuffered)
-	client := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage), // Unbuffered, will be "full"
-	}
-
-	// Send pty_resized - should not panic, just log warning
-	tr.sendPtyResizedToClient(client, 120, 40)
-
-	// No message should be in channel (was dropped due to full buffer)
-	select {
-	case <-client.Send:
-		t.Error("message should not have been sent to full channel")
-	default:
-		// Expected - message was dropped
-	}
-}
-
-func TestTerminalRouterHandleTerminalOutputWithDeadClient(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Register pod
-	tr.RegisterPod("pod-1", 100)
-
-	// Manually add a client with full send buffer
-	shard := tr.getShard("pod-1")
-	deadClient := &TerminalClient{
-		PodKey: "pod-1",
-		Send:   make(chan TerminalMessage), // Unbuffered = full
-	}
-	shard.mu.Lock()
-	if shard.terminalClients["pod-1"] == nil {
-		shard.terminalClients["pod-1"] = make(map[*TerminalClient]bool)
-	}
-	shard.terminalClients["pod-1"][deadClient] = true
-	shard.mu.Unlock()
-
-	// Handle output - dead client should be detected
-	tr.handleTerminalOutput(100, &runnerv1.TerminalOutputEvent{
-		PodKey: "pod-1",
-		Data:   []byte("test output"),
-	})
-
-	// Data should still be in virtual terminal
-	output := tr.GetRecentOutput("pod-1", 10)
-	if !strings.Contains(string(output), "test output") {
-		t.Errorf("output = %q, should contain %q", output, "test output")
-	}
-
-	// Dead client should be removed
-	count := tr.GetClientCount("pod-1")
-	if count != 0 {
-		t.Errorf("client count = %d, want 0 (dead client should be removed)", count)
-	}
-}
-
-func TestTerminalRouterHandlePtyResizedWithClients(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-
-	// Register pod
-	tr.RegisterPod("pod-1", 100)
-
-	// Connect a client
-	client, _ := tr.ConnectClient("pod-1", nil)
-
-	// Drain the initial pty_resized message (from ConnectClient)
-	select {
-	case <-client.Send:
-	default:
-	}
-
-	// Handle pty_resized event
-	tr.handlePtyResized(100, &runnerv1.PtyResizedEvent{
-		PodKey: "pod-1",
-		Cols:   150,
-		Rows:   50,
-	})
-
-	// Verify client received the message
-	select {
-	case msg := <-client.Send:
-		if !msg.IsJSON {
-			t.Error("expected JSON message for pty_resized")
-		}
-	default:
-		t.Error("client should have received pty_resized message")
-	}
-
-	tr.DisconnectClient(client)
-}
-
-func TestTerminalRouterConnectClientWithVTData(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-	mockSender := &MockCommandSender{}
-	tr.SetCommandSender(mockSender)
-
-	// Register pod with size
-	tr.RegisterPodWithSize("pod-1", 100, 80, 24)
-
-	// Set up ptySize by simulating pty_resized event
-	tr.handlePtyResized(100, &runnerv1.PtyResizedEvent{
-		PodKey: "pod-1",
-		Cols:   80,
-		Rows:   24,
-	})
-
-	// Feed some data to the VT to make it non-empty
-	tr.handleTerminalOutput(100, &runnerv1.TerminalOutputEvent{
-		PodKey: "pod-1",
-		Data:   []byte("Hello, World!\r\n"),
-	})
-
-	// Connect client - should receive serialized VT state
-	client, err := tr.ConnectClient("pod-1", nil)
-	if err != nil {
-		t.Fatalf("ConnectClient error: %v", err)
-	}
-
-	// Client should receive messages (pty_resized and serialized state)
-	receivedMessages := 0
-	for receivedMessages < 2 {
-		select {
-		case msg := <-client.Send:
-			receivedMessages++
-			// First message should be pty_resized (JSON), second is serialized state (not JSON)
-			if receivedMessages == 1 && !msg.IsJSON {
-				t.Error("first message should be pty_resized (JSON)")
-			}
-			if receivedMessages == 2 && msg.IsJSON {
-				t.Error("second message should be serialized state (not JSON)")
-			}
-		default:
-			break
-		}
-		if receivedMessages < 2 {
-			// Give it a moment for async operations
-			break
-		}
-	}
-
-	if receivedMessages < 1 {
-		t.Error("client should have received at least pty_resized message")
-	}
-
-	tr.DisconnectClient(client)
-}
-
-func TestTerminalRouterConnectClientEmptyVTTriggersRedraw(t *testing.T) {
-	cm := NewRunnerConnectionManager(newTestLogger())
-	tr := NewTerminalRouter(cm, newTestLogger())
-	mockSender := &MockCommandSender{}
-	tr.SetCommandSender(mockSender)
-
-	// Register pod with size
-	tr.RegisterPodWithSize("pod-1", 100, 80, 24)
-
-	// Set up ptySize by simulating pty_resized event (VT is empty)
-	// This should trigger redraw because VT is empty and client will be connected
-	tr.handlePtyResized(100, &runnerv1.PtyResizedEvent{
-		PodKey: "pod-1",
-		Cols:   80,
-		Rows:   24,
-	})
-
-	// Connect client - VT is empty
-	client, err := tr.ConnectClient("pod-1", nil)
-	if err != nil {
-		t.Fatalf("ConnectClient error: %v", err)
-	}
-
-	// Drain messages
-	for {
-		select {
-		case <-client.Send:
-		default:
-			goto done
-		}
-	}
-done:
-
-	// Trigger handlePtyResized again - this time with client connected
-	// Since VT is still empty, it should trigger redraw
-	tr.handlePtyResized(100, &runnerv1.PtyResizedEvent{
-		PodKey: "pod-1",
-		Cols:   81, // Different size to ensure it's processed
-		Rows:   24,
-	})
-
-	// Wait for async redraw call with proper timing
-	time.Sleep(50 * time.Millisecond)
-
-	if mockSender.GetTerminalRedrawCalls() == 0 {
-		t.Error("expected SendTerminalRedraw to be called when VT is empty")
-	}
-
-	tr.DisconnectClient(client)
 }

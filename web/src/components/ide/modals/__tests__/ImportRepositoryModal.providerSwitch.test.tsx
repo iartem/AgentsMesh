@@ -4,7 +4,7 @@ import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockProvider,
   mockGitLabProvider,
-  mockRepository,
+  createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
 
 // Mock the API
@@ -34,9 +34,9 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
     vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
       providers: [mockProvider, mockGitLabProvider],
     });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue({
-      repositories: [mockRepository],
-    });
+    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
+      createListRepositoriesResponse()
+    );
   });
 
   it("should change base URL when provider type is changed to gitlab", async () => {

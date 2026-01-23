@@ -35,6 +35,16 @@ type Terminal struct {
 	closed   bool
 	onOutput func([]byte)
 	onExit   func(int)
+
+	// Terminal size (set at creation, used when starting PTY)
+	rows int
+	cols int
+
+	// Backpressure control (ttyd-style flow control)
+	// When paused, readOutput() blocks to prevent unbounded memory growth
+	readPaused  bool          // Whether PTY reading is paused
+	readPauseMu sync.RWMutex  // Protects readPaused flag
+	resumeCh    chan struct{} // Signal to resume reading
 }
 
 // New creates a new terminal instance.
@@ -59,10 +69,23 @@ func New(opts Options) (*Terminal, error) {
 	}
 	cmd.Env = env
 
+	// Default terminal size if not specified
+	rows := opts.Rows
+	cols := opts.Cols
+	if rows <= 0 {
+		rows = 24
+	}
+	if cols <= 0 {
+		cols = 80
+	}
+
 	return &Terminal{
 		cmd:      cmd,
 		onOutput: opts.OnOutput,
 		onExit:   opts.OnExit,
+		rows:     rows,
+		cols:     cols,
+		resumeCh: make(chan struct{}, 1), // Buffered to avoid blocking
 	}, nil
 }
 
@@ -76,16 +99,22 @@ func (t *Terminal) Start() error {
 	}
 
 	log := logger.Terminal()
-	log.Debug("Starting command", "path", t.cmd.Path, "args", t.cmd.Args, "dir", t.cmd.Dir)
+	log.Debug("Starting command", "path", t.cmd.Path, "args", t.cmd.Args, "dir", t.cmd.Dir, "cols", t.cols, "rows", t.rows)
 
-	// Start with PTY
-	ptmx, err := pty.Start(t.cmd)
+	// Start with PTY and initial size
+	// Use StartWithSize to set correct terminal dimensions from the beginning
+	// This is critical for TUI applications like Claude Code that render based on terminal size
+	winSize := &pty.Winsize{
+		Rows: uint16(t.rows),
+		Cols: uint16(t.cols),
+	}
+	ptmx, err := pty.StartWithSize(t.cmd, winSize)
 	if err != nil {
 		return fmt.Errorf("failed to start pty: %w", err)
 	}
 	t.pty = ptmx
 
-	log.Debug("PTY started", "pid", t.cmd.Process.Pid)
+	log.Debug("PTY started", "pid", t.cmd.Process.Pid, "cols", t.cols, "rows", t.rows)
 
 	// Start output reader
 	go t.readOutput()
@@ -109,8 +138,10 @@ func (t *Terminal) Write(data []byte) error {
 	return err
 }
 
-// Resize resizes the terminal
-func (t *Terminal) Resize(rows, cols int) error {
+// Resize resizes the terminal.
+// Parameters follow the standard convention: cols (width) first, then rows (height).
+// This matches xterm.js, ANSI standards, and most terminal libraries.
+func (t *Terminal) Resize(cols, rows int) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -216,14 +247,102 @@ func (t *Terminal) SetExitHandler(handler func(int)) {
 	t.onExit = handler
 }
 
-// readOutput reads output from the PTY and sends to handler
+// PauseRead pauses PTY reading (backpressure signal from consumer).
+// This implements ttyd-style flow control: when the consumer can't keep up,
+// we stop reading from the PTY to prevent unbounded memory growth.
+// The readOutput goroutine will block until ResumeRead is called.
+func (t *Terminal) PauseRead() {
+	t.readPauseMu.Lock()
+	wasPaused := t.readPaused
+	t.readPaused = true
+	t.readPauseMu.Unlock()
+
+	if !wasPaused {
+		logger.Terminal().Debug("PTY read paused (backpressure)")
+	}
+}
+
+// ResumeRead resumes PTY reading after backpressure is released.
+// This signals the readOutput goroutine to continue reading.
+func (t *Terminal) ResumeRead() {
+	t.readPauseMu.Lock()
+	wasPaused := t.readPaused
+	t.readPaused = false
+	t.readPauseMu.Unlock()
+
+	if wasPaused {
+		// Signal the resume channel (non-blocking)
+		select {
+		case t.resumeCh <- struct{}{}:
+		default:
+			// Channel already has a signal pending
+		}
+		logger.Terminal().Debug("PTY read resumed")
+	}
+}
+
+// IsReadPaused returns whether PTY reading is currently paused.
+func (t *Terminal) IsReadPaused() bool {
+	t.readPauseMu.RLock()
+	defer t.readPauseMu.RUnlock()
+	return t.readPaused
+}
+
+// readOutput reads output from the PTY and sends to handler.
+// Implements ttyd-style backpressure: when paused, blocks until resumed.
+// This prevents unbounded memory growth when consumer can't keep up.
 func (t *Terminal) readOutput() {
 	log := logger.Terminal()
 	buf := make([]byte, 4096)
 	readCount := 0
+
 	for {
-		n, err := t.pty.Read(buf)
+		// Check if we should pause (backpressure from consumer)
+		t.readPauseMu.RLock()
+		paused := t.readPaused
+		t.readPauseMu.RUnlock()
+
+		if paused {
+			// Block until resume signal or terminal closes
+			// This is the key to ttyd-style backpressure:
+			// we stop reading from PTY when consumer is overwhelmed
+			select {
+			case <-t.resumeCh:
+				// Resumed, continue reading
+				log.Debug("PTY read loop resumed from backpressure")
+			case <-time.After(100 * time.Millisecond):
+				// Periodic check - verify terminal isn't closed
+				t.mu.Lock()
+				closed := t.closed
+				t.mu.Unlock()
+				if closed {
+					return
+				}
+				continue // Re-check paused state
+			}
+		}
+
+		// Check if terminal is closed before reading
+		t.mu.Lock()
+		closed := t.closed
+		ptyFile := t.pty
+		t.mu.Unlock()
+
+		if closed || ptyFile == nil {
+			return
+		}
+
+		// Read from PTY with timeout to allow periodic backpressure checks
+		// This ensures we can respond to pause signals even during slow output
+		ptyFile.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		n, err := ptyFile.Read(buf)
+
 		if err != nil {
+			// Check if it's just a timeout (expected during backpressure checks)
+			if os.IsTimeout(err) {
+				continue // Normal timeout, re-check pause state
+			}
+
 			if err != io.EOF {
 				// Only log if not a normal close
 				t.mu.Lock()

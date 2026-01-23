@@ -4,8 +4,8 @@ import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockProvider,
   mockGitLabProvider,
-  mockRepository,
-  mockCreatedRepository,
+  createListRepositoriesResponse,
+  createRepositoryResponse,
 } from "./ImportRepositoryModal.utils";
 
 // Mock the API
@@ -35,13 +35,13 @@ describe("ImportRepositoryModal - Import Actions", () => {
     vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
       providers: [mockProvider, mockGitLabProvider],
     });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue({
-      repositories: [mockRepository],
-    });
+    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
+      createListRepositoriesResponse()
+    );
   });
 
   it("should call repositoryApi.create when import is clicked", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue(mockCreatedRepository);
+    vi.mocked(repositoryApi.create).mockResolvedValue(createRepositoryResponse());
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />
@@ -78,7 +78,7 @@ describe("ImportRepositoryModal - Import Actions", () => {
   });
 
   it("should call onImported and onClose after successful import", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue(mockCreatedRepository);
+    vi.mocked(repositoryApi.create).mockResolvedValue(createRepositoryResponse());
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />

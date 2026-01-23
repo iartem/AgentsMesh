@@ -46,12 +46,14 @@ func (b *PodBuilder) WithCommand(cmd *runnerv1.CreatePodCommand) *PodBuilder {
 }
 
 // WithTerminalSize sets terminal dimensions.
-func (b *PodBuilder) WithTerminalSize(rows, cols int) *PodBuilder {
-	if rows > 0 {
-		b.rows = rows
-	}
+// Parameters follow the standard convention: cols (width) first, then rows (height).
+// This matches xterm.js, ANSI standards, and most terminal libraries.
+func (b *PodBuilder) WithTerminalSize(cols, rows int) *PodBuilder {
 	if cols > 0 {
 		b.cols = cols
+	}
+	if rows > 0 {
+		b.rows = rows
 	}
 	return b
 }

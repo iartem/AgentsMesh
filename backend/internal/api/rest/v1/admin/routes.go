@@ -5,15 +5,21 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/admin"
+	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
+	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Services contains all admin-related services
 type Services struct {
-	Auth  *auth.Service
-	Admin *admin.Service
+	Auth          *auth.Service
+	Admin         *admin.Service
+	RelayManager  *relay.Manager
+	CommandSender runner.RunnerCommandSender
+	PodService    *agentpod.PodService
 }
 
 // RegisterRoutes registers all admin console routes
@@ -56,4 +62,10 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 	// Promo Codes
 	promoCodeHandler := NewPromoCodeHandler(svc.Admin)
 	promoCodeHandler.RegisterRoutes(protected)
+
+	// Relays (optional - only if relay manager is available)
+	if svc.RelayManager != nil {
+		relayHandler := NewRelayHandler(svc.Admin, svc.RelayManager, svc.CommandSender, svc.PodService)
+		relayHandler.RegisterRoutes(protected)
+	}
 }

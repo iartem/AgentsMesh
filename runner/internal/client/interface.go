@@ -43,7 +43,7 @@ type Connection interface {
 	QueueCapacity() int
 
 	// QueueUsage returns the terminal queue usage ratio (0.0 to 1.0).
-	// Used by SmartAggregator to adapt frame rate based on queue pressure.
+	// Used for monitoring queue pressure.
 	QueueUsage() float64
 
 	// SetOrgSlug sets the organization slug.

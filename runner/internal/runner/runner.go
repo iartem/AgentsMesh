@@ -11,6 +11,7 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp"
 	"github.com/anthropics/agentsmesh/runner/internal/monitor"
+	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/anthropics/agentsmesh/runner/internal/workspace"
 )
@@ -49,13 +50,22 @@ type Pod struct {
 	Branch           string
 	WorktreePath     string
 	Terminal         *terminal.Terminal
-	Aggregator       *terminal.SmartAggregator // Output aggregator for adaptive frame rate
+	VirtualTerminal  *terminal.VirtualTerminal  // Virtual terminal for state management and snapshots
+	Aggregator       *terminal.SmartAggregator  // Output aggregator for adaptive frame rate
+	RelayClient      *relay.Client              // WebSocket client for Relay connection
+	relayMu          sync.RWMutex               // Protects RelayClient field
 	StartedAt        time.Time
 	Status           string              // Pod status - use statusMu for thread-safe access
 	statusMu         sync.RWMutex        // Protects Status field
 	TicketIdentifier string              // Ticket ID for worktree-based pods
 	OnOutput         func([]byte)        // Output callback
 	OnExit           func(int)           // Exit callback
+}
+
+// NewVirtualTerminal creates a new VirtualTerminal.
+// This is a wrapper for terminal.NewVirtualTerminal to avoid importing terminal package in message_handler.
+func NewVirtualTerminal(cols, rows, historyLimit int) *terminal.VirtualTerminal {
+	return terminal.NewVirtualTerminal(cols, rows, historyLimit)
 }
 
 // SetStatus sets the pod status in a thread-safe manner
@@ -70,6 +80,41 @@ func (p *Pod) GetStatus() string {
 	p.statusMu.RLock()
 	defer p.statusMu.RUnlock()
 	return p.Status
+}
+
+// SetRelayClient sets the relay client in a thread-safe manner
+func (p *Pod) SetRelayClient(client *relay.Client) {
+	p.relayMu.Lock()
+	defer p.relayMu.Unlock()
+	p.RelayClient = client
+}
+
+// GetRelayClient returns the relay client in a thread-safe manner
+func (p *Pod) GetRelayClient() *relay.Client {
+	p.relayMu.RLock()
+	defer p.relayMu.RUnlock()
+	return p.RelayClient
+}
+
+// HasRelayClient returns whether a relay client is connected
+func (p *Pod) HasRelayClient() bool {
+	p.relayMu.RLock()
+	defer p.relayMu.RUnlock()
+	return p.RelayClient != nil && p.RelayClient.IsConnected()
+}
+
+// DisconnectRelay disconnects and clears the relay client
+func (p *Pod) DisconnectRelay() {
+	p.relayMu.Lock()
+	defer p.relayMu.Unlock()
+	if p.RelayClient != nil {
+		p.RelayClient.Stop()
+		p.RelayClient = nil
+	}
+	// Clear aggregator relay output - will fall back to gRPC
+	if p.Aggregator != nil {
+		p.Aggregator.SetRelayOutput(nil)
+	}
 }
 
 // PodStatus constants
@@ -216,9 +261,19 @@ func (r *Runner) Run(ctx context.Context) error {
 func (r *Runner) stopAllPods() {
 	pods := r.podStore.All()
 	for _, pod := range pods {
+		// 1. Disconnect Relay first
+		pod.DisconnectRelay()
+
+		// 2. Stop aggregator to flush remaining output
+		if pod.Aggregator != nil {
+			pod.Aggregator.Stop()
+		}
+
+		// 3. Stop terminal
 		if pod.Terminal != nil {
 			pod.Terminal.Stop()
 		}
+
 		r.podStore.Delete(pod.PodKey)
 	}
 }

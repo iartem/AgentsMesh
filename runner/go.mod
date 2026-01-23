@@ -10,11 +10,14 @@ require (
 	github.com/creack/pty v1.1.21
 	github.com/creativeprojects/go-selfupdate v1.5.2
 	github.com/getlantern/systray v1.2.2
+	github.com/gorilla/websocket v1.5.1
 	github.com/kardianos/service v1.2.4
+	github.com/mattn/go-runewidth v0.0.16
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/term v0.38.0
+	golang.org/x/time v0.14.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -46,6 +49,7 @@ require (
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -64,7 +68,6 @@ require (
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

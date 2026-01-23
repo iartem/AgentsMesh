@@ -21,7 +21,8 @@ type SubscriptionRenewJob struct {
 }
 
 // NewSubscriptionRenewJob creates a new subscription renewal job
-func NewSubscriptionRenewJob(db *gorm.DB, cfg *config.PaymentConfig, logger *slog.Logger) *SubscriptionRenewJob {
+// cfg is the full application config, needed for URL derivation in payment providers
+func NewSubscriptionRenewJob(db *gorm.DB, cfg *config.Config, logger *slog.Logger) *SubscriptionRenewJob {
 	return &SubscriptionRenewJob{
 		db:             db,
 		paymentFactory: payment.NewFactoryWithDB(cfg, db),

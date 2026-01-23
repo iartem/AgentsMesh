@@ -26,7 +26,8 @@ func NewWebhookRouter(db *gorm.DB, cfg *config.Config, logger *slog.Logger) *Web
 	SetupDefaultHandlers(registry, logger)
 
 	// Initialize billing service and payment factory for payment webhooks
-	billingSvc := billing.NewServiceWithConfig(db, &cfg.Payment)
+	// Full config is passed for URL derivation (AlipayNotifyURL, etc.)
+	billingSvc := billing.NewServiceWithConfig(db, cfg)
 	paymentFactory := billingSvc.GetPaymentFactory()
 
 	return &WebhookRouter{

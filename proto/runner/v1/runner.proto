@@ -125,6 +125,8 @@ message ServerMessage {
     TerminalResizeCommand terminal_resize = 5;
     SendPromptCommand send_prompt = 6;
     TerminalRedrawCommand terminal_redraw = 7;
+    SubscribeTerminalCommand subscribe_terminal = 8;
+    UnsubscribeTerminalCommand unsubscribe_terminal = 9;
   }
   int64 timestamp = 15;
 }
@@ -159,6 +161,8 @@ message CreatePodCommand {
   repeated FileToCreate files_to_create = 5;
   SandboxConfig sandbox_config = 6;  // 替代原 work_dir_config
   string initial_prompt = 7;
+  int32 cols = 8;  // 终端列数（由浏览器传入）
+  int32 rows = 9;  // 终端行数（由浏览器传入）
 }
 
 // FileToCreate 要创建的文件或目录
@@ -227,5 +231,24 @@ message SendPromptCommand {
 // （直接发送 SIGWINCH 对处于空闲状态的程序如 Claude Code 无效）
 // Runner 收到后执行 resize 技巧，不响应 pty_resized 事件（避免循环）
 message TerminalRedrawCommand {
+  string pod_key = 1;
+}
+
+// ==================== Relay 中继相关命令 ====================
+
+// SubscribeTerminalCommand 订阅终端命令
+// Backend 通知 Runner 有观察者要订阅终端，Runner 应连接到 Relay
+message SubscribeTerminalCommand {
+  string pod_key = 1;
+  string relay_url = 2;        // Relay WebSocket URL (wss://relay.example.com)
+  string session_id = 3;       // 会话 ID，用于 Relay 匹配 Browser 和 Runner
+  bool include_snapshot = 4;   // 是否发送快照
+  int32 snapshot_history = 5;  // 快照历史行数
+  string runner_token = 6;     // Runner 认证 Token（JWT）
+}
+
+// UnsubscribeTerminalCommand 取消订阅终端命令
+// Backend 通知 Runner 所有观察者已离开，Runner 应断开与 Relay 的连接
+message UnsubscribeTerminalCommand {
   string pod_key = 1;
 }

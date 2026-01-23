@@ -208,6 +208,10 @@ type CreatePodRequest struct {
 
 	// ConfigOverrides allows users to override agent type default configuration
 	ConfigOverrides map[string]interface{} `json:"config_overrides"`
+
+	// Terminal size (from browser xterm.js)
+	Cols int32 `json:"cols"` // Terminal columns (width)
+	Rows int32 `json:"rows"` // Terminal rows (height)
 }
 
 // CreatePod creates a new pod

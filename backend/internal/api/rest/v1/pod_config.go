@@ -100,6 +100,8 @@ func (h *PodHandler) buildPodCommand(c *gin.Context, req *CreatePodRequest, podK
 		InitialPrompt:       req.InitialPrompt,
 		PodKey:              podKey,
 		MCPPort:             19000, // Default MCP port, could be made configurable
+		Cols:                req.Cols,
+		Rows:                req.Rows,
 	}
 
 	return h.configBuilder.BuildPodCommand(ctx, buildReq)

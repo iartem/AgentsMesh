@@ -66,14 +66,14 @@ func TestPodBuilderWithCommand(t *testing.T) {
 
 func TestPodBuilderWithTerminalSize(t *testing.T) {
 	runner := &Runner{cfg: &config.Config{}}
-	builder := NewPodBuilder(runner).WithTerminalSize(48, 160)
-
-	if builder.rows != 48 {
-		t.Errorf("rows = %d, want 48", builder.rows)
-	}
+	builder := NewPodBuilder(runner).WithTerminalSize(160, 48) // (cols, rows)
 
 	if builder.cols != 160 {
 		t.Errorf("cols = %d, want 160", builder.cols)
+	}
+
+	if builder.rows != 48 {
+		t.Errorf("rows = %d, want 48", builder.rows)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestPodBuilderCommandWithAllFields(t *testing.T) {
 
 	builder := NewPodBuilder(runner).
 		WithCommand(cmd).
-		WithTerminalSize(48, 160)
+		WithTerminalSize(160, 48) // (cols, rows)
 
 	if builder.cmd.PodKey != "pod-1" {
 		t.Errorf("podKey = %v, want pod-1", builder.cmd.PodKey)
@@ -170,6 +170,10 @@ func TestPodBuilderCommandWithAllFields(t *testing.T) {
 
 	if len(builder.cmd.LaunchArgs) != 1 || builder.cmd.LaunchArgs[0] != "--headless" {
 		t.Errorf("launchArgs = %v, want [--headless]", builder.cmd.LaunchArgs)
+	}
+
+	if builder.cols != 160 {
+		t.Errorf("cols = %d, want 160", builder.cols)
 	}
 
 	if builder.rows != 48 {

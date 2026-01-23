@@ -2,11 +2,9 @@ package runner
 
 import (
 	"testing"
-	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/config"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Tests for event sending methods and helper functions
@@ -142,50 +140,6 @@ func TestSendMethodsWithNilConnection(t *testing.T) {
 	handler.sendPodError("pod-1", "error")
 }
 
-// --- Test createOutputHandler ---
-
-func TestCreateOutputHandler(t *testing.T) {
-	store := NewInMemoryPodStore()
-	mockConn := client.NewMockConnection()
-
-	runner := &Runner{cfg: &config.Config{}}
-
-	handler := NewRunnerMessageHandler(runner, store, mockConn)
-
-	// Create a SmartAggregator for the test
-	agg := terminal.NewSmartAggregator(
-		func(data []byte) {
-			handler.sendTerminalOutput("pod-1", data)
-		},
-		func() float64 { return 0 },
-	)
-
-	outputHandler := handler.createOutputHandler("pod-1", agg)
-
-	// Call the handler
-	outputHandler([]byte("test output"))
-
-	// Flush the aggregator to ensure data is sent
-	agg.Stop()
-
-	// Wait a bit for the async flush callback to complete
-	// SmartAggregator calls onFlush in a goroutine to avoid deadlock
-	time.Sleep(50 * time.Millisecond)
-
-	// Verify output was sent
-	events := mockConn.GetEvents()
-	hasOutput := false
-	for _, e := range events {
-		if e.Type == client.MsgTypeTerminalOutput {
-			hasOutput = true
-			break
-		}
-	}
-	if !hasOutput {
-		t.Error("output handler should send terminal output")
-	}
-}
-
 // --- Test createExitHandler ---
 
 func TestCreateExitHandler(t *testing.T) {
@@ -196,19 +150,13 @@ func TestCreateExitHandler(t *testing.T) {
 
 	handler := NewRunnerMessageHandler(runner, store, mockConn)
 
-	// Create a SmartAggregator for the test
-	agg := terminal.NewSmartAggregator(
-		func(data []byte) {},
-		func() float64 { return 0 },
-	)
-
 	// Add pod
 	store.Put("exit-pod", &Pod{
 		ID:     "exit-pod",
 		Status: PodStatusRunning,
 	})
 
-	exitHandler := handler.createExitHandler("exit-pod", agg)
+	exitHandler := handler.createExitHandler("exit-pod")
 
 	// Call the handler
 	exitHandler(0)

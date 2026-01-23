@@ -26,7 +26,7 @@ func TestPodBuilderStruct(t *testing.T) {
 
 	builder := NewPodBuilder(runner).
 		WithCommand(cmd).
-		WithTerminalSize(24, 80)
+		WithTerminalSize(80, 24) // (cols, rows)
 
 	if builder.cmd.PodKey != "pod-1" {
 		t.Errorf("podKey: got %v, want pod-1", builder.cmd.PodKey)
@@ -34,6 +34,9 @@ func TestPodBuilderStruct(t *testing.T) {
 
 	if builder.rows != 24 {
 		t.Errorf("rows: got %v, want 24", builder.rows)
+	}
+	if builder.cols != 80 {
+		t.Errorf("cols: got %v, want 80", builder.cols)
 	}
 }
 
@@ -60,7 +63,7 @@ func TestPodBuilderFluentAPI(t *testing.T) {
 	builder := NewPodBuilder(runner)
 	result := builder.
 		WithCommand(cmd).
-		WithTerminalSize(40, 120)
+		WithTerminalSize(120, 40) // (cols, rows)
 
 	// Verify it returns the same builder
 	if result != builder {
@@ -238,7 +241,7 @@ func TestPodBuilderWithAllOptions(t *testing.T) {
 
 	builder := NewPodBuilder(runner).
 		WithCommand(cmd).
-		WithTerminalSize(40, 120)
+		WithTerminalSize(120, 40) // (cols, rows)
 
 	if builder.cmd.PodKey != "pod-key" {
 		t.Errorf("podKey = %v, want pod-key", builder.cmd.PodKey)
@@ -287,7 +290,7 @@ func BenchmarkPodBuilderFluentAPI(b *testing.B) {
 		}
 		NewPodBuilder(runner).
 			WithCommand(cmd).
-			WithTerminalSize(40, 120)
+			WithTerminalSize(120, 40) // (cols, rows)
 	}
 }
 

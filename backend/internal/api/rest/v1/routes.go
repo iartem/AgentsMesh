@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/backend/internal/config"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/acme"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/websocket"
@@ -19,6 +20,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/service/promocode"
+	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
@@ -63,6 +65,12 @@ type Services struct {
 
 	// gRPC/mTLS Runner registration handler (optional, only when PKI is enabled)
 	GRPCRunnerHandler *GRPCRunnerHandler
+
+	// Relay services for terminal data streaming
+	RelayManager        *relay.Manager         // Relay server management
+	RelayTokenGenerator *relay.TokenGenerator  // Relay token generation
+	RelayDNSService     *relay.DNSService      // Relay DNS management
+	RelayACMEManager    *acme.Manager          // ACME certificate management for Relay TLS
 }
 
 // RegisterAllRoutes registers all API v1 routes with proper handlers
@@ -181,6 +189,15 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		pods.GET("/:key/terminal/observe", podHandler.ObserveTerminal)
 		pods.POST("/:key/terminal/input", podHandler.SendTerminalInput)
 		pods.POST("/:key/terminal/resize", podHandler.ResizeTerminal)
+	}
+
+	// Terminal Relay connection endpoint (for browser -> relay connection)
+	if svc.RelayManager != nil && svc.RelayTokenGenerator != nil {
+		var commandSender runner.RunnerCommandSender
+		if svc.PodCoordinator != nil {
+			commandSender = svc.PodCoordinator.GetCommandSender()
+		}
+		RegisterTerminalConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender)
 	}
 
 	// Channels

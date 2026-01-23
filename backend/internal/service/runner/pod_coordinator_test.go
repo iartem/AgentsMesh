@@ -487,3 +487,54 @@ func TestPodCoordinatorTerminatePodNotFound(t *testing.T) {
 		t.Error("TerminatePod should return error for non-existent pod")
 	}
 }
+
+func TestPodCoordinatorGetCommandSender(t *testing.T) {
+	db := setupTestDB(t)
+	logger := newTestLogger()
+	_, cm, tr, hb := setupPodCoordinatorDeps(t)
+
+	pc := NewPodCoordinator(db, cm, tr, hb, logger)
+
+	// Default should be NoOpCommandSender
+	sender := pc.GetCommandSender()
+	if sender == nil {
+		t.Fatal("GetCommandSender returned nil")
+	}
+	if _, ok := sender.(*NoOpCommandSender); !ok {
+		t.Error("expected NoOpCommandSender by default")
+	}
+
+	// Set custom sender
+	mockSender := &MockCommandSender{}
+	pc.SetCommandSender(mockSender)
+
+	if pc.GetCommandSender() != mockSender {
+		t.Error("GetCommandSender should return the set sender")
+	}
+}
+
+func TestPodCoordinatorSetInitProgressCallback(t *testing.T) {
+	db := setupTestDB(t)
+	logger := newTestLogger()
+	_, cm, tr, hb := setupPodCoordinatorDeps(t)
+
+	pc := NewPodCoordinator(db, cm, tr, hb, logger)
+
+	called := false
+	pc.SetInitProgressCallback(func(podKey, phase string, progress int, message string) {
+		called = true
+		if podKey != "test-pod" {
+			t.Errorf("podKey: got %q, want %q", podKey, "test-pod")
+		}
+	})
+
+	if pc.onInitProgress == nil {
+		t.Error("onInitProgress should be set")
+	}
+
+	// Trigger the callback directly
+	pc.onInitProgress("test-pod", "init", 50, "initializing")
+	if !called {
+		t.Error("callback should have been called")
+	}
+}

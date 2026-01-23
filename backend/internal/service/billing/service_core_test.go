@@ -35,6 +35,21 @@ func TestNewServiceWithStripeKey(t *testing.T) {
 	}
 }
 
+// testConfigWithPayment creates a test config with payment settings
+func testConfigWithPayment(payment *config.PaymentConfig) *config.Config {
+	if payment == nil {
+		return &config.Config{
+			PrimaryDomain: "localhost:10000",
+			UseHTTPS:      false,
+		}
+	}
+	return &config.Config{
+		PrimaryDomain: "localhost:10000",
+		UseHTTPS:      false,
+		Payment:       *payment,
+	}
+}
+
 func TestNewServiceWithConfig(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -48,11 +63,11 @@ func TestNewServiceWithConfig(t *testing.T) {
 	}
 
 	// Test with mock enabled config
-	cfg := &config.PaymentConfig{
+	appCfg := testConfigWithPayment(&config.PaymentConfig{
 		DeploymentType: config.DeploymentGlobal,
 		MockEnabled:    true,
-	}
-	service = NewServiceWithConfig(db, cfg)
+	})
+	service = NewServiceWithConfig(db, appCfg)
 	if service == nil {
 		t.Fatal("expected non-nil service")
 	}
@@ -63,8 +78,8 @@ func TestNewServiceWithConfig(t *testing.T) {
 
 func TestGetPaymentFactory(t *testing.T) {
 	db := setupTestDB(t)
-	cfg := &config.PaymentConfig{MockEnabled: true}
-	service := NewServiceWithConfig(db, cfg)
+	appCfg := testConfigWithPayment(&config.PaymentConfig{MockEnabled: true})
+	service := NewServiceWithConfig(db, appCfg)
 
 	factory := service.GetPaymentFactory()
 	if factory == nil {
@@ -168,11 +183,11 @@ func TestGetDeploymentInfo(t *testing.T) {
 	}
 
 	// With config
-	cfg := &config.PaymentConfig{
+	appCfg := testConfigWithPayment(&config.PaymentConfig{
 		DeploymentType: config.DeploymentCN,
 		MockEnabled:    true,
-	}
-	service = NewServiceWithConfig(db, cfg)
+	})
+	service = NewServiceWithConfig(db, appCfg)
 	info = service.GetDeploymentInfo()
 	if info.DeploymentType != "cn" {
 		t.Errorf("expected 'cn', got %s", info.DeploymentType)
@@ -216,13 +231,13 @@ func TestNewServiceWithConfigStripe(t *testing.T) {
 	db := setupTestDB(t)
 
 	// Test with Stripe key
-	cfg := &config.PaymentConfig{
+	appCfg := testConfigWithPayment(&config.PaymentConfig{
 		DeploymentType: config.DeploymentGlobal,
 		Stripe: config.StripeConfig{
 			SecretKey: "sk_test_fake",
 		},
-	}
-	service := NewServiceWithConfig(db, cfg)
+	})
+	service := NewServiceWithConfig(db, appCfg)
 	if service == nil {
 		t.Fatal("expected non-nil service")
 	}

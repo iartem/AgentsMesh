@@ -4,7 +4,7 @@ import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockProvider,
   mockGitLabProvider,
-  mockRepository,
+  createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
 
 // Mock the API
@@ -34,9 +34,9 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
     vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
       providers: [mockProvider, mockGitLabProvider],
     });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue({
-      repositories: [mockRepository],
-    });
+    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
+      createListRepositoriesResponse()
+    );
   });
 
   it("should call onClose when cancel button is clicked", async () => {

@@ -1,6 +1,20 @@
 /**
  * 环境变量工具函数
  *
+ * =============================================================================
+ * Unified Domain Configuration (推荐)
+ * =============================================================================
+ * 只需配置两个变量，所有 URL 自动派生：
+ * - NEXT_PUBLIC_PRIMARY_DOMAIN → 主域名 (e.g., "localhost:10000" 或 "agentsmesh.com")
+ * - NEXT_PUBLIC_USE_HTTPS → 是否使用 HTTPS (true/false)
+ *
+ * 派生的 URL：
+ * - OAuth URL = http(s)://{PRIMARY_DOMAIN}
+ * - WebSocket URL = ws(s)://{PRIMARY_DOMAIN}
+ *
+ * =============================================================================
+ * 传统配置方式（向后兼容）
+ * =============================================================================
  * 本地开发时（使用 dev.sh）：
  * - NEXT_PUBLIC_API_URL="" → 使用相对路径，由 Next.js rewrites 代理
  * - NEXT_PUBLIC_OAUTH_URL → OAuth 浏览器跳转使用
@@ -10,6 +24,48 @@
  * - NEXT_PUBLIC_API_URL → 完整的后端 URL
  */
 
+// =============================================================================
+// Unified Domain Configuration Helpers
+// =============================================================================
+
+/**
+ * 获取主域名配置
+ */
+function getPrimaryDomain(): string | undefined {
+  return process.env.NEXT_PUBLIC_PRIMARY_DOMAIN;
+}
+
+/**
+ * 是否使用 HTTPS
+ */
+function isHttpsEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_USE_HTTPS === "true";
+}
+
+/**
+ * 从 PRIMARY_DOMAIN 派生 HTTP(S) URL
+ */
+function deriveHttpUrl(): string | undefined {
+  const domain = getPrimaryDomain();
+  if (!domain) return undefined;
+  const protocol = isHttpsEnabled() ? "https" : "http";
+  return `${protocol}://${domain}`;
+}
+
+/**
+ * 从 PRIMARY_DOMAIN 派生 WS(S) URL
+ */
+function deriveWsUrl(): string | undefined {
+  const domain = getPrimaryDomain();
+  if (!domain) return undefined;
+  const protocol = isHttpsEnabled() ? "wss" : "ws";
+  return `${protocol}://${domain}`;
+}
+
+// =============================================================================
+// Public API
+// =============================================================================
+
 /**
  * 获取 API 基础 URL
  * - 本地开发：返回空字符串（使用相对路径）
@@ -17,11 +73,16 @@
  */
 export function getApiBaseUrl(): string {
   // NEXT_PUBLIC_API_URL="" 表示使用相对路径
-  // NEXT_PUBLIC_API_URL=undefined 表示未配置，使用默认值
+  // NEXT_PUBLIC_API_URL=undefined 表示未配置，尝试从 PRIMARY_DOMAIN 派生
   if (typeof process.env.NEXT_PUBLIC_API_URL === "string") {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  return "http://localhost:8080";
+
+  // Try deriving from PRIMARY_DOMAIN
+  const derived = deriveHttpUrl();
+  if (derived) return derived;
+
+  return "http://localhost:10000";
 }
 
 /**
@@ -29,11 +90,19 @@ export function getApiBaseUrl(): string {
  * OAuth 必须使用完整 URL，因为是浏览器直接跳转到后端
  */
 export function getOAuthBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_OAUTH_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8080"
-  );
+  // Explicit configuration takes priority
+  if (process.env.NEXT_PUBLIC_OAUTH_URL) {
+    return process.env.NEXT_PUBLIC_OAUTH_URL;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // Try deriving from PRIMARY_DOMAIN
+  const derived = deriveHttpUrl();
+  if (derived) return derived;
+
+  return "http://localhost:10000";
 }
 
 /**
@@ -41,25 +110,29 @@ export function getOAuthBaseUrl(): string {
  * WebSocket 必须使用完整 URL，因为不能通过 Next.js rewrites 代理
  */
 export function getWsBaseUrl(): string {
-  // 优先使用显式配置的 WS URL
+  // Explicit configuration takes priority
   if (process.env.NEXT_PUBLIC_WS_URL) {
     return process.env.NEXT_PUBLIC_WS_URL;
   }
 
-  // 从 API URL 推导
+  // Try deriving from PRIMARY_DOMAIN
+  const derived = deriveWsUrl();
+  if (derived) return derived;
+
+  // Derive from API URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (apiUrl) {
     return apiUrl.replace(/^http/, "ws");
   }
 
-  // 客户端：从当前页面推导
+  // Client-side: derive from current page
   if (typeof window !== "undefined") {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
     return `${protocol}//${host}`;
   }
 
-  return "ws://localhost:8080";
+  return "ws://localhost:10000";
 }
 
 // Default server URL for SSR and production

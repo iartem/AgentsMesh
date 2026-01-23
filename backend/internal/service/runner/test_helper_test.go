@@ -91,13 +91,15 @@ func newTestLogger() *slog.Logger {
 // Shared across all test files in the runner package.
 // Thread-safe for use with async goroutines.
 type MockCommandSender struct {
-	mu                   sync.Mutex
-	CreatePodCalls       int
-	TerminatePodCalls    int
-	TerminalInputCalls   int
-	TerminalResizeCalls  int
-	TerminalRedrawCalls  int
-	SendPromptCalls      int
+	mu                        sync.Mutex
+	CreatePodCalls            int
+	TerminatePodCalls         int
+	TerminalInputCalls        int
+	TerminalResizeCalls       int
+	TerminalRedrawCalls       int
+	SendPromptCalls           int
+	SubscribeTerminalCalls    int
+	UnsubscribeTerminalCalls  int
 }
 
 func (m *MockCommandSender) SendCreatePod(ctx context.Context, runnerID int64, cmd *runnerv1.CreatePodCommand) error {
@@ -139,6 +141,20 @@ func (m *MockCommandSender) SendPrompt(ctx context.Context, runnerID int64, podK
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.SendPromptCalls++
+	return nil
+}
+
+func (m *MockCommandSender) SendSubscribeTerminal(ctx context.Context, runnerID int64, podKey, relayURL, sessionID, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.SubscribeTerminalCalls++
+	return nil
+}
+
+func (m *MockCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerID int64, podKey string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.UnsubscribeTerminalCalls++
 	return nil
 }
 

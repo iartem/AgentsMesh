@@ -50,7 +50,7 @@ export interface CreatePodFormState {
   submit: (
     selectedRunnerId: number | null,
     pluginConfig: Record<string, unknown>,
-    options?: { ticketId?: number; initialPrompt?: string }
+    options?: { ticketId?: number; initialPrompt?: string; cols?: number; rows?: number }
   ) => Promise<PodData | null>;
 }
 
@@ -199,7 +199,7 @@ export function useCreatePodForm(
     async (
       selectedRunnerId: number | null,
       pluginConfig: Record<string, unknown>,
-      options?: { ticketId?: number; initialPrompt?: string }
+      options?: { ticketId?: number; initialPrompt?: string; cols?: number; rows?: number }
     ): Promise<PodData | null> => {
       // Validate before submission
       if (!validate(selectedRunnerId)) {
@@ -233,6 +233,8 @@ export function useCreatePodForm(
           config_overrides: config,
           credential_profile_id: selectedCredentialProfile > 0 ? selectedCredentialProfile : undefined,
           ticket_id: options?.ticketId,
+          cols: options?.cols,
+          rows: options?.rows,
         });
 
         if (response.pod) {

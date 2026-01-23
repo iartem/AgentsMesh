@@ -65,6 +65,12 @@ func (pc *PodCoordinator) SetCommandSender(sender RunnerCommandSender) {
 	pc.logger.Info("command sender configured", "type", fmt.Sprintf("%T", sender))
 }
 
+// GetCommandSender returns the command sender for sending commands to runners.
+// Returns nil if no command sender is configured.
+func (pc *PodCoordinator) GetCommandSender() RunnerCommandSender {
+	return pc.commandSender
+}
+
 // SetStatusChangeCallback sets the callback for status changes
 func (pc *PodCoordinator) SetStatusChangeCallback(fn func(podKey string, status string, agentStatus string)) {
 	pc.onStatusChange = fn

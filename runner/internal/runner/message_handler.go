@@ -3,10 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
@@ -43,8 +46,19 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 	}
 
 	// Build pod using Proto command directly
+	// Use terminal size from command (sent by frontend based on actual browser terminal size)
+	cols := int(cmd.Cols)
+	rows := int(cmd.Rows)
+	if cols <= 0 {
+		cols = 80
+	}
+	if rows <= 0 {
+		rows = 24
+	}
+
 	builder := NewPodBuilder(h.runner).
-		WithCommand(cmd)
+		WithCommand(cmd).
+		WithTerminalSize(cols, rows)
 
 	// Build pod
 	pod, err := builder.Build(ctx)
@@ -58,20 +72,49 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("failed to build pod: %w", err)
 	}
 
-	// Create SmartAggregator for this pod
-	// The aggregator buffers terminal output and adapts frame rate based on queue pressure
-	pod.Aggregator = terminal.NewSmartAggregator(
-		func(data []byte) {
-			h.sendTerminalOutput(cmd.PodKey, data)
-		},
-		func() float64 {
-			return h.conn.QueueUsage()
-		},
-	)
+	// Create VirtualTerminal for terminal state management and snapshots
+	// Use actual terminal size from command
+	// Use small history size (100 lines) to avoid OOM - TUI apps like Claude Code
+	// use alt screen which doesn't scroll to history anyway
+	pod.VirtualTerminal = NewVirtualTerminal(cols, rows, 100)
 
-	// Set output/exit handlers - output goes through SmartAggregator
-	pod.Terminal.SetOutputHandler(h.createOutputHandler(cmd.PodKey, pod.Aggregator))
-	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey, pod.Aggregator))
+	// Create SmartAggregator for adaptive frame rate output
+	// Data flow (parallel branches):
+	//   PTY → OutputHandler → VirtualTerminal.Feed() [state tracking for snapshots]
+	//                       → SmartAggregator.Write() → Relay/gRPC → Browser → xterm
+	podKey := cmd.PodKey
+	vt := pod.VirtualTerminal
+
+	// gRPC fallback handler (when no Relay connected)
+	grpcHandler := func(data []byte) {
+		h.sendTerminalOutput(podKey, data)
+	}
+
+	// Create aggregator with gRPC as fallback
+	aggregator := terminal.NewSmartAggregator(grpcHandler, nil)
+	pod.Aggregator = aggregator
+
+	// Set output handler: PTY → VirtualTerminal → Aggregator
+	pod.Terminal.SetOutputHandler(func(data []byte) {
+		// Recover from any panic to prevent Runner crash
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Terminal().Error("PANIC in OutputHandler recovered",
+					"pod_key", podKey,
+					"panic", fmt.Sprintf("%v", r),
+					"data_len", len(data))
+			}
+		}()
+
+		// Feed VirtualTerminal for state tracking (enables snapshots)
+		if vt != nil {
+			vt.Feed(data)
+		}
+
+		// Write to aggregator - it handles Relay vs gRPC routing internally
+		aggregator.Write(data)
+	})
+	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey))
 
 	// Start terminal
 	if err := pod.Terminal.Start(); err != nil {
@@ -90,10 +133,10 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		log.Debug("Registered pod with MCP server", "pod_key", cmd.PodKey, "org", orgSlug)
 	}
 
-	// Notify server that pod is created
-	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch, 80, 24)
+	// Notify server that pod is created with actual terminal size
+	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch, uint16(cols), uint16(rows))
 
-	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "worktree", pod.WorktreePath, "branch", pod.Branch)
+	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "worktree", pod.WorktreePath, "branch", pod.Branch, "cols", cols, "rows", rows)
 	return nil
 }
 
@@ -108,7 +151,7 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	// Stop aggregator first to flush pending output
+	// Stop aggregator first to ensure no more output is sent
 	if pod.Aggregator != nil {
 		pod.Aggregator.Stop()
 	}
@@ -175,8 +218,14 @@ func (h *RunnerMessageHandler) OnTerminalResize(req client.TerminalResizeRequest
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	if err := pod.Terminal.Resize(int(req.Rows), int(req.Cols)); err != nil {
+	// All resize functions use (cols, rows) order
+	if err := pod.Terminal.Resize(int(req.Cols), int(req.Rows)); err != nil {
 		return err
+	}
+
+	// Also resize VirtualTerminal to keep it in sync
+	if pod.VirtualTerminal != nil {
+		pod.VirtualTerminal.Resize(int(req.Cols), int(req.Rows))
 	}
 
 	// Notify server of resize
@@ -201,30 +250,151 @@ func (h *RunnerMessageHandler) OnTerminalRedraw(req client.TerminalRedrawRequest
 	return pod.Terminal.Redraw()
 }
 
-// Helper methods
+// OnSubscribeTerminal handles subscribe terminal command from server.
+// This notifies the Runner that a browser wants to observe the terminal via Relay.
+// The Runner should connect to the specified Relay URL and start streaming terminal output.
+// Implements client.MessageHandler interface.
+func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalRequest) error {
+	log := logger.Pod()
+	log.Info("Subscribing to terminal via Relay",
+		"pod_key", req.PodKey,
+		"relay_url", req.RelayURL,
+		"session_id", req.SessionID,
+		"include_snapshot", req.IncludeSnapshot)
 
-// createOutputHandler creates an output handler that routes through SmartAggregator.
-// The aggregator buffers output and adapts frame rate based on queue pressure.
-func (h *RunnerMessageHandler) createOutputHandler(podKey string, agg *terminal.SmartAggregator) func([]byte) {
-	return func(data []byte) {
-		// Route through SmartAggregator for adaptive frame rate
-		agg.Write(data)
+	pod, ok := h.podStore.Get(req.PodKey)
+	if !ok {
+		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
+
+	// Check if already connected to a relay
+	if pod.HasRelayClient() {
+		log.Info("Already connected to relay, skipping", "pod_key", req.PodKey)
+		return nil
+	}
+
+	// Create relay client with JWT token for authentication
+	relayClient := relay.NewClient(
+		req.RelayURL,
+		req.PodKey,
+		req.SessionID,
+		req.RunnerToken,
+		slog.Default().With("pod_key", req.PodKey),
+	)
+
+	// Set input handler - relay user input to PTY
+	relayClient.SetInputHandler(func(data []byte) {
+		if pod.Terminal != nil {
+			if err := pod.Terminal.Write(data); err != nil {
+				log.Error("Failed to write relay input to terminal", "pod_key", req.PodKey, "error", err)
+			}
+		}
+	})
+
+	// Set resize handler - relay resize requests to PTY and VirtualTerminal
+	// All resize functions use (cols, rows) order
+	relayClient.SetResizeHandler(func(cols, rows uint16) {
+		log.Info("Received resize from relay", "pod_key", req.PodKey, "cols", cols, "rows", rows)
+		if pod.Terminal != nil {
+			if err := pod.Terminal.Resize(int(cols), int(rows)); err != nil {
+				log.Error("Failed to resize terminal from relay", "pod_key", req.PodKey, "error", err)
+			}
+		}
+		// Also resize VirtualTerminal to keep it in sync
+		if pod.VirtualTerminal != nil {
+			pod.VirtualTerminal.Resize(int(cols), int(rows))
+		}
+	})
+
+	// Set close handler - clean up relay client and aggregator relay output when connection closes
+	relayClient.SetCloseHandler(func() {
+		log.Info("Relay connection closed", "pod_key", req.PodKey)
+		pod.SetRelayClient(nil)
+		// Clear aggregator relay output - will fall back to gRPC
+		if pod.Aggregator != nil {
+			pod.Aggregator.SetRelayOutput(nil)
+		}
+	})
+
+	// Connect to relay
+	if err := relayClient.Connect(); err != nil {
+		return fmt.Errorf("failed to connect to relay: %w", err)
+	}
+
+	// Start read/write loops
+	relayClient.Start()
+
+	// Store relay client in pod
+	pod.SetRelayClient(relayClient)
+
+	// Set aggregator to route output through Relay instead of gRPC
+	if pod.Aggregator != nil {
+		pod.Aggregator.SetRelayOutput(func(data []byte) {
+			if err := relayClient.SendOutput(data); err != nil {
+				log.Debug("Failed to send output to relay", "pod_key", req.PodKey, "error", err)
+			}
+		})
+	}
+
+	// For TUI apps (alt screen mode), trigger redraw to refresh the display
+	// TUI apps like Claude Code need SIGWINCH to repaint when a new observer connects
+	if pod.VirtualTerminal != nil && pod.VirtualTerminal.IsAltScreen() && pod.Terminal != nil {
+		go func() {
+			// Small delay to ensure relay connection is fully established
+			time.Sleep(100 * time.Millisecond)
+			if err := pod.Terminal.Redraw(); err != nil {
+				log.Debug("Failed to trigger TUI redraw", "pod_key", req.PodKey, "error", err)
+			} else {
+				log.Debug("Triggered TUI redraw for alt screen mode", "pod_key", req.PodKey)
+			}
+		}()
+	}
+
+	log.Info("Successfully subscribed to terminal via Relay", "pod_key", req.PodKey)
+	return nil
 }
 
-// createExitHandler creates an exit handler that stops the aggregator and notifies server.
-func (h *RunnerMessageHandler) createExitHandler(podKey string, agg *terminal.SmartAggregator) func(int) {
+// OnUnsubscribeTerminal handles unsubscribe terminal command from server.
+// This notifies the Runner that all browsers have disconnected.
+// The Runner should disconnect from the Relay.
+// Implements client.MessageHandler interface.
+func (h *RunnerMessageHandler) OnUnsubscribeTerminal(req client.UnsubscribeTerminalRequest) error {
+	log := logger.Pod()
+	log.Info("Unsubscribing from terminal relay", "pod_key", req.PodKey)
+
+	pod, ok := h.podStore.Get(req.PodKey)
+	if !ok {
+		// Pod might have been terminated, that's OK
+		log.Debug("Pod not found for unsubscribe, ignoring", "pod_key", req.PodKey)
+		return nil
+	}
+
+	// Disconnect from relay
+	// NOTE: Output will automatically fall back to gRPC via Terminal.OutputHandler
+	pod.DisconnectRelay()
+
+	log.Info("Successfully unsubscribed from terminal relay", "pod_key", req.PodKey)
+	return nil
+}
+
+// Helper methods
+
+// createExitHandler creates an exit handler that notifies server when pod exits.
+func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 	return func(exitCode int) {
 		logger.Pod().Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
-
-		// Stop aggregator to flush any pending output
-		if agg != nil {
-			agg.Stop()
-		}
 
 		pod := h.podStore.Delete(podKey)
 		if pod != nil {
 			pod.SetStatus(PodStatusStopped)
+
+			// 1. Disconnect Relay connection
+			pod.DisconnectRelay()
+
+			// 2. Stop aggregator to flush any remaining output
+			if pod.Aggregator != nil {
+				pod.Aggregator.Stop()
+			}
 		}
 
 		h.sendPodTerminated(podKey)
@@ -254,12 +424,18 @@ func (h *RunnerMessageHandler) sendPodTerminated(podKey string) {
 }
 
 func (h *RunnerMessageHandler) sendTerminalOutput(podKey string, data []byte) {
+	logger.Terminal().Debug("sendTerminalOutput called",
+		"pod_key", podKey, "data_len", len(data))
+
 	if h.conn == nil {
+		logger.Terminal().Debug("sendTerminalOutput: conn is nil")
 		return
 	}
 	// Use gRPC-specific method for terminal output
 	if err := h.conn.SendTerminalOutput(podKey, data); err != nil {
 		logger.Terminal().Error("Failed to send terminal output", "error", err)
+	} else {
+		logger.Terminal().Debug("sendTerminalOutput: sent successfully")
 	}
 }
 

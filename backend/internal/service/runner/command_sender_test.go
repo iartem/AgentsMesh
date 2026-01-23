@@ -61,6 +61,30 @@ func TestNoOpCommandSender_SendPrompt(t *testing.T) {
 	assert.Equal(t, ErrCommandSenderNotSet, err)
 }
 
+func TestNoOpCommandSender_SendTerminalRedraw(t *testing.T) {
+	sender := NewNoOpCommandSender(newTestLogger())
+	ctx := context.Background()
+
+	err := sender.SendTerminalRedraw(ctx, 1, "test-pod")
+	assert.Equal(t, ErrCommandSenderNotSet, err)
+}
+
+func TestNoOpCommandSender_SendSubscribeTerminal(t *testing.T) {
+	sender := NewNoOpCommandSender(newTestLogger())
+	ctx := context.Background()
+
+	err := sender.SendSubscribeTerminal(ctx, 1, "test-pod", "ws://relay.local", "session-1", "runner-token", true, 100)
+	assert.Equal(t, ErrCommandSenderNotSet, err)
+}
+
+func TestNoOpCommandSender_SendUnsubscribeTerminal(t *testing.T) {
+	sender := NewNoOpCommandSender(newTestLogger())
+	ctx := context.Background()
+
+	err := sender.SendUnsubscribeTerminal(ctx, 1, "test-pod")
+	assert.Equal(t, ErrCommandSenderNotSet, err)
+}
+
 func TestNoOpCommandSender_ImplementsInterface(t *testing.T) {
 	sender := NewNoOpCommandSender(newTestLogger())
 

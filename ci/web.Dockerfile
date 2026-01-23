@@ -26,10 +26,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build-time environment variables for Next.js
-ARG NEXT_PUBLIC_API_URL=https://api.agentsmesh.cn
-ARG NEXT_PUBLIC_WS_URL=wss://api.agentsmesh.cn
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+# Unified Domain Configuration - all URLs derived from PRIMARY_DOMAIN
+ARG PRIMARY_DOMAIN=api.agentsmesh.cn
+ARG USE_HTTPS=true
+ENV PRIMARY_DOMAIN=${PRIMARY_DOMAIN}
+ENV USE_HTTPS=${USE_HTTPS}
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED 1

@@ -83,7 +83,7 @@ func TestPodBuilderBuildWithAllOptions(t *testing.T) {
 
 	pod, err := NewPodBuilder(runner).
 		WithCommand(cmd).
-		WithTerminalSize(30, 100).
+		WithTerminalSize(100, 30). // (cols, rows)
 		Build(context.Background())
 
 	if err != nil {
@@ -308,7 +308,7 @@ func TestPodBuilderCommandFields(t *testing.T) {
 
 	builder := NewPodBuilder(runner).
 		WithCommand(cmd).
-		WithTerminalSize(40, 120)
+		WithTerminalSize(120, 40) // (cols, rows)
 
 	if builder.cmd.PodKey != "command-fields-pod" {
 		t.Error("podKey not set")

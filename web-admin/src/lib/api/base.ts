@@ -1,6 +1,27 @@
 import { getAuthToken, useAuthStore } from "@/stores/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+/**
+ * Get API URL from environment variables
+ * Supports both unified domain configuration and legacy configuration
+ */
+function getApiUrl(): string {
+  // Legacy configuration takes priority
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // Try deriving from PRIMARY_DOMAIN
+  const primaryDomain = process.env.NEXT_PUBLIC_PRIMARY_DOMAIN;
+  if (primaryDomain) {
+    const useHttps = process.env.NEXT_PUBLIC_USE_HTTPS === "true";
+    const protocol = useHttps ? "https" : "http";
+    return `${protocol}://${primaryDomain}`;
+  }
+
+  return "http://localhost:10000";
+}
+
+const API_URL = getApiUrl();
 
 export interface ApiError {
   error: string;
@@ -89,9 +110,10 @@ class ApiClient {
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
+      body: data ? JSON.stringify(data) : undefined,
     });
   }
 }

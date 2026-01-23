@@ -326,15 +326,15 @@ The Admin Console (`web-admin`) is an internal management interface for system a
 
 ### Configuration
 
-Admin Console is enabled by default. Optional environment variables:
+Admin Console is enabled by default. All components use unified domain configuration:
 
 ```bash
-# Backend (.env)
-ADMIN_ENABLED=true                              # Enable admin console (default: true)
-ADMIN_FRONTEND_URL=http://localhost/admin       # Admin console frontend URL
+# All components use the same two variables (Backend, Relay, Web, Web-Admin)
+PRIMARY_DOMAIN=localhost:10000                  # Primary domain for all URLs
+USE_HTTPS=false                                 # Use HTTPS/WSS protocols
 
-# Web-Admin (.env)
-NEXT_PUBLIC_API_URL=http://localhost            # Backend API URL
+# Backend-specific
+ADMIN_ENABLED=true                              # Enable admin console (default: true)
 ```
 
 ### Creating Admin Users

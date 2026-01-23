@@ -19,9 +19,10 @@ type SubscriptionScheduler struct {
 }
 
 // NewSubscriptionScheduler creates a new subscription scheduler
-func NewSubscriptionScheduler(db *gorm.DB, cfg *config.PaymentConfig, emailSvc email.Service, logger *slog.Logger) *SubscriptionScheduler {
+// appConfig is needed for URL derivation in payment providers
+func NewSubscriptionScheduler(db *gorm.DB, appConfig *config.Config, emailSvc email.Service, logger *slog.Logger) *SubscriptionScheduler {
 	return &SubscriptionScheduler{
-		renewJob: NewSubscriptionRenewJob(db, cfg, logger),
+		renewJob: NewSubscriptionRenewJob(db, appConfig, logger),
 		emailJob: NewRenewalReminderJob(db, emailSvc, logger),
 		stopCh:   make(chan struct{}),
 		logger:   logger,

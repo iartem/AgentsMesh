@@ -24,13 +24,17 @@ func setupIntegrationTestService(t *testing.T) (*Service, *payment.Factory) {
 	seedEnterprisePlan(t, db)
 
 	// Create service with mock provider enabled
-	cfg := &config.PaymentConfig{
-		DeploymentType: config.DeploymentGlobal,
-		MockEnabled:    true,
-		MockBaseURL:    "http://localhost:3000",
+	appCfg := &config.Config{
+		PrimaryDomain: "localhost:3000",
+		UseHTTPS:      false,
+		Payment: config.PaymentConfig{
+			DeploymentType: config.DeploymentGlobal,
+			MockEnabled:    true,
+			MockBaseURL:    "http://localhost:3000",
+		},
 	}
 
-	service := NewServiceWithConfig(db, cfg)
+	service := NewServiceWithConfig(db, appCfg)
 	factory := service.GetPaymentFactory()
 
 	return service, factory

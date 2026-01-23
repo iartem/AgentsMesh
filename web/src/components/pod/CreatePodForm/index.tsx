@@ -96,10 +96,17 @@ export function CreatePodForm({
     if (!selectedRunner || !form.selectedAgent) return;
 
     try {
+      // Use reasonable default terminal size for initial PTY creation
+      // Terminal will resize immediately after connection via fit addon
+      const defaultCols = 120;
+      const defaultRows = 40;
+
       // onSuccess 回调已在 useCreatePodForm.submit 中处理
       await form.submit(selectedRunner.id, configValues, {
         ticketId: context?.ticket?.id,
         initialPrompt: form.prompt,
+        cols: defaultCols,
+        rows: defaultRows,
       });
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Unknown error");

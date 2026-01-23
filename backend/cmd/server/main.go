@@ -18,7 +18,9 @@ import (
 	v1 "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 	"github.com/anthropics/agentsmesh/backend/internal/interfaces"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/acme"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/dns"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/logger"
@@ -38,6 +40,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/service/promocode"
+	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
@@ -106,6 +109,53 @@ func main() {
 	// Initialize Runner connection manager and Pod coordinator
 	runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher := initializeRunnerComponents(db, redisClient, appLogger, services.agentType)
 
+	// Initialize Relay services for terminal data streaming
+	relayManager := relay.NewManager()
+	relayTokenGenerator := relay.NewTokenGenerator(cfg.JWT.Secret, "agentsmesh-relay")
+
+	// Initialize Relay DNS service (optional, for automatic DNS registration)
+	var relayDNSService *relay.DNSService
+	var relayACMEManager *acme.Manager
+	if cfg.Relay.IsEnabled() {
+		var err error
+		relayDNSService, err = relay.NewDNSService(cfg.Relay)
+		if err != nil {
+			slog.Warn("Failed to initialize Relay DNS service", "error", err)
+		} else {
+			slog.Info("Relay DNS service initialized",
+				"base_domain", cfg.Relay.BaseDomain,
+				"provider", cfg.Relay.DNS.Provider)
+		}
+
+		// Initialize ACME Manager for automatic TLS certificates (if enabled)
+		if cfg.Relay.ACME.Enabled {
+			dnsProvider := createDNSProvider(cfg.Relay)
+			if dnsProvider != nil {
+				relayACMEManager, err = acme.NewManager(acme.Config{
+					DirectoryURL: cfg.Relay.ACME.DirectoryURL,
+					Email:        cfg.Relay.ACME.Email,
+					Domain:       cfg.Relay.BaseDomain,
+					StorageDir:   cfg.Relay.ACME.StorageDir,
+					DNSProvider:  dnsProvider,
+					RenewalDays:  30,
+				})
+				if err != nil {
+					slog.Error("Failed to initialize ACME manager", "error", err)
+				} else {
+					// Start auto-renewal in background
+					relayACMEManager.StartAutoRenewal(context.Background())
+					slog.Info("ACME manager initialized for Relay TLS certificates",
+						"domain", "*."+cfg.Relay.BaseDomain,
+						"email", cfg.Relay.ACME.Email,
+						"staging", cfg.Relay.ACME.Staging)
+				}
+			} else {
+				slog.Warn("DNS provider not available, ACME certificate management disabled")
+			}
+		}
+	}
+	slog.Info("Relay services initialized")
+
 	// Setup terminal router event publishing for OSC 777 notifications
 	terminalRouter.SetEventBus(eventBus)
 	terminalRouter.SetPodInfoGetter(services.pod)
@@ -136,39 +186,44 @@ func main() {
 	// Create services container for HTTP handlers
 	// NOTE: GitProvider and SSHKey services removed - now handled via user.Service
 	svc := &v1.Services{
-		Auth:              services.auth,
-		User:              services.user,
-		Org:               services.org,
-		AgentType:         services.agentType,
-		CredentialProfile: services.credentialProfile,
-		UserConfig:        services.userConfig,
-		Repository:        services.repository,
-		Runner:            services.runner,
-		RunnerConnMgr:     runnerConnMgr,
-		PodCoordinator:    podCoordinator,
-		TerminalRouter:    terminalRouter,
-		Pod:               services.pod,
-		Channel:           services.channel,
-		Binding:           services.binding,
-		Ticket:            services.ticket,
-		Mesh:              services.mesh,
-		Billing:           services.billing,
-		Hub:               hub,
-		EventBus:          eventBus,
-		Invitation:        services.invitation,
-		File:              services.file,
+		Auth:               services.auth,
+		User:               services.user,
+		Org:                services.org,
+		AgentType:          services.agentType,
+		CredentialProfile:  services.credentialProfile,
+		UserConfig:         services.userConfig,
+		Repository:         services.repository,
+		Runner:             services.runner,
+		RunnerConnMgr:      runnerConnMgr,
+		PodCoordinator:     podCoordinator,
+		TerminalRouter:     terminalRouter,
+		Pod:                services.pod,
+		Channel:            services.channel,
+		Binding:            services.binding,
+		Ticket:             services.ticket,
+		Mesh:               services.mesh,
+		Billing:            services.billing,
+		Hub:                hub,
+		EventBus:           eventBus,
+		Invitation:         services.invitation,
+		File:               services.file,
 		PromoCode:          services.promoCode,
 		AgentPodSettings:   services.agentpodSettings,
 		AgentPodAIProvider: services.agentpodAIProvider,
 		License:            services.license,
 		GRPCRunnerHandler:  grpcRunnerHandler,
+		// Relay services for terminal data streaming
+		RelayManager:        relayManager,
+		RelayTokenGenerator: relayTokenGenerator,
+		RelayDNSService:     relayDNSService,
+		RelayACMEManager:    relayACMEManager,
 	}
 
 	// Initialize router
 	router := rest.NewRouter(cfg, svc, db, appLogger.Logger)
 
 	// Initialize and start subscription renewal job scheduler
-	subscriptionScheduler := startSubscriptionJobs(db, &cfg.Payment, services.email, appLogger.Logger)
+	subscriptionScheduler := startSubscriptionJobs(db, cfg, services.email, appLogger.Logger)
 
 	// Create and start HTTP server
 	srv := startHTTPServer(cfg, router)
@@ -221,7 +276,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	credentialProfileSvc := agent.NewCredentialProfileService(db, agentTypeSvc)
 	userConfigSvc := agent.NewUserConfigService(db, agentTypeSvc)
 	repoSvc := repository.NewService(db)
-	billingSvc := billing.NewServiceWithConfig(db, &cfg.Payment)
+	billingSvc := billing.NewServiceWithConfig(db, cfg)
 	runnerSvc := runner.NewService(db, billingSvc)
 	podSvc := agentpod.NewPodService(db)
 	channelSvc := channel.NewService(db)
@@ -230,11 +285,12 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	meshSvc := mesh.NewService(db, podSvc, channelSvc, bindingSvc)
 
 	// Initialize email service for invitations
+	// BaseURL is derived from PrimaryDomain
 	emailSvc := email.NewService(email.Config{
 		Provider:    cfg.Email.Provider,
 		ResendKey:   cfg.Email.ResendKey,
 		FromAddress: cfg.Email.FromAddress,
-		BaseURL:     cfg.Email.BaseURL,
+		BaseURL:     cfg.FrontendURL(),
 	})
 	invitationSvc := invitation.NewService(db, emailSvc)
 
@@ -398,8 +454,9 @@ func startHTTPServer(cfg *config.Config, handler http.Handler) *http.Server {
 }
 
 // startSubscriptionJobs initializes and starts subscription-related scheduled jobs
-func startSubscriptionJobs(db *gorm.DB, paymentCfg *config.PaymentConfig, emailSvc email.Service, logger *slog.Logger) *job.SubscriptionScheduler {
-	scheduler := job.NewSubscriptionScheduler(db, paymentCfg, emailSvc, logger)
+// appConfig is needed for URL derivation in payment providers
+func startSubscriptionJobs(db *gorm.DB, appConfig *config.Config, emailSvc email.Service, logger *slog.Logger) *job.SubscriptionScheduler {
+	scheduler := job.NewSubscriptionScheduler(db, appConfig, emailSvc, logger)
 	scheduler.Start()
 	slog.Info("subscription scheduler started")
 	return scheduler
@@ -586,4 +643,23 @@ func (a *grpcAgentTypesAdapter) GetAgentTypesForRunner() []interfaces.AgentTypeI
 	}
 	return result
 }
+
+// createDNSProvider creates a DNS provider based on configuration
+func createDNSProvider(relayCfg config.RelayConfig) dns.Provider {
+	switch relayCfg.DNS.Provider {
+	case string(config.DNSProviderCloudflare):
+		if relayCfg.DNS.CloudflareAPIToken == "" || relayCfg.DNS.CloudflareZoneID == "" {
+			return nil
+		}
+		return dns.NewCloudflareProvider(relayCfg.DNS.CloudflareAPIToken, relayCfg.DNS.CloudflareZoneID)
+	case string(config.DNSProviderAliyun):
+		if relayCfg.DNS.AliyunAccessKeyID == "" || relayCfg.DNS.AliyunAccessKeySecret == "" {
+			return nil
+		}
+		return dns.NewAliyunProvider(relayCfg.DNS.AliyunAccessKeyID, relayCfg.DNS.AliyunAccessKeySecret)
+	default:
+		return nil
+	}
+}
+
 // Build trigger: 20260119003527

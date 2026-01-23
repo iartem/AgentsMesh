@@ -2,19 +2,21 @@ package runner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
-	"github.com/anthropics/agentsmesh/backend/internal/infra/terminal"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
-	"github.com/gorilla/websocket"
 )
 
-// TerminalRouter routes terminal data between frontend clients and runners using sharded locks
-// Uses 64 shards to minimize lock contention for high-scale deployments (500K+ pods)
+// TerminalRouter routes terminal commands between frontend and runners using sharded locks.
+// After Relay migration, this component only handles:
+// - Pod-Runner mapping for routing commands
+// - PTY size tracking for resize events
+// - OSC notification detection
+//
+// Terminal data streaming is handled by Relay (Browser <-> Relay <-> Runner).
 type TerminalRouter struct {
 	connectionManager *RunnerConnectionManager
 	logger            *slog.Logger
@@ -26,7 +28,7 @@ type TerminalRouter struct {
 	// OSC notification detector
 	oscDetector *OSCDetector
 
-	// Sharded storage for all pod-related data
+	// Sharded storage for pod-related data
 	shards [terminalShards]*terminalShard
 }
 
@@ -46,6 +48,7 @@ func NewTerminalRouter(cm *RunnerConnectionManager, logger *slog.Logger) *Termin
 	}
 
 	// Set up callbacks from connection manager
+	// Note: Terminal output is now routed through Relay, not Backend
 	cm.SetTerminalOutputCallback(tr.handleTerminalOutput)
 	cm.SetPtyResizedCallback(tr.handlePtyResized)
 
@@ -83,15 +86,12 @@ func (tr *TerminalRouter) SetPodInfoGetter(getter PodInfoGetter) {
 }
 
 // RegisterPod registers a pod's runner mapping with default terminal size.
-// Note: This will create a new VT if one doesn't exist, or resize if dimensions differ.
-// For heartbeat re-registration that should preserve existing state, use EnsurePodRegistered instead.
 func (tr *TerminalRouter) RegisterPod(podKey string, runnerID int64) {
 	tr.RegisterPodWithSize(podKey, runnerID, DefaultTerminalCols, DefaultTerminalRows)
 }
 
 // EnsurePodRegistered ensures the pod is registered with the terminal router.
-// Unlike RegisterPod, this method preserves existing VT state and only creates
-// a new VT if one doesn't exist. Use this for heartbeat re-registration.
+// Use this for heartbeat re-registration to preserve existing state.
 func (tr *TerminalRouter) EnsurePodRegistered(podKey string, runnerID int64) {
 	shard := tr.getShard(podKey)
 
@@ -99,15 +99,7 @@ func (tr *TerminalRouter) EnsurePodRegistered(podKey string, runnerID int64) {
 	defer shard.mu.Unlock()
 
 	shard.podRunnerMap[podKey] = runnerID
-
-	// Only create VT if it doesn't exist, never resize
-	if _, exists := shard.virtualTerminals[podKey]; !exists {
-		shard.virtualTerminals[podKey] = terminal.NewVirtualTerminal(DefaultTerminalCols, DefaultTerminalRows, DefaultVirtualTerminalHistory)
-		tr.logger.Debug("pod registered (new VT from ensure)",
-			"pod_key", podKey,
-			"runner_id", runnerID)
-	}
-	// If VT already exists, don't touch it - preserve all data
+	tr.logger.Debug("pod registered (ensure)", "pod_key", podKey, "runner_id", runnerID)
 }
 
 // RegisterPodWithSize registers a pod with specific terminal size
@@ -118,31 +110,13 @@ func (tr *TerminalRouter) RegisterPodWithSize(podKey string, runnerID int64, col
 	defer shard.mu.Unlock()
 
 	shard.podRunnerMap[podKey] = runnerID
+	shard.ptySize[podKey] = &PtySize{Cols: cols, Rows: rows}
 
-	// Initialize virtual terminal for agent observation and state serialization
-	if vt, exists := shard.virtualTerminals[podKey]; !exists {
-		shard.virtualTerminals[podKey] = terminal.NewVirtualTerminal(cols, rows, DefaultVirtualTerminalHistory)
-		tr.logger.Debug("pod registered (new VT)",
-			"pod_key", podKey,
-			"runner_id", runnerID,
-			"cols", cols,
-			"rows", rows)
-	} else {
-		// Only resize if dimensions actually changed to preserve terminal data
-		// This is critical for heartbeat re-registration which uses default size
-		if vt.Cols() != cols || vt.Rows() != rows {
-			vt.Resize(cols, rows)
-			tr.logger.Debug("pod registered (resized)",
-				"pod_key", podKey,
-				"runner_id", runnerID,
-				"cols", cols,
-				"rows", rows)
-		} else {
-			tr.logger.Debug("pod registered (no change)",
-				"pod_key", podKey,
-				"runner_id", runnerID)
-		}
-	}
+	tr.logger.Debug("pod registered",
+		"pod_key", podKey,
+		"runner_id", runnerID,
+		"cols", cols,
+		"rows", rows)
 }
 
 // UnregisterPod unregisters a pod
@@ -151,138 +125,17 @@ func (tr *TerminalRouter) UnregisterPod(podKey string) {
 
 	shard.mu.Lock()
 	delete(shard.podRunnerMap, podKey)
-	delete(shard.virtualTerminals, podKey)
 	delete(shard.ptySize, podKey)
-	clients := shard.terminalClients[podKey]
-	delete(shard.terminalClients, podKey)
 	shard.mu.Unlock()
-
-	// Close client connections outside the lock
-	for client := range clients {
-		close(client.Send)
-		client.Conn.Close()
-	}
 
 	tr.logger.Debug("pod unregistered", "pod_key", podKey)
 }
 
-// ConnectClient connects a frontend client to a pod
-func (tr *TerminalRouter) ConnectClient(podKey string, conn *websocket.Conn) (*TerminalClient, error) {
-	client := &TerminalClient{
-		Conn:   conn,
-		PodKey: podKey,
-		Send:   make(chan TerminalMessage, 256),
-	}
-
-	shard := tr.getShard(podKey)
-
-	shard.mu.Lock()
-	if shard.terminalClients[podKey] == nil {
-		shard.terminalClients[podKey] = make(map[*TerminalClient]bool)
-	}
-	shard.terminalClients[podKey][client] = true
-
-	// Get current PTY size and virtual terminal while holding lock
-	currentSize := shard.ptySize[podKey]
-	vt := shard.virtualTerminals[podKey]
-	shard.mu.Unlock()
-
-	tr.logger.Info("terminal client connected", "pod_key", podKey)
-
-	// Send current PTY size to the newly connected client
-	if currentSize != nil {
-		tr.sendPtyResizedToClient(client, currentSize.Cols, currentSize.Rows)
-	}
-
-	// Send serialized terminal state to restore history and current screen
-	// This allows clients to see the full terminal state on reconnection
-	vtEmpty := true
-	if vt != nil {
-		vtEmpty = vt.IsEmpty()
-		opts := terminal.DefaultSerializeOptions()
-		opts.ScrollbackLines = 1000 // Include recent scrollback
-		state := vt.Serialize(opts)
-		curRow, curCol := vt.CursorPosition()
-		tr.logger.Debug("serialized terminal state",
-			"pod_key", podKey,
-			"state_size", len(state),
-			"has_data", state != "",
-			"cursor_row", curRow,
-			"cursor_col", curCol,
-			"vt_rows", vt.Rows(),
-			"vt_cols", vt.Cols())
-		if state != "" {
-			select {
-			case client.Send <- TerminalMessage{Data: []byte(state), IsJSON: false}:
-				tr.logger.Debug("sent serialized terminal state",
-					"pod_key", podKey,
-					"state_size", len(state))
-			default:
-				tr.logger.Warn("failed to send serialized state, channel full", "pod_key", podKey)
-			}
-		}
-	} else {
-		tr.logger.Debug("no virtual terminal found", "pod_key", podKey)
-	}
-
-	// If VT is empty (e.g., after server restart), trigger a redraw to restore terminal state
-	if vtEmpty && currentSize != nil {
-		shard.mu.RLock()
-		runnerID, hasRunner := shard.podRunnerMap[podKey]
-		shard.mu.RUnlock()
-
-		if hasRunner {
-			tr.triggerRedrawIfNeeded(podKey, runnerID, "client_connect")
-		}
-	}
-
-	return client, nil
-}
-
-// DisconnectClient disconnects a frontend client
-func (tr *TerminalRouter) DisconnectClient(client *TerminalClient) {
-	shard := tr.getShard(client.PodKey)
-
-	shard.mu.Lock()
-	if clients, ok := shard.terminalClients[client.PodKey]; ok {
-		delete(clients, client)
-		if len(clients) == 0 {
-			delete(shard.terminalClients, client.PodKey)
-		}
-	}
-	shard.mu.Unlock()
-
-	close(client.Send)
-	tr.logger.Info("terminal client disconnected", "pod_key", client.PodKey)
-}
-
-// handleTerminalOutput handles terminal output from a runner (Proto type)
+// handleTerminalOutput handles terminal output from a runner.
+// Note: After Relay migration, this only handles OSC detection.
+// Actual terminal data is streamed through Relay, not Backend.
 func (tr *TerminalRouter) handleTerminalOutput(runnerID int64, data *runnerv1.TerminalOutputEvent) {
 	podKey := data.PodKey
-	shard := tr.getShard(podKey)
-
-	// Get or create virtual terminal
-	// Use write lock since we may need to create a new VT
-	shard.mu.Lock()
-	vt := shard.virtualTerminals[podKey]
-	if vt == nil {
-		// Auto-create VT on first output - critical for server restart recovery
-		// This ensures terminal output is never lost even if VT wasn't pre-registered
-		vt = terminal.NewVirtualTerminal(DefaultTerminalCols, DefaultTerminalRows, DefaultVirtualTerminalHistory)
-		shard.virtualTerminals[podKey] = vt
-		shard.podRunnerMap[podKey] = runnerID
-		tr.logger.Info("auto-created virtual terminal on output",
-			"pod_key", podKey,
-			"runner_id", runnerID)
-	}
-	clients := shard.terminalClients[podKey]
-	shard.mu.Unlock()
-
-	// Feed to virtual terminal (used for both agent observation and client state serialization)
-	vt.Feed(data.Data)
-	tr.logger.Debug("fed data to virtual terminal",
-		"pod_key", podKey,
-		"data_size", len(data.Data))
 
 	// Check for OSC 777/9 notifications and publish events
 	if tr.oscDetector != nil {
@@ -290,35 +143,9 @@ func (tr *TerminalRouter) handleTerminalOutput(runnerID int64, data *runnerv1.Te
 		// Check for OSC 0/2 title changes and publish events
 		tr.oscDetector.DetectAndPublishTitle(context.Background(), podKey, data.Data)
 	}
-
-	// Route to all connected clients
-	if len(clients) == 0 {
-		tr.logger.Debug("no clients for terminal output", "pod_key", podKey)
-		return
-	}
-
-	// Broadcast to all clients
-	var deadClients []*TerminalClient
-	for client := range clients {
-		select {
-		case client.Send <- TerminalMessage{Data: data.Data, IsJSON: false}:
-		default:
-			// Client buffer full, mark for removal
-			deadClients = append(deadClients, client)
-		}
-	}
-
-	// Clean up dead clients
-	if len(deadClients) > 0 {
-		shard.mu.Lock()
-		for _, client := range deadClients {
-			delete(shard.terminalClients[podKey], client)
-		}
-		shard.mu.Unlock()
-	}
 }
 
-// handlePtyResized handles PTY resize notifications from runner (Proto type)
+// handlePtyResized handles PTY resize notifications from runner
 func (tr *TerminalRouter) handlePtyResized(runnerID int64, data *runnerv1.PtyResizedEvent) {
 	podKey := data.PodKey
 	shard := tr.getShard(podKey)
@@ -330,94 +157,19 @@ func (tr *TerminalRouter) handlePtyResized(runnerID int64, data *runnerv1.PtyRes
 	// Update local PTY size record
 	shard.ptySize[podKey] = &PtySize{Cols: cols, Rows: rows}
 
-	// Get or create virtual terminal with correct size
-	vt, exists := shard.virtualTerminals[podKey]
-	if !exists {
-		// Auto-create VT on resize event - critical for server restart recovery
-		// PTY resize often arrives before terminal output, so we create with correct dimensions
-		vt = terminal.NewVirtualTerminal(cols, rows, DefaultVirtualTerminalHistory)
-		shard.virtualTerminals[podKey] = vt
+	// Ensure pod is registered
+	if _, exists := shard.podRunnerMap[podKey]; !exists {
 		shard.podRunnerMap[podKey] = runnerID
-		tr.logger.Info("auto-created virtual terminal on resize",
+		tr.logger.Info("pod auto-registered on resize",
 			"pod_key", podKey,
-			"runner_id", runnerID,
-			"cols", cols,
-			"rows", rows)
-	} else if vt.Cols() != cols || vt.Rows() != rows {
-		// Update virtual terminal size only if dimensions changed
-		// This prevents clearing terminal data on repeated resize events with same size
-		vt.Resize(cols, rows)
-		tr.logger.Debug("virtual terminal resized",
-			"pod_key", podKey,
-			"cols", cols,
-			"rows", rows)
+			"runner_id", runnerID)
 	}
-
-	// Check if VT is empty and has connected clients - need to trigger restore
-	// This handles the case where client connected before we had ptySize
-	vtEmpty := vt != nil && vt.IsEmpty()
-	hasClients := len(shard.terminalClients[podKey]) > 0
-
-	// Get clients while holding lock
-	clients := shard.terminalClients[podKey]
 	shard.mu.Unlock()
 
-	// Broadcast pty_resized to all connected frontend clients
-	for client := range clients {
-		tr.sendPtyResizedToClient(client, cols, rows)
-	}
-
-	// If VT is empty and there are clients waiting, trigger redraw to restore terminal state
-	// This handles the case where client connected before ptySize arrived
-	if vtEmpty && hasClients {
-		tr.triggerRedrawIfNeeded(podKey, runnerID, "pty_resized")
-	}
-}
-
-// triggerRedrawIfNeeded triggers a terminal redraw to restore terminal state after server restart.
-// The Runner's Redraw() method uses resize +1/-1 trick because SIGWINCH alone doesn't work
-// for programs in idle state (like Claude Code waiting for input).
-//
-// trigger indicates the source: "client_connect" or "pty_resized"
-func (tr *TerminalRouter) triggerRedrawIfNeeded(podKey string, runnerID int64, trigger string) {
-	tr.logger.Info("triggering terminal redraw to restore state",
+	tr.logger.Debug("pty resized",
 		"pod_key", podKey,
-		"runner_id", runnerID,
-		"trigger", trigger)
-
-	go func() {
-		ctx := context.Background()
-		if err := tr.commandSender.SendTerminalRedraw(ctx, runnerID, podKey); err != nil {
-			tr.logger.Error("failed to send terminal redraw",
-				"pod_key", podKey,
-				"runner_id", runnerID,
-				"trigger", trigger,
-				"error", err)
-		}
-	}()
-}
-
-// sendPtyResizedToClient sends pty_resized message to a single client
-func (tr *TerminalRouter) sendPtyResizedToClient(client *TerminalClient, cols, rows int) {
-	msg, err := json.Marshal(map[string]interface{}{
-		"type": "pty_resized",
-		"cols": cols,
-		"rows": rows,
-	})
-	if err != nil {
-		tr.logger.Error("failed to marshal pty_resized message", "error", err)
-		return
-	}
-
-	select {
-	case client.Send <- TerminalMessage{Data: msg, IsJSON: true}:
-		tr.logger.Debug("sent pty_resized to client",
-			"pod_key", client.PodKey,
-			"cols", cols,
-			"rows", rows)
-	default:
-		tr.logger.Warn("failed to send pty_resized, channel full", "pod_key", client.PodKey)
-	}
+		"cols", cols,
+		"rows", rows)
 }
 
 // RouteInput routes terminal input from frontend to runner
@@ -452,15 +204,6 @@ func (tr *TerminalRouter) RouteResize(podKey string, cols, rows int) error {
 	return tr.commandSender.SendTerminalResize(context.Background(), runnerID, podKey, cols, rows)
 }
 
-// GetClientCount returns the number of clients connected to a pod
-func (tr *TerminalRouter) GetClientCount(podKey string) int {
-	shard := tr.getShard(podKey)
-
-	shard.mu.RLock()
-	defer shard.mu.RUnlock()
-	return len(shard.terminalClients[podKey])
-}
-
 // IsPodRegistered checks if a pod is registered
 func (tr *TerminalRouter) IsPodRegistered(podKey string) bool {
 	shard := tr.getShard(podKey)
@@ -493,3 +236,15 @@ func (tr *TerminalRouter) GetRegisteredPodCount() int {
 	return total
 }
 
+// GetPtySize returns the PTY size for a pod
+func (tr *TerminalRouter) GetPtySize(podKey string) (cols, rows int, ok bool) {
+	shard := tr.getShard(podKey)
+
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
+
+	if size, exists := shard.ptySize[podKey]; exists {
+		return size.Cols, size.Rows, true
+	}
+	return DefaultTerminalCols, DefaultTerminalRows, false
+}
