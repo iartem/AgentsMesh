@@ -25,13 +25,14 @@ export interface ChannelMessage {
   content: string;
   metadata?: Record<string, unknown>;
   created_at: string;
-  pod?: {
+  // Backend returns these field names (from GORM json tags)
+  sender_pod_info?: {
     pod_key: string;
     agent_type?: {
       name: string;
     };
   };
-  user?: {
+  sender_user?: {
     id: number;
     username: string;
     name?: string;
