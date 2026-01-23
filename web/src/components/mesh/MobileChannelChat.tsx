@@ -70,24 +70,27 @@ export function MobileChannelChat({ channelId, onClose }: MobileChannelChatProps
   }, [channelId, fetchMessages]);
 
   // Transform messages for MessageList component
+  // Note: Backend returns sender_pod_info and sender_user (GORM json tags)
   const transformedMessages = messages.map((msg) => ({
     id: msg.id,
     content: msg.content,
     messageType: msg.message_type as "text" | "system" | "code" | "command",
     metadata: msg.metadata,
     createdAt: msg.created_at,
-    pod: msg.pod
+    pod: msg.sender_pod_info
       ? {
-          podKey: msg.pod.pod_key,
-          agentType: msg.pod.agent_type ? { name: msg.pod.agent_type.name } : undefined,
+          podKey: msg.sender_pod_info.pod_key,
+          agentType: msg.sender_pod_info.agent_type
+            ? { name: msg.sender_pod_info.agent_type.name }
+            : undefined,
         }
       : undefined,
-    user: msg.user
+    user: msg.sender_user
       ? {
-          id: msg.user.id,
-          username: msg.user.username,
-          name: msg.user.name,
-          avatarUrl: msg.user.avatar_url,
+          id: msg.sender_user.id,
+          username: msg.sender_user.username,
+          name: msg.sender_user.name,
+          avatarUrl: msg.sender_user.avatar_url,
         }
       : undefined,
   }));
