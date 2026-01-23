@@ -45,8 +45,9 @@ RUN addgroup -g 1000 -S app && \
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/migrations /app/migrations
 
-# Set ownership
-RUN chown -R app:app /app
+# Create data directory for ACME storage and set ownership
+RUN mkdir -p /data/acme && \
+    chown -R app:app /app /data
 
 # Switch to non-root user
 USER app
