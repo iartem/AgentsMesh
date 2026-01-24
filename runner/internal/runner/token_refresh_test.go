@@ -89,28 +89,39 @@ func TestPodDeliverNewToken_NoReceiver(t *testing.T) {
 func TestPodDeliverNewToken_ChannelCreatedOnDemand(t *testing.T) {
 	pod := &Pod{}
 
-	// Channel should not exist initially
-	assert.Nil(t, pod.tokenRefreshCh)
-
-	// DeliverNewToken should create channel
+	// DeliverNewToken should create channel and not panic
+	// We verify this by calling DeliverNewToken then WaitForNewToken
 	pod.DeliverNewToken("token")
-	assert.NotNil(t, pod.tokenRefreshCh)
+
+	// If channel was created, WaitForNewToken should receive the token
+	token := pod.WaitForNewToken(50 * time.Millisecond)
+	assert.Equal(t, "token", token)
 }
 
 func TestPodWaitForNewToken_ChannelCreatedOnDemand(t *testing.T) {
 	pod := &Pod{}
 
-	// Channel should not exist initially
-	assert.Nil(t, pod.tokenRefreshCh)
-
-	// WaitForNewToken should create channel (and timeout)
+	// WaitForNewToken should create channel on demand
+	// Verify by starting a wait, then delivering a token
+	resultCh := make(chan string, 1)
 	go func() {
-		pod.WaitForNewToken(10 * time.Millisecond)
+		token := pod.WaitForNewToken(100 * time.Millisecond)
+		resultCh <- token
 	}()
 
-	// Give it time to create channel
-	time.Sleep(5 * time.Millisecond)
-	assert.NotNil(t, pod.tokenRefreshCh)
+	// Give waiter time to start and create channel
+	time.Sleep(10 * time.Millisecond)
+
+	// Deliver token - this should succeed because channel was created
+	pod.DeliverNewToken("delivered-token")
+
+	// Waiter should receive the token
+	select {
+	case token := <-resultCh:
+		assert.Equal(t, "delivered-token", token)
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("Timeout waiting for token")
+	}
 }
 
 func TestPodTokenRefresh_ConcurrentAccess(t *testing.T) {
