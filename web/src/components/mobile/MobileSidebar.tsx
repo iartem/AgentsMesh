@@ -56,6 +56,7 @@ interface SidebarCallbacks {
   onCreatePod?: () => void;
   onAddRunner?: () => void;
   onImportRepo?: () => void;
+  onTerminatePod?: () => void;
 }
 
 /**
@@ -67,7 +68,7 @@ function getSidebarContent(
 ): React.ReactNode {
   switch (activity) {
     case "workspace":
-      return <WorkspaceSidebarContent onCreatePod={callbacks.onCreatePod} />;
+      return <WorkspaceSidebarContent onCreatePod={callbacks.onCreatePod} onTerminatePod={callbacks.onTerminatePod} />;
     case "tickets":
       return <TicketsSidebarContent />;
     case "mesh":
@@ -127,11 +128,17 @@ export function MobileSidebar({ className }: MobileSidebarProps) {
     setImportRepoModalOpen(true);
   }, []);
 
+  // Handle terminate pod - close sidebar after terminating
+  const handleTerminatePod = useCallback(() => {
+    setMobileSidebarOpen(false);
+  }, [setMobileSidebarOpen]);
+
   const title = getActivityTitle(activeActivity);
   const sidebarCallbacks: SidebarCallbacks = {
     onCreatePod: handleCreatePod,
     onAddRunner: handleAddRunner,
     onImportRepo: handleImportRepo,
+    onTerminatePod: handleTerminatePod,
   };
   const content = getSidebarContent(activeActivity, sidebarCallbacks);
 

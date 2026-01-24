@@ -43,6 +43,7 @@ import { useTranslations } from "@/lib/i18n/client";
 interface WorkspaceSidebarContentProps {
   className?: string;
   onCreatePod?: () => void;
+  onTerminatePod?: () => void;
 }
 
 // Status badge colors - matches PodData status type
@@ -60,7 +61,7 @@ const statusColors: Record<string, { bg: string; text: string; dot: string }> = 
 
 type FilterType = "all" | "running" | "completed";
 
-export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSidebarContentProps) {
+export function WorkspaceSidebarContent({ className, onCreatePod, onTerminatePod }: WorkspaceSidebarContentProps) {
   const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
@@ -164,8 +165,9 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
       await terminatePod(podToTerminate);
       setTerminateDialogOpen(false);
       setPodToTerminate(null);
+      onTerminatePod?.();
     }
-  }, [podToTerminate, terminatePod]);
+  }, [podToTerminate, terminatePod, onTerminatePod]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
