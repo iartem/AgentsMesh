@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { WorkspaceManager } from "@/components/workspace";
@@ -12,12 +13,35 @@ import { PodData } from "@/lib/api";
 
 export default function WorkspacePage() {
   const t = useTranslations();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { panes, addPane, _hasHydrated } = useWorkspaceStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const processedPodRef = useRef<string | null>(null);
 
   const handleOpenPod = (podKey: string, title?: string) => {
     addPane(podKey, title || `Pod ${podKey.substring(0, 8)}`);
   };
+
+  // Handle ?pod=xxx query param to auto-open a pod
+  useEffect(() => {
+    if (!_hasHydrated) return;
+
+    const podKey = searchParams.get("pod");
+    if (podKey && podKey !== processedPodRef.current) {
+      processedPodRef.current = podKey;
+      // Check if pod is already open
+      const isAlreadyOpen = panes.some((p) => p.podKey === podKey);
+      if (!isAlreadyOpen) {
+        handleOpenPod(podKey);
+        toast.info(t("workspace.podOpened"), {
+          description: `Pod: ${podKey.substring(0, 8)}`,
+        });
+      }
+      // Clear the query param to avoid re-opening on refresh
+      router.replace(window.location.pathname);
+    }
+  }, [_hasHydrated, searchParams, panes, router, t]);
 
   // Show loading while hydrating
   if (!_hasHydrated) {

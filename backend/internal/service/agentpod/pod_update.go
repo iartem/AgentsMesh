@@ -59,9 +59,9 @@ func (s *PodService) UpdatePodTitle(ctx context.Context, podKey, title string) e
 		Update("title", title).Error
 }
 
-// UpdateWorktreePath updates pod worktree path and branch
-func (s *PodService) UpdateWorktreePath(ctx context.Context, podKey, worktreePath, branchName string) error {
-	updates := map[string]interface{}{"worktree_path": worktreePath}
+// UpdateSandboxPath updates pod sandbox path and branch
+func (s *PodService) UpdateSandboxPath(ctx context.Context, podKey, sandboxPath, branchName string) error {
+	updates := map[string]interface{}{"sandbox_path": sandboxPath}
 	if branchName != "" {
 		updates["branch_name"] = branchName
 	}

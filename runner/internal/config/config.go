@@ -35,10 +35,9 @@ type Config struct {
 	WorkspaceRoot string `mapstructure:"workspace_root"`
 	GitConfigPath string `mapstructure:"git_config_path"`
 
-	// Worktree settings (for ticket-based development)
+	// Git settings (for ticket-based development)
 	RepositoryPath string `mapstructure:"repository_path"` // Path to the main git repository
-	WorktreesDir   string `mapstructure:"worktrees_dir"`   // Directory for worktrees
-	BaseBranch     string `mapstructure:"base_branch"`     // Base branch for new worktrees (default: main)
+	BaseBranch     string `mapstructure:"base_branch"`     // Base branch for new git worktrees (default: main)
 
 	// MCP settings
 	MCPConfigPath string `mapstructure:"mcp_config_path"` // Path to MCP servers config file

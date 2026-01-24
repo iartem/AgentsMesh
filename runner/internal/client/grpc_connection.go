@@ -487,12 +487,14 @@ func (c *GRPCConnection) sendTerminal(msg *runnerv1.RunnerMessage) error {
 }
 
 // SendPodCreated sends a pod_created event to the server (control message).
-func (c *GRPCConnection) SendPodCreated(podKey string, pid int32) error {
+func (c *GRPCConnection) SendPodCreated(podKey string, pid int32, sandboxPath, branchName string) error {
 	msg := &runnerv1.RunnerMessage{
 		Payload: &runnerv1.RunnerMessage_PodCreated{
 			PodCreated: &runnerv1.PodCreatedEvent{
-				PodKey: podKey,
-				Pid:    pid,
+				PodKey:      podKey,
+				Pid:         pid,
+				SandboxPath: sandboxPath,
+				BranchName:  branchName,
 			},
 		},
 		Timestamp: time.Now().UnixMilli(),
@@ -976,6 +978,9 @@ func (c *GRPCConnection) handleServerMessage(msg *runnerv1.ServerMessage) {
 	case *runnerv1.ServerMessage_UnsubscribeTerminal:
 		c.handleUnsubscribeTerminal(payload.UnsubscribeTerminal)
 
+	case *runnerv1.ServerMessage_QuerySandboxes:
+		c.handleQuerySandboxes(payload.QuerySandboxes)
+
 	default:
 		logger.GRPC().Warn("Unknown server message type")
 	}
@@ -1115,6 +1120,57 @@ func (c *GRPCConnection) handleUnsubscribeTerminal(cmd *runnerv1.UnsubscribeTerm
 	if err := c.handler.OnUnsubscribeTerminal(req); err != nil {
 		log.Error("Failed to unsubscribe terminal", "pod_key", cmd.PodKey, "error", err)
 	}
+}
+
+// handleQuerySandboxes handles query_sandboxes command from server.
+// Returns sandbox status for specified pod keys.
+func (c *GRPCConnection) handleQuerySandboxes(cmd *runnerv1.QuerySandboxesCommand) {
+	log := logger.GRPC()
+	log.Info("Received query_sandboxes", "request_id", cmd.RequestId, "queries", len(cmd.Queries))
+	if c.handler == nil {
+		log.Warn("No handler set, ignoring query_sandboxes")
+		return
+	}
+
+	req := QuerySandboxesRequest{
+		RequestID: cmd.RequestId,
+		Queries:   cmd.Queries,
+	}
+	if err := c.handler.OnQuerySandboxes(req); err != nil {
+		log.Error("Failed to query sandboxes", "request_id", cmd.RequestId, "error", err)
+	}
+}
+
+// SendSandboxesStatus sends sandbox status query response to the server (control message).
+func (c *GRPCConnection) SendSandboxesStatus(requestID string, sandboxes []*SandboxStatusInfo) error {
+	// Convert SandboxStatusInfo to proto
+	protoSandboxes := make([]*runnerv1.SandboxStatus, len(sandboxes))
+	for i, s := range sandboxes {
+		protoSandboxes[i] = &runnerv1.SandboxStatus{
+			PodKey:                s.PodKey,
+			Exists:                s.Exists,
+			SandboxPath:           s.SandboxPath,
+			RepositoryUrl:         s.RepositoryURL,
+			BranchName:            s.BranchName,
+			CurrentCommit:         s.CurrentCommit,
+			SizeBytes:             s.SizeBytes,
+			LastModified:          s.LastModified,
+			HasUncommittedChanges: s.HasUncommittedChanges,
+			CanResume:             s.CanResume,
+			Error:                 s.Error,
+		}
+	}
+
+	msg := &runnerv1.RunnerMessage{
+		Payload: &runnerv1.RunnerMessage_SandboxesStatus{
+			SandboxesStatus: &runnerv1.SandboxesStatusEvent{
+				RequestId: requestID,
+				Sandboxes: protoSandboxes,
+			},
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return c.sendControl(msg)
 }
 
 // sendError sends an error event back to the server (internal use, control message).

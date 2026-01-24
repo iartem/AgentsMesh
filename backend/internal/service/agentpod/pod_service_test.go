@@ -68,11 +68,13 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		last_activity DATETIME,
 		initial_prompt TEXT,
 		branch_name TEXT,
-		worktree_path TEXT,
+		sandbox_path TEXT,
 		model TEXT,
 		permission_mode TEXT,
 		think_level TEXT,
 		title TEXT,
+		session_id TEXT,
+		source_pod_key TEXT,
 		config_overrides TEXT DEFAULT '{}',
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -407,7 +409,7 @@ func TestUpdatePodPTY(t *testing.T) {
 	}
 }
 
-func TestUpdateWorktreePath(t *testing.T) {
+func TestUpdateSandboxPath(t *testing.T) {
 	db := setupTestDB(t)
 	svc := NewPodService(db)
 	ctx := context.Background()
@@ -419,14 +421,14 @@ func TestUpdateWorktreePath(t *testing.T) {
 	}
 	sess, _ := svc.CreatePod(ctx, req)
 
-	err := svc.UpdateWorktreePath(ctx, sess.PodKey, "/worktree/path", "feature/test")
+	err := svc.UpdateSandboxPath(ctx, sess.PodKey, "/workspace/sandboxes/pod-1", "feature/test")
 	if err != nil {
-		t.Fatalf("UpdateWorktreePath failed: %v", err)
+		t.Fatalf("UpdateSandboxPath failed: %v", err)
 	}
 
 	updated, _ := svc.GetPod(ctx, sess.PodKey)
-	if updated.WorktreePath == nil || *updated.WorktreePath != "/worktree/path" {
-		t.Error("WorktreePath not set correctly")
+	if updated.SandboxPath == nil || *updated.SandboxPath != "/workspace/sandboxes/pod-1" {
+		t.Error("SandboxPath not set correctly")
 	}
 	if updated.BranchName == nil || *updated.BranchName != "feature/test" {
 		t.Error("BranchName not set correctly")
@@ -445,7 +447,7 @@ func TestHandlePodCreated(t *testing.T) {
 	}
 	sess, _ := svc.CreatePod(ctx, req)
 
-	err := svc.HandlePodCreated(ctx, sess.PodKey, 12345, "/worktree", "main")
+	err := svc.HandlePodCreated(ctx, sess.PodKey, 12345, "/workspace/sandboxes/pod-1", "main")
 	if err != nil {
 		t.Fatalf("HandlePodCreated failed: %v", err)
 	}

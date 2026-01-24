@@ -74,7 +74,7 @@ func (s *PodService) GetCreatePodCommand(ctx context.Context, pod *agentpod.Pod,
 	}
 
 	parts := strings.Split(pod.PodKey, "-")
-	worktreeSuffix := parts[len(parts)-1]
+	podSuffix := parts[len(parts)-1]
 
 	return &agentpod.CreatePodCommand{
 		PodKey:            pod.PodKey,
@@ -82,7 +82,7 @@ func (s *PodService) GetCreatePodCommand(ctx context.Context, pod *agentpod.Pod,
 		InitialPrompt:     formattedPrompt,
 		PermissionMode:    permissionMode,
 		TicketIdentifier:  ticketIdentifier,
-		WorktreeSuffix:    worktreeSuffix,
+		PodSuffix:         podSuffix,
 		EnvVars:           req.EnvVars,
 		PreparationConfig: req.PreparationConfig,
 	}, nil

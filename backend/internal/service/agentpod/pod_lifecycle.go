@@ -8,7 +8,7 @@ import (
 )
 
 // HandlePodCreated handles the pod_created event from runner
-func (s *PodService) HandlePodCreated(ctx context.Context, podKey string, ptyPID int, worktreePath, branchName string) error {
+func (s *PodService) HandlePodCreated(ctx context.Context, podKey string, ptyPID int, sandboxPath, branchName string) error {
 	now := time.Now()
 	updates := map[string]interface{}{
 		"pty_pid":       ptyPID,
@@ -16,8 +16,8 @@ func (s *PodService) HandlePodCreated(ctx context.Context, podKey string, ptyPID
 		"started_at":    now,
 		"last_activity": now,
 	}
-	if worktreePath != "" {
-		updates["worktree_path"] = worktreePath
+	if sandboxPath != "" {
+		updates["sandbox_path"] = sandboxPath
 	}
 	if branchName != "" {
 		updates["branch_name"] = branchName

@@ -19,6 +19,8 @@ var (
 	ErrQuotaExceeded = billing.ErrQuotaExceeded
 	// ErrSubscriptionFrozen is returned when subscription is frozen and operations are blocked
 	ErrSubscriptionFrozen = billing.ErrSubscriptionFrozen
+	// ErrSandboxAlreadyResumed is returned when trying to resume a sandbox that's already been resumed
+	ErrSandboxAlreadyResumed = agentpodService.ErrSandboxAlreadyResumed
 )
 
 // PodServiceForHandler defines the pod service methods needed by PodHandler
@@ -29,6 +31,9 @@ type PodServiceForHandler interface {
 	GetPod(ctx context.Context, podKey string) (*agentpod.Pod, error)
 	TerminatePod(ctx context.Context, podKey string) error
 	GetPodsByTicket(ctx context.Context, ticketID int64) ([]*agentpod.Pod, error)
+	// GetActivePodBySourcePodKey returns an active pod that was resumed from the given source pod key
+	// Used to prevent multiple pods from resuming the same sandbox simultaneously
+	GetActivePodBySourcePodKey(ctx context.Context, sourcePodKey string) (*agentpod.Pod, error)
 }
 
 // RepositoryServiceForHandler defines the repository service methods needed by PodHandler

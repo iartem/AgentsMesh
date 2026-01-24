@@ -55,13 +55,16 @@ func NewManager(root, gitConfigPath string) (*Manager, error) {
 	}, nil
 }
 
-// CreateWorktree creates a git worktree for a repository
+// CreateWorktree creates a git worktree for a repository.
+// The worktree is created inside the sandbox directory: sandboxes/{podKey}/workspace
 func (m *Manager) CreateWorktree(ctx context.Context, repoURL, branch, podKey string) (string, error) {
-	return m.CreateWorktreeWithOptions(ctx, repoURL, branch, podKey)
+	workspacePath := filepath.Join(m.root, "sandboxes", podKey, "workspace")
+	return m.CreateWorktreeWithOptions(ctx, repoURL, branch, workspacePath)
 }
 
-// CreateWorktreeWithOptions creates a git worktree with additional options
-func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch, podKey string, opts ...WorktreeOption) (string, error) {
+// CreateWorktreeWithOptions creates a git worktree with additional options.
+// worktreePath is the full path where the worktree should be created.
+func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch, worktreePath string, opts ...WorktreeOption) (string, error) {
 	// Apply options
 	options := &WorktreeOptions{}
 	for _, opt := range opts {
@@ -77,16 +80,13 @@ func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch
 		return "", fmt.Errorf("invalid repository URL: %s", repoURL)
 	}
 
-	// Main repository path
+	// Main repository path (bare repo cache, shared across pods)
 	mainRepoPath := filepath.Join(m.root, "repos", repoName)
 
 	// Clone or fetch the repository with authentication
 	if err := m.ensureRepositoryWithAuth(ctx, repoURL, mainRepoPath, options); err != nil {
 		return "", fmt.Errorf("failed to ensure repository: %w", err)
 	}
-
-	// Worktree path
-	worktreePath := filepath.Join(m.root, "worktrees", podKey)
 
 	// Remove existing worktree if it exists
 	if _, err := os.Stat(worktreePath); err == nil {
@@ -95,7 +95,7 @@ func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch
 		}
 	}
 
-	// Create worktree directory
+	// Create worktree parent directory
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
 		return "", fmt.Errorf("failed to create worktree parent dir: %w", err)
 	}
@@ -123,8 +123,10 @@ func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch
 	}
 
 	// Create worktree
-	// Use a unique branch name to avoid conflicts
-	worktreeBranch := fmt.Sprintf("worktree-%s", podKey)
+	// Use a unique branch name based on parent directory name (sandbox podKey)
+	// e.g., /path/sandboxes/pod-123/worktree -> worktree-pod-123
+	parentDir := filepath.Base(filepath.Dir(worktreePath))
+	worktreeBranch := fmt.Sprintf("worktree-%s", parentDir)
 
 	worktreeCmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", worktreeBranch, worktreePath, fmt.Sprintf("origin/%s", branch))
 	worktreeCmd.Dir = mainRepoPath
@@ -320,8 +322,10 @@ func (m *Manager) TempWorkspace(podKey string) string {
 	return path
 }
 
-// applyGitConfig applies custom git configuration
-func (m *Manager) applyGitConfig(ctx context.Context, repoPath string) error {
+// applyGitConfig applies custom git configuration to a worktree.
+// In a worktree, .git is a file pointing to the main repo, so we use
+// git config --local which handles this correctly.
+func (m *Manager) applyGitConfig(ctx context.Context, worktreePath string) error {
 	if m.gitConfigPath == "" {
 		return nil
 	}
@@ -332,15 +336,30 @@ func (m *Manager) applyGitConfig(ctx context.Context, repoPath string) error {
 		return fmt.Errorf("failed to read git config: %w", err)
 	}
 
-	// Write to local config
-	localConfigPath := filepath.Join(repoPath, ".git", "config.local")
+	// Get the actual git directory for this worktree
+	// In a worktree, `git rev-parse --git-dir` returns the correct .git directory
+	gitDirCmd := exec.CommandContext(ctx, "git", "rev-parse", "--git-dir")
+	gitDirCmd.Dir = worktreePath
+	gitDirOutput, err := gitDirCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get git directory: %w", err)
+	}
+	gitDir := strings.TrimSpace(string(gitDirOutput))
+
+	// Make path absolute if relative
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(worktreePath, gitDir)
+	}
+
+	// Write to local config in the actual git directory
+	localConfigPath := filepath.Join(gitDir, "config.local")
 	if err := os.WriteFile(localConfigPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write local config: %w", err)
 	}
 
 	// Include the local config
 	cmd := exec.CommandContext(ctx, "git", "config", "--local", "include.path", "config.local")
-	cmd.Dir = repoPath
+	cmd.Dir = worktreePath
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to include local config: %s, output: %s", err, output)
 	}
@@ -348,13 +367,14 @@ func (m *Manager) applyGitConfig(ctx context.Context, repoPath string) error {
 	return nil
 }
 
-// CleanupOldWorktrees removes worktrees older than maxAge
+// CleanupOldWorktrees removes invalid worktrees from sandboxes.
+// Worktrees are located at sandboxes/{podKey}/worktree
 func (m *Manager) CleanupOldWorktrees(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	worktreesDir := filepath.Join(m.root, "worktrees")
-	entries, err := os.ReadDir(worktreesDir)
+	sandboxesDir := filepath.Join(m.root, "sandboxes")
+	entries, err := os.ReadDir(sandboxesDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -367,12 +387,15 @@ func (m *Manager) CleanupOldWorktrees(ctx context.Context) error {
 			continue
 		}
 
-		worktreePath := filepath.Join(worktreesDir, entry.Name())
+		worktreePath := filepath.Join(sandboxesDir, entry.Name(), "worktree")
 
-		// Check if worktree is still valid
-		if _, err := os.Stat(filepath.Join(worktreePath, ".git")); os.IsNotExist(err) {
-			// Invalid worktree, remove it
-			os.RemoveAll(worktreePath)
+		// Check if worktree exists and is valid
+		if _, err := os.Stat(worktreePath); err == nil {
+			// Worktree exists, check if it's still valid
+			if _, err := os.Stat(filepath.Join(worktreePath, ".git")); os.IsNotExist(err) {
+				// Invalid worktree (no .git), remove it
+				os.RemoveAll(worktreePath)
+			}
 		}
 	}
 
@@ -408,13 +431,14 @@ func (m *Manager) GetWorkspaceRoot() string {
 	return m.root
 }
 
-// ListWorktrees lists all active worktrees
+// ListWorktrees lists all active worktrees.
+// Worktrees are located at sandboxes/{podKey}/worktree
 func (m *Manager) ListWorktrees() ([]string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	worktreesDir := filepath.Join(m.root, "worktrees")
-	entries, err := os.ReadDir(worktreesDir)
+	sandboxesDir := filepath.Join(m.root, "sandboxes")
+	entries, err := os.ReadDir(sandboxesDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -424,8 +448,13 @@ func (m *Manager) ListWorktrees() ([]string, error) {
 
 	var worktrees []string
 	for _, entry := range entries {
-		if entry.IsDir() {
-			worktrees = append(worktrees, filepath.Join(worktreesDir, entry.Name()))
+		if !entry.IsDir() {
+			continue
+		}
+		worktreePath := filepath.Join(sandboxesDir, entry.Name(), "worktree")
+		// Only include if worktree actually exists
+		if _, err := os.Stat(worktreePath); err == nil {
+			worktrees = append(worktrees, worktreePath)
 		}
 	}
 

@@ -90,13 +90,18 @@ func (m *MockConnection) GetOrgSlug() string {
 }
 
 // SendPodCreated implements Connection.
-func (m *MockConnection) SendPodCreated(podKey string, pid int32) error {
+func (m *MockConnection) SendPodCreated(podKey string, pid int32, sandboxPath, branchName string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.SendErr != nil {
 		return m.SendErr
 	}
-	m.Events = append(m.Events, EventCall{Type: MsgTypePodCreated, Data: map[string]interface{}{"pod_key": podKey, "pid": pid}})
+	m.Events = append(m.Events, EventCall{Type: MsgTypePodCreated, Data: map[string]interface{}{
+		"pod_key":      podKey,
+		"pid":          pid,
+		"sandbox_path": sandboxPath,
+		"branch_name":   branchName,
+	}})
 	return nil
 }
 
@@ -163,6 +168,17 @@ func (m *MockConnection) SendRequestRelayToken(podKey, sessionID, relayURL strin
 		return m.SendErr
 	}
 	m.Events = append(m.Events, EventCall{Type: MessageType("request_relay_token"), Data: map[string]interface{}{"pod_key": podKey, "session_id": sessionID, "relay_url": relayURL}})
+	return nil
+}
+
+// SendSandboxesStatus implements Connection.
+func (m *MockConnection) SendSandboxesStatus(requestID string, results []*SandboxStatusInfo) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.SendErr != nil {
+		return m.SendErr
+	}
+	m.Events = append(m.Events, EventCall{Type: MessageType("sandboxes_status"), Data: map[string]interface{}{"request_id": requestID, "results": results}})
 	return nil
 }
 
@@ -242,6 +258,17 @@ func (m *MockConnection) SimulateUnsubscribeTerminal(req UnsubscribeTerminalRequ
 	m.mu.Unlock()
 	if handler != nil {
 		return handler.OnUnsubscribeTerminal(req)
+	}
+	return nil
+}
+
+// SimulateQuerySandboxes simulates server sending a query_sandboxes message.
+func (m *MockConnection) SimulateQuerySandboxes(req QuerySandboxesRequest) error {
+	m.mu.Lock()
+	handler := m.handler
+	m.mu.Unlock()
+	if handler != nil {
+		return handler.OnQuerySandboxes(req)
 	}
 	return nil
 }

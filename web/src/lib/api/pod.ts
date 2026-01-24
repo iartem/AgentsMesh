@@ -8,7 +8,7 @@ export interface PodData {
   agent_status: string;
   initial_prompt?: string;
   branch_name?: string;
-  worktree_path?: string;
+  sandbox_path?: string;
   started_at?: string;
   finished_at?: string;
   last_activity?: string;
@@ -55,7 +55,7 @@ export const podApi = {
     request<{ pod: PodData }>(`${orgPath("/pods")}/${key}`),
 
   create: (data: {
-    agent_type_id: number;
+    agent_type_id?: number; // Required unless resuming
     runner_id?: number;
     repository_id?: number;
     ticket_id?: number;
@@ -65,6 +65,9 @@ export const podApi = {
     credential_profile_id?: number; // User's credential profile ID (undefined = RunnerHost mode)
     cols?: number; // Terminal columns (from xterm.js)
     rows?: number; // Terminal rows (from xterm.js)
+    // Resume mode fields
+    source_pod_key?: string; // Pod key to resume from (enables resume mode)
+    resume_agent_session?: boolean; // Whether to restore agent session (default: true when resuming)
   }) =>
     request<{ message: string; pod: PodData }>(
       orgPath("/pods"),

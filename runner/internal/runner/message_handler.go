@@ -146,7 +146,7 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 	}
 
 	// Notify server that pod is created with actual terminal size
-	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.WorktreePath, pod.Branch, uint16(cols), uint16(rows))
+	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.SandboxPath, pod.Branch, uint16(cols), uint16(rows))
 
 	// Send initial terminal setup sequence to ensure clean xterm.js state
 	// TUI apps like Claude Code (using Ink) assume the terminal is clean and use
@@ -159,7 +159,7 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 	h.sendTerminalOutput(cmd.PodKey, initSequence)
 	log.Debug("Sent initial terminal setup sequence", "pod_key", cmd.PodKey)
 
-	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "worktree", pod.WorktreePath, "branch", pod.Branch, "cols", cols, "rows", rows)
+	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "sandbox", pod.SandboxPath, "branch", pod.Branch, "cols", cols, "rows", rows)
 	return nil
 }
 
@@ -479,6 +479,30 @@ func (h *RunnerMessageHandler) OnUnsubscribeTerminal(req client.UnsubscribeTermi
 	return nil
 }
 
+// OnQuerySandboxes handles sandbox status query from server.
+// Returns sandbox status for each requested pod key.
+// Implements client.MessageHandler interface.
+func (h *RunnerMessageHandler) OnQuerySandboxes(req client.QuerySandboxesRequest) error {
+	log := logger.Pod()
+	log.Info("Querying sandbox status", "request_id", req.RequestID, "queries", len(req.Queries))
+
+	results := make([]*client.SandboxStatusInfo, 0, len(req.Queries))
+
+	for _, query := range req.Queries {
+		status := h.runner.GetSandboxStatus(query.PodKey)
+		results = append(results, status)
+	}
+
+	// Send response back to server
+	if err := h.conn.SendSandboxesStatus(req.RequestID, results); err != nil {
+		log.Error("Failed to send sandbox status response", "request_id", req.RequestID, "error", err)
+		return err
+	}
+
+	log.Info("Sent sandbox status response", "request_id", req.RequestID, "results", len(results))
+	return nil
+}
+
 // Helper methods
 
 // createExitHandler creates an exit handler that notifies server when pod exits.
@@ -510,12 +534,12 @@ func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 
 // Event sending methods - using gRPC-specific methods
 
-func (h *RunnerMessageHandler) sendPodCreated(podKey string, pid int, worktreePath, branchName string, cols, rows uint16) {
+func (h *RunnerMessageHandler) sendPodCreated(podKey string, pid int, sandboxPath, branchName string, cols, rows uint16) {
 	if h.conn == nil {
 		return
 	}
-	// Use gRPC-specific method
-	if err := h.conn.SendPodCreated(podKey, int32(pid)); err != nil {
+	// Use gRPC-specific method with sandbox_path and branch_name for Resume functionality
+	if err := h.conn.SendPodCreated(podKey, int32(pid), sandboxPath, branchName); err != nil {
 		logger.Pod().Error("Failed to send pod created event", "error", err)
 	}
 }

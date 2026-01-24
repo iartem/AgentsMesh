@@ -51,6 +51,7 @@ type RunnerConnectionManager struct {
 	onDisconnect         func(runnerID int64)
 	onInitialized        func(runnerID int64, availableAgents []string)
 	onInitFailed         func(runnerID int64, reason string)
+	onSandboxesStatus    func(runnerID int64, data *runnerv1.SandboxesStatusEvent)
 }
 
 // grpcConnectionShard holds a subset of gRPC connections with its own lock.
@@ -139,6 +140,11 @@ func (cm *RunnerConnectionManager) SetInitializedCallback(fn func(runnerID int64
 // SetInitFailedCallback sets the initialization failure callback
 func (cm *RunnerConnectionManager) SetInitFailedCallback(fn func(runnerID int64, reason string)) {
 	cm.onInitFailed = fn
+}
+
+// SetSandboxesStatusCallback sets the sandbox status callback (Proto type)
+func (cm *RunnerConnectionManager) SetSandboxesStatusCallback(fn func(runnerID int64, data *runnerv1.SandboxesStatusEvent)) {
+	cm.onSandboxesStatus = fn
 }
 
 // SetInitTimeout sets the initialization timeout
@@ -412,5 +418,13 @@ func (cm *RunnerConnectionManager) HandleRequestRelayToken(runnerID int64, data 
 	cm.UpdateHeartbeat(runnerID)
 	if cm.onRequestRelayToken != nil {
 		cm.onRequestRelayToken(runnerID, data)
+	}
+}
+
+// HandleSandboxesStatus handles sandbox status response event (Proto type)
+func (cm *RunnerConnectionManager) HandleSandboxesStatus(runnerID int64, data *runnerv1.SandboxesStatusEvent) {
+	cm.UpdateHeartbeat(runnerID)
+	if cm.onSandboxesStatus != nil {
+		cm.onSandboxesStatus(runnerID, data)
 	}
 }

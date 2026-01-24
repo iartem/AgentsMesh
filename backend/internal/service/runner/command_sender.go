@@ -105,3 +105,14 @@ func (n *NoOpCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerI
 
 // Ensure NoOpCommandSender implements RunnerCommandSender
 var _ RunnerCommandSender = (*NoOpCommandSender)(nil)
+
+// SandboxQuerySender defines the interface for sending sandbox queries to runners.
+// This is a separate interface from RunnerCommandSender (Interface Segregation).
+type SandboxQuerySender interface {
+	// SendQuerySandboxes sends a query sandboxes command to a runner.
+	// Response is delivered via callback registered in RunnerConnectionManager.
+	SendQuerySandboxes(runnerID int64, requestID string, podKeys []string) error
+
+	// IsConnected checks if a runner is connected.
+	IsConnected(runnerID int64) bool
+}

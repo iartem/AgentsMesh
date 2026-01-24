@@ -71,7 +71,7 @@ type Pod struct {
 	// Initial prompt and configuration
 	InitialPrompt string  `gorm:"type:text" json:"initial_prompt,omitempty"`
 	BranchName    *string `gorm:"size:255" json:"branch_name,omitempty"`
-	WorktreePath  *string `gorm:"size:500" json:"worktree_path,omitempty"`
+	SandboxPath   *string `gorm:"column:sandbox_path;size:500" json:"sandbox_path,omitempty"`
 
 	// Agent configuration used for this pod
 	Model          *string `gorm:"size:50" json:"model,omitempty"`           // opus/sonnet/haiku
@@ -80,6 +80,14 @@ type Pod struct {
 
 	// Terminal title from OSC 0/2 escape sequences
 	Title *string `gorm:"size:255" json:"title,omitempty"`
+
+	// Session ID for agent session management (e.g., Claude Code --session-id)
+	// Used for resume functionality - allows agents to restore conversation context
+	SessionID *string `gorm:"size:36" json:"session_id,omitempty"`
+
+	// SourcePodKey tracks the original pod when this pod was created via resume
+	// Enables tracking the chain of resumed sessions
+	SourcePodKey *string `gorm:"size:100" json:"source_pod_key,omitempty"`
 
 	// ConfigOverrides stores pod-level configuration overrides
 	// Merged with organization defaults during Pod creation
@@ -143,7 +151,7 @@ type CreatePodCommand struct {
 	InitialPrompt     string             `json:"initial_prompt,omitempty"`
 	PermissionMode    string             `json:"permission_mode,omitempty"`
 	TicketIdentifier  string             `json:"ticket_identifier,omitempty"`
-	WorktreeSuffix    string             `json:"worktree_suffix,omitempty"`
+	PodSuffix         string             `json:"pod_suffix,omitempty"`
 	EnvVars           map[string]string  `json:"env_vars,omitempty"`
 	PreparationConfig *PreparationConfig `json:"preparation_config,omitempty"`
 }

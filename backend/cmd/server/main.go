@@ -107,7 +107,7 @@ func main() {
 	}
 
 	// Initialize Runner connection manager and Pod coordinator
-	runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher := initializeRunnerComponents(db, redisClient, appLogger, services.agentType)
+	runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher, sandboxQuerySvc := initializeRunnerComponents(db, redisClient, appLogger, services.agentType)
 
 	// Initialize Relay services for terminal data streaming
 	relayManager := relay.NewManager()
@@ -168,6 +168,7 @@ func main() {
 	// Automatically enabled when PKI_CA_CERT_FILE and PKI_CA_KEY_FILE are configured
 	var grpcRunnerHandler *v1.GRPCRunnerHandler
 	var grpcServer *grpcserver.Server
+	var sandboxQuerySender runner.SandboxQuerySender
 	if cfg.PKI.CACertFile != "" && cfg.PKI.CAKeyFile != "" {
 		grpcServer, grpcRunnerHandler = initializePKIAndGRPC(cfg, services.runner, services.org, services.agentType, runnerConnMgr, appLogger)
 
@@ -176,6 +177,8 @@ func main() {
 			grpcCommandSender := grpcserver.NewGRPCCommandSender(grpcServer.RunnerAdapter())
 			podCoordinator.SetCommandSender(grpcCommandSender)
 			terminalRouter.SetCommandSender(grpcCommandSender)
+			// Also use grpcCommandSender as SandboxQuerySender
+			sandboxQuerySender = grpcCommandSender
 			slog.Info("PodCoordinator and TerminalRouter connected to gRPC Server for Runner commands")
 
 			// Setup relay token refresh callback (for auto-reconnect when token expires)
@@ -215,6 +218,9 @@ func main() {
 		AgentPodAIProvider: services.agentpodAIProvider,
 		License:            services.license,
 		GRPCRunnerHandler:  grpcRunnerHandler,
+		// Sandbox query services
+		SandboxQueryService: sandboxQuerySvc,
+		SandboxQuerySender:  sandboxQuerySender,
 		// Relay services for terminal data streaming
 		RelayManager:        relayManager,
 		RelayTokenGenerator: relayTokenGenerator,
@@ -410,7 +416,7 @@ func initializeInfrastructure(cfg *config.Config, appLogger *logger.Logger) (*we
 }
 
 // initializeRunnerComponents initializes runner-related components
-func initializeRunnerComponents(db *gorm.DB, redisClient *redis.Client, appLogger *logger.Logger, agentTypeSvc *agent.AgentTypeService) (*runner.RunnerConnectionManager, *runner.PodCoordinator, *runner.TerminalRouter, *runner.HeartbeatBatcher) {
+func initializeRunnerComponents(db *gorm.DB, redisClient *redis.Client, appLogger *logger.Logger, agentTypeSvc *agent.AgentTypeService) (*runner.RunnerConnectionManager, *runner.PodCoordinator, *runner.TerminalRouter, *runner.HeartbeatBatcher, *runner.SandboxQueryService) {
 	// Initialize Runner connection manager
 	runnerConnMgr := runner.NewRunnerConnectionManager(appLogger.Logger)
 
@@ -432,7 +438,10 @@ func initializeRunnerComponents(db *gorm.DB, redisClient *redis.Client, appLogge
 	// Initialize Pod coordinator (manages pod lifecycle between backend and runner)
 	podCoordinator := runner.NewPodCoordinator(db, runnerConnMgr, terminalRouter, heartbeatBatcher, appLogger.Logger)
 
-	return runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher
+	// Initialize Sandbox query service (handles sandbox status queries to runners)
+	sandboxQuerySvc := runner.NewSandboxQueryService(runnerConnMgr)
+
+	return runnerConnMgr, podCoordinator, terminalRouter, heartbeatBatcher, sandboxQuerySvc
 }
 
 // startHTTPServer creates and starts the HTTP server

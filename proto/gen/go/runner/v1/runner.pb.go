@@ -37,6 +37,7 @@ type RunnerMessage struct {
 	//	*RunnerMessage_Error
 	//	*RunnerMessage_PodInitProgress
 	//	*RunnerMessage_RequestRelayToken
+	//	*RunnerMessage_SandboxesStatus
 	Payload       isRunnerMessage_Payload `protobuf_oneof:"payload"`
 	Timestamp     int64                   `protobuf:"varint,15,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -179,6 +180,15 @@ func (x *RunnerMessage) GetRequestRelayToken() *RequestRelayTokenEvent {
 	return nil
 }
 
+func (x *RunnerMessage) GetSandboxesStatus() *SandboxesStatusEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_SandboxesStatus); ok {
+			return x.SandboxesStatus
+		}
+	}
+	return nil
+}
+
 func (x *RunnerMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -234,6 +244,10 @@ type RunnerMessage_RequestRelayToken struct {
 	RequestRelayToken *RequestRelayTokenEvent `protobuf:"bytes,11,opt,name=request_relay_token,json=requestRelayToken,proto3,oneof"`
 }
 
+type RunnerMessage_SandboxesStatus struct {
+	SandboxesStatus *SandboxesStatusEvent `protobuf:"bytes,12,opt,name=sandboxes_status,json=sandboxesStatus,proto3,oneof"`
+}
+
 func (*RunnerMessage_Initialize) isRunnerMessage_Payload() {}
 
 func (*RunnerMessage_Initialized) isRunnerMessage_Payload() {}
@@ -255,6 +269,8 @@ func (*RunnerMessage_Error) isRunnerMessage_Payload() {}
 func (*RunnerMessage_PodInitProgress) isRunnerMessage_Payload() {}
 
 func (*RunnerMessage_RequestRelayToken) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_SandboxesStatus) isRunnerMessage_Payload() {}
 
 // InitializeRequest Runner 初始化请求
 type InitializeRequest struct {
@@ -558,6 +574,8 @@ type PodCreatedEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PodKey        string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
 	Pid           int32                  `protobuf:"varint,2,opt,name=pid,proto3" json:"pid,omitempty"`
+	SandboxPath   string                 `protobuf:"bytes,3,opt,name=sandbox_path,json=sandboxPath,proto3" json:"sandbox_path,omitempty"` // Sandbox 根目录路径（用于 Resume 功能）
+	BranchName    string                 `protobuf:"bytes,4,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty"`    // 当前分支名
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -604,6 +622,20 @@ func (x *PodCreatedEvent) GetPid() int32 {
 		return x.Pid
 	}
 	return 0
+}
+
+func (x *PodCreatedEvent) GetSandboxPath() string {
+	if x != nil {
+		return x.SandboxPath
+	}
+	return ""
+}
+
+func (x *PodCreatedEvent) GetBranchName() string {
+	if x != nil {
+		return x.BranchName
+	}
+	return ""
 }
 
 // PodTerminatedEvent Pod 终止事件
@@ -986,6 +1018,7 @@ type ServerMessage struct {
 	//	*ServerMessage_TerminalRedraw
 	//	*ServerMessage_SubscribeTerminal
 	//	*ServerMessage_UnsubscribeTerminal
+	//	*ServerMessage_QuerySandboxes
 	Payload       isServerMessage_Payload `protobuf_oneof:"payload"`
 	Timestamp     int64                   `protobuf:"varint,15,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1110,6 +1143,15 @@ func (x *ServerMessage) GetUnsubscribeTerminal() *UnsubscribeTerminalCommand {
 	return nil
 }
 
+func (x *ServerMessage) GetQuerySandboxes() *QuerySandboxesCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_QuerySandboxes); ok {
+			return x.QuerySandboxes
+		}
+	}
+	return nil
+}
+
 func (x *ServerMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -1157,6 +1199,10 @@ type ServerMessage_UnsubscribeTerminal struct {
 	UnsubscribeTerminal *UnsubscribeTerminalCommand `protobuf:"bytes,9,opt,name=unsubscribe_terminal,json=unsubscribeTerminal,proto3,oneof"`
 }
 
+type ServerMessage_QuerySandboxes struct {
+	QuerySandboxes *QuerySandboxesCommand `protobuf:"bytes,10,opt,name=query_sandboxes,json=querySandboxes,proto3,oneof"`
+}
+
 func (*ServerMessage_InitializeResult) isServerMessage_Payload() {}
 
 func (*ServerMessage_CreatePod) isServerMessage_Payload() {}
@@ -1174,6 +1220,8 @@ func (*ServerMessage_TerminalRedraw) isServerMessage_Payload() {}
 func (*ServerMessage_SubscribeTerminal) isServerMessage_Payload() {}
 
 func (*ServerMessage_UnsubscribeTerminal) isServerMessage_Payload() {}
+
+func (*ServerMessage_QuerySandboxes) isServerMessage_Payload() {}
 
 // InitializeResult 初始化响应
 type InitializeResult struct {
@@ -2119,11 +2167,288 @@ func (x *RequestRelayTokenEvent) GetRelayUrl() string {
 	return ""
 }
 
+// QuerySandboxesCommand 查询指定 Pod 对应的 Sandbox 状态
+// Backend 发送此命令以检查 Sandbox 是否仍然存在，可用于判断是否可以 Resume
+type QuerySandboxesCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // 请求 ID，用于关联响应
+	Queries       []*SandboxQuery        `protobuf:"bytes,2,rep,name=queries,proto3" json:"queries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuerySandboxesCommand) Reset() {
+	*x = QuerySandboxesCommand{}
+	mi := &file_runner_v1_runner_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuerySandboxesCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuerySandboxesCommand) ProtoMessage() {}
+
+func (x *QuerySandboxesCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuerySandboxesCommand.ProtoReflect.Descriptor instead.
+func (*QuerySandboxesCommand) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *QuerySandboxesCommand) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *QuerySandboxesCommand) GetQueries() []*SandboxQuery {
+	if x != nil {
+		return x.Queries
+	}
+	return nil
+}
+
+// SandboxQuery 单个 Sandbox 查询请求
+type SandboxQuery struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PodKey        string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"` // Pod key 用于定位 Sandbox 目录
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SandboxQuery) Reset() {
+	*x = SandboxQuery{}
+	mi := &file_runner_v1_runner_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SandboxQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SandboxQuery) ProtoMessage() {}
+
+func (x *SandboxQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SandboxQuery.ProtoReflect.Descriptor instead.
+func (*SandboxQuery) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *SandboxQuery) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+// SandboxesStatusEvent Sandbox 状态查询响应
+type SandboxesStatusEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // 对应 QuerySandboxesCommand.request_id
+	Sandboxes     []*SandboxStatus       `protobuf:"bytes,2,rep,name=sandboxes,proto3" json:"sandboxes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SandboxesStatusEvent) Reset() {
+	*x = SandboxesStatusEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SandboxesStatusEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SandboxesStatusEvent) ProtoMessage() {}
+
+func (x *SandboxesStatusEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SandboxesStatusEvent.ProtoReflect.Descriptor instead.
+func (*SandboxesStatusEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *SandboxesStatusEvent) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *SandboxesStatusEvent) GetSandboxes() []*SandboxStatus {
+	if x != nil {
+		return x.Sandboxes
+	}
+	return nil
+}
+
+// SandboxStatus 单个 Sandbox 的状态信息
+type SandboxStatus struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	PodKey                string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`                                                 // Pod key
+	Exists                bool                   `protobuf:"varint,2,opt,name=exists,proto3" json:"exists,omitempty"`                                                              // Sandbox 目录是否存在
+	SandboxPath           string                 `protobuf:"bytes,3,opt,name=sandbox_path,json=sandboxPath,proto3" json:"sandbox_path,omitempty"`                                  // Sandbox 根目录路径
+	RepositoryUrl         string                 `protobuf:"bytes,4,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`                            // 仓库 URL（从 git remote 获取）
+	BranchName            string                 `protobuf:"bytes,5,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty"`                                     // 当前分支名
+	CurrentCommit         string                 `protobuf:"bytes,6,opt,name=current_commit,json=currentCommit,proto3" json:"current_commit,omitempty"`                            // 当前 commit SHA
+	SizeBytes             int64                  `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`                                       // 目录大小（字节）
+	LastModified          int64                  `protobuf:"varint,8,opt,name=last_modified,json=lastModified,proto3" json:"last_modified,omitempty"`                              // 最后修改时间（Unix 时间戳）
+	HasUncommittedChanges bool                   `protobuf:"varint,9,opt,name=has_uncommitted_changes,json=hasUncommittedChanges,proto3" json:"has_uncommitted_changes,omitempty"` // 是否有未提交的更改
+	CanResume             bool                   `protobuf:"varint,10,opt,name=can_resume,json=canResume,proto3" json:"can_resume,omitempty"`                                      // 是否可以 resume（Sandbox 存在即可）
+	Error                 string                 `protobuf:"bytes,11,opt,name=error,proto3" json:"error,omitempty"`                                                                // 查询错误信息（如有）
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *SandboxStatus) Reset() {
+	*x = SandboxStatus{}
+	mi := &file_runner_v1_runner_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SandboxStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SandboxStatus) ProtoMessage() {}
+
+func (x *SandboxStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SandboxStatus.ProtoReflect.Descriptor instead.
+func (*SandboxStatus) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *SandboxStatus) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+func (x *SandboxStatus) GetExists() bool {
+	if x != nil {
+		return x.Exists
+	}
+	return false
+}
+
+func (x *SandboxStatus) GetSandboxPath() string {
+	if x != nil {
+		return x.SandboxPath
+	}
+	return ""
+}
+
+func (x *SandboxStatus) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *SandboxStatus) GetBranchName() string {
+	if x != nil {
+		return x.BranchName
+	}
+	return ""
+}
+
+func (x *SandboxStatus) GetCurrentCommit() string {
+	if x != nil {
+		return x.CurrentCommit
+	}
+	return ""
+}
+
+func (x *SandboxStatus) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *SandboxStatus) GetLastModified() int64 {
+	if x != nil {
+		return x.LastModified
+	}
+	return 0
+}
+
+func (x *SandboxStatus) GetHasUncommittedChanges() bool {
+	if x != nil {
+		return x.HasUncommittedChanges
+	}
+	return false
+}
+
+func (x *SandboxStatus) GetCanResume() bool {
+	if x != nil {
+		return x.CanResume
+	}
+	return false
+}
+
+func (x *SandboxStatus) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_runner_v1_runner_proto protoreflect.FileDescriptor
 
 const file_runner_v1_runner_proto_rawDesc = "" +
 	"\n" +
-	"\x16runner/v1/runner.proto\x12\trunner.v1\"\x9b\x06\n" +
+	"\x16runner/v1/runner.proto\x12\trunner.v1\"\xe9\x06\n" +
 	"\rRunnerMessage\x12>\n" +
 	"\n" +
 	"initialize\x18\x01 \x01(\v2\x1c.runner.v1.InitializeRequestH\x00R\n" +
@@ -2140,7 +2465,8 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\x05error\x18\t \x01(\v2\x15.runner.v1.ErrorEventH\x00R\x05error\x12M\n" +
 	"\x11pod_init_progress\x18\n" +
 	" \x01(\v2\x1f.runner.v1.PodInitProgressEventH\x00R\x0fpodInitProgress\x12S\n" +
-	"\x13request_relay_token\x18\v \x01(\v2!.runner.v1.RequestRelayTokenEventH\x00R\x11requestRelayToken\x12\x1c\n" +
+	"\x13request_relay_token\x18\v \x01(\v2!.runner.v1.RequestRelayTokenEventH\x00R\x11requestRelayToken\x12L\n" +
+	"\x10sandboxes_status\x18\f \x01(\v2\x1f.runner.v1.SandboxesStatusEventH\x00R\x0fsandboxesStatus\x12\x1c\n" +
 	"\ttimestamp\x18\x0f \x01(\x03R\ttimestampB\t\n" +
 	"\apayload\"v\n" +
 	"\x11InitializeRequest\x12)\n" +
@@ -2163,10 +2489,13 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\aPodInfo\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12!\n" +
-	"\fagent_status\x18\x03 \x01(\tR\vagentStatus\"<\n" +
+	"\fagent_status\x18\x03 \x01(\tR\vagentStatus\"\x80\x01\n" +
 	"\x0fPodCreatedEvent\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x10\n" +
-	"\x03pid\x18\x02 \x01(\x05R\x03pid\"o\n" +
+	"\x03pid\x18\x02 \x01(\x05R\x03pid\x12!\n" +
+	"\fsandbox_path\x18\x03 \x01(\tR\vsandboxPath\x12\x1f\n" +
+	"\vbranch_name\x18\x04 \x01(\tR\n" +
+	"branchName\"o\n" +
 	"\x12PodTerminatedEvent\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x1b\n" +
 	"\texit_code\x18\x02 \x01(\x05R\bexitCode\x12#\n" +
@@ -2194,7 +2523,7 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12\x1a\n" +
 	"\bprogress\x18\x03 \x01(\x05R\bprogress\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\"\xe0\x05\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\xad\x06\n" +
 	"\rServerMessage\x12J\n" +
 	"\x11initialize_result\x18\x01 \x01(\v2\x1b.runner.v1.InitializeResultH\x00R\x10initializeResult\x12<\n" +
 	"\n" +
@@ -2206,7 +2535,9 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"sendPrompt\x12K\n" +
 	"\x0fterminal_redraw\x18\a \x01(\v2 .runner.v1.TerminalRedrawCommandH\x00R\x0eterminalRedraw\x12T\n" +
 	"\x12subscribe_terminal\x18\b \x01(\v2#.runner.v1.SubscribeTerminalCommandH\x00R\x11subscribeTerminal\x12Z\n" +
-	"\x14unsubscribe_terminal\x18\t \x01(\v2%.runner.v1.UnsubscribeTerminalCommandH\x00R\x13unsubscribeTerminal\x12\x1c\n" +
+	"\x14unsubscribe_terminal\x18\t \x01(\v2%.runner.v1.UnsubscribeTerminalCommandH\x00R\x13unsubscribeTerminal\x12K\n" +
+	"\x0fquery_sandboxes\x18\n" +
+	" \x01(\v2 .runner.v1.QuerySandboxesCommandH\x00R\x0equerySandboxes\x12\x1c\n" +
 	"\ttimestamp\x18\x0f \x01(\x03R\ttimestampB\t\n" +
 	"\apayload\"\xcc\x01\n" +
 	"\x10InitializeResult\x12)\n" +
@@ -2283,7 +2614,33 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x1b\n" +
-	"\trelay_url\x18\x03 \x01(\tR\brelayUrl2R\n" +
+	"\trelay_url\x18\x03 \x01(\tR\brelayUrl\"i\n" +
+	"\x15QuerySandboxesCommand\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x121\n" +
+	"\aqueries\x18\x02 \x03(\v2\x17.runner.v1.SandboxQueryR\aqueries\"'\n" +
+	"\fSandboxQuery\x12\x17\n" +
+	"\apod_key\x18\x01 \x01(\tR\x06podKey\"m\n" +
+	"\x14SandboxesStatusEvent\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x126\n" +
+	"\tsandboxes\x18\x02 \x03(\v2\x18.runner.v1.SandboxStatusR\tsandboxes\"\x83\x03\n" +
+	"\rSandboxStatus\x12\x17\n" +
+	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x16\n" +
+	"\x06exists\x18\x02 \x01(\bR\x06exists\x12!\n" +
+	"\fsandbox_path\x18\x03 \x01(\tR\vsandboxPath\x12%\n" +
+	"\x0erepository_url\x18\x04 \x01(\tR\rrepositoryUrl\x12\x1f\n" +
+	"\vbranch_name\x18\x05 \x01(\tR\n" +
+	"branchName\x12%\n" +
+	"\x0ecurrent_commit\x18\x06 \x01(\tR\rcurrentCommit\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\a \x01(\x03R\tsizeBytes\x12#\n" +
+	"\rlast_modified\x18\b \x01(\x03R\flastModified\x126\n" +
+	"\x17has_uncommitted_changes\x18\t \x01(\bR\x15hasUncommittedChanges\x12\x1d\n" +
+	"\n" +
+	"can_resume\x18\n" +
+	" \x01(\bR\tcanResume\x12\x14\n" +
+	"\x05error\x18\v \x01(\tR\x05error2R\n" +
 	"\rRunnerService\x12A\n" +
 	"\aConnect\x12\x18.runner.v1.RunnerMessage\x1a\x18.runner.v1.ServerMessage(\x010\x01B\x9a\x01\n" +
 	"\rcom.runner.v1B\vRunnerProtoP\x01Z7github.com/anthropic/agentmesh/proto/runner/v1;runnerv1\xa2\x02\x03RXX\xaa\x02\tRunner.V1\xca\x02\tRunner\\V1\xe2\x02\x15Runner\\V1\\GPBMetadata\xea\x02\n" +
@@ -2301,7 +2658,7 @@ func file_runner_v1_runner_proto_rawDescGZIP() []byte {
 	return file_runner_v1_runner_proto_rawDescData
 }
 
-var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_runner_v1_runner_proto_goTypes = []any{
 	(*RunnerMessage)(nil),              // 0: runner.v1.RunnerMessage
 	(*InitializeRequest)(nil),          // 1: runner.v1.InitializeRequest
@@ -2331,8 +2688,12 @@ var file_runner_v1_runner_proto_goTypes = []any{
 	(*SubscribeTerminalCommand)(nil),   // 25: runner.v1.SubscribeTerminalCommand
 	(*UnsubscribeTerminalCommand)(nil), // 26: runner.v1.UnsubscribeTerminalCommand
 	(*RequestRelayTokenEvent)(nil),     // 27: runner.v1.RequestRelayTokenEvent
-	nil,                                // 28: runner.v1.ErrorEvent.DetailsEntry
-	nil,                                // 29: runner.v1.CreatePodCommand.EnvVarsEntry
+	(*QuerySandboxesCommand)(nil),      // 28: runner.v1.QuerySandboxesCommand
+	(*SandboxQuery)(nil),               // 29: runner.v1.SandboxQuery
+	(*SandboxesStatusEvent)(nil),       // 30: runner.v1.SandboxesStatusEvent
+	(*SandboxStatus)(nil),              // 31: runner.v1.SandboxStatus
+	nil,                                // 32: runner.v1.ErrorEvent.DetailsEntry
+	nil,                                // 33: runner.v1.CreatePodCommand.EnvVarsEntry
 }
 var file_runner_v1_runner_proto_depIdxs = []int32{
 	1,  // 0: runner.v1.RunnerMessage.initialize:type_name -> runner.v1.InitializeRequest
@@ -2346,30 +2707,34 @@ var file_runner_v1_runner_proto_depIdxs = []int32{
 	11, // 8: runner.v1.RunnerMessage.error:type_name -> runner.v1.ErrorEvent
 	12, // 9: runner.v1.RunnerMessage.pod_init_progress:type_name -> runner.v1.PodInitProgressEvent
 	27, // 10: runner.v1.RunnerMessage.request_relay_token:type_name -> runner.v1.RequestRelayTokenEvent
-	2,  // 11: runner.v1.InitializeRequest.runner_info:type_name -> runner.v1.RunnerInfo
-	5,  // 12: runner.v1.HeartbeatData.pods:type_name -> runner.v1.PodInfo
-	28, // 13: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
-	14, // 14: runner.v1.ServerMessage.initialize_result:type_name -> runner.v1.InitializeResult
-	17, // 15: runner.v1.ServerMessage.create_pod:type_name -> runner.v1.CreatePodCommand
-	20, // 16: runner.v1.ServerMessage.terminate_pod:type_name -> runner.v1.TerminatePodCommand
-	21, // 17: runner.v1.ServerMessage.terminal_input:type_name -> runner.v1.TerminalInputCommand
-	22, // 18: runner.v1.ServerMessage.terminal_resize:type_name -> runner.v1.TerminalResizeCommand
-	23, // 19: runner.v1.ServerMessage.send_prompt:type_name -> runner.v1.SendPromptCommand
-	24, // 20: runner.v1.ServerMessage.terminal_redraw:type_name -> runner.v1.TerminalRedrawCommand
-	25, // 21: runner.v1.ServerMessage.subscribe_terminal:type_name -> runner.v1.SubscribeTerminalCommand
-	26, // 22: runner.v1.ServerMessage.unsubscribe_terminal:type_name -> runner.v1.UnsubscribeTerminalCommand
-	15, // 23: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
-	16, // 24: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
-	29, // 25: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
-	18, // 26: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
-	19, // 27: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
-	0,  // 28: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
-	13, // 29: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
-	29, // [29:30] is the sub-list for method output_type
-	28, // [28:29] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	30, // 11: runner.v1.RunnerMessage.sandboxes_status:type_name -> runner.v1.SandboxesStatusEvent
+	2,  // 12: runner.v1.InitializeRequest.runner_info:type_name -> runner.v1.RunnerInfo
+	5,  // 13: runner.v1.HeartbeatData.pods:type_name -> runner.v1.PodInfo
+	32, // 14: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
+	14, // 15: runner.v1.ServerMessage.initialize_result:type_name -> runner.v1.InitializeResult
+	17, // 16: runner.v1.ServerMessage.create_pod:type_name -> runner.v1.CreatePodCommand
+	20, // 17: runner.v1.ServerMessage.terminate_pod:type_name -> runner.v1.TerminatePodCommand
+	21, // 18: runner.v1.ServerMessage.terminal_input:type_name -> runner.v1.TerminalInputCommand
+	22, // 19: runner.v1.ServerMessage.terminal_resize:type_name -> runner.v1.TerminalResizeCommand
+	23, // 20: runner.v1.ServerMessage.send_prompt:type_name -> runner.v1.SendPromptCommand
+	24, // 21: runner.v1.ServerMessage.terminal_redraw:type_name -> runner.v1.TerminalRedrawCommand
+	25, // 22: runner.v1.ServerMessage.subscribe_terminal:type_name -> runner.v1.SubscribeTerminalCommand
+	26, // 23: runner.v1.ServerMessage.unsubscribe_terminal:type_name -> runner.v1.UnsubscribeTerminalCommand
+	28, // 24: runner.v1.ServerMessage.query_sandboxes:type_name -> runner.v1.QuerySandboxesCommand
+	15, // 25: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
+	16, // 26: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
+	33, // 27: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
+	18, // 28: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
+	19, // 29: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
+	29, // 30: runner.v1.QuerySandboxesCommand.queries:type_name -> runner.v1.SandboxQuery
+	31, // 31: runner.v1.SandboxesStatusEvent.sandboxes:type_name -> runner.v1.SandboxStatus
+	0,  // 32: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
+	13, // 33: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
+	33, // [33:34] is the sub-list for method output_type
+	32, // [32:33] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_runner_v1_runner_proto_init() }
@@ -2389,6 +2754,7 @@ func file_runner_v1_runner_proto_init() {
 		(*RunnerMessage_Error)(nil),
 		(*RunnerMessage_PodInitProgress)(nil),
 		(*RunnerMessage_RequestRelayToken)(nil),
+		(*RunnerMessage_SandboxesStatus)(nil),
 	}
 	file_runner_v1_runner_proto_msgTypes[13].OneofWrappers = []any{
 		(*ServerMessage_InitializeResult)(nil),
@@ -2400,6 +2766,7 @@ func file_runner_v1_runner_proto_init() {
 		(*ServerMessage_TerminalRedraw)(nil),
 		(*ServerMessage_SubscribeTerminal)(nil),
 		(*ServerMessage_UnsubscribeTerminal)(nil),
+		(*ServerMessage_QuerySandboxes)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2407,7 +2774,7 @@ func file_runner_v1_runner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_runner_v1_runner_proto_rawDesc), len(file_runner_v1_runner_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   30,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

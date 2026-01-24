@@ -82,10 +82,10 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
   const totalPods = runners.reduce((sum, r) => sum + r.current_pods, 0);
   const totalCapacity = runners.reduce((sum, r) => sum + r.max_concurrent_pods, 0);
 
-  // Handle runner click
+  // Handle runner click - navigate to runner detail page
   const handleRunnerClick = (runner: Runner) => {
     setSelectedRunnerId(runner.id);
-    router.push(`/${currentOrg?.slug}/runners?selected=${runner.id}`);
+    router.push(`/${currentOrg?.slug}/runners/${runner.id}`);
   };
 
   // Handle add runner - use callback if provided, otherwise navigate

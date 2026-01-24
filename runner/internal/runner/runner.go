@@ -48,7 +48,7 @@ type Pod struct {
 	AgentType        string
 	RepositoryURL    string
 	Branch           string
-	WorktreePath     string
+	SandboxPath      string
 	Terminal         *terminal.Terminal
 	VirtualTerminal  *terminal.VirtualTerminal  // Virtual terminal for state management and snapshots
 	Aggregator       *terminal.SmartAggregator  // Output aggregator for adaptive frame rate

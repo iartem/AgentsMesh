@@ -66,6 +66,10 @@ type Services struct {
 	// gRPC/mTLS Runner registration handler (optional, only when PKI is enabled)
 	GRPCRunnerHandler *GRPCRunnerHandler
 
+	// Sandbox query services
+	SandboxQueryService *runner.SandboxQueryService // Sandbox status query service
+	SandboxQuerySender  runner.SandboxQuerySender   // Sandbox query sender (gRPC adapter)
+
 	// Relay services for terminal data streaming
 	RelayManager        *relay.Manager         // Relay server management
 	RelayTokenGenerator *relay.TokenGenerator  // Relay token generation
@@ -141,7 +145,17 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 	}
 
 	// Runners
-	runnerHandler := NewRunnerHandler(svc.Runner)
+	var runnerOpts []RunnerHandlerOption
+	if svc.Pod != nil {
+		runnerOpts = append(runnerOpts, WithPodServiceForRunner(svc.Pod))
+	}
+	if svc.SandboxQueryService != nil {
+		runnerOpts = append(runnerOpts, WithSandboxQueryService(svc.SandboxQueryService))
+	}
+	if svc.SandboxQuerySender != nil {
+		runnerOpts = append(runnerOpts, WithSandboxQuerySender(svc.SandboxQuerySender))
+	}
+	runnerHandler := NewRunnerHandler(svc.Runner, runnerOpts...)
 	runners := rg.Group("/runners")
 	{
 		runners.GET("", runnerHandler.ListRunners)
@@ -149,6 +163,8 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		runners.GET("/:id", runnerHandler.GetRunner)
 		runners.PUT("/:id", runnerHandler.UpdateRunner)
 		runners.DELETE("/:id", runnerHandler.DeleteRunner)
+		runners.GET("/:id/pods", runnerHandler.ListRunnerPods)
+		runners.POST("/:id/sandboxes/query", runnerHandler.QuerySandboxes)
 
 		// gRPC/mTLS routes (under /runners/grpc/)
 		if svc.GRPCRunnerHandler != nil {

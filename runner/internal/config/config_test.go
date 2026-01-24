@@ -315,7 +315,6 @@ func TestConfigStruct(t *testing.T) {
 		WorkspaceRoot:     "/workspace",
 		GitConfigPath:     "/git/config",
 		RepositoryPath:    "/repo",
-		WorktreesDir:      "/worktrees",
 		BaseBranch:        "main",
 		MCPConfigPath:     "/mcp/config",
 		DefaultAgent:      "claude-code",

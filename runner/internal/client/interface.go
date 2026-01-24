@@ -18,7 +18,8 @@ type Connection interface {
 	// gRPC send methods
 
 	// SendPodCreated sends a pod_created event to the server.
-	SendPodCreated(podKey string, pid int32) error
+	// Includes sandbox_path and branch_name for Resume functionality.
+	SendPodCreated(podKey string, pid int32, sandboxPath, branchName string) error
 
 	// SendPodTerminated sends a pod_terminated event to the server.
 	SendPodTerminated(podKey string, exitCode int32, errorMsg string) error
@@ -39,6 +40,9 @@ type Connection interface {
 	// SendRequestRelayToken sends a request for a new relay token to the server.
 	// This is called when the relay connection fails due to token expiration.
 	SendRequestRelayToken(podKey, sessionID, relayURL string) error
+
+	// SendSandboxesStatus sends sandbox status query response to the server.
+	SendSandboxesStatus(requestID string, sandboxes []*SandboxStatusInfo) error
 
 	// QueueLength returns the current send queue length.
 	QueueLength() int

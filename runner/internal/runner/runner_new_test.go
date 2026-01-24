@@ -329,7 +329,7 @@ func TestMockConnectionReset(t *testing.T) {
 	mockConn := client.NewMockConnection()
 
 	// Send some events using new methods
-	mockConn.SendPodCreated("test-pod", 123)
+	mockConn.SendPodCreated("test-pod", 123, "/worktree/path", "main")
 	mockConn.Start()
 
 	// Verify state
@@ -369,8 +369,8 @@ func TestMockConnectionQueueLength(t *testing.T) {
 		t.Errorf("initial queue length = %d, want 0", mockConn.QueueLength())
 	}
 
-	mockConn.SendPodCreated("test1", 1)
-	mockConn.SendPodCreated("test2", 2)
+	mockConn.SendPodCreated("test1", 1, "/worktree/1", "main")
+	mockConn.SendPodCreated("test2", 2, "/worktree/2", "develop")
 
 	if mockConn.QueueLength() != 2 {
 		t.Errorf("queue length = %d, want 2", mockConn.QueueLength())
