@@ -62,7 +62,7 @@ type FilterType = "all" | "running" | "completed";
 
 export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSidebarContentProps) {
   const t = useTranslations();
-  useRouter(); // Reserved for navigation
+  const router = useRouter();
   const { currentOrg } = useAuthStore();
   const { pods, loading, fetchPods, terminatePod } = usePodStore();
   const { runners, loading: runnersLoading, fetchRunners } = useRunnerStore();
@@ -359,7 +359,8 @@ export function WorkspaceSidebarContent({ className, onCreatePod }: WorkspaceSid
                 {runners.map((runner) => (
                   <div
                     key={runner.id}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/${currentOrg?.slug}/runners/${runner.id}`)}
                   >
                     <span
                       className={cn(

@@ -303,6 +303,10 @@ func (a *GRPCRunnerAdapter) handleProtoMessage(ctx context.Context, runnerID int
 		// Runner is requesting a new relay token (token expired during reconnection)
 		a.connManager.HandleRequestRelayToken(runnerID, payload.RequestRelayToken)
 
+	case *runnerv1.RunnerMessage_SandboxesStatus:
+		// Direct Proto type passing - no conversion
+		a.connManager.HandleSandboxesStatus(runnerID, payload.SandboxesStatus)
+
 	default:
 		a.logger.Warn("unknown message type", "runner_id", runnerID)
 	}
@@ -620,6 +624,33 @@ func (a *GRPCRunnerAdapter) SendUnsubscribeTerminal(runnerID int64, podKey strin
 		Payload: &runnerv1.ServerMessage_UnsubscribeTerminal{
 			UnsubscribeTerminal: &runnerv1.UnsubscribeTerminalCommand{
 				PodKey: podKey,
+			},
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return conn.SendMessage(msg)
+}
+
+// SendQuerySandboxes sends a query sandboxes command to a Runner.
+// Returns sandbox status for specified pod keys via callback registered in RunnerConnectionManager.
+func (a *GRPCRunnerAdapter) SendQuerySandboxes(runnerID int64, requestID string, podKeys []string) error {
+	conn := a.connManager.GetConnection(runnerID)
+	if conn == nil {
+		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
+	}
+
+	queries := make([]*runnerv1.SandboxQuery, len(podKeys))
+	for i, podKey := range podKeys {
+		queries[i] = &runnerv1.SandboxQuery{
+			PodKey: podKey,
+		}
+	}
+
+	msg := &runnerv1.ServerMessage{
+		Payload: &runnerv1.ServerMessage_QuerySandboxes{
+			QuerySandboxes: &runnerv1.QuerySandboxesCommand{
+				RequestId: requestID,
+				Queries:   queries,
 			},
 		},
 		Timestamp: time.Now().UnixMilli(),

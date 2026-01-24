@@ -174,7 +174,13 @@ func (pc *PodCoordinator) handlePodCreated(runnerID int64, data *runnerv1.PodCre
 		"last_activity": now,
 	}
 
-	// Note: BranchName and WorktreePath not available in Proto PodCreatedEvent
+	// Store sandbox_path and branch_name for Resume functionality
+	if data.SandboxPath != "" {
+		updates["sandbox_path"] = data.SandboxPath
+	}
+	if data.BranchName != "" {
+		updates["branch_name"] = data.BranchName
+	}
 
 	if err := pc.db.WithContext(ctx).
 		Model(&agentpod.Pod{}).
@@ -192,7 +198,9 @@ func (pc *PodCoordinator) handlePodCreated(runnerID int64, data *runnerv1.PodCre
 	pc.logger.Info("pod created",
 		"pod_key", data.PodKey,
 		"runner_id", runnerID,
-		"pid", data.Pid)
+		"pid", data.Pid,
+		"sandbox_path", data.SandboxPath,
+		"branch_name", data.BranchName)
 
 	// Notify status change
 	if pc.onStatusChange != nil {

@@ -76,7 +76,7 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 	b.sendProgress("pending", 0, "Initializing pod...")
 
 	// Setup sandbox and working directory
-	sandboxRoot, workingDir, worktreePath, branchName, err := b.setup(ctx)
+	sandboxRoot, workingDir, branchName, err := b.setup(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,14 +114,14 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 
 	// Create pod
 	pod := &Pod{
-		ID:           b.cmd.PodKey,
-		PodKey:       b.cmd.PodKey,
-		AgentType:    "", // Could be extracted from command if needed
-		Branch:       branchName,
-		WorktreePath: worktreePath,
-		Terminal:     term,
-		StartedAt:    time.Now(),
-		Status:       PodStatusInitializing,
+		ID:          b.cmd.PodKey,
+		PodKey:      b.cmd.PodKey,
+		AgentType:   "", // Could be extracted from command if needed
+		Branch:      branchName,
+		SandboxPath: sandboxRoot,
+		Terminal:    term,
+		StartedAt:   time.Now(),
+		Status:      PodStatusInitializing,
 	}
 
 	logger.Pod().Info("Pod built", "pod_key", b.cmd.PodKey, "working_dir", workingDir)
@@ -133,13 +133,13 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 }
 
 // setup sets up the sandbox and working directory.
-// Returns (sandboxRoot, workingDir, worktreePath, branchName, error).
-func (b *PodBuilder) setup(ctx context.Context) (string, string, string, string, error) {
+// Returns (sandboxRoot, workingDir, branchName, error).
+func (b *PodBuilder) setup(ctx context.Context) (string, string, string, error) {
 	// 1. Create sandbox root directory
 	b.sendProgress("preparing", 10, "Creating sandbox directory...")
 	sandboxRoot := filepath.Join(b.runner.cfg.WorkspaceRoot, "sandboxes", b.cmd.PodKey)
 	if err := os.MkdirAll(sandboxRoot, 0755); err != nil {
-		return "", "", "", "", &client.PodError{
+		return "", "", "", &client.PodError{
 			Code:    client.ErrCodeSandboxCreate,
 			Message: fmt.Sprintf("failed to create sandbox directory: %v", err),
 		}
@@ -150,42 +150,46 @@ func (b *PodBuilder) setup(ctx context.Context) (string, string, string, string,
 	// 2. Setup working directory based on SandboxConfig
 	b.sendProgress("preparing", 20, "Setting up working directory...")
 
-	var workingDir, worktreePath, branchName string
+	var workingDir, branchName string
 	var err error
 
 	if cfg != nil && cfg.RepositoryUrl != "" {
-		// Has repository - create worktree
-		worktreePath, branchName, err = b.setupGitWorktree(ctx, sandboxRoot, cfg)
+		// Has repository - create git worktree as workspace
+		workingDir, branchName, err = b.setupGitWorktree(ctx, sandboxRoot, cfg)
 		if err != nil {
 			os.RemoveAll(sandboxRoot)
-			return "", "", "", "", err
+			return "", "", "", err
 		}
-		workingDir = worktreePath
 
 		// Run preparation script if configured
 		if cfg.PreparationScript != "" {
-			if err := b.runPreparationScript(ctx, cfg, worktreePath, branchName); err != nil {
+			if err := b.runPreparationScript(ctx, cfg, workingDir, branchName); err != nil {
 				os.RemoveAll(sandboxRoot)
-				return "", "", "", "", err
+				return "", "", "", err
 			}
 		}
 	} else if cfg != nil && cfg.LocalPath != "" {
-		// Local path mode
+		// Local path mode (Resume mode) - use existing sandbox directly
 		if _, err := os.Stat(cfg.LocalPath); os.IsNotExist(err) {
 			os.RemoveAll(sandboxRoot)
-			return "", "", "", "", &client.PodError{
+			return "", "", "", &client.PodError{
 				Code:    client.ErrCodeWorkDirNotExist,
 				Message: fmt.Sprintf("local path does not exist: %s", cfg.LocalPath),
 				Details: map[string]string{"path": cfg.LocalPath},
 			}
 		}
-		workingDir = cfg.LocalPath
+		// For resume mode, the working directory is the workspace inside the existing sandbox
+		workingDir = filepath.Join(cfg.LocalPath, "workspace")
+		if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+			// Fallback to local path itself if workspace subdirectory doesn't exist
+			workingDir = cfg.LocalPath
+		}
 	} else {
 		// No repository - create empty sandbox workspace
 		workingDir = filepath.Join(sandboxRoot, "workspace")
 		if err := os.MkdirAll(workingDir, 0755); err != nil {
 			os.RemoveAll(sandboxRoot)
-			return "", "", "", "", &client.PodError{
+			return "", "", "", &client.PodError{
 				Code:    client.ErrCodeSandboxCreate,
 				Message: fmt.Sprintf("failed to create temp workspace: %v", err),
 			}
@@ -198,10 +202,10 @@ func (b *PodBuilder) setup(ctx context.Context) (string, string, string, string,
 	}
 	if err := b.createFiles(sandboxRoot, workingDir); err != nil {
 		os.RemoveAll(sandboxRoot)
-		return "", "", "", "", err
+		return "", "", "", err
 	}
 
-	return sandboxRoot, workingDir, worktreePath, branchName, nil
+	return sandboxRoot, workingDir, branchName, nil
 }
 
 // setupGitWorktree creates a git worktree for the pod.
@@ -258,11 +262,13 @@ func (b *PodBuilder) setupGitWorktree(ctx context.Context, sandboxRoot string, c
 		}
 	}
 
-	worktreePath, err := b.runner.workspace.CreateWorktreeWithOptions(
+	// Create git worktree inside sandbox directory: sandboxes/{podKey}/workspace
+	workspaceTarget := filepath.Join(sandboxRoot, "workspace")
+	workspacePath, err := b.runner.workspace.CreateWorktreeWithOptions(
 		ctx,
 		cfg.RepositoryUrl,
 		cfg.SourceBranch,
-		b.cmd.PodKey,
+		workspaceTarget,
 		opts...,
 	)
 	if err != nil {
@@ -276,7 +282,7 @@ func (b *PodBuilder) setupGitWorktree(ctx context.Context, sandboxRoot string, c
 		}
 		return "", "", &client.PodError{
 			Code:    errCode,
-			Message: fmt.Sprintf("failed to create worktree: %v", err),
+			Message: fmt.Sprintf("failed to create workspace: %v", err),
 			Details: map[string]string{
 				"repository": cfg.RepositoryUrl,
 				"branch":     cfg.SourceBranch,
@@ -291,11 +297,11 @@ func (b *PodBuilder) setupGitWorktree(ctx context.Context, sandboxRoot string, c
 	if branchName == "" {
 		branchName = "main"
 	}
-	return worktreePath, branchName, nil
+	return workspacePath, branchName, nil
 }
 
-// runPreparationScript executes the preparation script in the worktree.
-func (b *PodBuilder) runPreparationScript(ctx context.Context, cfg *runnerv1.SandboxConfig, worktreePath, branchName string) error {
+// runPreparationScript executes the preparation script in the workspace.
+func (b *PodBuilder) runPreparationScript(ctx context.Context, cfg *runnerv1.SandboxConfig, workspacePath, branchName string) error {
 	timeout := int(cfg.PreparationTimeout)
 	if timeout <= 0 {
 		timeout = 300 // Default 5 minutes
@@ -312,8 +318,7 @@ func (b *PodBuilder) runPreparationScript(ctx context.Context, cfg *runnerv1.San
 		PodID:            b.cmd.PodKey,
 		TicketIdentifier: cfg.TicketId,
 		BranchName:       branchName,
-		WorkingDir:       worktreePath,
-		WorktreeDir:      worktreePath,
+		WorkspaceDir:     workspacePath,
 	}
 
 	if err := preparer.Prepare(ctx, prepCtx); err != nil {

@@ -216,7 +216,7 @@ func TestCreatePodCommandStruct(t *testing.T) {
 		InitialPrompt:    "Start working",
 		PermissionMode:   "bypassPermissions",
 		TicketIdentifier: "TICKET-123",
-		WorktreeSuffix:   "v1",
+		PodSuffix:        "v1",
 		EnvVars:          map[string]string{"FOO": "bar"},
 		PreparationConfig: &PreparationConfig{
 			Script:  "npm ci",

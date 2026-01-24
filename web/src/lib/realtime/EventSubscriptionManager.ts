@@ -150,7 +150,8 @@ export class EventSubscriptionManager {
 
     this.ws.onerror = () => {
       // WebSocket error events don't contain useful info, log connection details instead
-      console.error("[EventSubscriptionManager] WebSocket error:", {
+      // Use warn instead of error to avoid Next.js dev mode error overlay
+      console.warn("[EventSubscriptionManager] WebSocket error:", {
         url: url,
         readyState: this.ws?.readyState,
         // Common causes: server not running, CORS, network issues

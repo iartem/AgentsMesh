@@ -33,9 +33,8 @@ type PreparationContext struct {
 	PodID            string            // Pod identifier
 	TicketIdentifier string            // Ticket identifier (e.g., "TBD-123")
 	BranchName       string            // Git branch name
-	WorkingDir       string            // Actual working directory (may be worktree path)
-	MainRepoDir      string            // Path to the main git repository
-	WorktreeDir      string            // Path to the worktree (empty if not using worktree)
+	WorkspaceDir     string            // Workspace directory path
+	MainRepoDir      string            // Path to the main git repository (for bare repo operations)
 	BaseEnvVars      map[string]string // Base environment variables (e.g., AI provider credentials)
 }
 
@@ -50,12 +49,9 @@ func (c *PreparationContext) GetEnvVars() map[string]string {
 	}
 
 	// Add workspace-specific variables
-	result["WORKING_DIR"] = c.WorkingDir
+	result["WORKSPACE_DIR"] = c.WorkspaceDir
 	if c.MainRepoDir != "" {
 		result["MAIN_REPO_DIR"] = c.MainRepoDir
-	}
-	if c.WorktreeDir != "" {
-		result["WORKTREE_DIR"] = c.WorktreeDir
 	}
 	if c.TicketIdentifier != "" {
 		result["TICKET_IDENTIFIER"] = c.TicketIdentifier
@@ -70,8 +66,8 @@ func (c *PreparationContext) GetEnvVars() map[string]string {
 // String returns a string representation for logging.
 func (c *PreparationContext) String() string {
 	return fmt.Sprintf(
-		"PreparationContext{PodID: %s, Ticket: %s, WorkingDir: %s}",
-		c.PodID, c.TicketIdentifier, c.WorkingDir,
+		"PreparationContext{PodID: %s, Ticket: %s, WorkspaceDir: %s}",
+		c.PodID, c.TicketIdentifier, c.WorkspaceDir,
 	)
 }
 
@@ -191,11 +187,11 @@ func (s *ScriptPreparationStep) Execute(ctx context.Context, prepCtx *Preparatio
 	defer cancel()
 
 	log.Info("Executing preparation script",
-		"pod_id", prepCtx.PodID, "working_dir", prepCtx.WorkingDir, "timeout", s.timeout.String())
+		"pod_id", prepCtx.PodID, "workspace_dir", prepCtx.WorkspaceDir, "timeout", s.timeout.String())
 
 	// Create command
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", s.script)
-	cmd.Dir = prepCtx.WorkingDir
+	cmd.Dir = prepCtx.WorkspaceDir
 	cmd.Env = s.buildEnv(prepCtx)
 
 	// Execute and capture output

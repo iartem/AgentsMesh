@@ -59,5 +59,18 @@ func (s *GRPCCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerI
 	return s.adapter.SendUnsubscribeTerminal(runnerID, podKey)
 }
 
+// SendQuerySandboxes sends a sandbox query command to a runner via gRPC.
+func (s *GRPCCommandSender) SendQuerySandboxes(runnerID int64, requestID string, podKeys []string) error {
+	return s.adapter.SendQuerySandboxes(runnerID, requestID, podKeys)
+}
+
+// IsConnected checks if a runner is connected.
+func (s *GRPCCommandSender) IsConnected(runnerID int64) bool {
+	return s.adapter.IsConnected(runnerID)
+}
+
 // Ensure GRPCCommandSender implements runner.RunnerCommandSender
 var _ runner.RunnerCommandSender = (*GRPCCommandSender)(nil)
+
+// Ensure GRPCCommandSender implements runner.SandboxQuerySender
+var _ runner.SandboxQuerySender = (*GRPCCommandSender)(nil)

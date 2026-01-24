@@ -28,6 +28,7 @@ message RunnerMessage {
     ErrorEvent error = 9;
     PodInitProgressEvent pod_init_progress = 10;
     RequestRelayTokenEvent request_relay_token = 11;
+    SandboxesStatusEvent sandboxes_status = 12;
   }
   int64 timestamp = 15;
 }
@@ -70,6 +71,8 @@ message PodInfo {
 message PodCreatedEvent {
   string pod_key = 1;
   int32 pid = 2;
+  string sandbox_path = 3;  // Sandbox 根目录路径（用于 Resume 功能）
+  string branch_name = 4;   // 当前分支名
 }
 
 // PodTerminatedEvent Pod 终止事件
@@ -128,6 +131,7 @@ message ServerMessage {
     TerminalRedrawCommand terminal_redraw = 7;
     SubscribeTerminalCommand subscribe_terminal = 8;
     UnsubscribeTerminalCommand unsubscribe_terminal = 9;
+    QuerySandboxesCommand query_sandboxes = 10;
   }
   int64 timestamp = 15;
 }
@@ -261,4 +265,39 @@ message RequestRelayTokenEvent {
   string pod_key = 1;
   string session_id = 2;     // 当前的 session ID
   string relay_url = 3;      // 当前的 Relay URL
+}
+
+// ==================== Sandbox 状态查询相关 ====================
+
+// QuerySandboxesCommand 查询指定 Pod 对应的 Sandbox 状态
+// Backend 发送此命令以检查 Sandbox 是否仍然存在，可用于判断是否可以 Resume
+message QuerySandboxesCommand {
+  string request_id = 1;           // 请求 ID，用于关联响应
+  repeated SandboxQuery queries = 2;
+}
+
+// SandboxQuery 单个 Sandbox 查询请求
+message SandboxQuery {
+  string pod_key = 1;              // Pod key 用于定位 Sandbox 目录
+}
+
+// SandboxesStatusEvent Sandbox 状态查询响应
+message SandboxesStatusEvent {
+  string request_id = 1;           // 对应 QuerySandboxesCommand.request_id
+  repeated SandboxStatus sandboxes = 2;
+}
+
+// SandboxStatus 单个 Sandbox 的状态信息
+message SandboxStatus {
+  string pod_key = 1;              // Pod key
+  bool exists = 2;                 // Sandbox 目录是否存在
+  string sandbox_path = 3;         // Sandbox 根目录路径
+  string repository_url = 4;       // 仓库 URL（从 git remote 获取）
+  string branch_name = 5;          // 当前分支名
+  string current_commit = 6;       // 当前 commit SHA
+  int64 size_bytes = 7;            // 目录大小（字节）
+  int64 last_modified = 8;         // 最后修改时间（Unix 时间戳）
+  bool has_uncommitted_changes = 9; // 是否有未提交的更改
+  bool can_resume = 10;            // 是否可以 resume（Sandbox 存在即可）
+  string error = 11;               // 查询错误信息（如有）
 }

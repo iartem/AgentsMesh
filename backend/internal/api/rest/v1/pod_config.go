@@ -82,6 +82,15 @@ func (h *PodHandler) buildPodCommand(c *gin.Context, req *CreatePodRequest, podK
 	// Add permission mode to config
 	configOverrides["permission_mode"] = permissionMode
 
+	// Handle sandbox_local_path for Resume mode (takes precedence over repository config)
+	localPath := ""
+	if path, ok := configOverrides["sandbox_local_path"].(string); ok && path != "" {
+		localPath = path
+		// When using local path (resume mode), don't clone repository
+		repositoryURL = ""
+		delete(configOverrides, "sandbox_local_path") // Remove from config overrides, handled separately
+	}
+
 	// Build the request for ConfigBuilder
 	buildReq := &agent.ConfigBuildRequest{
 		AgentTypeID:         *req.AgentTypeID,
@@ -96,6 +105,7 @@ func (h *PodHandler) buildPodCommand(c *gin.Context, req *CreatePodRequest, podK
 		TicketID:            ticketID,
 		PreparationScript:   preparationScript,
 		PreparationTimeout:  preparationTimeout,
+		LocalPath:           localPath, // For Resume mode
 		ConfigOverrides:     configOverrides,
 		InitialPrompt:       req.InitialPrompt,
 		PodKey:              podKey,

@@ -17,10 +17,12 @@
     "dismiss": "Dismiss",
     "back": "Back",
     "next": "Next",
+    "previous": "Previous",
     "submit": "Submit",
     "reset": "Reset",
     "optional": "optional",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "refresh": "Refresh"
   },
   "auth": {
     "login": "Login",
@@ -580,6 +582,19 @@
       "paused": "Paused",
       "terminated": "Terminated",
       "error": "Error"
+    }
+  },
+  "pods": {
+    "status": {
+      "initializing": "Initializing",
+      "running": "Running",
+      "paused": "Paused",
+      "disconnected": "Disconnected",
+      "orphaned": "Orphaned",
+      "completed": "Completed",
+      "terminated": "Terminated",
+      "error": "Error",
+      "failed": "Failed"
     }
   },
   "mesh": {
@@ -1504,6 +1519,7 @@
     "noTerminalsDescription": "Click on a pod in the sidebar to open its terminal, or create a new pod to get started.",
     "createNewPod": "Create New Pod",
     "podCreated": "Pod created! Waiting for it to start...",
+    "podOpened": "Pod opened",
     "filters": {
       "all": "All",
       "running": "Running",
@@ -1764,6 +1780,50 @@
       "cancel": "Cancel",
       "saving": "Saving...",
       "save": "Save Changes"
+    },
+    "detail": {
+      "notFound": "Runner not found",
+      "disabled": "Disabled",
+      "disable": "Disable",
+      "enable": "Enable",
+      "confirmDelete": "Are you sure you want to delete runner \"{nodeId}\"? This action cannot be undone.",
+      "confirmResume": "Resume a new pod from sandbox of \"{podKey}\"? This will create a new pod using the existing workspace.",
+      "resumeFailed": "Failed to resume pod. Please try again.",
+      "tabs": {
+        "overview": "Overview",
+        "pods": "Pods"
+      },
+      "basicInfo": "Basic Information",
+      "nodeId": "Node ID",
+      "description": "Description",
+      "version": "Version",
+      "lastHeartbeat": "Last Heartbeat",
+      "createdAt": "Created At",
+      "capacity": "Capacity",
+      "currentPods": "Current Pods",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "os": "Operating System",
+      "availableAgents": "Available Agents",
+      "allStatus": "All Status",
+      "refreshSandbox": "Refresh Sandbox Status",
+      "podKey": "Pod Key",
+      "status": "Status",
+      "sandbox": "Sandbox",
+      "branch": "Branch",
+      "actions": "Actions",
+      "canResume": "Can Resume",
+      "exists": "Exists",
+      "notExists": "Not Exists",
+      "active": "Active",
+      "noPods": "No pods found for this runner",
+      "showing": "Showing {from} to {to} of {total} pods",
+      "resume": "Resume",
+      "resumeTooltip": "Create a new pod using the existing sandbox workspace",
+      "resumeDialogTitle": "Resume Pod",
+      "resumeDialogDescription": "You are about to resume from the sandbox of \"{podKey}\".",
+      "resumeDialogInfo": "This will create a new Pod using the existing workspace, allowing the AI agent to continue from where it left off.",
+      "confirmResumeBtn": "Resume"
     }
   },
   "commandPalette": {

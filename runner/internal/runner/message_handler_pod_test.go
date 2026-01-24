@@ -457,7 +457,7 @@ func TestOnTerminatePodWithWorktree(t *testing.T) {
 	// Add pod with worktree
 	store.Put("worktree-pod", &Pod{
 		ID:           "worktree-pod",
-		WorktreePath: "/fake/worktree/path",
+		SandboxPath: "/fake/worktree/path",
 		Terminal:     nil,
 	})
 

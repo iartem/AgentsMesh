@@ -16,11 +16,13 @@
     "close": "关闭",
     "dismiss": "关闭",
     "back": "返回",
-    "next": "下一步",
+    "next": "下一页",
+    "previous": "上一页",
     "submit": "提交",
     "reset": "重置",
     "optional": "可选",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "refresh": "刷新"
   },
   "auth": {
     "login": "登录",
@@ -580,6 +582,19 @@
       "paused": "已暂停",
       "terminated": "已终止",
       "error": "错误"
+    }
+  },
+  "pods": {
+    "status": {
+      "initializing": "初始化中",
+      "running": "运行中",
+      "paused": "已暂停",
+      "disconnected": "已断开",
+      "orphaned": "孤立",
+      "completed": "已完成",
+      "terminated": "已终止",
+      "error": "错误",
+      "failed": "失败"
     }
   },
   "mesh": {
@@ -1504,6 +1519,7 @@
     "noTerminalsDescription": "点击侧边栏中的 Pod 打开其终端，或创建新的 Pod 开始使用。",
     "createNewPod": "创建新 Pod",
     "podCreated": "Pod 已创建！等待启动中...",
+    "podOpened": "Pod 已打开",
     "filters": {
       "all": "全部",
       "running": "运行中",
@@ -1764,6 +1780,50 @@
       "cancel": "取消",
       "saving": "保存中...",
       "save": "保存更改"
+    },
+    "detail": {
+      "notFound": "Runner 未找到",
+      "disabled": "已禁用",
+      "disable": "禁用",
+      "enable": "启用",
+      "confirmDelete": "确定要删除 Runner「{nodeId}」吗？此操作无法撤销。",
+      "confirmResume": "要从「{podKey}」的 Sandbox 恢复一个新 Pod 吗？这将使用现有工作区创建新 Pod。",
+      "resumeFailed": "恢复 Pod 失败，请重试。",
+      "tabs": {
+        "overview": "概览",
+        "pods": "Pod 列表"
+      },
+      "basicInfo": "基本信息",
+      "nodeId": "节点 ID",
+      "description": "描述",
+      "version": "版本",
+      "lastHeartbeat": "最后心跳",
+      "createdAt": "创建时间",
+      "capacity": "容量",
+      "currentPods": "当前 Pod 数",
+      "cpu": "CPU",
+      "memory": "内存",
+      "os": "操作系统",
+      "availableAgents": "可用智能体",
+      "allStatus": "全部状态",
+      "refreshSandbox": "刷新 Sandbox 状态",
+      "podKey": "Pod Key",
+      "status": "状态",
+      "sandbox": "Sandbox",
+      "branch": "分支",
+      "actions": "操作",
+      "canResume": "可恢复",
+      "exists": "存在",
+      "notExists": "不存在",
+      "active": "活跃",
+      "noPods": "此 Runner 暂无 Pod",
+      "showing": "显示 {from} 到 {to}，共 {total} 个 Pod",
+      "resume": "恢复",
+      "resumeTooltip": "使用现有 Sandbox 工作区创建新 Pod",
+      "resumeDialogTitle": "恢复 Pod",
+      "resumeDialogDescription": "即将从「{podKey}」的 Sandbox 恢复。",
+      "resumeDialogInfo": "这将使用现有工作区创建新 Pod，让 AI 智能体可以从上次中断的地方继续工作。",
+      "confirmResumeBtn": "确认恢复"
     }
   },
   "commandPalette": {

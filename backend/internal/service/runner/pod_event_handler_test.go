@@ -42,7 +42,7 @@ func setupPodEventHandlerDeps(t *testing.T) (*PodCoordinator, *RunnerConnectionM
 			agent_status TEXT,
 			pty_pid INTEGER,
 			branch_name TEXT,
-			worktree_path TEXT,
+			sandbox_path TEXT,
 			started_at DATETIME,
 			finished_at DATETIME,
 			last_activity DATETIME,
@@ -198,20 +198,22 @@ func TestHandlePodCreated(t *testing.T) {
 		callbackStatus = status
 	})
 
-	// Handle pod created event (using Proto type)
-	// Note: BranchName and WorktreePath not in Proto, testing basic fields only
+	// Handle pod created event (using Proto type with sandbox_path and branch_name)
 	data := &runnerv1.PodCreatedEvent{
-		PodKey: "create-pod-1",
-		Pid:    12345,
+		PodKey:      "create-pod-1",
+		Pid:         12345,
+		SandboxPath: "/workspace/sandboxes/create-pod-1",
+		BranchName:  "feature/test",
 	}
 
 	pc.handlePodCreated(r.ID, data)
 
-	// Verify pod was updated
+	// Verify pod was updated including sandbox_path and branch_name
 	var status string
 	var pid int
-	pc.db.Raw(`SELECT status, pty_pid FROM pods WHERE pod_key = ?`, "create-pod-1").
-		Row().Scan(&status, &pid)
+	var sandboxPath, branchName *string
+	pc.db.Raw(`SELECT status, pty_pid, sandbox_path, branch_name FROM pods WHERE pod_key = ?`, "create-pod-1").
+		Row().Scan(&status, &pid, &sandboxPath, &branchName)
 
 	if status != agentpod.StatusRunning {
 		t.Errorf("status: got %q, want %q", status, agentpod.StatusRunning)
@@ -219,7 +221,12 @@ func TestHandlePodCreated(t *testing.T) {
 	if pid != 12345 {
 		t.Errorf("pid: got %d, want 12345", pid)
 	}
-	// Note: BranchName and WorktreePath not in Proto PodCreatedEvent
+	if sandboxPath == nil || *sandboxPath != "/workspace/sandboxes/create-pod-1" {
+		t.Errorf("sandbox_path: got %v, want %q", sandboxPath, "/workspace/sandboxes/create-pod-1")
+	}
+	if branchName == nil || *branchName != "feature/test" {
+		t.Errorf("branch_name: got %v, want %q", branchName, "feature/test")
+	}
 
 	// Verify pod was registered
 	if !tr.IsPodRegistered("create-pod-1") {

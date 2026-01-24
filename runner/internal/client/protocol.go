@@ -71,6 +71,27 @@ type UnsubscribeTerminalRequest struct {
 	PodKey string `json:"pod_key"`
 }
 
+// QuerySandboxesRequest is sent to query sandbox status for specified pods.
+type QuerySandboxesRequest struct {
+	RequestID string                   `json:"request_id"`
+	Queries   []*runnerv1.SandboxQuery `json:"queries"`
+}
+
+// SandboxStatusInfo contains sandbox status information.
+type SandboxStatusInfo struct {
+	PodKey                string `json:"pod_key"`
+	Exists                bool   `json:"exists"`
+	SandboxPath           string `json:"sandbox_path"`
+	RepositoryURL         string `json:"repository_url"`
+	BranchName            string `json:"branch_name"`
+	CurrentCommit         string `json:"current_commit"`
+	SizeBytes             int64  `json:"size_bytes"`
+	LastModified          int64  `json:"last_modified"`
+	HasUncommittedChanges bool   `json:"has_uncommitted_changes"`
+	CanResume             bool   `json:"can_resume"`
+	Error                 string `json:"error,omitempty"`
+}
+
 // ==================== Message Handler Interface ====================
 
 // MessageHandler handles incoming messages from server.
@@ -93,4 +114,8 @@ type MessageHandler interface {
 	// This notifies the Runner that all browsers have disconnected.
 	// The Runner should disconnect from the Relay.
 	OnUnsubscribeTerminal(req UnsubscribeTerminalRequest) error
+
+	// OnQuerySandboxes handles sandbox status query command from server.
+	// Returns sandbox status for specified pod keys.
+	OnQuerySandboxes(req QuerySandboxesRequest) error
 }

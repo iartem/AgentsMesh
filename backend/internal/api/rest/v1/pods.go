@@ -2,11 +2,15 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
+
 	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
@@ -190,8 +194,8 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 
 // CreatePodRequest represents pod creation request
 type CreatePodRequest struct {
-	RunnerID          int64   `json:"runner_id" binding:"required"`
-	AgentTypeID       *int64  `json:"agent_type_id" binding:"required"` // Required for new protocol
+	RunnerID          int64   `json:"runner_id"` // Required for new pods, optional when resuming (inherited from source)
+	AgentTypeID       *int64  `json:"agent_type_id"` // Required unless resuming (then inherited from source pod)
 	CustomAgentTypeID *int64  `json:"custom_agent_type_id"`
 	RepositoryID      *int64  `json:"repository_id"`
 	RepositoryURL     *string `json:"repository_url"`      // Direct repository URL (takes precedence over repository_id)
@@ -212,10 +216,15 @@ type CreatePodRequest struct {
 	// Terminal size (from browser xterm.js)
 	Cols int32 `json:"cols"` // Terminal columns (width)
 	Rows int32 `json:"rows"` // Terminal rows (height)
+
+	// Resume related fields
+	SourcePodKey       string `json:"source_pod_key"`        // Pod key to resume from (enables resume mode)
+	ResumeAgentSession *bool  `json:"resume_agent_session"`  // Whether to restore agent session (default: true when resuming)
 }
 
 // CreatePod creates a new pod
 // POST /api/v1/organizations/:slug/pods
+// Supports Resume mode when source_pod_key is provided
 func (h *PodHandler) CreatePod(c *gin.Context) {
 	var req CreatePodRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -224,10 +233,143 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	ctx := c.Request.Context()
+
+	// Handle Resume mode
+	var sourcePod *podDomain.Pod
+	var sessionID string
+	isResumeMode := req.SourcePodKey != ""
+
+	if isResumeMode {
+		// Get source pod for resume
+		var err error
+		sourcePod, err = h.podService.GetPod(ctx, req.SourcePodKey)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Source pod not found for resume",
+				"code":  "SOURCE_POD_NOT_FOUND",
+			})
+			return
+		}
+
+		// Verify source pod belongs to same organization
+		if sourcePod.OrganizationID != tenant.OrganizationID {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Source pod belongs to different organization",
+				"code":  "SOURCE_POD_ACCESS_DENIED",
+			})
+			return
+		}
+
+		// Verify source pod is terminated (cannot resume from running pod)
+		// Note: orphaned status is also allowed - sandbox may still exist even if pod process terminated unexpectedly
+		if sourcePod.Status != podDomain.StatusTerminated &&
+			sourcePod.Status != podDomain.StatusCompleted &&
+			sourcePod.Status != podDomain.StatusOrphaned {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Can only resume from terminated, completed, or orphaned pods",
+				"code":  "SOURCE_POD_NOT_TERMINATED",
+			})
+			return
+		}
+
+		// Check if source pod has already been resumed by another active pod
+		// This prevents multiple pods from using the same sandbox simultaneously
+		existingResumePod, err := h.podService.GetActivePodBySourcePodKey(ctx, req.SourcePodKey)
+		if err == nil && existingResumePod != nil {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "Source pod has already been resumed by another active pod",
+				"code":  "SOURCE_POD_ALREADY_RESUMED",
+				"details": gin.H{
+					"existing_pod_key": existingResumePod.PodKey,
+				},
+			})
+			return
+		}
+
+		// Inherit runner_id from source pod if not provided
+		// (Sandbox is local to runner, so resume must use same runner)
+		if req.RunnerID == 0 {
+			req.RunnerID = sourcePod.RunnerID
+		} else if sourcePod.RunnerID != req.RunnerID {
+			// If user explicitly specified different runner, reject
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Resume requires same runner as source pod (Sandbox is local to runner)",
+				"code":  "RESUME_RUNNER_MISMATCH",
+			})
+			return
+		}
+
+		// Inherit configuration from source pod if not explicitly provided
+		if req.AgentTypeID == nil {
+			req.AgentTypeID = sourcePod.AgentTypeID
+		}
+		if req.CustomAgentTypeID == nil {
+			req.CustomAgentTypeID = sourcePod.CustomAgentTypeID
+		}
+		if req.RepositoryID == nil {
+			req.RepositoryID = sourcePod.RepositoryID
+		}
+		if req.TicketID == nil {
+			req.TicketID = sourcePod.TicketID
+		}
+		if req.BranchName == nil {
+			req.BranchName = sourcePod.BranchName
+		}
+		// Note: CredentialProfileID is intentionally NOT inherited
+		// Users may want to use different credentials when resuming
+
+		// Reuse session ID from source pod, or generate new one if not set
+		if sourcePod.SessionID != nil && *sourcePod.SessionID != "" {
+			sessionID = *sourcePod.SessionID
+		} else {
+			sessionID = generateSessionID()
+		}
+
+		// Set resume configuration in config overrides
+		resumeAgentSession := req.ResumeAgentSession == nil || *req.ResumeAgentSession
+		if resumeAgentSession {
+			if req.ConfigOverrides == nil {
+				req.ConfigOverrides = make(map[string]interface{})
+			}
+			req.ConfigOverrides["resume_enabled"] = true
+			req.ConfigOverrides["resume_session"] = sessionID
+		}
+	} else {
+		// Normal mode: require runner_id and agent_type_id
+		if req.RunnerID == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "runner_id is required for new pods",
+				"code":  "MISSING_RUNNER_ID",
+			})
+			return
+		}
+		if req.AgentTypeID == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "agent_type_id is required for new pods",
+				"code":  "MISSING_AGENT_TYPE_ID",
+			})
+			return
+		}
+		// Generate new session ID for normal creation
+		sessionID = generateSessionID()
+	}
+
+	// Add session_id to config overrides for NEW sessions only
+	// When resuming, --resume handles the session, so don't add --session-id
+	// (Claude Code doesn't allow --session-id and --resume together without --fork-session)
+	if req.ConfigOverrides == nil {
+		req.ConfigOverrides = make(map[string]interface{})
+	}
+	if !isResumeMode {
+		// Only for new pods: add session_id so command_template can use --session-id
+		req.ConfigOverrides["session_id"] = sessionID
+	}
+	// Note: For resume mode, resume_enabled and resume_session are already set above
 
 	// Check concurrent pod quota before creation
 	if h.billingService != nil {
-		if err := h.billingService.CheckQuota(c.Request.Context(), tenant.OrganizationID, "concurrent_pods", 1); err != nil {
+		if err := h.billingService.CheckQuota(ctx, tenant.OrganizationID, "concurrent_pods", 1); err != nil {
 			if err == ErrQuotaExceeded {
 				c.JSON(http.StatusPaymentRequired, gin.H{
 					"error": "Concurrent pod quota exceeded. Please upgrade your plan or terminate existing pods.",
@@ -248,7 +390,7 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 	}
 
 	// Create pod record in database
-	pod, err := h.podService.CreatePod(c.Request.Context(), &agentpod.CreatePodRequest{
+	pod, err := h.podService.CreatePod(ctx, &agentpod.CreatePodRequest{
 		OrganizationID:    tenant.OrganizationID,
 		RunnerID:          req.RunnerID,
 		AgentTypeID:       req.AgentTypeID,
@@ -258,8 +400,18 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 		CreatedByID:       tenant.UserID,
 		InitialPrompt:     req.InitialPrompt,
 		BranchName:        req.BranchName,
+		SessionID:         sessionID,
+		SourcePodKey:      req.SourcePodKey,
 	})
 	if err != nil {
+		// Check for concurrent resume conflict (database unique constraint violation)
+		if errors.Is(err, ErrSandboxAlreadyResumed) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "Sandbox has already been resumed by another active pod",
+				"code":  "SANDBOX_ALREADY_RESUMED",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pod"})
 		return
 	}
@@ -274,6 +426,15 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 			permissionMode = *pod.PermissionMode
 		}
 
+		// For resume mode, set local_path to source pod's sandbox path
+		if isResumeMode && sourcePod.SandboxPath != nil {
+			if req.ConfigOverrides == nil {
+				req.ConfigOverrides = make(map[string]interface{})
+			}
+			// This will be handled in buildPodCommand to set SandboxConfig.local_path
+			req.ConfigOverrides["sandbox_local_path"] = *sourcePod.SandboxPath
+		}
+
 		// Build pod command using ConfigBuilder (returns Proto type directly)
 		podCmd, err := h.buildPodCommand(c, &req, pod.PodKey, permissionMode)
 		if err != nil {
@@ -285,9 +446,9 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 			return
 		}
 
-		log.Printf("[pods] Sending create_pod to runner %d for pod %s", req.RunnerID, pod.PodKey)
+		log.Printf("[pods] Sending create_pod to runner %d for pod %s (resume=%v)", req.RunnerID, pod.PodKey, isResumeMode)
 
-		if err := h.podCoordinator.CreatePod(c.Request.Context(), req.RunnerID, podCmd); err != nil {
+		if err := h.podCoordinator.CreatePod(ctx, req.RunnerID, podCmd); err != nil {
 			// Log the error but don't fail - pod is created, runner might be offline
 			log.Printf("[pods] Failed to send create_pod: %v", err)
 			c.JSON(http.StatusCreated, gin.H{
@@ -302,6 +463,11 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"pod": pod})
+}
+
+// generateSessionID generates a new UUID v4 for agent session
+func generateSessionID() string {
+	return uuid.New().String()
 }
 
 // GetPod returns pod by key

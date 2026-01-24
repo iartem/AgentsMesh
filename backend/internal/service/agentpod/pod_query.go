@@ -151,3 +151,56 @@ func (s *PodService) ListByTicket(ctx context.Context, ticketID int64) ([]*agent
 	}
 	return pods, nil
 }
+
+// ListPodsByRunner returns pods for a runner with pagination and optional status filter
+func (s *PodService) ListPodsByRunner(ctx context.Context, runnerID int64, status string, limit, offset int) ([]*agentpod.Pod, int64, error) {
+	query := s.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("runner_id = ?", runnerID)
+
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var pods []*agentpod.Pod
+	if err := query.
+		Preload("AgentType").
+		Preload("Ticket").
+		Preload("CreatedBy").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&pods).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return pods, total, nil
+}
+
+// GetActivePodBySourcePodKey returns an active pod that was resumed from the given source pod key
+// This is used to prevent multiple pods from resuming the same sandbox simultaneously
+// Returns nil if no active pod is found with the given source_pod_key
+func (s *PodService) GetActivePodBySourcePodKey(ctx context.Context, sourcePodKey string) (*agentpod.Pod, error) {
+	var pod agentpod.Pod
+	// Query for active pods that have the given source_pod_key
+	// Active statuses include: initializing, running, paused, disconnected
+	// Note: disconnected means user closed browser but pod is still running on runner
+	err := s.db.WithContext(ctx).
+		Where("source_pod_key = ?", sourcePodKey).
+		Where("status IN ?", []string{
+			agentpod.StatusInitializing,
+			agentpod.StatusRunning,
+			agentpod.StatusPaused,
+			agentpod.StatusDisconnected,
+		}).
+		First(&pod).Error
+
+	if err != nil {
+		// Not found is expected when no active pod exists
+		return nil, err
+	}
+	return &pod, nil
+}
