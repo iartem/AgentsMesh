@@ -522,12 +522,9 @@ export default function RunnerDetailPage() {
                   return (
                     <tr key={pod.pod_key} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-4 py-3">
-                        <Link
-                          href={`../../pods/${pod.pod_key}`}
-                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                        >
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {pod.pod_key}
-                        </Link>
+                        </span>
                         {pod.source_pod_key && (
                           <span className="ml-2 text-xs text-gray-400">
                             (resumed from {pod.source_pod_key.slice(0, 8)}...)
