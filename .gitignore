@@ -51,6 +51,7 @@ backend/bin/
 backend/tmp/
 backend/vendor/
 backend/server
+backend/coverage.html
 
 # =========================
 # Runner (Go)

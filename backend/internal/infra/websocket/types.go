@@ -28,7 +28,6 @@ type MessageType string
 
 const (
 	MessageTypeTerminalInput  MessageType = "terminal:input"
-	MessageTypeTerminalOutput MessageType = "terminal:output"
 	MessageTypeTerminalResize MessageType = "terminal:resize"
 	MessageTypePodStatus      MessageType = "pod:status"
 	MessageTypeAgentStatus    MessageType = "agent:status"
@@ -36,6 +35,7 @@ const (
 	MessageTypePing           MessageType = "ping"
 	MessageTypePong           MessageType = "pong"
 	MessageTypeError          MessageType = "error"
+	// NOTE: terminal:output is NOT here - terminal output is streamed via Relay, not WebSocket
 )
 
 // ========== Message Structures ==========
@@ -51,11 +51,6 @@ type Message struct {
 
 // TerminalInputData represents terminal input
 type TerminalInputData struct {
-	Data string `json:"data"`
-}
-
-// TerminalOutputData represents terminal output
-type TerminalOutputData struct {
 	Data string `json:"data"`
 }
 
