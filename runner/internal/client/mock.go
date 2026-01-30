@@ -342,5 +342,41 @@ func (m *MockConnection) SendOSCTitle(podKey, title string) error {
 	return nil
 }
 
+// SendMessage records a raw RunnerMessage.
+func (m *MockConnection) SendMessage(msg *runnerv1.RunnerMessage) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.SendErr != nil {
+		return m.SendErr
+	}
+	m.Events = append(m.Events, EventCall{
+		Type: "raw_message",
+		Data: msg,
+	})
+	return nil
+}
+
+// SimulateCreateAutopilot simulates server sending a create_autopilot message.
+func (m *MockConnection) SimulateCreateAutopilot(cmd *runnerv1.CreateAutopilotCommand) error {
+	m.mu.Lock()
+	handler := m.handler
+	m.mu.Unlock()
+	if handler != nil {
+		return handler.OnCreateAutopilot(cmd)
+	}
+	return nil
+}
+
+// SimulateAutopilotControl simulates server sending an autopilot_control message.
+func (m *MockConnection) SimulateAutopilotControl(cmd *runnerv1.AutopilotControlCommand) error {
+	m.mu.Lock()
+	handler := m.handler
+	m.mu.Unlock()
+	if handler != nil {
+		return handler.OnAutopilotControl(cmd)
+	}
+	return nil
+}
+
 // Ensure MockConnection implements Connection interface
 var _ Connection = (*MockConnection)(nil)

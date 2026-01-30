@@ -1,0 +1,147 @@
+id: TC-AUTOPILOT-001
+name: AutopilotController API CRUD 操作
+description: 验证 AutopilotController 的创建、查询、列表 API 功能
+priority: high
+module: autopilot
+
+preconditions:
+  - 开发环境已启动
+  - 用户已登录
+  - 至少有一个 Runner 在线
+  - 至少有一个 Pod 存在
+
+steps:
+  - id: step-1
+    action: 登录并获取 token
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/auth/login
+        headers:
+          Content-Type: application/json
+        body:
+          email: dev@agentsmesh.local
+          password: devpass123
+      expected:
+        status: 200
+        body:
+          token: not_empty
+      save:
+        access_token: body.token
+
+  - id: step-2
+    action: 获取可用 Runner 列表
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/runners/available
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+      save:
+        runner_id: body.runners[0].id
+
+  - id: step-3
+    action: 创建 Pod 作为 AutopilotController 的目标
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/orgs/dev-org/pods
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          runner_id: "{runner_id}"
+          agent_type: "claude"
+          initial_prompt: "AutopilotController E2E Test"
+      expected:
+        status: 201
+        body:
+          pod:
+            pod_key: not_empty
+      save:
+        pod_key: body.pod.pod_key
+
+  - id: step-4
+    action: 创建 AutopilotController
+    verification:
+      type: api
+      request:
+        method: POST
+        url: /api/v1/orgs/dev-org/autopilot-controllers
+        headers:
+          Authorization: Bearer {access_token}
+          Content-Type: application/json
+        body:
+          pod_key: "{pod_key}"
+          initial_prompt: "E2E Test Task: List files in current directory"
+          max_iterations: 5
+          no_progress_threshold: 3
+          same_error_threshold: 3
+      expected:
+        status: 201
+        body:
+          autopilot_controller_key: not_empty
+          pod_key: "{pod_key}"
+          phase: initializing
+          max_iterations: 5
+      save:
+        autopilot_controller_key: body.autopilot_controller_key
+
+  - id: step-5
+    action: 获取 AutopilotController 详情
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/autopilot-controllers/{autopilot_controller_key}
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          autopilot_controller_key: "{autopilot_controller_key}"
+          pod_key: "{pod_key}"
+
+  - id: step-6
+    action: 列出所有 AutopilotController
+    verification:
+      type: api
+      request:
+        method: GET
+        url: /api/v1/orgs/dev-org/autopilot-controllers
+        headers:
+          Authorization: Bearer {access_token}
+      expected:
+        status: 200
+        body:
+          length: gte(1)
+
+  - id: step-7
+    action: 验证数据库中 AutopilotController 已创建
+    verification:
+      type: database
+      query: |
+        SELECT autopilot_controller_key, pod_key, phase, max_iterations
+        FROM autopilot_controllers
+        WHERE autopilot_controller_key = '{autopilot_controller_key}'
+      expected:
+        autopilot_controller_key: "{autopilot_controller_key}"
+        pod_key: "{pod_key}"
+        max_iterations: 5
+
+cleanup:
+  - api:
+      method: POST
+      url: /api/v1/orgs/dev-org/autopilot-controllers/{autopilot_controller_key}/stop
+      headers:
+        Authorization: Bearer {access_token}
+  - api:
+      method: POST
+      url: /api/v1/orgs/dev-org/pods/{pod_key}/terminate
+      headers:
+        Authorization: Bearer {access_token}

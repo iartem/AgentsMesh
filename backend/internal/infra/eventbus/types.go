@@ -43,6 +43,13 @@ const (
 	EventRunnerOnline  EventType = "runner:online"
 	EventRunnerOffline EventType = "runner:offline"
 	EventRunnerUpdated EventType = "runner:updated"
+
+	// AutopilotController events
+	EventAutopilotStatusChanged EventType = "autopilot:status_changed"
+	EventAutopilotIteration     EventType = "autopilot:iteration"
+	EventAutopilotCreated       EventType = "autopilot:created"
+	EventAutopilotTerminated    EventType = "autopilot:terminated"
+	EventAutopilotThinking      EventType = "autopilot:thinking"
 )
 
 // ===== Notification Events (Category: notification) =====
@@ -161,4 +168,80 @@ type PodInitProgressData struct {
 	Phase    string `json:"phase"`    // pending, cloning, preparing, starting_pty, ready
 	Progress int    `json:"progress"` // 0-100
 	Message  string `json:"message"`  // Human-readable progress message
+}
+
+// AutopilotStatusChangedData represents the payload for AutopilotController status change events
+type AutopilotStatusChangedData struct {
+	AutopilotControllerKey string `json:"autopilot_controller_key"`
+	PodKey                 string `json:"pod_key"`
+	Phase                  string `json:"phase"`
+	CurrentIteration       int32  `json:"current_iteration"`
+	MaxIterations          int32  `json:"max_iterations"`
+	CircuitBreakerState    string `json:"circuit_breaker_state"`
+	CircuitBreakerReason   string `json:"circuit_breaker_reason,omitempty"`
+	UserTakeover           bool   `json:"user_takeover"`
+}
+
+// AutopilotIterationData represents the payload for AutopilotController iteration events
+type AutopilotIterationData struct {
+	AutopilotControllerKey string   `json:"autopilot_controller_key"`
+	Iteration              int32    `json:"iteration"`
+	Phase                  string   `json:"phase"`
+	Summary                string   `json:"summary,omitempty"`
+	FilesChanged           []string `json:"files_changed,omitempty"`
+	DurationMs             int64    `json:"duration_ms,omitempty"`
+}
+
+// AutopilotCreatedData represents the payload for AutopilotController created events
+type AutopilotCreatedData struct {
+	AutopilotControllerKey string `json:"autopilot_controller_key"`
+	PodKey                 string `json:"pod_key"`
+}
+
+// AutopilotTerminatedData represents the payload for AutopilotController terminated events
+type AutopilotTerminatedData struct {
+	AutopilotControllerKey string `json:"autopilot_controller_key"`
+	Reason                 string `json:"reason,omitempty"`
+}
+
+// AutopilotThinkingData represents the payload for AutopilotController thinking events
+// Exposes the Control Agent's decision-making process to the user
+type AutopilotThinkingData struct {
+	AutopilotControllerKey string                  `json:"autopilot_controller_key"`
+	Iteration              int32                   `json:"iteration"`
+	DecisionType           string                  `json:"decision_type"` // continue, completed, need_help, give_up
+	Reasoning              string                  `json:"reasoning"`
+	Confidence             float64                 `json:"confidence"`
+	Action                 *AutopilotActionData    `json:"action,omitempty"`
+	Progress               *AutopilotProgressData  `json:"progress,omitempty"`
+	HelpRequest            *AutopilotHelpRequestData `json:"help_request,omitempty"`
+}
+
+// AutopilotActionData describes the action taken by Control Agent
+type AutopilotActionData struct {
+	Type    string `json:"type"`    // observe, send_input, wait, none
+	Content string `json:"content"` // Action content
+	Reason  string `json:"reason"`  // Action reason
+}
+
+// AutopilotProgressData describes task progress
+type AutopilotProgressData struct {
+	Summary        string   `json:"summary"`
+	CompletedSteps []string `json:"completed_steps,omitempty"`
+	RemainingSteps []string `json:"remaining_steps,omitempty"`
+	Percent        int32    `json:"percent"`
+}
+
+// AutopilotHelpRequestData describes help request details
+type AutopilotHelpRequestData struct {
+	Reason          string                       `json:"reason"`
+	Context         string                       `json:"context"`
+	TerminalExcerpt string                       `json:"terminal_excerpt,omitempty"`
+	Suggestions     []AutopilotHelpSuggestionData `json:"suggestions,omitempty"`
+}
+
+// AutopilotHelpSuggestionData describes a help request suggestion
+type AutopilotHelpSuggestionData struct {
+	Action string `json:"action"`
+	Label  string `json:"label"`
 }

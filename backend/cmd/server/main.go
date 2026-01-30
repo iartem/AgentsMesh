@@ -204,6 +204,7 @@ func main() {
 		PodCoordinator:     podCoordinator,
 		TerminalRouter:     terminalRouter,
 		Pod:                services.pod,
+		Autopilot:          services.autopilot,
 		Channel:            services.channel,
 		Binding:            services.binding,
 		Ticket:             services.ticket,
@@ -253,6 +254,7 @@ type serviceContainer struct {
 	repository         *repository.Service
 	runner             *runner.Service
 	pod                *agentpod.PodService
+	autopilot          *agentpod.AutopilotControllerService
 	channel            *channel.Service
 	ticket             *ticket.Service
 	billing            *billing.Service
@@ -288,6 +290,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	billingSvc := billing.NewServiceWithConfig(db, cfg)
 	runnerSvc := runner.NewService(db, billingSvc)
 	podSvc := agentpod.NewPodService(db)
+	autopilotSvc := agentpod.NewAutopilotControllerService(db)
 	channelSvc := channel.NewService(db)
 	ticketSvc := ticket.NewService(db)
 	bindingSvc := binding.NewService(db, podSvc)
@@ -360,6 +363,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		repository:         repoSvc,
 		runner:             runnerSvc,
 		pod:                podSvc,
+		autopilot:          autopilotSvc,
 		channel:            channelSvc,
 		ticket:             ticketSvc,
 		billing:            billingSvc,

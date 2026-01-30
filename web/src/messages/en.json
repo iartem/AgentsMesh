@@ -1424,6 +1424,7 @@
       "problems": "Problems",
       "channels": "Channels",
       "activity": "Activity",
+      "autopilot": "Autopilot",
       "noOutput": "No output yet",
       "noProblems": "No problems detected",
       "noChannels": "No active channels",

@@ -105,3 +105,31 @@ func (cm *RunnerConnectionManager) GetHeartbeatCallback() func(runnerID int64, d
 func (cm *RunnerConnectionManager) GetDisconnectCallback() func(runnerID int64) {
 	return cm.onDisconnect
 }
+
+// ==================== AutopilotController Callback Setters ====================
+
+// SetAutopilotStatusCallback sets the AutopilotController status callback (Proto type)
+func (cm *RunnerConnectionManager) SetAutopilotStatusCallback(fn func(runnerID int64, data *runnerv1.AutopilotStatusEvent)) {
+	cm.onAutopilotStatus = fn
+}
+
+// SetAutopilotIterationCallback sets the AutopilotController iteration callback (Proto type)
+func (cm *RunnerConnectionManager) SetAutopilotIterationCallback(fn func(runnerID int64, data *runnerv1.AutopilotIterationEvent)) {
+	cm.onAutopilotIteration = fn
+}
+
+// SetAutopilotCreatedCallback sets the AutopilotController created callback (Proto type)
+func (cm *RunnerConnectionManager) SetAutopilotCreatedCallback(fn func(runnerID int64, data *runnerv1.AutopilotCreatedEvent)) {
+	cm.onAutopilotCreated = fn
+}
+
+// SetAutopilotTerminatedCallback sets the AutopilotController terminated callback (Proto type)
+func (cm *RunnerConnectionManager) SetAutopilotTerminatedCallback(fn func(runnerID int64, data *runnerv1.AutopilotTerminatedEvent)) {
+	cm.onAutopilotTerminated = fn
+}
+
+// SetAutopilotThinkingCallback sets the AutopilotController thinking callback (Proto type)
+// Called when Control Agent reports its decision-making process
+func (cm *RunnerConnectionManager) SetAutopilotThinkingCallback(fn func(runnerID int64, data *runnerv1.AutopilotThinkingEvent)) {
+	cm.onAutopilotThinking = fn
+}

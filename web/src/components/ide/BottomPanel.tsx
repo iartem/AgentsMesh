@@ -25,7 +25,10 @@ import {
   ArrowLeft,
   Hash,
   Users,
+  Bot,
 } from "lucide-react";
+import { AutopilotPanelContent } from "@/components/autopilot";
+import { useAutopilotStore } from "@/stores/autopilot";
 
 interface BottomPanelProps {
   className?: string;
@@ -34,9 +37,10 @@ interface BottomPanelProps {
 const TAB_ICONS: Record<BottomPanelTab, React.ReactNode> = {
   channels: <MessageSquare className="w-3.5 h-3.5" />,
   activity: <Activity className="w-3.5 h-3.5" />,
+  autopilot: <Bot className="w-3.5 h-3.5" />,
 };
 
-const TAB_IDS: BottomPanelTab[] = ["channels", "activity"];
+const TAB_IDS: BottomPanelTab[] = ["channels", "activity", "autopilot"];
 
 export function BottomPanel({ className }: BottomPanelProps) {
   const t = useTranslations();
@@ -95,6 +99,10 @@ export function BottomPanel({ className }: BottomPanelProps) {
     const pane = panes.find((p) => p.id === activePane);
     return pane?.podKey ?? null;
   }, [activePane, panes]);
+
+  // Get autopilot status for the selected pod
+  const { getAutopilotControllerByPodKey } = useAutopilotStore();
+  const activeAutopilot = selectedPodKey ? getAutopilotControllerByPodKey(selectedPodKey) : undefined;
 
   // Get channels and bindings for selected pod
   const podChannels = useMemo(() => {
@@ -446,10 +454,12 @@ export function BottomPanel({ className }: BottomPanelProps) {
           <button
             key={tabId}
             className={cn(
-              "flex items-center gap-1.5 px-2 py-1 text-xs rounded hover:bg-muted",
+              "flex items-center gap-1.5 px-2 py-1 text-xs rounded hover:bg-muted relative",
               bottomPanelTab === tabId
                 ? "text-foreground"
-                : "text-muted-foreground"
+                : "text-muted-foreground",
+              // Highlight autopilot tab when active
+              tabId === "autopilot" && activeAutopilot && "text-green-500"
             )}
             onClick={() => {
               setBottomPanelTab(tabId);
@@ -462,6 +472,13 @@ export function BottomPanel({ className }: BottomPanelProps) {
           >
             {TAB_ICONS[tabId]}
             <span>{t(`ide.bottomPanel.${tabId}`)}</span>
+            {/* Active indicator for autopilot */}
+            {tabId === "autopilot" && activeAutopilot && (
+              <span className="relative flex h-2 w-2 ml-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+            )}
           </button>
         ))}
         <div className="flex-1" />
@@ -498,10 +515,12 @@ export function BottomPanel({ className }: BottomPanelProps) {
           <button
             key={tabId}
             className={cn(
-              "flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors",
+              "flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors relative",
               bottomPanelTab === tabId
                 ? "text-foreground bg-muted"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              // Highlight autopilot tab when active
+              tabId === "autopilot" && activeAutopilot && bottomPanelTab !== tabId && "text-green-500"
             )}
             onClick={() => {
               setBottomPanelTab(tabId);
@@ -513,6 +532,13 @@ export function BottomPanel({ className }: BottomPanelProps) {
           >
             {TAB_ICONS[tabId]}
             <span>{t(`ide.bottomPanel.${tabId}`)}</span>
+            {/* Active indicator for autopilot */}
+            {tabId === "autopilot" && activeAutopilot && (
+              <span className="relative flex h-2 w-2 ml-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+            )}
           </button>
         ))}
         <div className="flex-1" />
@@ -538,6 +564,7 @@ export function BottomPanel({ className }: BottomPanelProps) {
       <div className="flex-1 overflow-auto p-2">
         {bottomPanelTab === "channels" && renderChannelsContent()}
         {bottomPanelTab === "activity" && renderActivityContent()}
+        {bottomPanelTab === "autopilot" && <AutopilotPanelContent podKey={selectedPodKey} />}
       </div>
     </div>
   );

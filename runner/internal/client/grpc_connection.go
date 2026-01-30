@@ -629,6 +629,15 @@ func (c *GRPCConnection) SendOSCTitle(podKey, title string) error {
 	return c.sendControl(msg)
 }
 
+// SendMessage sends a raw RunnerMessage to the server.
+// Used for Autopilot events and other custom messages.
+func (c *GRPCConnection) SendMessage(msg *runnerv1.RunnerMessage) error {
+	if msg.Timestamp == 0 {
+		msg.Timestamp = time.Now().UnixMilli()
+	}
+	return c.sendControl(msg)
+}
+
 // QueueLength returns the current terminal send queue length.
 func (c *GRPCConnection) QueueLength() int {
 	return len(c.terminalCh)
@@ -981,6 +990,12 @@ func (c *GRPCConnection) handleServerMessage(msg *runnerv1.ServerMessage) {
 	case *runnerv1.ServerMessage_QuerySandboxes:
 		c.handleQuerySandboxes(payload.QuerySandboxes)
 
+	case *runnerv1.ServerMessage_CreateAutopilot:
+		c.handleCreateAutopilot(payload.CreateAutopilot)
+
+	case *runnerv1.ServerMessage_AutopilotControl:
+		c.handleAutopilotControl(payload.AutopilotControl)
+
 	default:
 		logger.GRPC().Warn("Unknown server message type")
 	}
@@ -1138,6 +1153,34 @@ func (c *GRPCConnection) handleQuerySandboxes(cmd *runnerv1.QuerySandboxesComman
 	}
 	if err := c.handler.OnQuerySandboxes(req); err != nil {
 		log.Error("Failed to query sandboxes", "request_id", cmd.RequestId, "error", err)
+	}
+}
+
+// handleCreateAutopilot handles create_autopilot command from server.
+func (c *GRPCConnection) handleCreateAutopilot(cmd *runnerv1.CreateAutopilotCommand) {
+	log := logger.GRPC()
+	log.Info("Received create_autopilot", "autopilot_key", cmd.AutopilotKey, "pod_key", cmd.PodKey)
+	if c.handler == nil {
+		log.Warn("No handler set, ignoring create_autopilot")
+		return
+	}
+
+	if err := c.handler.OnCreateAutopilot(cmd); err != nil {
+		log.Error("Failed to create Autopilot", "autopilot_key", cmd.AutopilotKey, "error", err)
+	}
+}
+
+// handleAutopilotControl handles autopilot_control command from server.
+func (c *GRPCConnection) handleAutopilotControl(cmd *runnerv1.AutopilotControlCommand) {
+	log := logger.GRPC()
+	log.Info("Received autopilot_control", "autopilot_key", cmd.AutopilotKey)
+	if c.handler == nil {
+		log.Warn("No handler set, ignoring autopilot_control")
+		return
+	}
+
+	if err := c.handler.OnAutopilotControl(cmd); err != nil {
+		log.Error("Failed to handle Autopilot control", "autopilot_key", cmd.AutopilotKey, "error", err)
 	}
 }
 

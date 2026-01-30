@@ -189,6 +189,38 @@ func (r *EventRegistry) registerBuiltinEvents() {
 		EntityType:  "",
 		Description: "System maintenance notification",
 	}
+
+	// AutopilotController events
+	r.definitions[EventAutopilotStatusChanged] = &EventDefinition{
+		Type:        EventAutopilotStatusChanged,
+		Category:    CategoryEntity,
+		EntityType:  "autopilot_controller",
+		Description: "AutopilotController status has changed",
+	}
+	r.definitions[EventAutopilotIteration] = &EventDefinition{
+		Type:        EventAutopilotIteration,
+		Category:    CategoryEntity,
+		EntityType:  "autopilot_controller",
+		Description: "AutopilotController iteration event",
+	}
+	r.definitions[EventAutopilotCreated] = &EventDefinition{
+		Type:        EventAutopilotCreated,
+		Category:    CategoryEntity,
+		EntityType:  "autopilot_controller",
+		Description: "A new AutopilotController has been created",
+	}
+	r.definitions[EventAutopilotTerminated] = &EventDefinition{
+		Type:        EventAutopilotTerminated,
+		Category:    CategoryEntity,
+		EntityType:  "autopilot_controller",
+		Description: "AutopilotController has been terminated",
+	}
+	r.definitions[EventAutopilotThinking] = &EventDefinition{
+		Type:        EventAutopilotThinking,
+		Category:    CategoryEntity,
+		EntityType:  "autopilot_controller",
+		Description: "AutopilotController Control Agent thinking event",
+	}
 }
 
 // DefaultRegistry is the global default event registry

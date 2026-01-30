@@ -69,6 +69,22 @@ func (a *GRPCRunnerAdapter) handleProtoMessage(ctx context.Context, runnerID int
 		// OSC 0/2 title change from terminal
 		a.connManager.HandleOSCTitle(runnerID, payload.OscTitle)
 
+	// AutopilotController events
+	case *runnerv1.RunnerMessage_AutopilotStatus:
+		a.connManager.HandleAutopilotStatus(runnerID, payload.AutopilotStatus)
+
+	case *runnerv1.RunnerMessage_AutopilotIteration:
+		a.connManager.HandleAutopilotIteration(runnerID, payload.AutopilotIteration)
+
+	case *runnerv1.RunnerMessage_AutopilotCreated:
+		a.connManager.HandleAutopilotCreated(runnerID, payload.AutopilotCreated)
+
+	case *runnerv1.RunnerMessage_AutopilotTerminated:
+		a.connManager.HandleAutopilotTerminated(runnerID, payload.AutopilotTerminated)
+
+	case *runnerv1.RunnerMessage_AutopilotThinking:
+		a.connManager.HandleAutopilotThinking(runnerID, payload.AutopilotThinking)
+
 	default:
 		a.logger.Warn("unknown message type", "runner_id", runnerID)
 	}

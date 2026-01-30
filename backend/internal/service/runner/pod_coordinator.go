@@ -55,6 +55,13 @@ func NewPodCoordinator(
 	cm.SetDisconnectCallback(pc.handleRunnerDisconnect)
 	cm.SetPodInitProgressCallback(pc.handlePodInitProgress)
 
+	// Set up AutopilotController callbacks
+	cm.SetAutopilotStatusCallback(pc.handleAutopilotControllerStatus)
+	cm.SetAutopilotCreatedCallback(pc.handleAutopilotControllerCreated)
+	cm.SetAutopilotTerminatedCallback(pc.handleAutopilotControllerTerminated)
+	cm.SetAutopilotIterationCallback(pc.handleAutopilotIteration)
+	cm.SetAutopilotThinkingCallback(pc.handleAutopilotThinking)
+
 	return pc
 }
 
@@ -174,4 +181,18 @@ func (pc *PodCoordinator) MarkReconnected(ctx context.Context, podKey string) er
 			"status":        agentpod.StatusRunning,
 			"last_activity": time.Now(),
 		}).Error
+}
+
+// ==================== AutopilotController Commands ====================
+
+// SendCreateAutopilot sends a create AutopilotController command to a runner.
+// Delegates to the underlying command sender.
+func (pc *PodCoordinator) SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error {
+	return pc.commandSender.SendCreateAutopilot(runnerID, cmd)
+}
+
+// SendAutopilotControl sends an AutopilotController control command to a runner.
+// Delegates to the underlying command sender.
+func (pc *PodCoordinator) SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error {
+	return pc.commandSender.SendAutopilotControl(runnerID, cmd)
 }

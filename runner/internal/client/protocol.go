@@ -118,4 +118,11 @@ type MessageHandler interface {
 	// OnQuerySandboxes handles sandbox status query command from server.
 	// Returns sandbox status for specified pod keys.
 	OnQuerySandboxes(req QuerySandboxesRequest) error
+
+	// Autopilot commands
+	// OnCreateAutopilot handles Autopilot creation command.
+	OnCreateAutopilot(cmd *runnerv1.CreateAutopilotCommand) error
+
+	// OnAutopilotControl handles Autopilot control commands (pause/resume/stop/approve/takeover/handback).
+	OnAutopilotControl(cmd *runnerv1.AutopilotControlCommand) error
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp"
 	"github.com/anthropics/agentsmesh/runner/internal/monitor"
+	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/anthropics/agentsmesh/runner/internal/workspace"
@@ -32,6 +33,10 @@ type Runner struct {
 	mcpManager      *mcp.Manager          // MCP server management
 	mcpServer       *mcp.HTTPServer       // MCP HTTP Server for Claude Code
 	claudeMonitor   *monitor.Monitor      // Claude CLI status monitoring
+
+	// Autopilot management
+	autopilots      map[string]*autopilot.AutopilotController // autopilotKey -> AutopilotController
+	autopilotsMu    sync.RWMutex
 
 	// Update management
 	draining       bool                   // True when waiting for pods to finish before update
@@ -61,6 +66,10 @@ type Pod struct {
 	OnOutput         func([]byte)        // Output callback
 	OnExit           func(int)           // Exit callback
 	PTYLogger        *terminal.PTYLogger // PTY logger for debugging (optional)
+
+	// StateDetector for multi-signal state detection (used by Autopilot)
+	stateDetector    *multiSignalDetectorAdapter
+	stateDetectorMu  sync.RWMutex
 
 	// Token refresh channel - used when relay token expires and needs to be refreshed
 	// RelayClient sends token request via gRPC, Backend responds with new SubscribeTerminalCommand
@@ -121,6 +130,72 @@ func (p *Pod) DisconnectRelay() {
 	// Clear aggregator relay output - will fall back to gRPC
 	if p.Aggregator != nil {
 		p.Aggregator.SetRelayOutput(nil)
+	}
+}
+
+// GetOrCreateStateDetector returns the state detector for this pod, creating one if needed.
+// This ensures the same detector instance is used throughout the pod's lifecycle.
+func (p *Pod) GetOrCreateStateDetector() *multiSignalDetectorAdapter {
+	p.stateDetectorMu.RLock()
+	if p.stateDetector != nil {
+		defer p.stateDetectorMu.RUnlock()
+		return p.stateDetector
+	}
+	p.stateDetectorMu.RUnlock()
+
+	// Need to create - acquire write lock
+	p.stateDetectorMu.Lock()
+	defer p.stateDetectorMu.Unlock()
+
+	// Double check after acquiring write lock
+	if p.stateDetector != nil {
+		return p.stateDetector
+	}
+
+	// Create new detector if VirtualTerminal is available
+	if p.VirtualTerminal != nil {
+		p.stateDetector = newMultiSignalDetectorAdapter(p.VirtualTerminal)
+	}
+	return p.stateDetector
+}
+
+// NotifyStateDetectorOutput notifies the state detector about new output.
+// Deprecated: Use NotifyStateDetectorWithScreen for single-direction data flow.
+func (p *Pod) NotifyStateDetectorOutput(bytes int) {
+	p.stateDetectorMu.RLock()
+	detector := p.stateDetector
+	p.stateDetectorMu.RUnlock()
+
+	if detector != nil {
+		detector.OnOutput(bytes)
+	}
+}
+
+// NotifyStateDetectorWithScreen notifies the state detector about new output
+// and provides the current screen lines for state analysis.
+// This implements single-direction data flow: PTY → VirtualTerminal.Feed → StateDetector
+// No reverse lock acquisition needed.
+func (p *Pod) NotifyStateDetectorWithScreen(bytes int, screenLines []string) {
+	p.stateDetectorMu.RLock()
+	detector := p.stateDetector
+	p.stateDetectorMu.RUnlock()
+
+	if detector != nil {
+		detector.OnOutput(bytes)
+		if screenLines != nil {
+			detector.OnScreenUpdate(screenLines)
+		}
+	}
+}
+
+// StopStateDetector stops the state detector if running.
+func (p *Pod) StopStateDetector() {
+	p.stateDetectorMu.Lock()
+	defer p.stateDetectorMu.Unlock()
+
+	if p.stateDetector != nil {
+		p.stateDetector.Stop()
+		p.stateDetector = nil
 	}
 }
 
@@ -236,6 +311,7 @@ func New(cfg *config.Config) (*Runner, error) {
 		workspace: ws,
 		pods:      make(map[string]*Pod),
 		podStore:  podStore,
+		autopilots: make(map[string]*autopilot.AutopilotController),
 		stopChan:  make(chan struct{}),
 	}
 
@@ -273,6 +349,11 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 	// Initialize and start MCP HTTP Server
 	mcpPort := cfg.GetMCPPort()
 	r.mcpServer = mcp.NewHTTPServer(cfg.ServerURL, mcpPort)
+	// Set status provider so get_pod_status tool can query pod status
+	r.mcpServer.SetStatusProvider(r)
+	// Set terminal provider so terminal tools can access local pods directly
+	// This is essential for Autopilot control process to interact with Pods
+	r.mcpServer.SetTerminalProvider(r)
 	go func() {
 		log.Info("Starting MCP HTTP Server", "port", mcpPort)
 		if err := r.mcpServer.Start(); err != nil {
@@ -280,8 +361,9 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 		}
 	}()
 
-	// Initialize Claude monitor for status tracking
+	// Initialize and start Claude monitor for status tracking
 	r.claudeMonitor = monitor.NewMonitor(5 * time.Second)
+	r.claudeMonitor.Start()
 }
 
 // Run starts the runner and blocks until context is cancelled
@@ -310,12 +392,15 @@ func (r *Runner) stopAllPods() {
 		// 1. Disconnect Relay first
 		pod.DisconnectRelay()
 
-		// 2. Stop aggregator to flush remaining output
+		// 2. Stop state detector if running
+		pod.StopStateDetector()
+
+		// 3. Stop aggregator to flush remaining output
 		if pod.Aggregator != nil {
 			pod.Aggregator.Stop()
 		}
 
-		// 3. Stop terminal
+		// 4. Stop terminal
 		if pod.Terminal != nil {
 			pod.Terminal.Stop()
 		}
@@ -374,4 +459,179 @@ func (r *Runner) GetPodCounter() func() int {
 // Config returns the runner configuration.
 func (r *Runner) Config() *config.Config {
 	return r.cfg
+}
+
+// GetPodStatus returns the agent status for a given pod key.
+// Implements mcp.PodStatusProvider interface.
+// Returns: agentStatus (executing/waiting/not_running/unknown), podStatus, shellPid, found
+func (r *Runner) GetPodStatus(podKey string) (agentStatus string, podStatus string, shellPid int, found bool) {
+	// Get pod from store
+	pod, exists := r.podStore.Get(podKey)
+	if !exists || pod == nil {
+		return "not_running", "not_found", 0, false
+	}
+
+	podStatus = pod.GetStatus()
+	shellPid = 0
+	if pod.Terminal != nil {
+		shellPid = pod.Terminal.PID()
+	}
+
+	// Get agent status from Claude monitor
+	if r.claudeMonitor != nil && shellPid > 0 {
+		status, exists := r.claudeMonitor.GetStatus(podKey)
+		if exists {
+			agentStatus = string(status.ClaudeStatus)
+			return agentStatus, podStatus, shellPid, true
+		}
+	}
+
+	// If monitor doesn't have status, check if terminal is running
+	if pod.Terminal != nil && !pod.Terminal.IsClosed() {
+		agentStatus = "unknown"
+	} else {
+		agentStatus = "not_running"
+	}
+
+	return agentStatus, podStatus, shellPid, true
+}
+
+// GetClaudeMonitor returns the Claude process monitor.
+func (r *Runner) GetClaudeMonitor() *monitor.Monitor {
+	return r.claudeMonitor
+}
+
+// Autopilot management methods
+
+// GetAutopilot returns an AutopilotController by key.
+func (r *Runner) GetAutopilot(key string) *autopilot.AutopilotController {
+	r.autopilotsMu.RLock()
+	defer r.autopilotsMu.RUnlock()
+	return r.autopilots[key]
+}
+
+// AddAutopilot adds an AutopilotController.
+func (r *Runner) AddAutopilot(ac *autopilot.AutopilotController) {
+	r.autopilotsMu.Lock()
+	defer r.autopilotsMu.Unlock()
+	r.autopilots[ac.Key()] = ac
+}
+
+// RemoveAutopilot removes an AutopilotController by key.
+func (r *Runner) RemoveAutopilot(key string) {
+	r.autopilotsMu.Lock()
+	defer r.autopilotsMu.Unlock()
+	delete(r.autopilots, key)
+}
+
+// GetAutopilotByPodKey returns an AutopilotController by its associated pod key.
+func (r *Runner) GetAutopilotByPodKey(podKey string) *autopilot.AutopilotController {
+	r.autopilotsMu.RLock()
+	defer r.autopilotsMu.RUnlock()
+	for _, ac := range r.autopilots {
+		if ac.PodKey() == podKey {
+			return ac
+		}
+	}
+	return nil
+}
+
+// GetConnection returns the gRPC connection.
+func (r *Runner) GetConnection() client.Connection {
+	return r.conn
+}
+
+// LocalTerminalProvider implementation for MCP HTTP Server
+
+// GetTerminalOutput returns the terminal output for a local pod.
+// Implements mcp.LocalTerminalProvider interface.
+func (r *Runner) GetTerminalOutput(podKey string, lines int) (string, error) {
+	pod, exists := r.podStore.Get(podKey)
+	if !exists || pod == nil {
+		return "", fmt.Errorf("pod not found: %s", podKey)
+	}
+
+	if pod.VirtualTerminal == nil {
+		return "", fmt.Errorf("virtual terminal not available for pod: %s", podKey)
+	}
+
+	// Get output from virtual terminal (includes scrollback and screen)
+	output := pod.VirtualTerminal.GetOutput(lines)
+	return output, nil
+}
+
+// SendTerminalText sends text to a local pod's terminal.
+// Implements mcp.LocalTerminalProvider interface.
+func (r *Runner) SendTerminalText(podKey string, text string) error {
+	pod, exists := r.podStore.Get(podKey)
+	if !exists || pod == nil {
+		return fmt.Errorf("pod not found: %s", podKey)
+	}
+
+	if pod.Terminal == nil {
+		return fmt.Errorf("terminal not available for pod: %s", podKey)
+	}
+
+	// Write text to terminal stdin
+	err := pod.Terminal.Write([]byte(text))
+	if err != nil {
+		return fmt.Errorf("failed to write to terminal: %w", err)
+	}
+
+	logger.Runner().Debug("Sent text to local terminal", "pod_key", podKey, "text_length", len(text))
+	return nil
+}
+
+// SendTerminalKey sends special keys to a local pod's terminal.
+// Implements mcp.LocalTerminalProvider interface.
+func (r *Runner) SendTerminalKey(podKey string, keys []string) error {
+	pod, exists := r.podStore.Get(podKey)
+	if !exists || pod == nil {
+		return fmt.Errorf("pod not found: %s", podKey)
+	}
+
+	if pod.Terminal == nil {
+		return fmt.Errorf("terminal not available for pod: %s", podKey)
+	}
+
+	// Map key names to escape sequences
+	keyMap := map[string]string{
+		"enter":     "\r",
+		"escape":    "\x1b",
+		"tab":       "\t",
+		"backspace": "\x7f",
+		"delete":    "\x1b[3~",
+		"ctrl+c":    "\x03",
+		"ctrl+d":    "\x04",
+		"ctrl+u":    "\x15",
+		"ctrl+l":    "\x0c",
+		"ctrl+z":    "\x1a",
+		"ctrl+a":    "\x01",
+		"ctrl+e":    "\x05",
+		"ctrl+k":    "\x0b",
+		"ctrl+w":    "\x17",
+		"up":        "\x1b[A",
+		"down":      "\x1b[B",
+		"right":     "\x1b[C",
+		"left":      "\x1b[D",
+		"home":      "\x1b[H",
+		"end":       "\x1b[F",
+		"pageup":    "\x1b[5~",
+		"pagedown":  "\x1b[6~",
+		"shift+tab": "\x1b[Z",
+	}
+
+	for _, key := range keys {
+		seq, ok := keyMap[key]
+		if !ok {
+			return fmt.Errorf("unknown key: %s", key)
+		}
+		err := pod.Terminal.Write([]byte(seq))
+		if err != nil {
+			return fmt.Errorf("failed to send key %s: %w", key, err)
+		}
+	}
+
+	logger.Runner().Debug("Sent keys to local terminal", "pod_key", podKey, "keys", keys)
+	return nil
 }

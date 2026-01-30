@@ -40,6 +40,11 @@ type RunnerMessage struct {
 	//	*RunnerMessage_SandboxesStatus
 	//	*RunnerMessage_OscNotification
 	//	*RunnerMessage_OscTitle
+	//	*RunnerMessage_AutopilotStatus
+	//	*RunnerMessage_AutopilotIteration
+	//	*RunnerMessage_AutopilotCreated
+	//	*RunnerMessage_AutopilotTerminated
+	//	*RunnerMessage_AutopilotThinking
 	Payload       isRunnerMessage_Payload `protobuf_oneof:"payload"`
 	Timestamp     int64                   `protobuf:"varint,15,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -209,6 +214,51 @@ func (x *RunnerMessage) GetOscTitle() *OSCTitleEvent {
 	return nil
 }
 
+func (x *RunnerMessage) GetAutopilotStatus() *AutopilotStatusEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_AutopilotStatus); ok {
+			return x.AutopilotStatus
+		}
+	}
+	return nil
+}
+
+func (x *RunnerMessage) GetAutopilotIteration() *AutopilotIterationEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_AutopilotIteration); ok {
+			return x.AutopilotIteration
+		}
+	}
+	return nil
+}
+
+func (x *RunnerMessage) GetAutopilotCreated() *AutopilotCreatedEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_AutopilotCreated); ok {
+			return x.AutopilotCreated
+		}
+	}
+	return nil
+}
+
+func (x *RunnerMessage) GetAutopilotTerminated() *AutopilotTerminatedEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_AutopilotTerminated); ok {
+			return x.AutopilotTerminated
+		}
+	}
+	return nil
+}
+
+func (x *RunnerMessage) GetAutopilotThinking() *AutopilotThinkingEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*RunnerMessage_AutopilotThinking); ok {
+			return x.AutopilotThinking
+		}
+	}
+	return nil
+}
+
 func (x *RunnerMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -276,6 +326,27 @@ type RunnerMessage_OscTitle struct {
 	OscTitle *OSCTitleEvent `protobuf:"bytes,14,opt,name=osc_title,json=oscTitle,proto3,oneof"`
 }
 
+type RunnerMessage_AutopilotStatus struct {
+	// Autopilot 相关事件
+	AutopilotStatus *AutopilotStatusEvent `protobuf:"bytes,16,opt,name=autopilot_status,json=autopilotStatus,proto3,oneof"`
+}
+
+type RunnerMessage_AutopilotIteration struct {
+	AutopilotIteration *AutopilotIterationEvent `protobuf:"bytes,17,opt,name=autopilot_iteration,json=autopilotIteration,proto3,oneof"`
+}
+
+type RunnerMessage_AutopilotCreated struct {
+	AutopilotCreated *AutopilotCreatedEvent `protobuf:"bytes,18,opt,name=autopilot_created,json=autopilotCreated,proto3,oneof"`
+}
+
+type RunnerMessage_AutopilotTerminated struct {
+	AutopilotTerminated *AutopilotTerminatedEvent `protobuf:"bytes,19,opt,name=autopilot_terminated,json=autopilotTerminated,proto3,oneof"`
+}
+
+type RunnerMessage_AutopilotThinking struct {
+	AutopilotThinking *AutopilotThinkingEvent `protobuf:"bytes,20,opt,name=autopilot_thinking,json=autopilotThinking,proto3,oneof"`
+}
+
 func (*RunnerMessage_Initialize) isRunnerMessage_Payload() {}
 
 func (*RunnerMessage_Initialized) isRunnerMessage_Payload() {}
@@ -303,6 +374,16 @@ func (*RunnerMessage_SandboxesStatus) isRunnerMessage_Payload() {}
 func (*RunnerMessage_OscNotification) isRunnerMessage_Payload() {}
 
 func (*RunnerMessage_OscTitle) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_AutopilotStatus) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_AutopilotIteration) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_AutopilotCreated) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_AutopilotTerminated) isRunnerMessage_Payload() {}
+
+func (*RunnerMessage_AutopilotThinking) isRunnerMessage_Payload() {}
 
 // InitializeRequest Runner 初始化请求
 type InitializeRequest struct {
@@ -1051,6 +1132,8 @@ type ServerMessage struct {
 	//	*ServerMessage_SubscribeTerminal
 	//	*ServerMessage_UnsubscribeTerminal
 	//	*ServerMessage_QuerySandboxes
+	//	*ServerMessage_CreateAutopilot
+	//	*ServerMessage_AutopilotControl
 	Payload       isServerMessage_Payload `protobuf_oneof:"payload"`
 	Timestamp     int64                   `protobuf:"varint,15,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1184,6 +1267,24 @@ func (x *ServerMessage) GetQuerySandboxes() *QuerySandboxesCommand {
 	return nil
 }
 
+func (x *ServerMessage) GetCreateAutopilot() *CreateAutopilotCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_CreateAutopilot); ok {
+			return x.CreateAutopilot
+		}
+	}
+	return nil
+}
+
+func (x *ServerMessage) GetAutopilotControl() *AutopilotControlCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_AutopilotControl); ok {
+			return x.AutopilotControl
+		}
+	}
+	return nil
+}
+
 func (x *ServerMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -1235,6 +1336,15 @@ type ServerMessage_QuerySandboxes struct {
 	QuerySandboxes *QuerySandboxesCommand `protobuf:"bytes,10,opt,name=query_sandboxes,json=querySandboxes,proto3,oneof"`
 }
 
+type ServerMessage_CreateAutopilot struct {
+	// Autopilot 相关命令
+	CreateAutopilot *CreateAutopilotCommand `protobuf:"bytes,11,opt,name=create_autopilot,json=createAutopilot,proto3,oneof"`
+}
+
+type ServerMessage_AutopilotControl struct {
+	AutopilotControl *AutopilotControlCommand `protobuf:"bytes,12,opt,name=autopilot_control,json=autopilotControl,proto3,oneof"`
+}
+
 func (*ServerMessage_InitializeResult) isServerMessage_Payload() {}
 
 func (*ServerMessage_CreatePod) isServerMessage_Payload() {}
@@ -1254,6 +1364,10 @@ func (*ServerMessage_SubscribeTerminal) isServerMessage_Payload() {}
 func (*ServerMessage_UnsubscribeTerminal) isServerMessage_Payload() {}
 
 func (*ServerMessage_QuerySandboxes) isServerMessage_Payload() {}
+
+func (*ServerMessage_CreateAutopilot) isServerMessage_Payload() {}
+
+func (*ServerMessage_AutopilotControl) isServerMessage_Payload() {}
 
 // InitializeResult 初始化响应
 type InitializeResult struct {
@@ -2600,11 +2714,1307 @@ func (x *OSCTitleEvent) GetTitle() string {
 	return ""
 }
 
+// AutopilotStatusEvent Autopilot 状态事件 (Runner -> Backend)
+type AutopilotStatusEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey  string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	PodKey        string                 `protobuf:"bytes,2,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
+	Status        *AutopilotStatus       `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotStatusEvent) Reset() {
+	*x = AutopilotStatusEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotStatusEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotStatusEvent) ProtoMessage() {}
+
+func (x *AutopilotStatusEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotStatusEvent.ProtoReflect.Descriptor instead.
+func (*AutopilotStatusEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *AutopilotStatusEvent) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotStatusEvent) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+func (x *AutopilotStatusEvent) GetStatus() *AutopilotStatus {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+// AutopilotStatus Autopilot 当前状态
+type AutopilotStatus struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Phase string                 `protobuf:"bytes,1,opt,name=phase,proto3" json:"phase,omitempty"` // initializing, running, paused,
+	// user_takeover, waiting_approval,
+	// completed, failed, stopped
+	CurrentIteration int32 `protobuf:"varint,2,opt,name=current_iteration,json=currentIteration,proto3" json:"current_iteration,omitempty"`
+	MaxIterations    int32 `protobuf:"varint,3,opt,name=max_iterations,json=maxIterations,proto3" json:"max_iterations,omitempty"`
+	// 断路器状态
+	CircuitBreakerState  string `protobuf:"bytes,4,opt,name=circuit_breaker_state,json=circuitBreakerState,proto3" json:"circuit_breaker_state,omitempty"` // closed, half_open, open
+	CircuitBreakerReason string `protobuf:"bytes,5,opt,name=circuit_breaker_reason,json=circuitBreakerReason,proto3" json:"circuit_breaker_reason,omitempty"`
+	// Pod 状态
+	PodStatus string `protobuf:"bytes,6,opt,name=pod_status,json=podStatus,proto3" json:"pod_status,omitempty"` // executing, waiting, exited
+	// 时间
+	StartedAt       int64 `protobuf:"varint,7,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	LastIterationAt int64 `protobuf:"varint,8,opt,name=last_iteration_at,json=lastIterationAt,proto3" json:"last_iteration_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AutopilotStatus) Reset() {
+	*x = AutopilotStatus{}
+	mi := &file_runner_v1_runner_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotStatus) ProtoMessage() {}
+
+func (x *AutopilotStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotStatus.ProtoReflect.Descriptor instead.
+func (*AutopilotStatus) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *AutopilotStatus) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *AutopilotStatus) GetCurrentIteration() int32 {
+	if x != nil {
+		return x.CurrentIteration
+	}
+	return 0
+}
+
+func (x *AutopilotStatus) GetMaxIterations() int32 {
+	if x != nil {
+		return x.MaxIterations
+	}
+	return 0
+}
+
+func (x *AutopilotStatus) GetCircuitBreakerState() string {
+	if x != nil {
+		return x.CircuitBreakerState
+	}
+	return ""
+}
+
+func (x *AutopilotStatus) GetCircuitBreakerReason() string {
+	if x != nil {
+		return x.CircuitBreakerReason
+	}
+	return ""
+}
+
+func (x *AutopilotStatus) GetPodStatus() string {
+	if x != nil {
+		return x.PodStatus
+	}
+	return ""
+}
+
+func (x *AutopilotStatus) GetStartedAt() int64 {
+	if x != nil {
+		return x.StartedAt
+	}
+	return 0
+}
+
+func (x *AutopilotStatus) GetLastIterationAt() int64 {
+	if x != nil {
+		return x.LastIterationAt
+	}
+	return 0
+}
+
+// AutopilotIterationEvent 迭代事件 (Runner -> Backend)
+type AutopilotIterationEvent struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	Iteration    int32                  `protobuf:"varint,2,opt,name=iteration,proto3" json:"iteration,omitempty"`
+	Phase        string                 `protobuf:"bytes,3,opt,name=phase,proto3" json:"phase,omitempty"` // started, control_running,
+	// action_sent, completed
+	Summary       string   `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"` // Control Process 的决策摘要
+	FilesChanged  []string `protobuf:"bytes,5,rep,name=files_changed,json=filesChanged,proto3" json:"files_changed,omitempty"`
+	DurationMs    int64    `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotIterationEvent) Reset() {
+	*x = AutopilotIterationEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotIterationEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotIterationEvent) ProtoMessage() {}
+
+func (x *AutopilotIterationEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotIterationEvent.ProtoReflect.Descriptor instead.
+func (*AutopilotIterationEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *AutopilotIterationEvent) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotIterationEvent) GetIteration() int32 {
+	if x != nil {
+		return x.Iteration
+	}
+	return 0
+}
+
+func (x *AutopilotIterationEvent) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *AutopilotIterationEvent) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *AutopilotIterationEvent) GetFilesChanged() []string {
+	if x != nil {
+		return x.FilesChanged
+	}
+	return nil
+}
+
+func (x *AutopilotIterationEvent) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+// AutopilotControlCommand 用户控制命令 (Backend -> Runner)
+type AutopilotControlCommand struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	// Types that are valid to be assigned to Action:
+	//
+	//	*AutopilotControlCommand_Pause
+	//	*AutopilotControlCommand_Resume
+	//	*AutopilotControlCommand_Stop
+	//	*AutopilotControlCommand_Approve
+	//	*AutopilotControlCommand_Takeover
+	//	*AutopilotControlCommand_Handback
+	Action        isAutopilotControlCommand_Action `protobuf_oneof:"action"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotControlCommand) Reset() {
+	*x = AutopilotControlCommand{}
+	mi := &file_runner_v1_runner_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotControlCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotControlCommand) ProtoMessage() {}
+
+func (x *AutopilotControlCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotControlCommand.ProtoReflect.Descriptor instead.
+func (*AutopilotControlCommand) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *AutopilotControlCommand) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotControlCommand) GetAction() isAutopilotControlCommand_Action {
+	if x != nil {
+		return x.Action
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetPause() *AutopilotPauseAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Pause); ok {
+			return x.Pause
+		}
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetResume() *AutopilotResumeAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Resume); ok {
+			return x.Resume
+		}
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetStop() *AutopilotStopAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Stop); ok {
+			return x.Stop
+		}
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetApprove() *AutopilotApproveAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Approve); ok {
+			return x.Approve
+		}
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetTakeover() *AutopilotTakeoverAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Takeover); ok {
+			return x.Takeover
+		}
+	}
+	return nil
+}
+
+func (x *AutopilotControlCommand) GetHandback() *AutopilotHandbackAction {
+	if x != nil {
+		if x, ok := x.Action.(*AutopilotControlCommand_Handback); ok {
+			return x.Handback
+		}
+	}
+	return nil
+}
+
+type isAutopilotControlCommand_Action interface {
+	isAutopilotControlCommand_Action()
+}
+
+type AutopilotControlCommand_Pause struct {
+	Pause *AutopilotPauseAction `protobuf:"bytes,2,opt,name=pause,proto3,oneof"`
+}
+
+type AutopilotControlCommand_Resume struct {
+	Resume *AutopilotResumeAction `protobuf:"bytes,3,opt,name=resume,proto3,oneof"`
+}
+
+type AutopilotControlCommand_Stop struct {
+	Stop *AutopilotStopAction `protobuf:"bytes,4,opt,name=stop,proto3,oneof"`
+}
+
+type AutopilotControlCommand_Approve struct {
+	Approve *AutopilotApproveAction `protobuf:"bytes,5,opt,name=approve,proto3,oneof"`
+}
+
+type AutopilotControlCommand_Takeover struct {
+	Takeover *AutopilotTakeoverAction `protobuf:"bytes,6,opt,name=takeover,proto3,oneof"` // 用户接管
+}
+
+type AutopilotControlCommand_Handback struct {
+	Handback *AutopilotHandbackAction `protobuf:"bytes,7,opt,name=handback,proto3,oneof"` // 交回控制权
+}
+
+func (*AutopilotControlCommand_Pause) isAutopilotControlCommand_Action() {}
+
+func (*AutopilotControlCommand_Resume) isAutopilotControlCommand_Action() {}
+
+func (*AutopilotControlCommand_Stop) isAutopilotControlCommand_Action() {}
+
+func (*AutopilotControlCommand_Approve) isAutopilotControlCommand_Action() {}
+
+func (*AutopilotControlCommand_Takeover) isAutopilotControlCommand_Action() {}
+
+func (*AutopilotControlCommand_Handback) isAutopilotControlCommand_Action() {}
+
+// AutopilotApproveAction 断路器审批操作
+type AutopilotApproveAction struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ContinueExecution    bool                   `protobuf:"varint,1,opt,name=continue_execution,json=continueExecution,proto3" json:"continue_execution,omitempty"`          // true=继续, false=停止
+	AdditionalIterations int32                  `protobuf:"varint,2,opt,name=additional_iterations,json=additionalIterations,proto3" json:"additional_iterations,omitempty"` // 追加迭代次数
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *AutopilotApproveAction) Reset() {
+	*x = AutopilotApproveAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotApproveAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotApproveAction) ProtoMessage() {}
+
+func (x *AutopilotApproveAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotApproveAction.ProtoReflect.Descriptor instead.
+func (*AutopilotApproveAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *AutopilotApproveAction) GetContinueExecution() bool {
+	if x != nil {
+		return x.ContinueExecution
+	}
+	return false
+}
+
+func (x *AutopilotApproveAction) GetAdditionalIterations() int32 {
+	if x != nil {
+		return x.AdditionalIterations
+	}
+	return 0
+}
+
+// AutopilotTakeoverAction 用户接管控制权
+type AutopilotTakeoverAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotTakeoverAction) Reset() {
+	*x = AutopilotTakeoverAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotTakeoverAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotTakeoverAction) ProtoMessage() {}
+
+func (x *AutopilotTakeoverAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotTakeoverAction.ProtoReflect.Descriptor instead.
+func (*AutopilotTakeoverAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{39}
+}
+
+// AutopilotHandbackAction 用户交回控制权
+type AutopilotHandbackAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotHandbackAction) Reset() {
+	*x = AutopilotHandbackAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotHandbackAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotHandbackAction) ProtoMessage() {}
+
+func (x *AutopilotHandbackAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotHandbackAction.ProtoReflect.Descriptor instead.
+func (*AutopilotHandbackAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{40}
+}
+
+// AutopilotPauseAction 暂停 Autopilot
+type AutopilotPauseAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotPauseAction) Reset() {
+	*x = AutopilotPauseAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotPauseAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotPauseAction) ProtoMessage() {}
+
+func (x *AutopilotPauseAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotPauseAction.ProtoReflect.Descriptor instead.
+func (*AutopilotPauseAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{41}
+}
+
+// AutopilotResumeAction 恢复 Autopilot
+type AutopilotResumeAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotResumeAction) Reset() {
+	*x = AutopilotResumeAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotResumeAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotResumeAction) ProtoMessage() {}
+
+func (x *AutopilotResumeAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotResumeAction.ProtoReflect.Descriptor instead.
+func (*AutopilotResumeAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{42}
+}
+
+// AutopilotStopAction 停止 Autopilot
+type AutopilotStopAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotStopAction) Reset() {
+	*x = AutopilotStopAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotStopAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotStopAction) ProtoMessage() {}
+
+func (x *AutopilotStopAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotStopAction.ProtoReflect.Descriptor instead.
+func (*AutopilotStopAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{43}
+}
+
+// CreateAutopilotCommand 创建 Autopilot 命令 (Backend -> Runner)
+type CreateAutopilotCommand struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	// 方式一：绑定已有 Pod
+	PodKey string `protobuf:"bytes,2,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
+	// 方式二：同时创建 Pod
+	PodConfig *CreatePodCommand `protobuf:"bytes,3,opt,name=pod_config,json=podConfig,proto3" json:"pod_config,omitempty"`
+	// Autopilot 配置
+	Config        *AutopilotConfig `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateAutopilotCommand) Reset() {
+	*x = CreateAutopilotCommand{}
+	mi := &file_runner_v1_runner_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateAutopilotCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateAutopilotCommand) ProtoMessage() {}
+
+func (x *CreateAutopilotCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateAutopilotCommand.ProtoReflect.Descriptor instead.
+func (*CreateAutopilotCommand) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *CreateAutopilotCommand) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *CreateAutopilotCommand) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+func (x *CreateAutopilotCommand) GetPodConfig() *CreatePodCommand {
+	if x != nil {
+		return x.PodConfig
+	}
+	return nil
+}
+
+func (x *CreateAutopilotCommand) GetConfig() *AutopilotConfig {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// AutopilotConfig Autopilot 配置
+type AutopilotConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 任务
+	InitialPrompt string `protobuf:"bytes,1,opt,name=initial_prompt,json=initialPrompt,proto3" json:"initial_prompt,omitempty"`
+	// 迭代控制
+	MaxIterations           int32 `protobuf:"varint,2,opt,name=max_iterations,json=maxIterations,proto3" json:"max_iterations,omitempty"`                                 // 默认 10
+	IterationTimeoutSeconds int32 `protobuf:"varint,3,opt,name=iteration_timeout_seconds,json=iterationTimeoutSeconds,proto3" json:"iteration_timeout_seconds,omitempty"` // 单次迭代超时，默认 300
+	// 断路器
+	NoProgressThreshold    int32 `protobuf:"varint,4,opt,name=no_progress_threshold,json=noProgressThreshold,proto3" json:"no_progress_threshold,omitempty"`          // 无进展阈值，默认 3
+	SameErrorThreshold     int32 `protobuf:"varint,5,opt,name=same_error_threshold,json=sameErrorThreshold,proto3" json:"same_error_threshold,omitempty"`             // 相同错误阈值，默认 5
+	ApprovalTimeoutMinutes int32 `protobuf:"varint,6,opt,name=approval_timeout_minutes,json=approvalTimeoutMinutes,proto3" json:"approval_timeout_minutes,omitempty"` // 断路器超时，默认 30
+	// 控制 Pod
+	ControlAgentType      string `protobuf:"bytes,7,opt,name=control_agent_type,json=controlAgentType,proto3" json:"control_agent_type,omitempty"`                // 默认 "claude"
+	ControlPromptTemplate string `protobuf:"bytes,8,opt,name=control_prompt_template,json=controlPromptTemplate,proto3" json:"control_prompt_template,omitempty"` // 可选，自定义 Control Process 的 system prompt
+	// MCP 配置（复用现有机制）
+	McpConfigJson string `protobuf:"bytes,9,opt,name=mcp_config_json,json=mcpConfigJson,proto3" json:"mcp_config_json,omitempty"` // Control Process 的 mcp.json 内容
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotConfig) Reset() {
+	*x = AutopilotConfig{}
+	mi := &file_runner_v1_runner_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotConfig) ProtoMessage() {}
+
+func (x *AutopilotConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotConfig.ProtoReflect.Descriptor instead.
+func (*AutopilotConfig) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *AutopilotConfig) GetInitialPrompt() string {
+	if x != nil {
+		return x.InitialPrompt
+	}
+	return ""
+}
+
+func (x *AutopilotConfig) GetMaxIterations() int32 {
+	if x != nil {
+		return x.MaxIterations
+	}
+	return 0
+}
+
+func (x *AutopilotConfig) GetIterationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.IterationTimeoutSeconds
+	}
+	return 0
+}
+
+func (x *AutopilotConfig) GetNoProgressThreshold() int32 {
+	if x != nil {
+		return x.NoProgressThreshold
+	}
+	return 0
+}
+
+func (x *AutopilotConfig) GetSameErrorThreshold() int32 {
+	if x != nil {
+		return x.SameErrorThreshold
+	}
+	return 0
+}
+
+func (x *AutopilotConfig) GetApprovalTimeoutMinutes() int32 {
+	if x != nil {
+		return x.ApprovalTimeoutMinutes
+	}
+	return 0
+}
+
+func (x *AutopilotConfig) GetControlAgentType() string {
+	if x != nil {
+		return x.ControlAgentType
+	}
+	return ""
+}
+
+func (x *AutopilotConfig) GetControlPromptTemplate() string {
+	if x != nil {
+		return x.ControlPromptTemplate
+	}
+	return ""
+}
+
+func (x *AutopilotConfig) GetMcpConfigJson() string {
+	if x != nil {
+		return x.McpConfigJson
+	}
+	return ""
+}
+
+// AutopilotCreatedEvent Autopilot 创建完成事件 (Runner -> Backend)
+type AutopilotCreatedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey  string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	PodKey        string                 `protobuf:"bytes,2,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotCreatedEvent) Reset() {
+	*x = AutopilotCreatedEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotCreatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotCreatedEvent) ProtoMessage() {}
+
+func (x *AutopilotCreatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotCreatedEvent.ProtoReflect.Descriptor instead.
+func (*AutopilotCreatedEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *AutopilotCreatedEvent) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotCreatedEvent) GetPodKey() string {
+	if x != nil {
+		return x.PodKey
+	}
+	return ""
+}
+
+// AutopilotTerminatedEvent Autopilot 终止事件 (Runner -> Backend)
+type AutopilotTerminatedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey  string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // completed, stopped, failed, max_iterations
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotTerminatedEvent) Reset() {
+	*x = AutopilotTerminatedEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotTerminatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotTerminatedEvent) ProtoMessage() {}
+
+func (x *AutopilotTerminatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotTerminatedEvent.ProtoReflect.Descriptor instead.
+func (*AutopilotTerminatedEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *AutopilotTerminatedEvent) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotTerminatedEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// AutopilotThinkingEvent Control Agent 思考过程事件 (Runner -> Backend)
+// 用于向用户透明化展示 Control Agent 的决策过程
+type AutopilotThinkingEvent struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AutopilotKey string                 `protobuf:"bytes,1,opt,name=autopilot_key,json=autopilotKey,proto3" json:"autopilot_key,omitempty"`
+	Iteration    int32                  `protobuf:"varint,2,opt,name=iteration,proto3" json:"iteration,omitempty"`
+	// Control Agent 的决策信息
+	DecisionType string  `protobuf:"bytes,3,opt,name=decision_type,json=decisionType,proto3" json:"decision_type,omitempty"` // continue, completed, need_help, give_up
+	Reasoning    string  `protobuf:"bytes,4,opt,name=reasoning,proto3" json:"reasoning,omitempty"`                           // 决策推理过程
+	Confidence   float64 `protobuf:"fixed64,5,opt,name=confidence,proto3" json:"confidence,omitempty"`                       // 决策置信度 (0-1)
+	// 采取的行动
+	Action *AutopilotAction `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
+	// 任务进度
+	Progress *AutopilotProgress `protobuf:"bytes,7,opt,name=progress,proto3" json:"progress,omitempty"`
+	// 帮助请求（当 decision_type 为 need_help 时）
+	HelpRequest   *AutopilotHelpRequest `protobuf:"bytes,8,opt,name=help_request,json=helpRequest,proto3" json:"help_request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotThinkingEvent) Reset() {
+	*x = AutopilotThinkingEvent{}
+	mi := &file_runner_v1_runner_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotThinkingEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotThinkingEvent) ProtoMessage() {}
+
+func (x *AutopilotThinkingEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotThinkingEvent.ProtoReflect.Descriptor instead.
+func (*AutopilotThinkingEvent) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *AutopilotThinkingEvent) GetAutopilotKey() string {
+	if x != nil {
+		return x.AutopilotKey
+	}
+	return ""
+}
+
+func (x *AutopilotThinkingEvent) GetIteration() int32 {
+	if x != nil {
+		return x.Iteration
+	}
+	return 0
+}
+
+func (x *AutopilotThinkingEvent) GetDecisionType() string {
+	if x != nil {
+		return x.DecisionType
+	}
+	return ""
+}
+
+func (x *AutopilotThinkingEvent) GetReasoning() string {
+	if x != nil {
+		return x.Reasoning
+	}
+	return ""
+}
+
+func (x *AutopilotThinkingEvent) GetConfidence() float64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+func (x *AutopilotThinkingEvent) GetAction() *AutopilotAction {
+	if x != nil {
+		return x.Action
+	}
+	return nil
+}
+
+func (x *AutopilotThinkingEvent) GetProgress() *AutopilotProgress {
+	if x != nil {
+		return x.Progress
+	}
+	return nil
+}
+
+func (x *AutopilotThinkingEvent) GetHelpRequest() *AutopilotHelpRequest {
+	if x != nil {
+		return x.HelpRequest
+	}
+	return nil
+}
+
+// AutopilotAction 描述 Control Agent 采取的行动
+type AutopilotAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`       // observe, send_input, wait, none
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"` // 行动内容
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`   // 行动原因
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotAction) Reset() {
+	*x = AutopilotAction{}
+	mi := &file_runner_v1_runner_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotAction) ProtoMessage() {}
+
+func (x *AutopilotAction) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotAction.ProtoReflect.Descriptor instead.
+func (*AutopilotAction) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *AutopilotAction) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *AutopilotAction) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *AutopilotAction) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// AutopilotProgress 任务进度信息
+type AutopilotProgress struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Summary        string                 `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`                                     // 简要进度摘要
+	CompletedSteps []string               `protobuf:"bytes,2,rep,name=completed_steps,json=completedSteps,proto3" json:"completed_steps,omitempty"` // 已完成的步骤
+	RemainingSteps []string               `protobuf:"bytes,3,rep,name=remaining_steps,json=remainingSteps,proto3" json:"remaining_steps,omitempty"` // 剩余步骤
+	Percent        int32                  `protobuf:"varint,4,opt,name=percent,proto3" json:"percent,omitempty"`                                    // 估计进度百分比 (0-100)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AutopilotProgress) Reset() {
+	*x = AutopilotProgress{}
+	mi := &file_runner_v1_runner_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotProgress) ProtoMessage() {}
+
+func (x *AutopilotProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotProgress.ProtoReflect.Descriptor instead.
+func (*AutopilotProgress) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *AutopilotProgress) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *AutopilotProgress) GetCompletedSteps() []string {
+	if x != nil {
+		return x.CompletedSteps
+	}
+	return nil
+}
+
+func (x *AutopilotProgress) GetRemainingSteps() []string {
+	if x != nil {
+		return x.RemainingSteps
+	}
+	return nil
+}
+
+func (x *AutopilotProgress) GetPercent() int32 {
+	if x != nil {
+		return x.Percent
+	}
+	return 0
+}
+
+// AutopilotHelpRequest 帮助请求详情
+type AutopilotHelpRequest struct {
+	state           protoimpl.MessageState     `protogen:"open.v1"`
+	Reason          string                     `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`                                          // 需要帮助的原因
+	Context         string                     `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`                                        // 上下文信息
+	TerminalExcerpt string                     `protobuf:"bytes,3,opt,name=terminal_excerpt,json=terminalExcerpt,proto3" json:"terminal_excerpt,omitempty"` // 相关终端输出摘录
+	Suggestions     []*AutopilotHelpSuggestion `protobuf:"bytes,4,rep,name=suggestions,proto3" json:"suggestions,omitempty"`                                // 建议的操作
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AutopilotHelpRequest) Reset() {
+	*x = AutopilotHelpRequest{}
+	mi := &file_runner_v1_runner_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotHelpRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotHelpRequest) ProtoMessage() {}
+
+func (x *AutopilotHelpRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotHelpRequest.ProtoReflect.Descriptor instead.
+func (*AutopilotHelpRequest) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *AutopilotHelpRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *AutopilotHelpRequest) GetContext() string {
+	if x != nil {
+		return x.Context
+	}
+	return ""
+}
+
+func (x *AutopilotHelpRequest) GetTerminalExcerpt() string {
+	if x != nil {
+		return x.TerminalExcerpt
+	}
+	return ""
+}
+
+func (x *AutopilotHelpRequest) GetSuggestions() []*AutopilotHelpSuggestion {
+	if x != nil {
+		return x.Suggestions
+	}
+	return nil
+}
+
+// AutopilotHelpSuggestion 帮助请求的建议操作
+type AutopilotHelpSuggestion struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"` // approve, skip, custom 等
+	Label         string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`   // 显示标签
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutopilotHelpSuggestion) Reset() {
+	*x = AutopilotHelpSuggestion{}
+	mi := &file_runner_v1_runner_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutopilotHelpSuggestion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutopilotHelpSuggestion) ProtoMessage() {}
+
+func (x *AutopilotHelpSuggestion) ProtoReflect() protoreflect.Message {
+	mi := &file_runner_v1_runner_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutopilotHelpSuggestion.ProtoReflect.Descriptor instead.
+func (*AutopilotHelpSuggestion) Descriptor() ([]byte, []int) {
+	return file_runner_v1_runner_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *AutopilotHelpSuggestion) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AutopilotHelpSuggestion) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
 var File_runner_v1_runner_proto protoreflect.FileDescriptor
 
 const file_runner_v1_runner_proto_rawDesc = "" +
 	"\n" +
-	"\x16runner/v1/runner.proto\x12\trunner.v1\"\xf0\a\n" +
+	"\x16runner/v1/runner.proto\x12\trunner.v1\"\x94\v\n" +
 	"\rRunnerMessage\x12>\n" +
 	"\n" +
 	"initialize\x18\x01 \x01(\v2\x1c.runner.v1.InitializeRequestH\x00R\n" +
@@ -2624,7 +4034,12 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\x13request_relay_token\x18\v \x01(\v2!.runner.v1.RequestRelayTokenEventH\x00R\x11requestRelayToken\x12L\n" +
 	"\x10sandboxes_status\x18\f \x01(\v2\x1f.runner.v1.SandboxesStatusEventH\x00R\x0fsandboxesStatus\x12L\n" +
 	"\x10osc_notification\x18\r \x01(\v2\x1f.runner.v1.OSCNotificationEventH\x00R\x0foscNotification\x127\n" +
-	"\tosc_title\x18\x0e \x01(\v2\x18.runner.v1.OSCTitleEventH\x00R\boscTitle\x12\x1c\n" +
+	"\tosc_title\x18\x0e \x01(\v2\x18.runner.v1.OSCTitleEventH\x00R\boscTitle\x12L\n" +
+	"\x10autopilot_status\x18\x10 \x01(\v2\x1f.runner.v1.AutopilotStatusEventH\x00R\x0fautopilotStatus\x12U\n" +
+	"\x13autopilot_iteration\x18\x11 \x01(\v2\".runner.v1.AutopilotIterationEventH\x00R\x12autopilotIteration\x12O\n" +
+	"\x11autopilot_created\x18\x12 \x01(\v2 .runner.v1.AutopilotCreatedEventH\x00R\x10autopilotCreated\x12X\n" +
+	"\x14autopilot_terminated\x18\x13 \x01(\v2#.runner.v1.AutopilotTerminatedEventH\x00R\x13autopilotTerminated\x12R\n" +
+	"\x12autopilot_thinking\x18\x14 \x01(\v2!.runner.v1.AutopilotThinkingEventH\x00R\x11autopilotThinking\x12\x1c\n" +
 	"\ttimestamp\x18\x0f \x01(\x03R\ttimestampB\t\n" +
 	"\apayload\"v\n" +
 	"\x11InitializeRequest\x12)\n" +
@@ -2681,7 +4096,7 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12\x1a\n" +
 	"\bprogress\x18\x03 \x01(\x05R\bprogress\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\"\xad\x06\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\xd0\a\n" +
 	"\rServerMessage\x12J\n" +
 	"\x11initialize_result\x18\x01 \x01(\v2\x1b.runner.v1.InitializeResultH\x00R\x10initializeResult\x12<\n" +
 	"\n" +
@@ -2695,7 +4110,9 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\x12subscribe_terminal\x18\b \x01(\v2#.runner.v1.SubscribeTerminalCommandH\x00R\x11subscribeTerminal\x12Z\n" +
 	"\x14unsubscribe_terminal\x18\t \x01(\v2%.runner.v1.UnsubscribeTerminalCommandH\x00R\x13unsubscribeTerminal\x12K\n" +
 	"\x0fquery_sandboxes\x18\n" +
-	" \x01(\v2 .runner.v1.QuerySandboxesCommandH\x00R\x0equerySandboxes\x12\x1c\n" +
+	" \x01(\v2 .runner.v1.QuerySandboxesCommandH\x00R\x0equerySandboxes\x12N\n" +
+	"\x10create_autopilot\x18\v \x01(\v2!.runner.v1.CreateAutopilotCommandH\x00R\x0fcreateAutopilot\x12Q\n" +
+	"\x11autopilot_control\x18\f \x01(\v2\".runner.v1.AutopilotControlCommandH\x00R\x10autopilotControl\x12\x1c\n" +
 	"\ttimestamp\x18\x0f \x01(\x03R\ttimestampB\t\n" +
 	"\apayload\"\xcc\x01\n" +
 	"\x10InitializeResult\x12)\n" +
@@ -2806,7 +4223,97 @@ const file_runner_v1_runner_proto_rawDesc = "" +
 	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\">\n" +
 	"\rOSCTitleEvent\x12\x17\n" +
 	"\apod_key\x18\x01 \x01(\tR\x06podKey\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title2R\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\"\x88\x01\n" +
+	"\x14AutopilotStatusEvent\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x17\n" +
+	"\apod_key\x18\x02 \x01(\tR\x06podKey\x122\n" +
+	"\x06status\x18\x03 \x01(\v2\x1a.runner.v1.AutopilotStatusR\x06status\"\xcf\x02\n" +
+	"\x0fAutopilotStatus\x12\x14\n" +
+	"\x05phase\x18\x01 \x01(\tR\x05phase\x12+\n" +
+	"\x11current_iteration\x18\x02 \x01(\x05R\x10currentIteration\x12%\n" +
+	"\x0emax_iterations\x18\x03 \x01(\x05R\rmaxIterations\x122\n" +
+	"\x15circuit_breaker_state\x18\x04 \x01(\tR\x13circuitBreakerState\x124\n" +
+	"\x16circuit_breaker_reason\x18\x05 \x01(\tR\x14circuitBreakerReason\x12\x1d\n" +
+	"\n" +
+	"pod_status\x18\x06 \x01(\tR\tpodStatus\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\a \x01(\x03R\tstartedAt\x12*\n" +
+	"\x11last_iteration_at\x18\b \x01(\x03R\x0flastIterationAt\"\xd2\x01\n" +
+	"\x17AutopilotIterationEvent\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x1c\n" +
+	"\titeration\x18\x02 \x01(\x05R\titeration\x12\x14\n" +
+	"\x05phase\x18\x03 \x01(\tR\x05phase\x12\x18\n" +
+	"\asummary\x18\x04 \x01(\tR\asummary\x12#\n" +
+	"\rfiles_changed\x18\x05 \x03(\tR\ffilesChanged\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x03R\n" +
+	"durationMs\"\xb6\x03\n" +
+	"\x17AutopilotControlCommand\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x127\n" +
+	"\x05pause\x18\x02 \x01(\v2\x1f.runner.v1.AutopilotPauseActionH\x00R\x05pause\x12:\n" +
+	"\x06resume\x18\x03 \x01(\v2 .runner.v1.AutopilotResumeActionH\x00R\x06resume\x124\n" +
+	"\x04stop\x18\x04 \x01(\v2\x1e.runner.v1.AutopilotStopActionH\x00R\x04stop\x12=\n" +
+	"\aapprove\x18\x05 \x01(\v2!.runner.v1.AutopilotApproveActionH\x00R\aapprove\x12@\n" +
+	"\btakeover\x18\x06 \x01(\v2\".runner.v1.AutopilotTakeoverActionH\x00R\btakeover\x12@\n" +
+	"\bhandback\x18\a \x01(\v2\".runner.v1.AutopilotHandbackActionH\x00R\bhandbackB\b\n" +
+	"\x06action\"|\n" +
+	"\x16AutopilotApproveAction\x12-\n" +
+	"\x12continue_execution\x18\x01 \x01(\bR\x11continueExecution\x123\n" +
+	"\x15additional_iterations\x18\x02 \x01(\x05R\x14additionalIterations\"\x19\n" +
+	"\x17AutopilotTakeoverAction\"\x19\n" +
+	"\x17AutopilotHandbackAction\"\x16\n" +
+	"\x14AutopilotPauseAction\"\x17\n" +
+	"\x15AutopilotResumeAction\"\x15\n" +
+	"\x13AutopilotStopAction\"\xc6\x01\n" +
+	"\x16CreateAutopilotCommand\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x17\n" +
+	"\apod_key\x18\x02 \x01(\tR\x06podKey\x12:\n" +
+	"\n" +
+	"pod_config\x18\x03 \x01(\v2\x1b.runner.v1.CreatePodCommandR\tpodConfig\x122\n" +
+	"\x06config\x18\x04 \x01(\v2\x1a.runner.v1.AutopilotConfigR\x06config\"\xc9\x03\n" +
+	"\x0fAutopilotConfig\x12%\n" +
+	"\x0einitial_prompt\x18\x01 \x01(\tR\rinitialPrompt\x12%\n" +
+	"\x0emax_iterations\x18\x02 \x01(\x05R\rmaxIterations\x12:\n" +
+	"\x19iteration_timeout_seconds\x18\x03 \x01(\x05R\x17iterationTimeoutSeconds\x122\n" +
+	"\x15no_progress_threshold\x18\x04 \x01(\x05R\x13noProgressThreshold\x120\n" +
+	"\x14same_error_threshold\x18\x05 \x01(\x05R\x12sameErrorThreshold\x128\n" +
+	"\x18approval_timeout_minutes\x18\x06 \x01(\x05R\x16approvalTimeoutMinutes\x12,\n" +
+	"\x12control_agent_type\x18\a \x01(\tR\x10controlAgentType\x126\n" +
+	"\x17control_prompt_template\x18\b \x01(\tR\x15controlPromptTemplate\x12&\n" +
+	"\x0fmcp_config_json\x18\t \x01(\tR\rmcpConfigJson\"U\n" +
+	"\x15AutopilotCreatedEvent\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x17\n" +
+	"\apod_key\x18\x02 \x01(\tR\x06podKey\"W\n" +
+	"\x18AutopilotTerminatedEvent\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xf0\x02\n" +
+	"\x16AutopilotThinkingEvent\x12#\n" +
+	"\rautopilot_key\x18\x01 \x01(\tR\fautopilotKey\x12\x1c\n" +
+	"\titeration\x18\x02 \x01(\x05R\titeration\x12#\n" +
+	"\rdecision_type\x18\x03 \x01(\tR\fdecisionType\x12\x1c\n" +
+	"\treasoning\x18\x04 \x01(\tR\treasoning\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x05 \x01(\x01R\n" +
+	"confidence\x122\n" +
+	"\x06action\x18\x06 \x01(\v2\x1a.runner.v1.AutopilotActionR\x06action\x128\n" +
+	"\bprogress\x18\a \x01(\v2\x1c.runner.v1.AutopilotProgressR\bprogress\x12B\n" +
+	"\fhelp_request\x18\b \x01(\v2\x1f.runner.v1.AutopilotHelpRequestR\vhelpRequest\"W\n" +
+	"\x0fAutopilotAction\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x99\x01\n" +
+	"\x11AutopilotProgress\x12\x18\n" +
+	"\asummary\x18\x01 \x01(\tR\asummary\x12'\n" +
+	"\x0fcompleted_steps\x18\x02 \x03(\tR\x0ecompletedSteps\x12'\n" +
+	"\x0fremaining_steps\x18\x03 \x03(\tR\x0eremainingSteps\x12\x18\n" +
+	"\apercent\x18\x04 \x01(\x05R\apercent\"\xb9\x01\n" +
+	"\x14AutopilotHelpRequest\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\x12\x18\n" +
+	"\acontext\x18\x02 \x01(\tR\acontext\x12)\n" +
+	"\x10terminal_excerpt\x18\x03 \x01(\tR\x0fterminalExcerpt\x12D\n" +
+	"\vsuggestions\x18\x04 \x03(\v2\".runner.v1.AutopilotHelpSuggestionR\vsuggestions\"G\n" +
+	"\x17AutopilotHelpSuggestion\x12\x16\n" +
+	"\x06action\x18\x01 \x01(\tR\x06action\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label2R\n" +
 	"\rRunnerService\x12A\n" +
 	"\aConnect\x12\x18.runner.v1.RunnerMessage\x1a\x18.runner.v1.ServerMessage(\x010\x01B\x9a\x01\n" +
 	"\rcom.runner.v1B\vRunnerProtoP\x01Z7github.com/anthropic/agentmesh/proto/runner/v1;runnerv1\xa2\x02\x03RXX\xaa\x02\tRunner.V1\xca\x02\tRunner\\V1\xe2\x02\x15Runner\\V1\\GPBMetadata\xea\x02\n" +
@@ -2824,7 +4331,7 @@ func file_runner_v1_runner_proto_rawDescGZIP() []byte {
 	return file_runner_v1_runner_proto_rawDescData
 }
 
-var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_runner_v1_runner_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_runner_v1_runner_proto_goTypes = []any{
 	(*RunnerMessage)(nil),              // 0: runner.v1.RunnerMessage
 	(*InitializeRequest)(nil),          // 1: runner.v1.InitializeRequest
@@ -2860,8 +4367,27 @@ var file_runner_v1_runner_proto_goTypes = []any{
 	(*SandboxStatus)(nil),              // 31: runner.v1.SandboxStatus
 	(*OSCNotificationEvent)(nil),       // 32: runner.v1.OSCNotificationEvent
 	(*OSCTitleEvent)(nil),              // 33: runner.v1.OSCTitleEvent
-	nil,                                // 34: runner.v1.ErrorEvent.DetailsEntry
-	nil,                                // 35: runner.v1.CreatePodCommand.EnvVarsEntry
+	(*AutopilotStatusEvent)(nil),       // 34: runner.v1.AutopilotStatusEvent
+	(*AutopilotStatus)(nil),            // 35: runner.v1.AutopilotStatus
+	(*AutopilotIterationEvent)(nil),    // 36: runner.v1.AutopilotIterationEvent
+	(*AutopilotControlCommand)(nil),    // 37: runner.v1.AutopilotControlCommand
+	(*AutopilotApproveAction)(nil),     // 38: runner.v1.AutopilotApproveAction
+	(*AutopilotTakeoverAction)(nil),    // 39: runner.v1.AutopilotTakeoverAction
+	(*AutopilotHandbackAction)(nil),    // 40: runner.v1.AutopilotHandbackAction
+	(*AutopilotPauseAction)(nil),       // 41: runner.v1.AutopilotPauseAction
+	(*AutopilotResumeAction)(nil),      // 42: runner.v1.AutopilotResumeAction
+	(*AutopilotStopAction)(nil),        // 43: runner.v1.AutopilotStopAction
+	(*CreateAutopilotCommand)(nil),     // 44: runner.v1.CreateAutopilotCommand
+	(*AutopilotConfig)(nil),            // 45: runner.v1.AutopilotConfig
+	(*AutopilotCreatedEvent)(nil),      // 46: runner.v1.AutopilotCreatedEvent
+	(*AutopilotTerminatedEvent)(nil),   // 47: runner.v1.AutopilotTerminatedEvent
+	(*AutopilotThinkingEvent)(nil),     // 48: runner.v1.AutopilotThinkingEvent
+	(*AutopilotAction)(nil),            // 49: runner.v1.AutopilotAction
+	(*AutopilotProgress)(nil),          // 50: runner.v1.AutopilotProgress
+	(*AutopilotHelpRequest)(nil),       // 51: runner.v1.AutopilotHelpRequest
+	(*AutopilotHelpSuggestion)(nil),    // 52: runner.v1.AutopilotHelpSuggestion
+	nil,                                // 53: runner.v1.ErrorEvent.DetailsEntry
+	nil,                                // 54: runner.v1.CreatePodCommand.EnvVarsEntry
 }
 var file_runner_v1_runner_proto_depIdxs = []int32{
 	1,  // 0: runner.v1.RunnerMessage.initialize:type_name -> runner.v1.InitializeRequest
@@ -2878,33 +4404,53 @@ var file_runner_v1_runner_proto_depIdxs = []int32{
 	30, // 11: runner.v1.RunnerMessage.sandboxes_status:type_name -> runner.v1.SandboxesStatusEvent
 	32, // 12: runner.v1.RunnerMessage.osc_notification:type_name -> runner.v1.OSCNotificationEvent
 	33, // 13: runner.v1.RunnerMessage.osc_title:type_name -> runner.v1.OSCTitleEvent
-	2,  // 14: runner.v1.InitializeRequest.runner_info:type_name -> runner.v1.RunnerInfo
-	5,  // 15: runner.v1.HeartbeatData.pods:type_name -> runner.v1.PodInfo
-	34, // 16: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
-	14, // 17: runner.v1.ServerMessage.initialize_result:type_name -> runner.v1.InitializeResult
-	17, // 18: runner.v1.ServerMessage.create_pod:type_name -> runner.v1.CreatePodCommand
-	20, // 19: runner.v1.ServerMessage.terminate_pod:type_name -> runner.v1.TerminatePodCommand
-	21, // 20: runner.v1.ServerMessage.terminal_input:type_name -> runner.v1.TerminalInputCommand
-	22, // 21: runner.v1.ServerMessage.terminal_resize:type_name -> runner.v1.TerminalResizeCommand
-	23, // 22: runner.v1.ServerMessage.send_prompt:type_name -> runner.v1.SendPromptCommand
-	24, // 23: runner.v1.ServerMessage.terminal_redraw:type_name -> runner.v1.TerminalRedrawCommand
-	25, // 24: runner.v1.ServerMessage.subscribe_terminal:type_name -> runner.v1.SubscribeTerminalCommand
-	26, // 25: runner.v1.ServerMessage.unsubscribe_terminal:type_name -> runner.v1.UnsubscribeTerminalCommand
-	28, // 26: runner.v1.ServerMessage.query_sandboxes:type_name -> runner.v1.QuerySandboxesCommand
-	15, // 27: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
-	16, // 28: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
-	35, // 29: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
-	18, // 30: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
-	19, // 31: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
-	29, // 32: runner.v1.QuerySandboxesCommand.queries:type_name -> runner.v1.SandboxQuery
-	31, // 33: runner.v1.SandboxesStatusEvent.sandboxes:type_name -> runner.v1.SandboxStatus
-	0,  // 34: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
-	13, // 35: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
-	35, // [35:36] is the sub-list for method output_type
-	34, // [34:35] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	34, // 14: runner.v1.RunnerMessage.autopilot_status:type_name -> runner.v1.AutopilotStatusEvent
+	36, // 15: runner.v1.RunnerMessage.autopilot_iteration:type_name -> runner.v1.AutopilotIterationEvent
+	46, // 16: runner.v1.RunnerMessage.autopilot_created:type_name -> runner.v1.AutopilotCreatedEvent
+	47, // 17: runner.v1.RunnerMessage.autopilot_terminated:type_name -> runner.v1.AutopilotTerminatedEvent
+	48, // 18: runner.v1.RunnerMessage.autopilot_thinking:type_name -> runner.v1.AutopilotThinkingEvent
+	2,  // 19: runner.v1.InitializeRequest.runner_info:type_name -> runner.v1.RunnerInfo
+	5,  // 20: runner.v1.HeartbeatData.pods:type_name -> runner.v1.PodInfo
+	53, // 21: runner.v1.ErrorEvent.details:type_name -> runner.v1.ErrorEvent.DetailsEntry
+	14, // 22: runner.v1.ServerMessage.initialize_result:type_name -> runner.v1.InitializeResult
+	17, // 23: runner.v1.ServerMessage.create_pod:type_name -> runner.v1.CreatePodCommand
+	20, // 24: runner.v1.ServerMessage.terminate_pod:type_name -> runner.v1.TerminatePodCommand
+	21, // 25: runner.v1.ServerMessage.terminal_input:type_name -> runner.v1.TerminalInputCommand
+	22, // 26: runner.v1.ServerMessage.terminal_resize:type_name -> runner.v1.TerminalResizeCommand
+	23, // 27: runner.v1.ServerMessage.send_prompt:type_name -> runner.v1.SendPromptCommand
+	24, // 28: runner.v1.ServerMessage.terminal_redraw:type_name -> runner.v1.TerminalRedrawCommand
+	25, // 29: runner.v1.ServerMessage.subscribe_terminal:type_name -> runner.v1.SubscribeTerminalCommand
+	26, // 30: runner.v1.ServerMessage.unsubscribe_terminal:type_name -> runner.v1.UnsubscribeTerminalCommand
+	28, // 31: runner.v1.ServerMessage.query_sandboxes:type_name -> runner.v1.QuerySandboxesCommand
+	44, // 32: runner.v1.ServerMessage.create_autopilot:type_name -> runner.v1.CreateAutopilotCommand
+	37, // 33: runner.v1.ServerMessage.autopilot_control:type_name -> runner.v1.AutopilotControlCommand
+	15, // 34: runner.v1.InitializeResult.server_info:type_name -> runner.v1.ServerInfo
+	16, // 35: runner.v1.InitializeResult.agent_types:type_name -> runner.v1.AgentTypeInfo
+	54, // 36: runner.v1.CreatePodCommand.env_vars:type_name -> runner.v1.CreatePodCommand.EnvVarsEntry
+	18, // 37: runner.v1.CreatePodCommand.files_to_create:type_name -> runner.v1.FileToCreate
+	19, // 38: runner.v1.CreatePodCommand.sandbox_config:type_name -> runner.v1.SandboxConfig
+	29, // 39: runner.v1.QuerySandboxesCommand.queries:type_name -> runner.v1.SandboxQuery
+	31, // 40: runner.v1.SandboxesStatusEvent.sandboxes:type_name -> runner.v1.SandboxStatus
+	35, // 41: runner.v1.AutopilotStatusEvent.status:type_name -> runner.v1.AutopilotStatus
+	41, // 42: runner.v1.AutopilotControlCommand.pause:type_name -> runner.v1.AutopilotPauseAction
+	42, // 43: runner.v1.AutopilotControlCommand.resume:type_name -> runner.v1.AutopilotResumeAction
+	43, // 44: runner.v1.AutopilotControlCommand.stop:type_name -> runner.v1.AutopilotStopAction
+	38, // 45: runner.v1.AutopilotControlCommand.approve:type_name -> runner.v1.AutopilotApproveAction
+	39, // 46: runner.v1.AutopilotControlCommand.takeover:type_name -> runner.v1.AutopilotTakeoverAction
+	40, // 47: runner.v1.AutopilotControlCommand.handback:type_name -> runner.v1.AutopilotHandbackAction
+	17, // 48: runner.v1.CreateAutopilotCommand.pod_config:type_name -> runner.v1.CreatePodCommand
+	45, // 49: runner.v1.CreateAutopilotCommand.config:type_name -> runner.v1.AutopilotConfig
+	49, // 50: runner.v1.AutopilotThinkingEvent.action:type_name -> runner.v1.AutopilotAction
+	50, // 51: runner.v1.AutopilotThinkingEvent.progress:type_name -> runner.v1.AutopilotProgress
+	51, // 52: runner.v1.AutopilotThinkingEvent.help_request:type_name -> runner.v1.AutopilotHelpRequest
+	52, // 53: runner.v1.AutopilotHelpRequest.suggestions:type_name -> runner.v1.AutopilotHelpSuggestion
+	0,  // 54: runner.v1.RunnerService.Connect:input_type -> runner.v1.RunnerMessage
+	13, // 55: runner.v1.RunnerService.Connect:output_type -> runner.v1.ServerMessage
+	55, // [55:56] is the sub-list for method output_type
+	54, // [54:55] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_runner_v1_runner_proto_init() }
@@ -2927,6 +4473,11 @@ func file_runner_v1_runner_proto_init() {
 		(*RunnerMessage_SandboxesStatus)(nil),
 		(*RunnerMessage_OscNotification)(nil),
 		(*RunnerMessage_OscTitle)(nil),
+		(*RunnerMessage_AutopilotStatus)(nil),
+		(*RunnerMessage_AutopilotIteration)(nil),
+		(*RunnerMessage_AutopilotCreated)(nil),
+		(*RunnerMessage_AutopilotTerminated)(nil),
+		(*RunnerMessage_AutopilotThinking)(nil),
 	}
 	file_runner_v1_runner_proto_msgTypes[13].OneofWrappers = []any{
 		(*ServerMessage_InitializeResult)(nil),
@@ -2939,6 +4490,16 @@ func file_runner_v1_runner_proto_init() {
 		(*ServerMessage_SubscribeTerminal)(nil),
 		(*ServerMessage_UnsubscribeTerminal)(nil),
 		(*ServerMessage_QuerySandboxes)(nil),
+		(*ServerMessage_CreateAutopilot)(nil),
+		(*ServerMessage_AutopilotControl)(nil),
+	}
+	file_runner_v1_runner_proto_msgTypes[37].OneofWrappers = []any{
+		(*AutopilotControlCommand_Pause)(nil),
+		(*AutopilotControlCommand_Resume)(nil),
+		(*AutopilotControlCommand_Stop)(nil),
+		(*AutopilotControlCommand_Approve)(nil),
+		(*AutopilotControlCommand_Takeover)(nil),
+		(*AutopilotControlCommand_Handback)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2946,7 +4507,7 @@ func file_runner_v1_runner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_runner_v1_runner_proto_rawDesc), len(file_runner_v1_runner_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

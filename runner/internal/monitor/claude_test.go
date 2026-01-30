@@ -147,8 +147,45 @@ func TestMonitorSetCallback(t *testing.T) {
 
 	monitor.SetCallback(callback)
 
-	if monitor.onStatusChange == nil {
-		t.Error("callback should be set")
+	// SetCallback internally calls Subscribe("default", callback)
+	// Verify by checking subscribers map size
+	monitor.subMu.RLock()
+	hasDefaultSubscriber := monitor.subscribers["default"] != nil
+	monitor.subMu.RUnlock()
+
+	if !hasDefaultSubscriber {
+		t.Error("callback should be set as default subscriber")
+	}
+}
+
+func TestMonitorSubscribeUnsubscribe(t *testing.T) {
+	monitor := NewMonitor(time.Second)
+
+	var callCount int
+	callback := func(status PodStatus) {
+		callCount++
+	}
+
+	// Subscribe
+	monitor.Subscribe("test-sub", callback)
+
+	monitor.subMu.RLock()
+	hasSubscriber := monitor.subscribers["test-sub"] != nil
+	monitor.subMu.RUnlock()
+
+	if !hasSubscriber {
+		t.Error("subscriber should be registered")
+	}
+
+	// Unsubscribe
+	monitor.Unsubscribe("test-sub")
+
+	monitor.subMu.RLock()
+	hasSubscriberAfterUnsub := monitor.subscribers["test-sub"] != nil
+	monitor.subMu.RUnlock()
+
+	if hasSubscriberAfterUnsub {
+		t.Error("subscriber should be removed after unsubscribe")
 	}
 }
 
