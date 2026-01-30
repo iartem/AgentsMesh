@@ -40,8 +40,11 @@ type Monitor struct {
 	// Process inspector (injectable for testing)
 	inspector process.Inspector
 
-	// Callback when status changes
-	onStatusChange func(PodStatus)
+	// Subscribers for status changes (key: subscriber ID, value: callback)
+	// Supports multiple subscribers instead of single callback to allow
+	// multiple AutopilotControllers to receive status notifications
+	subscribers map[string]func(PodStatus)
+	subMu       sync.RWMutex
 
 	// Check interval
 	interval time.Duration
@@ -53,26 +56,68 @@ type Monitor struct {
 // NewMonitor creates a new process monitor.
 func NewMonitor(interval time.Duration) *Monitor {
 	return &Monitor{
-		statuses:  make(map[string]*PodStatus),
-		inspector: process.DefaultInspector(),
-		interval:  interval,
-		stopCh:    make(chan struct{}),
+		statuses:    make(map[string]*PodStatus),
+		subscribers: make(map[string]func(PodStatus)),
+		inspector:   process.DefaultInspector(),
+		interval:    interval,
+		stopCh:      make(chan struct{}),
 	}
 }
 
 // NewMonitorWithInspector creates a new monitor with a custom inspector (for testing).
 func NewMonitorWithInspector(interval time.Duration, inspector process.Inspector) *Monitor {
 	return &Monitor{
-		statuses:  make(map[string]*PodStatus),
-		inspector: inspector,
-		interval:  interval,
-		stopCh:    make(chan struct{}),
+		statuses:    make(map[string]*PodStatus),
+		subscribers: make(map[string]func(PodStatus)),
+		inspector:   inspector,
+		interval:    interval,
+		stopCh:      make(chan struct{}),
 	}
 }
 
 // SetCallback sets the status change callback.
+// Deprecated: Use Subscribe/Unsubscribe for multi-subscriber support.
 func (m *Monitor) SetCallback(callback func(PodStatus)) {
-	m.onStatusChange = callback
+	m.Subscribe("default", callback)
+}
+
+// Subscribe registers a callback for status change notifications.
+// Multiple subscribers can be registered with unique IDs.
+// If the same ID is used, the previous callback will be replaced.
+func (m *Monitor) Subscribe(id string, callback func(PodStatus)) {
+	m.subMu.Lock()
+	defer m.subMu.Unlock()
+	m.subscribers[id] = callback
+	log.Info("Registered status subscriber", "id", id)
+}
+
+// Unsubscribe removes a previously registered callback.
+func (m *Monitor) Unsubscribe(id string) {
+	m.subMu.Lock()
+	defer m.subMu.Unlock()
+	delete(m.subscribers, id)
+	log.Info("Unregistered status subscriber", "id", id)
+}
+
+// notifySubscribers notifies all registered subscribers of a status change.
+// Callbacks are invoked in separate goroutines to prevent blocking.
+func (m *Monitor) notifySubscribers(status PodStatus) {
+	m.subMu.RLock()
+	defer m.subMu.RUnlock()
+
+	for id, cb := range m.subscribers {
+		// Invoke callback in a goroutine to prevent blocking
+		go func(subscriberID string, callback func(PodStatus)) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error("Subscriber callback panic recovered",
+						"subscriber_id", subscriberID,
+						"panic", r)
+				}
+			}()
+			callback(status)
+		}(id, cb)
+	}
 }
 
 // RegisterPod registers a pod for monitoring.
@@ -190,17 +235,26 @@ func (m *Monitor) checkAllPods() {
 	}
 	m.mu.Unlock()
 
-	// Call callbacks after releasing the lock to prevent deadlocks
-	if m.onStatusChange != nil {
-		for _, status := range changes {
-			m.onStatusChange(status)
-		}
+	// Notify subscribers after releasing the lock to prevent deadlocks
+	for _, status := range changes {
+		m.notifySubscribers(status)
 	}
 }
 
 // getClaudeStatus checks the status of claude process in the process tree.
 func (m *Monitor) getClaudeStatus(shellPid int) (int, ClaudeStatus) {
-	// Find claude process in the process tree
+	// First check if the shell process itself is claude/node
+	// This happens when PTY directly runs claude (not via bash)
+	shellName := m.inspector.GetProcessName(shellPid)
+	if shellName == "claude" || shellName == "node" {
+		// The shell process IS the claude process
+		if m.hasActiveChildren(shellPid) {
+			return shellPid, StatusExecuting
+		}
+		return shellPid, StatusWaiting
+	}
+
+	// Otherwise, find claude process in the process tree
 	claudePid := m.findClaudeProcess(shellPid)
 	if claudePid == 0 {
 		return 0, StatusNotRunning
@@ -215,13 +269,15 @@ func (m *Monitor) getClaudeStatus(shellPid int) (int, ClaudeStatus) {
 }
 
 // findClaudeProcess finds claude process in the process tree rooted at pid.
+// It looks for processes named "claude" or "node" (since Claude CLI is Node.js based).
 func (m *Monitor) findClaudeProcess(pid int) int {
 	// Get direct children
 	children := m.inspector.GetChildProcesses(pid)
 
 	for _, childPid := range children {
 		name := m.inspector.GetProcessName(childPid)
-		if name == "claude" {
+		// Claude CLI can appear as "claude" or "node" depending on how it's invoked
+		if name == "claude" || name == "node" {
 			return childPid
 		}
 

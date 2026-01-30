@@ -158,6 +158,18 @@ func (m *MockCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerI
 	return nil
 }
 
+func (m *MockCommandSender) SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
+func (m *MockCommandSender) SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
 // GetTerminalRedrawCalls returns the number of SendTerminalRedraw calls (thread-safe).
 func (m *MockCommandSender) GetTerminalRedrawCalls() int {
 	m.mu.Lock()

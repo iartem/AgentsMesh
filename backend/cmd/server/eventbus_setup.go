@@ -15,6 +15,53 @@ import (
 	"gorm.io/gorm"
 )
 
+// protoToEventbusThinking converts Proto AutopilotThinkingEvent to eventbus data
+func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventbus.AutopilotThinkingData {
+	result := &eventbus.AutopilotThinkingData{
+		AutopilotControllerKey: data.GetAutopilotKey(),
+		Iteration:              data.GetIteration(),
+		DecisionType:           data.GetDecisionType(),
+		Reasoning:              data.GetReasoning(),
+		Confidence:             data.GetConfidence(),
+	}
+
+	// Convert action
+	if action := data.GetAction(); action != nil {
+		result.Action = &eventbus.AutopilotActionData{
+			Type:    action.GetType(),
+			Content: action.GetContent(),
+			Reason:  action.GetReason(),
+		}
+	}
+
+	// Convert progress
+	if progress := data.GetProgress(); progress != nil {
+		result.Progress = &eventbus.AutopilotProgressData{
+			Summary:        progress.GetSummary(),
+			CompletedSteps: progress.GetCompletedSteps(),
+			RemainingSteps: progress.GetRemainingSteps(),
+			Percent:        progress.GetPercent(),
+		}
+	}
+
+	// Convert help request
+	if helpReq := data.GetHelpRequest(); helpReq != nil {
+		result.HelpRequest = &eventbus.AutopilotHelpRequestData{
+			Reason:          helpReq.GetReason(),
+			Context:         helpReq.GetContext(),
+			TerminalExcerpt: helpReq.GetTerminalExcerpt(),
+		}
+		for _, s := range helpReq.GetSuggestions() {
+			result.HelpRequest.Suggestions = append(result.HelpRequest.Suggestions, eventbus.AutopilotHelpSuggestionData{
+				Action: s.GetAction(),
+				Label:  s.GetLabel(),
+			})
+		}
+	}
+
+	return result
+}
+
 // setupEventBusHub sets up the integration between EventBus and WebSocket Hub
 // EventBus publishes events, Hub routes them to appropriate WebSocket clients
 func setupEventBusHub(eb *eventbus.EventBus, hub *websocket.Hub) {
@@ -233,6 +280,116 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 		if err := eventBus.Publish(context.Background(), event); err != nil {
 			slog.Error("failed to publish pod init progress event", "error", err)
 		}
+	})
+
+	// Set up AutopilotController status change callback
+	podCoordinator.SetAutopilotStatusChangeCallback(func(
+		autopilotKey string,
+		podKey string,
+		phase string,
+		iteration int32,
+		maxIterations int32,
+		circuitBreakerState string,
+		circuitBreakerReason string,
+		userTakeover bool,
+	) {
+		// Query AutopilotController to get organization ID
+		var autopilot struct {
+			OrganizationID int64 `gorm:"column:organization_id"`
+		}
+		if err := db.Table("autopilot_controllers").Where("autopilot_controller_key = ?", autopilotKey).First(&autopilot).Error; err != nil {
+			slog.Error("failed to get autopilot for status event", "autopilot_key", autopilotKey, "error", err)
+			return
+		}
+
+		// Create and publish AutopilotController status event
+		data := &eventbus.AutopilotStatusChangedData{
+			AutopilotControllerKey: autopilotKey,
+			PodKey:                 podKey,
+			Phase:                  phase,
+			CurrentIteration:       iteration,
+			MaxIterations:          maxIterations,
+			CircuitBreakerState:    circuitBreakerState,
+			CircuitBreakerReason:   circuitBreakerReason,
+			UserTakeover:           userTakeover,
+		}
+		event, err := eventbus.NewEntityEvent(eventbus.EventAutopilotStatusChanged, autopilot.OrganizationID, "autopilot_controller", autopilotKey, data)
+		if err != nil {
+			slog.Error("failed to create autopilot status event", "error", err)
+			return
+		}
+		if err := eventBus.Publish(context.Background(), event); err != nil {
+			slog.Error("failed to publish autopilot status event", "error", err)
+		}
+	})
+
+	// Set up AutopilotController iteration callback
+	podCoordinator.SetAutopilotIterationChangeCallback(func(
+		autopilotKey string,
+		iteration int32,
+		phase string,
+		summary string,
+		filesChanged []string,
+		durationMs int64,
+	) {
+		// Query AutopilotController to get organization ID
+		var autopilot struct {
+			OrganizationID int64 `gorm:"column:organization_id"`
+		}
+		if err := db.Table("autopilot_controllers").Where("autopilot_controller_key = ?", autopilotKey).First(&autopilot).Error; err != nil {
+			slog.Error("failed to get autopilot for iteration event", "autopilot_key", autopilotKey, "error", err)
+			return
+		}
+
+		// Create and publish AutopilotController iteration event
+		data := &eventbus.AutopilotIterationData{
+			AutopilotControllerKey: autopilotKey,
+			Iteration:              iteration,
+			Phase:                  phase,
+			Summary:                summary,
+			FilesChanged:           filesChanged,
+			DurationMs:             durationMs,
+		}
+		event, err := eventbus.NewEntityEvent(eventbus.EventAutopilotIteration, autopilot.OrganizationID, "autopilot_controller", autopilotKey, data)
+		if err != nil {
+			slog.Error("failed to create autopilot iteration event", "error", err)
+			return
+		}
+		if err := eventBus.Publish(context.Background(), event); err != nil {
+			slog.Error("failed to publish autopilot iteration event", "error", err)
+		}
+	})
+
+	// Set up AutopilotController thinking callback
+	podCoordinator.SetAutopilotThinkingCallback(func(runnerID int64, protoData *runnerv1.AutopilotThinkingEvent) {
+		autopilotKey := protoData.GetAutopilotKey()
+
+		// Query AutopilotController to get organization ID
+		var autopilot struct {
+			OrganizationID int64 `gorm:"column:organization_id"`
+		}
+		if err := db.Table("autopilot_controllers").Where("autopilot_controller_key = ?", autopilotKey).First(&autopilot).Error; err != nil {
+			slog.Error("failed to get autopilot for thinking event", "autopilot_key", autopilotKey, "error", err)
+			return
+		}
+
+		// Convert Proto to eventbus data
+		data := protoToEventbusThinking(protoData)
+
+		// Create and publish AutopilotController thinking event
+		event, err := eventbus.NewEntityEvent(eventbus.EventAutopilotThinking, autopilot.OrganizationID, "autopilot_controller", autopilotKey, data)
+		if err != nil {
+			slog.Error("failed to create autopilot thinking event", "error", err)
+			return
+		}
+		if err := eventBus.Publish(context.Background(), event); err != nil {
+			slog.Error("failed to publish autopilot thinking event", "error", err)
+		}
+
+		slog.Debug("published autopilot thinking event",
+			"autopilot_key", autopilotKey,
+			"decision_type", data.DecisionType,
+			"iteration", data.Iteration)
 	})
 }
 

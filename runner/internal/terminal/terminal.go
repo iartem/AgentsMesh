@@ -295,6 +295,8 @@ func (t *Terminal) readOutput() {
 	log := logger.Terminal()
 	buf := make([]byte, 4096)
 	readCount := 0
+	timeoutCount := 0           // Track consecutive timeouts
+	lastOutputTime := time.Now() // Track when we last received output
 
 	for {
 		// Check if we should pause (backpressure from consumer)
@@ -306,6 +308,7 @@ func (t *Terminal) readOutput() {
 			// Block until resume signal or terminal closes
 			// This is the key to ttyd-style backpressure:
 			// we stop reading from PTY when consumer is overwhelmed
+			log.Warn("PTY read loop BLOCKED by backpressure", "read_count", readCount)
 			select {
 			case <-t.resumeCh:
 				// Resumed, continue reading
@@ -329,6 +332,7 @@ func (t *Terminal) readOutput() {
 		t.mu.Unlock()
 
 		if closed || ptyFile == nil {
+			log.Debug("PTY read loop exiting", "closed", closed, "ptyFile_nil", ptyFile == nil, "read_count", readCount)
 			return
 		}
 
@@ -340,6 +344,15 @@ func (t *Terminal) readOutput() {
 		if err != nil {
 			// Check if it's just a timeout (expected during backpressure checks)
 			if os.IsTimeout(err) {
+				timeoutCount++
+				// Log every 50 timeouts (5 seconds of no output) to track idle state
+				if timeoutCount%50 == 0 {
+					idleDuration := time.Since(lastOutputTime)
+					log.Debug("PTY read loop idle heartbeat",
+						"timeout_count", timeoutCount,
+						"idle_duration", idleDuration,
+						"total_reads", readCount)
+				}
 				continue // Normal timeout, re-check pause state
 			}
 
@@ -358,12 +371,13 @@ func (t *Terminal) readOutput() {
 		}
 
 		readCount++
+		timeoutCount = 0           // Reset timeout counter on successful read
+		lastOutputTime = time.Now() // Update last output time
 		if n > 0 {
-			// Debug: Log first few reads
-			if readCount <= 5 {
-				preview := string(buf[:min(n, 100)])
-				log.Debug("PTY read", "read_num", readCount, "bytes", n, "preview", preview)
-			}
+			// Log every read for debugging
+			log.Debug("PTY read SUCCESS",
+				"read_num", readCount,
+				"bytes", n)
 
 			// Make a copy of the data
 			data := make([]byte, n)
@@ -375,7 +389,19 @@ func (t *Terminal) readOutput() {
 			t.mu.Unlock()
 
 			if handler != nil {
+				log.Debug("PTY calling handler",
+					"read_num", readCount,
+					"bytes", n)
+				startHandler := time.Now()
 				handler(data)
+				handlerTime := time.Since(startHandler)
+				log.Debug("PTY handler returned",
+					"read_num", readCount,
+					"bytes", n,
+					"handler_time", handlerTime)
+				if handlerTime > 50*time.Millisecond {
+					log.Warn("PTY output handler slow", "read_num", readCount, "bytes", n, "handler_time", handlerTime)
+				}
 			} else {
 				log.Warn("No output handler set", "read_num", readCount)
 			}

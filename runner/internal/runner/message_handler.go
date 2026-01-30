@@ -9,6 +9,8 @@ import (
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/monitor"
+	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
@@ -111,7 +113,8 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		}
 	}
 
-	// Set output handler: PTY → VirtualTerminal → Aggregator
+	// Set output handler: PTY → VirtualTerminal → StateDetector → Aggregator
+	// Single-direction data flow: no reverse lock acquisition
 	pod.Terminal.SetOutputHandler(func(data []byte) {
 		// Recover from any panic to prevent Runner crash
 		defer func() {
@@ -123,10 +126,17 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 			}
 		}()
 
-		// Feed VirtualTerminal for state tracking (enables snapshots)
+		// Feed VirtualTerminal and get screen lines in one lock acquisition
+		// This enables single-direction data flow without reverse lock contention
+		var screenLines []string
 		if vt != nil {
-			vt.Feed(data)
+			screenLines = vt.Feed(data)
 		}
+
+		// Notify state detector with both output activity AND screen content
+		// This is the single-direction data flow: PTY → Feed → StateDetector
+		// No need for StateDetector to reverse-fetch from VirtualTerminal
+		go pod.NotifyStateDetectorWithScreen(len(data), screenLines)
 
 		// Write to aggregator - it handles Relay vs gRPC routing internally
 		aggregator.Write(data)
@@ -148,6 +158,12 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		orgSlug := h.conn.GetOrgSlug()
 		h.runner.mcpServer.RegisterPod(cmd.PodKey, orgSlug, nil, nil, cmd.LaunchCommand)
 		log.Debug("Registered pod with MCP server", "pod_key", cmd.PodKey, "org", orgSlug)
+	}
+
+	// Register pod with Claude Monitor for agent status detection
+	if h.runner.claudeMonitor != nil {
+		h.runner.claudeMonitor.RegisterPod(cmd.PodKey, pod.Terminal.PID())
+		log.Debug("Registered pod with Claude monitor", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID())
 	}
 
 	// Notify server that pod is created with actual terminal size
@@ -177,6 +193,9 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 		pod.PTYLogger.Close()
 	}
 
+	// Stop state detector if running (used by Autopilot)
+	pod.StopStateDetector()
+
 	// Stop aggregator first to ensure no more output is sent
 	if pod.Aggregator != nil {
 		pod.Aggregator.Stop()
@@ -190,6 +209,11 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 	// Unregister pod from MCP HTTP Server
 	if h.runner.mcpServer != nil {
 		h.runner.mcpServer.UnregisterPod(req.PodKey)
+	}
+
+	// Unregister pod from Claude Monitor
+	if h.runner.claudeMonitor != nil {
+		h.runner.claudeMonitor.UnregisterPod(req.PodKey)
 	}
 
 	// Notify server
@@ -562,10 +586,13 @@ func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 				pod.PTYLogger.Close()
 			}
 
-			// 2. Disconnect Relay connection
+			// 2. Stop state detector if running (used by Autopilot)
+			pod.StopStateDetector()
+
+			// 3. Disconnect Relay connection
 			pod.DisconnectRelay()
 
-			// 3. Stop aggregator to flush any remaining output
+			// 4. Stop aggregator to flush any remaining output
 			if pod.Aggregator != nil {
 				pod.Aggregator.Stop()
 			}
@@ -627,6 +654,150 @@ func (h *RunnerMessageHandler) sendPodErrorWithCode(podKey string, podErr *clien
 	if err := h.conn.SendError(podKey, podErr.Code, podErr.Message); err != nil {
 		logger.Pod().Error("Failed to send error event", "error", err)
 	}
+}
+
+// ==================== Autopilot Command Handlers ====================
+
+// OnCreateAutopilot handles Autopilot creation command from server.
+// Implements client.MessageHandler interface.
+func (h *RunnerMessageHandler) OnCreateAutopilot(cmd *runnerv1.CreateAutopilotCommand) error {
+	log := logger.Autopilot()
+	log.Info("Creating Autopilot",
+		"autopilot_key", cmd.AutopilotKey,
+		"pod_key", cmd.PodKey)
+
+	// Check if Autopilot already exists
+	if h.runner.GetAutopilot(cmd.AutopilotKey) != nil {
+		return fmt.Errorf("Autopilot already exists: %s", cmd.AutopilotKey)
+	}
+
+	var targetPod *Pod
+	var podKey string
+
+	// Method 1: Bind to existing Pod
+	if cmd.PodKey != "" {
+		podKey = cmd.PodKey
+		var ok bool
+		targetPod, ok = h.podStore.Get(podKey)
+		if !ok {
+			return fmt.Errorf("Pod not found: %s", podKey)
+		}
+	}
+
+	// Method 2: Create Pod along with Autopilot
+	if cmd.PodConfig != nil && targetPod == nil {
+		podKey = cmd.PodConfig.PodKey
+		if err := h.OnCreatePod(cmd.PodConfig); err != nil {
+			return fmt.Errorf("failed to create Pod: %w", err)
+		}
+		var ok bool
+		targetPod, ok = h.podStore.Get(podKey)
+		if !ok {
+			return fmt.Errorf("Pod not found after creation: %s", podKey)
+		}
+	}
+
+	if targetPod == nil {
+		return fmt.Errorf("either pod_key or pod_config is required")
+	}
+
+	// Create PodController
+	podCtrl := NewPodController(targetPod, h.runner)
+
+	// Create event reporter
+	reporter := autopilot.NewGRPCEventReporter(func(msg *runnerv1.RunnerMessage) error {
+		return h.conn.SendMessage(msg)
+	})
+
+	// Create Autopilot with MCP port for control process
+	mcpPort := h.runner.cfg.GetMCPPort()
+	ac := autopilot.NewAutopilotController(autopilot.Config{
+		AutopilotKey: cmd.AutopilotKey,
+		PodKey:       podKey,
+		ProtoConfig:  cmd.Config,
+		PodCtrl:      podCtrl,
+		Reporter:     reporter,
+		MCPPort:      mcpPort,
+	})
+
+	// Store Autopilot
+	h.runner.AddAutopilot(ac)
+
+	// Register with Monitor for event-driven callbacks
+	// Use Autopilot key as unique subscriber ID to support multiple Autopilots
+	if h.runner.claudeMonitor != nil {
+		subscriberID := "autopilot-" + cmd.AutopilotKey
+		h.runner.claudeMonitor.Subscribe(subscriberID, func(status monitor.PodStatus) {
+			// Check if this status change is for the specific Pod
+			if status.PodID == podKey && status.ClaudeStatus == monitor.StatusWaiting {
+				// Trigger Autopilot when Pod transitions to waiting
+				ac.OnPodWaiting()
+			}
+		})
+	}
+
+	// Start Autopilot
+	if err := ac.Start(); err != nil {
+		h.runner.RemoveAutopilot(cmd.AutopilotKey)
+		return fmt.Errorf("failed to start Autopilot: %w", err)
+	}
+
+	log.Info("Autopilot created successfully",
+		"autopilot_key", cmd.AutopilotKey,
+		"pod_key", podKey)
+
+	return nil
+}
+
+// OnAutopilotControl handles Autopilot control commands (pause/resume/stop/approve/takeover/handback).
+// Implements client.MessageHandler interface.
+func (h *RunnerMessageHandler) OnAutopilotControl(cmd *runnerv1.AutopilotControlCommand) error {
+	log := logger.Autopilot()
+	log.Info("Handling Autopilot control command", "autopilot_key", cmd.AutopilotKey)
+
+	ac := h.runner.GetAutopilot(cmd.AutopilotKey)
+	if ac == nil {
+		return fmt.Errorf("Autopilot not found: %s", cmd.AutopilotKey)
+	}
+
+	switch action := cmd.Action.(type) {
+	case *runnerv1.AutopilotControlCommand_Pause:
+		log.Info("Pausing Autopilot", "autopilot_key", cmd.AutopilotKey)
+		ac.Pause()
+
+	case *runnerv1.AutopilotControlCommand_Resume:
+		log.Info("Resuming Autopilot", "autopilot_key", cmd.AutopilotKey)
+		ac.Resume()
+
+	case *runnerv1.AutopilotControlCommand_Stop:
+		log.Info("Stopping Autopilot", "autopilot_key", cmd.AutopilotKey)
+		ac.Stop()
+		// Unsubscribe from Monitor
+		if h.runner.claudeMonitor != nil {
+			h.runner.claudeMonitor.Unsubscribe("autopilot-" + cmd.AutopilotKey)
+		}
+		h.runner.RemoveAutopilot(cmd.AutopilotKey)
+
+	case *runnerv1.AutopilotControlCommand_Approve:
+		log.Info("Approving Autopilot continuation",
+			"autopilot_key", cmd.AutopilotKey,
+			"continue", action.Approve.ContinueExecution,
+			"additional_iterations", action.Approve.AdditionalIterations)
+		ac.Approve(action.Approve.ContinueExecution, action.Approve.AdditionalIterations)
+
+	case *runnerv1.AutopilotControlCommand_Takeover:
+		log.Info("User takeover", "autopilot_key", cmd.AutopilotKey)
+		ac.Takeover()
+
+	case *runnerv1.AutopilotControlCommand_Handback:
+		log.Info("User handback", "autopilot_key", cmd.AutopilotKey)
+		ac.Handback()
+
+	default:
+		return fmt.Errorf("unknown Autopilot control action")
+	}
+
+	return nil
 }
 
 // Ensure RunnerMessageHandler implements client.MessageHandler

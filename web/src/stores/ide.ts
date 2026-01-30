@@ -15,7 +15,7 @@ export type ActivityType =
 /**
  * Bottom panel tab types
  */
-export type BottomPanelTab = "channels" | "activity";
+export type BottomPanelTab = "channels" | "activity" | "autopilot";
 
 /**
  * IDE UI state management

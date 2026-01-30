@@ -192,3 +192,37 @@ func (a *GRPCRunnerAdapter) SendQuerySandboxes(runnerID int64, requestID string,
 	}
 	return conn.SendMessage(msg)
 }
+
+// ==================== AutopilotController Commands ====================
+
+// SendCreateAutopilot sends a create AutopilotController command to a Runner.
+func (a *GRPCRunnerAdapter) SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error {
+	conn := a.connManager.GetConnection(runnerID)
+	if conn == nil {
+		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
+	}
+
+	msg := &runnerv1.ServerMessage{
+		Payload: &runnerv1.ServerMessage_CreateAutopilot{
+			CreateAutopilot: cmd,
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return conn.SendMessage(msg)
+}
+
+// SendAutopilotControl sends an AutopilotController control command to a Runner.
+func (a *GRPCRunnerAdapter) SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error {
+	conn := a.connManager.GetConnection(runnerID)
+	if conn == nil {
+		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
+	}
+
+	msg := &runnerv1.ServerMessage{
+		Payload: &runnerv1.ServerMessage_AutopilotControl{
+			AutopilotControl: cmd,
+		},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	return conn.SendMessage(msg)
+}

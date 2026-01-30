@@ -1,5 +1,9 @@
 package client
 
+import (
+	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
+)
+
 // Connection defines the interface for server communication.
 // This interface abstracts GRPCConnection for testing and decoupling.
 type Connection interface {
@@ -49,6 +53,10 @@ type Connection interface {
 	// SendOSCTitle sends an OSC title change event to the server.
 	// This is triggered by OSC 0/2 sequences for window/tab title changes.
 	SendOSCTitle(podKey, title string) error
+
+	// SendMessage sends a raw RunnerMessage to the server.
+	// Used for Autopilot events and other custom messages.
+	SendMessage(msg *runnerv1.RunnerMessage) error
 
 	// QueueLength returns the current send queue length.
 	QueueLength() int

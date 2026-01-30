@@ -3,6 +3,7 @@ package terminal
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -162,8 +163,10 @@ func (vt *VirtualTerminal) initScreen() {
 	vt.currentUnderlineColor = DefaultColor()
 }
 
-// Feed processes raw PTY data with proper UTF-8 support
-func (vt *VirtualTerminal) Feed(data []byte) {
+// Feed processes raw PTY data with proper UTF-8 support.
+// Returns the current screen lines for downstream consumers (single-direction data flow).
+// This avoids the need for consumers to acquire a separate lock to read screen state.
+func (vt *VirtualTerminal) Feed(data []byte) []string {
 	vt.mu.Lock()
 	defer vt.mu.Unlock()
 
@@ -210,6 +213,30 @@ func (vt *VirtualTerminal) Feed(data []byte) {
 		vt.processChar(r)
 		data = data[size:]
 	}
+
+	// Return current screen lines for downstream consumers (single-direction data flow)
+	// This is done inside the lock to ensure consistency
+	return vt.getLinesLocked()
+}
+
+// getLinesLocked returns screen lines. Caller must hold vt.mu.
+func (vt *VirtualTerminal) getLinesLocked() []string {
+	screen := vt.screen
+	lines := make([]string, vt.rows)
+	for row := 0; row < vt.rows; row++ {
+		var line strings.Builder
+		if row < len(screen) {
+			for _, ch := range screen[row] {
+				if ch == 0 {
+					line.WriteRune(' ')
+				} else {
+					line.WriteRune(ch)
+				}
+			}
+		}
+		lines[row] = strings.TrimRight(line.String(), " ")
+	}
+	return lines
 }
 
 // processByte processes a single byte through the state machine
@@ -568,16 +595,74 @@ type TerminalSnapshot struct {
 	IsAltScreen       bool     `json:"is_alt_screen"` // Whether currently in alternate screen mode (TUI apps)
 }
 
+// TryGetSnapshot attempts to get a terminal snapshot without blocking.
+// Returns nil if the lock cannot be acquired immediately (e.g., Feed is in progress).
+// This is useful for periodic polling where skipping a snapshot is acceptable.
+func (vt *VirtualTerminal) TryGetSnapshot() *TerminalSnapshot {
+	if !vt.mu.TryRLock() {
+		slog.Debug("VirtualTerminal.TryGetSnapshot: lock busy, skipping")
+		return nil // Lock held by Feed(), skip this tick
+	}
+	slog.Debug("VirtualTerminal.TryGetSnapshot: got RLock")
+	defer func() {
+		vt.mu.RUnlock()
+		slog.Debug("VirtualTerminal.TryGetSnapshot: released RLock")
+	}()
+	return vt.getSnapshotLocked()
+}
+
+// TryGetLines attempts to get terminal screen lines without blocking.
+// Returns nil if the lock cannot be acquired immediately.
+// This is a lightweight alternative to TryGetSnapshot for state detection
+// that only needs text content, not serialized ANSI output.
+func (vt *VirtualTerminal) TryGetLines() []string {
+	if !vt.mu.TryRLock() {
+		return nil // Lock held by Feed(), skip this tick
+	}
+	defer vt.mu.RUnlock()
+
+	// Quick extraction of screen lines - no serialization needed
+	screen := vt.screen
+	lines := make([]string, vt.rows)
+	for row := 0; row < vt.rows; row++ {
+		var line strings.Builder
+		if row < len(screen) {
+			for _, ch := range screen[row] {
+				if ch == 0 {
+					line.WriteRune(' ')
+				} else {
+					line.WriteRune(ch)
+				}
+			}
+		}
+		lines[row] = strings.TrimRight(line.String(), " ")
+	}
+	return lines
+}
+
 // GetSnapshot returns a complete terminal snapshot for relay transmission.
 // When in alternate screen mode (TUI apps like Claude Code), returns the alt screen content.
 // The snapshot includes SerializedContent with ANSI escape sequences for proper xterm.js rendering.
 func (vt *VirtualTerminal) GetSnapshot() *TerminalSnapshot {
+	slog.Debug("VirtualTerminal.GetSnapshot: acquiring RLock")
 	vt.mu.RLock()
-	defer vt.mu.RUnlock()
+	slog.Debug("VirtualTerminal.GetSnapshot: got RLock")
+	defer func() {
+		vt.mu.RUnlock()
+		slog.Debug("VirtualTerminal.GetSnapshot: released RLock")
+	}()
+	return vt.getSnapshotLocked()
+}
+
+// getSnapshotLocked returns a terminal snapshot. Caller must hold vt.mu (read or write).
+func (vt *VirtualTerminal) getSnapshotLocked() *TerminalSnapshot {
+	slog.Debug("VirtualTerminal.getSnapshotLocked: ENTER", "rows", vt.rows, "cols", vt.cols, "hasData", vt.hasData)
 
 	// Use the current screen buffer (which points to altScreen when in alt mode)
 	// This is already set correctly by enterAltScreen/exitAltScreen
 	screen := vt.screen
+
+	slog.Debug("VirtualTerminal.getSnapshotLocked: collecting lines", "screen_len", len(screen))
 
 	// Collect all visible lines from the screen buffer (plain text for backward compatibility)
 	lines := make([]string, vt.rows)
@@ -595,18 +680,24 @@ func (vt *VirtualTerminal) GetSnapshot() *TerminalSnapshot {
 		lines[row] = strings.TrimRight(line.String(), " ")
 	}
 
+	slog.Debug("VirtualTerminal.getSnapshotLocked: lines collected, serializing", "hasData", vt.hasData)
+
 	// Generate serialized content with ANSI sequences for proper xterm.js rendering.
 	// Use the existing Serialize() method which is well-tested.
 	// Serialize when hasData is true, even if screen appears empty (might have control sequences).
 	// This handles cases like TUI apps that clear screen and set cursor position without visible text.
 	var serialized string
 	if vt.hasData {
+		slog.Debug("VirtualTerminal.getSnapshotLocked: calling serializeNoLock")
 		serialized = vt.serializeNoLock(SerializeOptions{
 			ScrollbackLines:  0,     // Don't include scrollback history
 			ExcludeAltBuffer: false, // Include alt buffer if in alt screen mode
 			ExcludeModes:     true,  // Don't include mode sequences (DECCKM, etc.)
 		})
+		slog.Debug("VirtualTerminal.getSnapshotLocked: serializeNoLock done", "serialized_len", len(serialized))
 	}
+
+	slog.Debug("VirtualTerminal.getSnapshotLocked: EXIT")
 
 	return &TerminalSnapshot{
 		Cols:              vt.cols,

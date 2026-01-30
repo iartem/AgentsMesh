@@ -46,6 +46,7 @@ type Services struct {
 	PodCoordinator    *runner.PodCoordinator    // Pod lifecycle coordinator
 	TerminalRouter    *runner.TerminalRouter    // Terminal data router
 	Pod               *agentpod.PodService
+	Autopilot         *agentpod.AutopilotControllerService // AutopilotController automation service
 	Channel           *channel.Service
 	Binding           *binding.Service
 	Ticket            *ticket.Service
@@ -215,6 +216,20 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 		}
 		RegisterTerminalConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender)
 	}
+
+	// AutopilotControllers (event-driven automation controller)
+	var autopilotOpts []AutopilotControllerHandlerOption
+	if svc.Pod != nil {
+		autopilotOpts = append(autopilotOpts, WithPodServiceForAutopilot(svc.Pod))
+	}
+	if svc.Autopilot != nil {
+		autopilotOpts = append(autopilotOpts, WithAutopilotControllerService(svc.Autopilot))
+	}
+	if svc.PodCoordinator != nil {
+		autopilotOpts = append(autopilotOpts, WithAutopilotCommandSender(svc.PodCoordinator))
+	}
+	autopilotHandler := NewAutopilotControllerHandler(autopilotOpts...)
+	RegisterAutopilotControllerRoutes(rg, autopilotHandler)
 
 	// Channels
 	channelHandler := NewChannelHandler(svc.Channel)

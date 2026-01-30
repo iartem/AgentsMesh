@@ -5,7 +5,15 @@ import "@xterm/xterm/css/xterm.css";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { usePodStore } from "@/stores/pod";
+import { useAutopilotStore } from "@/stores/autopilot";
 import { usePodStatus, useTerminal, useTouchScroll } from "@/hooks";
+import {
+  CircuitBreakerAlert,
+  TakeoverBanner,
+  CreateAutopilotControllerModal,
+  AutopilotStatusBar,
+} from "@/components/autopilot";
+import { useIDEStore } from "@/stores/ide";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +26,7 @@ import {
   AlertCircle,
   RefreshCw,
   Square,
+  Bot,
 } from "lucide-react";
 
 interface TerminalPaneProps {
@@ -45,9 +54,33 @@ export function TerminalPane({
 }: TerminalPaneProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isTerminating, setIsTerminating] = useState(false);
+  const [showAutopilotModal, setShowAutopilotModal] = useState(false);
   const { terminalFontSize, setActivePane } = useWorkspaceStore();
+  const { setBottomPanelOpen, setBottomPanelTab } = useIDEStore();
   const initProgress = usePodStore((state) => state.initProgress[podKey]);
   const terminatePod = usePodStore((state) => state.terminatePod);
+
+  // AutopilotController state - find if there's an active AutopilotController for this Pod
+  const autopilotController = useAutopilotStore((state) => state.getAutopilotControllerByPodKey(podKey));
+  const getThinking = useAutopilotStore((state) => state.getThinking);
+
+  // Get thinking state for this autopilot
+  const thinking = autopilotController
+    ? getThinking(autopilotController.autopilot_controller_key)
+    : null;
+
+  // Auto-open BottomPanel Autopilot tab when help is needed
+  // Backend sends NEED_HUMAN_HELP, frontend expects need_help
+  React.useEffect(() => {
+    if (
+      thinking?.decision_type === "need_help" ||
+      thinking?.decision_type === "NEED_HUMAN_HELP" ||
+      autopilotController?.phase === "waiting_approval"
+    ) {
+      setBottomPanelTab("autopilot");
+      setBottomPanelOpen(true);
+    }
+  }, [thinking?.decision_type, autopilotController?.phase, setBottomPanelTab, setBottomPanelOpen]);
 
   // Pod status tracking
   const { podStatus, isPodReady, podError } = usePodStatus(podKey);
@@ -137,6 +170,21 @@ export function TerminalPane({
             >
               <RefreshCw className="w-3 h-3" />
             </Button>
+            {/* Start Autopilot button - only show when no active AutopilotController */}
+            {!autopilotController && isPodReady && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text hover:text-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAutopilotModal(true);
+                }}
+                title="Start Autopilot Mode"
+              >
+                <Bot className="w-3 h-3" />
+              </Button>
+            )}
             {onPopout && (
               <Button
                 variant="ghost"
@@ -248,15 +296,43 @@ export function TerminalPane({
           )}
         </div>
       ) : (
-        <div
-          ref={terminalRef}
-          className="flex-1 min-h-0 overflow-auto"
-          style={{
-            minHeight: showHeader ? "calc(100% - 32px)" : "100%",
-            touchAction: "pan-y pinch-zoom", // Enable touch scrolling and zoom
-          }}
-        />
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* AutopilotController Components - show when terminal is ready and AutopilotController exists */}
+          {autopilotController && (
+            <>
+              {/* Takeover Banner - only show when user has taken over */}
+              <TakeoverBanner autopilotController={autopilotController} className="rounded-none" />
+
+              {/* Circuit Breaker Alert - show when circuit breaker is open */}
+              <CircuitBreakerAlert autopilotController={autopilotController} className="mx-2 mt-2 rounded-md" />
+
+              {/* Simplified AutopilotStatusBar - click to open BottomPanel */}
+              <AutopilotStatusBar
+                autopilotController={autopilotController}
+                onTogglePanel={() => {
+                  setBottomPanelTab("autopilot");
+                  setBottomPanelOpen(true);
+                }}
+              />
+            </>
+          )}
+          <div
+            ref={terminalRef}
+            className="flex-1 min-h-0 overflow-auto"
+            style={{
+              touchAction: "pan-y pinch-zoom", // Enable touch scrolling and zoom
+            }}
+          />
+        </div>
       )}
+
+      {/* Create AutopilotController Modal */}
+      <CreateAutopilotControllerModal
+        open={showAutopilotModal}
+        onClose={() => setShowAutopilotModal(false)}
+        podKey={podKey}
+        podTitle={title}
+      />
     </div>
   );
 }

@@ -42,6 +42,12 @@ type RunnerCommandSender interface {
 	// SendUnsubscribeTerminal sends an unsubscribe terminal command to a runner.
 	// This notifies the runner that all browsers have disconnected and it should disconnect from Relay.
 	SendUnsubscribeTerminal(ctx context.Context, runnerID int64, podKey string) error
+
+	// SendCreateAutopilot sends a create AutopilotController command to a runner.
+	SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error
+
+	// SendAutopilotControl sends an AutopilotController control command to a runner.
+	SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error
 }
 
 // NoOpCommandSender is a fallback implementation that logs warnings.
@@ -100,6 +106,18 @@ func (n *NoOpCommandSender) SendSubscribeTerminal(ctx context.Context, runnerID 
 func (n *NoOpCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerID int64, podKey string) error {
 	n.logger.Warn("command sender not configured, cannot send unsubscribe terminal",
 		"runner_id", runnerID, "pod_key", podKey)
+	return ErrCommandSenderNotSet
+}
+
+func (n *NoOpCommandSender) SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error {
+	n.logger.Warn("command sender not configured, cannot create autopilot",
+		"runner_id", runnerID, "autopilot_key", cmd.AutopilotKey)
+	return ErrCommandSenderNotSet
+}
+
+func (n *NoOpCommandSender) SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error {
+	n.logger.Warn("command sender not configured, cannot send autopilot control",
+		"runner_id", runnerID, "autopilot_key", cmd.AutopilotKey)
 	return ErrCommandSenderNotSet
 }
 

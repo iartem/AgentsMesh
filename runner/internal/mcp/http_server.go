@@ -12,15 +12,36 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
 )
 
+// PodStatusProvider provides Pod status information.
+// This interface allows HTTPServer to query Pod status from the Runner.
+type PodStatusProvider interface {
+	// GetPodStatus returns the agent status (executing/waiting/not_running) for a given pod.
+	GetPodStatus(podKey string) (agentStatus string, podStatus string, shellPid int, found bool)
+}
+
+// LocalTerminalProvider provides direct access to local terminal operations.
+// This is used by AutopilotController control process to interact with local Pods
+// without going through the Backend API.
+type LocalTerminalProvider interface {
+	// GetTerminalOutput returns the terminal output for a local pod.
+	GetTerminalOutput(podKey string, lines int) (string, error)
+	// SendTerminalText sends text to a local pod's terminal.
+	SendTerminalText(podKey string, text string) error
+	// SendTerminalKey sends special keys to a local pod's terminal.
+	SendTerminalKey(podKey string, keys []string) error
+}
+
 // HTTPServer provides an MCP server over HTTP for agent collaboration.
 // This server exposes collaboration tools to Claude Code via the MCP protocol.
 type HTTPServer struct {
-	backendURL string
-	port       int
-	pods       map[string]*PodInfo
-	mu         sync.RWMutex
-	httpServer *http.Server
-	tools      []*MCPTool
+	backendURL       string
+	port             int
+	pods             map[string]*PodInfo
+	mu               sync.RWMutex
+	httpServer       *http.Server
+	tools            []*MCPTool
+	statusProvider   PodStatusProvider
+	terminalProvider LocalTerminalProvider
 }
 
 // PodInfo holds information about a registered pod.
@@ -170,6 +191,22 @@ func (s *HTTPServer) GetPod(podKey string) (*PodInfo, bool) {
 
 	info, ok := s.pods[podKey]
 	return info, ok
+}
+
+// SetStatusProvider sets the pod status provider for get_pod_status tool.
+func (s *HTTPServer) SetStatusProvider(provider PodStatusProvider) {
+	s.statusProvider = provider
+}
+
+// SetTerminalProvider sets the local terminal provider for terminal tools.
+// This enables direct access to local pods without going through Backend API.
+func (s *HTTPServer) SetTerminalProvider(provider LocalTerminalProvider) {
+	s.terminalProvider = provider
+}
+
+// GetTerminalProvider returns the local terminal provider.
+func (s *HTTPServer) GetTerminalProvider() LocalTerminalProvider {
+	return s.terminalProvider
 }
 
 // handleMCP handles MCP JSON-RPC requests.
@@ -394,6 +431,7 @@ func (s *HTTPServer) registerTools() {
 		s.createObserveTerminalTool(),
 		s.createSendTerminalTextTool(),
 		s.createSendTerminalKeyTool(),
+		s.createGetPodStatusTool(),
 
 		// Discovery tools
 		s.createListAvailablePodsTool(),

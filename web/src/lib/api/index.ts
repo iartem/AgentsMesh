@@ -146,3 +146,14 @@ export type {
   RedeemPromoCodeResponse,
   PromoCodeRedemption,
 } from "./promocode";
+
+// AutopilotController
+export { autopilotApi } from "./autopilot";
+export type {
+  AutopilotPhase,
+  CircuitBreakerState,
+  AutopilotControllerData,
+  AutopilotIterationData,
+  CreateAutopilotControllerRequest,
+  ApproveRequest,
+} from "./autopilot";

@@ -53,6 +53,13 @@ type RunnerConnectionManager struct {
 	onSandboxesStatus    func(runnerID int64, data *runnerv1.SandboxesStatusEvent)
 	onOSCNotification    func(runnerID int64, data *runnerv1.OSCNotificationEvent)
 	onOSCTitle           func(runnerID int64, data *runnerv1.OSCTitleEvent)
+
+	// AutopilotController event callbacks
+	onAutopilotStatus     func(runnerID int64, data *runnerv1.AutopilotStatusEvent)
+	onAutopilotIteration  func(runnerID int64, data *runnerv1.AutopilotIterationEvent)
+	onAutopilotCreated    func(runnerID int64, data *runnerv1.AutopilotCreatedEvent)
+	onAutopilotTerminated func(runnerID int64, data *runnerv1.AutopilotTerminatedEvent)
+	onAutopilotThinking   func(runnerID int64, data *runnerv1.AutopilotThinkingEvent)
 }
 
 // grpcConnectionShard holds a subset of gRPC connections with its own lock.

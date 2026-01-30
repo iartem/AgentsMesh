@@ -8,7 +8,8 @@ import { useTicketStore } from "@/stores/ticket";
 import { useMeshStore } from "@/stores/mesh";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useChannelStore } from "@/stores/channel";
-import type { ConnectionState, RealtimeEvent, PodStatusChangedData, PodCreatedData, RunnerStatusData, TicketStatusChangedData, TerminalNotificationData, TaskCompletedData, PodTitleChangedData, PodInitProgressData, ChannelMessageData } from "@/lib/realtime";
+import { useAutopilotStore } from "@/stores/autopilot";
+import type { ConnectionState, RealtimeEvent, PodStatusChangedData, PodCreatedData, RunnerStatusData, TicketStatusChangedData, TerminalNotificationData, TaskCompletedData, PodTitleChangedData, PodInitProgressData, ChannelMessageData, AutopilotStatusChangedData, AutopilotIterationData, AutopilotCreatedData, AutopilotTerminatedData, AutopilotThinkingData } from "@/lib/realtime";
 
 interface RealtimeContextValue {
   connectionState: ConnectionState;
@@ -55,6 +56,7 @@ export function RealtimeProvider({
   const meshStore = useMeshStore();
   const workspaceStore = useWorkspaceStore();
   const channelStore = useChannelStore();
+  const autopilotStore = useAutopilotStore();
 
   // Handle all events and route to appropriate stores
   const handleEvent = useCallback(
@@ -206,11 +208,64 @@ export function RealtimeProvider({
           break;
         }
 
+        // AutopilotController events
+        case "autopilot:status_changed": {
+          const data = event.data as AutopilotStatusChangedData;
+          autopilotStore.updateAutopilotControllerStatus(
+            data.autopilot_controller_key,
+            data.phase,
+            data.current_iteration,
+            data.max_iterations,
+            data.circuit_breaker_state,
+            data.circuit_breaker_reason
+          );
+          console.log("[Realtime] Autopilot status changed:", data.autopilot_controller_key, data.phase);
+          break;
+        }
+
+        case "autopilot:iteration": {
+          const data = event.data as AutopilotIterationData;
+          autopilotStore.addIteration(data.autopilot_controller_key, {
+            id: 0, // Will be assigned by server
+            autopilot_controller_id: 0,
+            iteration: data.iteration,
+            phase: data.phase,
+            summary: data.summary,
+            files_changed: data.files_changed,
+            duration_ms: data.duration_ms,
+            created_at: new Date().toISOString(),
+          });
+          console.log("[Realtime] Autopilot iteration:", data.autopilot_controller_key, data.iteration);
+          break;
+        }
+
+        case "autopilot:created": {
+          const data = event.data as AutopilotCreatedData;
+          // Refresh autopilot controllers list to include the new one
+          autopilotStore.fetchAutopilotControllers?.();
+          console.log("[Realtime] Autopilot created:", data.autopilot_controller_key);
+          break;
+        }
+
+        case "autopilot:terminated": {
+          const data = event.data as AutopilotTerminatedData;
+          autopilotStore.removeAutopilotController(data.autopilot_controller_key);
+          console.log("[Realtime] Autopilot terminated:", data.autopilot_controller_key, data.reason);
+          break;
+        }
+
+        case "autopilot:thinking": {
+          const data = event.data as AutopilotThinkingData;
+          autopilotStore.updateThinking(data.autopilot_controller_key, data);
+          console.log("[Realtime] Autopilot thinking:", data.autopilot_controller_key, data.decision_type);
+          break;
+        }
+
         default:
           console.log("[Realtime] Unknown event:", event.type);
       }
     },
-    [podStore, runnerStore, ticketStore, meshStore, workspaceStore, channelStore, onTerminalNotification, onTaskCompleted]
+    [podStore, runnerStore, ticketStore, meshStore, workspaceStore, channelStore, autopilotStore, onTerminalNotification, onTaskCompleted]
   );
 
   // Subscribe to all events
@@ -224,6 +279,7 @@ export function RealtimeProvider({
       runnerStore.fetchRunners?.();
       ticketStore.fetchTickets?.();
       meshStore.fetchTopology?.();
+      autopilotStore.fetchAutopilotControllers?.();
     }
     // Store objects are stable, only connectionState changes trigger refresh
     // eslint-disable-next-line react-hooks/exhaustive-deps

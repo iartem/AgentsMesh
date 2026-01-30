@@ -74,3 +74,8 @@ func Pod() *slog.Logger {
 func Plugin() *slog.Logger {
 	return Module("plugin")
 }
+
+// Autopilot returns a logger for AutopilotController operations.
+func Autopilot() *slog.Logger {
+	return Module("autopilot")
+}

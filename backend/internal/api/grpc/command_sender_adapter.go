@@ -59,6 +59,16 @@ func (s *GRPCCommandSender) SendUnsubscribeTerminal(ctx context.Context, runnerI
 	return s.adapter.SendUnsubscribeTerminal(runnerID, podKey)
 }
 
+// SendCreateAutopilot sends a create AutopilotController command to a runner via gRPC.
+func (s *GRPCCommandSender) SendCreateAutopilot(runnerID int64, cmd *runnerv1.CreateAutopilotCommand) error {
+	return s.adapter.SendCreateAutopilot(runnerID, cmd)
+}
+
+// SendAutopilotControl sends an AutopilotController control command to a runner via gRPC.
+func (s *GRPCCommandSender) SendAutopilotControl(runnerID int64, cmd *runnerv1.AutopilotControlCommand) error {
+	return s.adapter.SendAutopilotControl(runnerID, cmd)
+}
+
 // SendQuerySandboxes sends a sandbox query command to a runner via gRPC.
 func (s *GRPCCommandSender) SendQuerySandboxes(runnerID int64, requestID string, podKeys []string) error {
 	return s.adapter.SendQuerySandboxes(runnerID, requestID, podKeys)
