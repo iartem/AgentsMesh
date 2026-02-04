@@ -24,14 +24,17 @@ const (
 	SubscriptionStatusCanceled = "canceled"
 	SubscriptionStatusTrialing = "trialing"
 	SubscriptionStatusFrozen   = "frozen"
+	SubscriptionStatusPaused   = "paused"
+	SubscriptionStatusExpired  = "expired"
 )
 
 // Payment provider constants
 const (
-	PaymentProviderStripe  = "stripe"
-	PaymentProviderAlipay  = "alipay"
-	PaymentProviderWeChat  = "wechat"
-	PaymentProviderLicense = "license"
+	PaymentProviderStripe       = "stripe"
+	PaymentProviderLemonSqueezy = "lemonsqueezy"
+	PaymentProviderAlipay       = "alipay"
+	PaymentProviderWeChat       = "wechat"
+	PaymentProviderLicense      = "license"
 )
 
 // Payment method constants
@@ -109,3 +112,5 @@ const (
 	WebhookEventSubscriptionDeleted = "customer.subscription.deleted"
 	WebhookEventSubscriptionUpdated = "customer.subscription.updated"
 )
+
+// LemonSqueezy webhook event constants are defined in lemonsqueezy.go

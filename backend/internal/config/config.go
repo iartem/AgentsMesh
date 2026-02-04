@@ -100,6 +100,11 @@ func (c *Config) AlipayNotifyURL() string {
 	return c.BaseURL() + "/api/v1/webhooks/alipay"
 }
 
+// LemonSqueezyWebhookURL returns the LemonSqueezy webhook URL
+func (c *Config) LemonSqueezyWebhookURL() string {
+	return c.BaseURL() + "/api/v1/webhooks/lemonsqueezy"
+}
+
 // AlipayReturnURL returns the Alipay payment return URL
 func (c *Config) AlipayReturnURL() string {
 	return c.BaseURL()
@@ -121,6 +126,7 @@ type PaymentConfig struct {
 	MockEnabled    bool   // Enable mock payment provider for testing
 	MockBaseURL    string // Base URL for mock checkout pages
 	Stripe         StripeConfig
+	LemonSqueezy   LemonSqueezyConfig
 	Alipay         AlipayConfig
 	WeChat         WeChatConfig
 	License        LicenseConfig
@@ -161,6 +167,13 @@ type LicenseConfig struct {
 	LicenseServerURL string // Optional: License server URL for online verification
 }
 
+// LemonSqueezyConfig holds LemonSqueezy payment configuration
+type LemonSqueezyConfig struct {
+	APIKey        string // LemonSqueezy API key
+	StoreID       string // LemonSqueezy Store ID
+	WebhookSecret string // Webhook signing secret for signature verification
+}
+
 // IsGlobal returns true if deployment is for international users (Stripe)
 func (c PaymentConfig) IsGlobal() bool {
 	return c.DeploymentType == DeploymentGlobal
@@ -196,6 +209,19 @@ func (c PaymentConfig) LicenseEnabled() bool {
 	return c.IsOnPremise() && c.License.PublicKeyPath != ""
 }
 
+// LemonSqueezyEnabled returns true if LemonSqueezy is configured and enabled
+func (c PaymentConfig) LemonSqueezyEnabled() bool {
+	return c.IsGlobal() && c.LemonSqueezy.APIKey != ""
+}
+
+// LemonSqueezyFullyConfigured returns true if LemonSqueezy is fully configured
+// including webhook secret (required for production webhook signature verification)
+func (c PaymentConfig) LemonSqueezyFullyConfigured() bool {
+	return c.LemonSqueezyEnabled() &&
+		c.LemonSqueezy.StoreID != "" &&
+		c.LemonSqueezy.WebhookSecret != ""
+}
+
 // IsMockEnabled returns true if mock payment provider is enabled (for testing)
 func (c PaymentConfig) IsMockEnabled() bool {
 	return c.MockEnabled
@@ -209,6 +235,9 @@ func (c PaymentConfig) GetAvailableProviders() []string {
 	}
 
 	var providers []string
+	if c.LemonSqueezyEnabled() {
+		providers = append(providers, "lemonsqueezy")
+	}
 	if c.StripeEnabled() {
 		providers = append(providers, "stripe")
 	}
@@ -547,6 +576,11 @@ func Load() (*Config, error) {
 				SecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 				PublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
 				WebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
+			},
+			LemonSqueezy: LemonSqueezyConfig{
+				APIKey:        getEnv("LEMONSQUEEZY_API_KEY", ""),
+				StoreID:       getEnv("LEMONSQUEEZY_STORE_ID", ""),
+				WebhookSecret: getEnv("LEMONSQUEEZY_WEBHOOK_SECRET", ""),
 			},
 			Alipay: AlipayConfig{
 				AppID:           getEnv("ALIPAY_APP_ID", ""),

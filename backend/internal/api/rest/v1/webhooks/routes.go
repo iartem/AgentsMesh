@@ -69,6 +69,7 @@ func (r *WebhookRouter) RegisterRoutes(rg *gin.RouterGroup) {
 
 	// Payment webhook endpoints
 	rg.POST("/stripe", r.handleStripeWebhook)
+	rg.POST("/lemonsqueezy", r.handleLemonSqueezyWebhook)
 	rg.POST("/alipay", r.handleAlipayWebhook)
 	rg.POST("/wechat", r.handleWeChatWebhook)
 

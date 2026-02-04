@@ -24,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 MIGRATIONS_DIR="$SCRIPT_DIR/../../backend/migrations"
 SEED_FILE="$SCRIPT_DIR/seed/seed.sql"
+LEMONSQUEEZY_SEED_FILE="$SCRIPT_DIR/seed/seed_lemonsqueezy.sql"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -380,6 +381,13 @@ init_seed() {
 
     info "初始化 seed 数据..."
     docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$SEED_FILE" &>/dev/null
+
+    # 应用 LemonSqueezy Variant IDs 配置
+    if [[ -f "$LEMONSQUEEZY_SEED_FILE" ]]; then
+        info "配置 LemonSqueezy Variant IDs..."
+        docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$LEMONSQUEEZY_SEED_FILE" &>/dev/null
+    fi
+
     success "Seed 数据初始化完成"
 }
 

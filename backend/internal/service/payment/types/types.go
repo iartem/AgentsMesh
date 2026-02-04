@@ -91,8 +91,9 @@ type RefundResponse struct {
 
 // CustomerPortalRequest represents a customer portal request
 type CustomerPortalRequest struct {
-	CustomerID string
-	ReturnURL  string
+	CustomerID     string
+	SubscriptionID string // Optional: used by LemonSqueezy to get portal URL from subscription
+	ReturnURL      string
 }
 
 // CustomerPortalResponse represents a customer portal response

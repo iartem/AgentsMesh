@@ -32,7 +32,7 @@ stages:
 test-backend:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: golang:1.24-alpine
   before_script:
@@ -66,7 +66,7 @@ test-backend:
 test-web:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: node:20-alpine
   before_script:
@@ -98,7 +98,7 @@ test-web:
 test-runner:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: golang:1.24-alpine
   before_script:
@@ -134,7 +134,7 @@ test-runner:
 test-relay:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: golang:1.24-alpine
   before_script:
@@ -174,7 +174,7 @@ test-relay:
 verify-build-backend:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -193,7 +193,7 @@ verify-build-backend:
 verify-build-web:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -212,7 +212,7 @@ verify-build-web:
 verify-build-web-admin:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -231,7 +231,7 @@ verify-build-web-admin:
 verify-build-runner:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -250,7 +250,7 @@ verify-build-runner:
 verify-build-relay:
   stage: test
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -272,7 +272,7 @@ verify-build-relay:
 build-backend:
   stage: build
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -295,7 +295,7 @@ build-backend:
 build-web:
   stage: build
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -317,7 +317,7 @@ build-web:
 build-web-admin:
   stage: build
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -339,7 +339,7 @@ build-web-admin:
 build-runner:
   stage: build
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:
@@ -362,7 +362,7 @@ build-runner:
 build-relay:
   stage: build
   tags:
-    - amd64
+    - x86
     - docker
   image: ${REGISTRY}/library/docker:latest
   services:

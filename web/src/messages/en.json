@@ -1177,6 +1177,7 @@
         "additionalSeats": "Additional Seats",
         "seatPurchaseNote": "Seats will be added to your current subscription immediately.",
         "stripePayment": "Payment via Stripe (Credit Card)",
+        "globalPayment": "Secure payment via Credit Card",
         "cnPayment": "Payment via Alipay or WeChat Pay",
         "save": "Save ${amount}",
         "scanToPay": "Scan to Pay",

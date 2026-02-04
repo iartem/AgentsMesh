@@ -14,6 +14,10 @@ type PlanPrice struct {
 	StripePriceIDMonthly *string `gorm:"size:255" json:"stripe_price_id_monthly,omitempty"`
 	StripePriceIDYearly  *string `gorm:"size:255" json:"stripe_price_id_yearly,omitempty"`
 
+	// LemonSqueezy Variant IDs (a Variant is a specific price for a product)
+	LemonSqueezyVariantIDMonthly *string `gorm:"column:lemonsqueezy_variant_id_monthly;size:255" json:"lemonsqueezy_variant_id_monthly,omitempty"`
+	LemonSqueezyVariantIDYearly  *string `gorm:"column:lemonsqueezy_variant_id_yearly;size:255" json:"lemonsqueezy_variant_id_yearly,omitempty"`
+
 	CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
 

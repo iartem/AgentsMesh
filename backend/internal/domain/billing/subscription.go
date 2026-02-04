@@ -59,6 +59,10 @@ type Subscription struct {
 	// WeChat integration
 	WeChatContractID *string `gorm:"column:wechat_contract_id;size:255" json:"wechat_contract_id,omitempty"`
 
+	// LemonSqueezy integration
+	LemonSqueezyCustomerID     *string `gorm:"column:lemonsqueezy_customer_id;size:255" json:"lemonsqueezy_customer_id,omitempty"`
+	LemonSqueezySubscriptionID *string `gorm:"column:lemonsqueezy_subscription_id;size:255" json:"lemonsqueezy_subscription_id,omitempty"`
+
 	// Cancellation
 	CanceledAt        *time.Time `json:"canceled_at,omitempty"`
 	CancelAtPeriodEnd bool       `gorm:"not null;default:false" json:"cancel_at_period_end"`

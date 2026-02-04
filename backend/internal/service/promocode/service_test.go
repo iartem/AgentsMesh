@@ -86,6 +86,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			seat_count INTEGER NOT NULL DEFAULT 1,
 			stripe_customer_id TEXT,
 			stripe_subscription_id TEXT,
+			lemonsqueezy_customer_id TEXT,
+			lemonsqueezy_subscription_id TEXT,
 			alipay_agreement_no TEXT,
 			wechat_contract_id TEXT,
 			canceled_at DATETIME,

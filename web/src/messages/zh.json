@@ -1177,6 +1177,7 @@
         "additionalSeats": "额外席位",
         "seatPurchaseNote": "席位将立即添加到您的当前订阅中。",
         "stripePayment": "通过 Stripe 支付（信用卡）",
+        "globalPayment": "安全的信用卡支付",
         "cnPayment": "通过支付宝或微信支付",
         "save": "省 ¥{amount}",
         "scanToPay": "扫码支付",

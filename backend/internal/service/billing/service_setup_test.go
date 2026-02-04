@@ -4,7 +4,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -19,7 +18,40 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	}
 
 	// Create all required tables
-	tables := []string{
+	tables := getTestDBTableStatements()
+
+	for _, sql := range tables {
+		if err := db.Exec(sql).Error; err != nil {
+			t.Fatalf("failed to create table: %v", err)
+		}
+	}
+
+	return db
+}
+
+// setupTestService creates a test service with seeded plans
+func setupTestService(t *testing.T) (*Service, *gorm.DB) {
+	db := setupTestDB(t)
+	svc := NewService(db, "")
+
+	// Seed standard plans: based (ID=1), pro (ID=2), enterprise (ID=3)
+	seedTestPlan(t, db)
+	seedProPlan(t, db)
+	seedEnterprisePlan(t, db)
+
+	return svc, db
+}
+
+func createTestGinContext() (*gin.Context, *httptest.ResponseRecorder) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/", nil)
+	return c, w
+}
+
+func getTestDBTableStatements() []string {
+	return []string{
 		`CREATE TABLE IF NOT EXISTS subscription_plans (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL UNIQUE,
@@ -52,6 +84,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			seat_count INTEGER NOT NULL DEFAULT 1,
 			stripe_customer_id TEXT,
 			stripe_subscription_id TEXT,
+			lemonsqueezy_customer_id TEXT,
+			lemonsqueezy_subscription_id TEXT,
 			alipay_agreement_no TEXT,
 			wechat_contract_id TEXT,
 			canceled_at DATETIME,
@@ -73,224 +107,9 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			metadata TEXT,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
-		`CREATE TABLE IF NOT EXISTS payment_orders (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			order_no TEXT NOT NULL UNIQUE,
-			external_order_no TEXT,
-			order_type TEXT NOT NULL,
-			plan_id INTEGER,
-			billing_cycle TEXT,
-			seats INTEGER DEFAULT 1,
-			currency TEXT NOT NULL DEFAULT 'USD',
-			amount REAL NOT NULL,
-			discount_amount REAL DEFAULT 0,
-			actual_amount REAL NOT NULL,
-			payment_provider TEXT NOT NULL,
-			payment_method TEXT,
-			status TEXT NOT NULL DEFAULT 'pending',
-			metadata TEXT,
-			failure_reason TEXT,
-			idempotency_key TEXT UNIQUE,
-			expires_at DATETIME,
-			paid_at DATETIME,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			created_by_id INTEGER NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS payment_transactions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			payment_order_id INTEGER NOT NULL,
-			transaction_type TEXT NOT NULL,
-			external_transaction_id TEXT,
-			amount REAL NOT NULL,
-			currency TEXT NOT NULL DEFAULT 'USD',
-			status TEXT NOT NULL,
-			webhook_event_id TEXT,
-			webhook_event_type TEXT,
-			raw_payload TEXT,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS invoices (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			payment_order_id INTEGER,
-			invoice_no TEXT NOT NULL UNIQUE,
-			status TEXT NOT NULL DEFAULT 'draft',
-			currency TEXT NOT NULL DEFAULT 'USD',
-			subtotal REAL NOT NULL,
-			tax_amount REAL DEFAULT 0,
-			total REAL NOT NULL,
-			billing_name TEXT,
-			billing_email TEXT,
-			billing_address TEXT,
-			period_start DATETIME NOT NULL,
-			period_end DATETIME NOT NULL,
-			line_items TEXT NOT NULL DEFAULT '[]',
-			pdf_url TEXT,
-			issued_at DATETIME,
-			due_at DATETIME,
-			paid_at DATETIME,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS organization_members (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			user_id INTEGER NOT NULL,
-			role TEXT NOT NULL DEFAULT 'member',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS runners (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			name TEXT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS repositories (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			name TEXT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS pods (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			name TEXT NOT NULL,
-			status TEXT NOT NULL DEFAULT 'pending',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS invitations (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL,
-			email TEXT NOT NULL,
-			accepted_at DATETIME,
-			expires_at DATETIME,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS plan_prices (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			plan_id INTEGER NOT NULL,
-			currency TEXT NOT NULL,
-			price_monthly REAL NOT NULL,
-			price_yearly REAL NOT NULL,
-			stripe_price_id_monthly TEXT,
-			stripe_price_id_yearly TEXT,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE(plan_id, currency)
-		)`,
+		getPaymentOrdersTableSQL(),
+		getPaymentTransactionsTableSQL(),
+		getInvoicesTableSQL(),
+		getAuxiliaryTablesSQL(),
 	}
-
-	for _, sql := range tables {
-		if err := db.Exec(sql).Error; err != nil {
-			t.Fatalf("failed to create table: %v", err)
-		}
-	}
-
-	return db
-}
-
-func seedTestPlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
-	plan := &billing.SubscriptionPlan{
-		Name:                "based",
-		DisplayName:         "Based Plan",
-		PricePerSeatMonthly: 9.9,
-		PricePerSeatYearly:  99,
-		IncludedPodMinutes:  100,
-		PricePerExtraMinute: 0,
-		MaxUsers:            1, // Based plan has fixed 1 seat
-		MaxRunners:          1,
-		MaxConcurrentPods:   5,
-		MaxRepositories:     5,
-		IsActive:            true,
-	}
-	if err := db.Create(plan).Error; err != nil {
-		t.Fatalf("failed to seed plan: %v", err)
-	}
-
-	// Seed plan prices (Single Source of Truth)
-	prices := []billing.PlanPrice{
-		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 9.9, PriceYearly: 99},
-		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 69, PriceYearly: 690},
-	}
-	for _, price := range prices {
-		if err := db.Create(&price).Error; err != nil {
-			t.Fatalf("failed to seed plan price: %v", err)
-		}
-	}
-
-	return plan
-}
-
-func seedProPlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
-	plan := &billing.SubscriptionPlan{
-		Name:                "pro",
-		DisplayName:         "Pro Plan",
-		PricePerSeatMonthly: 19.99,
-		PricePerSeatYearly:  199.90,
-		IncludedPodMinutes:  1000,
-		PricePerExtraMinute: 0.05,
-		MaxUsers:            50,
-		MaxRunners:          10,
-		MaxConcurrentPods:   5,
-		MaxRepositories:     100,
-		IsActive:            true,
-	}
-	if err := db.Create(plan).Error; err != nil {
-		t.Fatalf("failed to seed pro plan: %v", err)
-	}
-
-	// Seed plan prices (Single Source of Truth)
-	prices := []billing.PlanPrice{
-		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 19.99, PriceYearly: 199.90},
-		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 139, PriceYearly: 1390},
-	}
-	for _, price := range prices {
-		if err := db.Create(&price).Error; err != nil {
-			t.Fatalf("failed to seed pro plan price: %v", err)
-		}
-	}
-
-	return plan
-}
-
-func seedEnterprisePlan(t *testing.T, db *gorm.DB) *billing.SubscriptionPlan {
-	plan := &billing.SubscriptionPlan{
-		Name:                "enterprise",
-		DisplayName:         "Enterprise Plan",
-		PricePerSeatMonthly: 99.99,
-		PricePerSeatYearly:  999.90,
-		IncludedPodMinutes:  -1, // unlimited
-		PricePerExtraMinute: 0,
-		MaxUsers:            -1, // unlimited
-		MaxRunners:          -1,
-		MaxConcurrentPods:   -1,
-		MaxRepositories:     -1,
-		IsActive:            true,
-	}
-	if err := db.Create(plan).Error; err != nil {
-		t.Fatalf("failed to seed enterprise plan: %v", err)
-	}
-
-	// Seed plan prices (Single Source of Truth)
-	prices := []billing.PlanPrice{
-		{PlanID: plan.ID, Currency: billing.CurrencyUSD, PriceMonthly: 99.99, PriceYearly: 999.90},
-		{PlanID: plan.ID, Currency: billing.CurrencyCNY, PriceMonthly: 690, PriceYearly: 6900},
-	}
-	for _, price := range prices {
-		if err := db.Create(&price).Error; err != nil {
-			t.Fatalf("failed to seed enterprise plan price: %v", err)
-		}
-	}
-
-	return plan
-}
-
-func createTestGinContext() (*gin.Context, *httptest.ResponseRecorder) {
-	gin.SetMode(gin.TestMode)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/", nil)
-	return c, w
 }

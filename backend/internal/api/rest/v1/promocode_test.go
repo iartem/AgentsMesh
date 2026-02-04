@@ -104,6 +104,8 @@ func setupPromoCodeTestDB(t *testing.T, db *gorm.DB) {
 			stripe_subscription_id TEXT,
 			alipay_agreement_no TEXT,
 			wechat_contract_id TEXT,
+			lemonsqueezy_customer_id TEXT,
+			lemonsqueezy_subscription_id TEXT,
 			canceled_at DATETIME,
 			cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
 			frozen_at DATETIME,

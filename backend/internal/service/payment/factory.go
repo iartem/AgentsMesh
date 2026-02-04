@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	alipayprovider "github.com/anthropics/agentsmesh/backend/internal/service/payment/alipay"
+	lemonsqueezyprovider "github.com/anthropics/agentsmesh/backend/internal/service/payment/lemonsqueezy"
 	licenseprovider "github.com/anthropics/agentsmesh/backend/internal/service/payment/license"
 	mockprovider "github.com/anthropics/agentsmesh/backend/internal/service/payment/mock"
 	stripeprovider "github.com/anthropics/agentsmesh/backend/internal/service/payment/stripe"
@@ -60,6 +61,12 @@ func (f *Factory) GetProvider(providerName string) (Provider, error) {
 	}
 
 	switch providerName {
+	case billing.PaymentProviderLemonSqueezy:
+		if !f.config.LemonSqueezyEnabled() {
+			return nil, fmt.Errorf("lemonsqueezy is not configured")
+		}
+		return lemonsqueezyprovider.NewProvider(&f.config.LemonSqueezy), nil
+
 	case billing.PaymentProviderStripe:
 		if !f.config.StripeEnabled() {
 			return nil, fmt.Errorf("stripe is not configured")
@@ -112,7 +119,8 @@ func (f *Factory) GetDefaultProvider() (Provider, error) {
 
 	switch f.config.DeploymentType {
 	case config.DeploymentGlobal:
-		return f.GetProvider(billing.PaymentProviderStripe)
+		// Use LemonSqueezy as the default provider for global deployment
+		return f.GetProvider(billing.PaymentProviderLemonSqueezy)
 	case config.DeploymentCN:
 		// Default to Alipay for China deployment
 		return f.GetProvider(billing.PaymentProviderAlipay)

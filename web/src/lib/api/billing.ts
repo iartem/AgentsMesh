@@ -79,6 +79,8 @@ export interface Subscription {
   seat_count: number;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
+  lemonsqueezy_customer_id?: string;
+  lemonsqueezy_subscription_id?: string;
   frozen_at?: string;
   downgrade_to_plan?: string;
   next_billing_cycle?: string;
@@ -87,7 +89,7 @@ export interface Subscription {
 // Checkout types
 export type OrderType = "subscription" | "seat_purchase" | "plan_upgrade" | "renewal";
 export type BillingCycle = "monthly" | "yearly";
-export type PaymentProvider = "stripe" | "alipay" | "wechat";
+export type PaymentProvider = "stripe" | "lemonsqueezy" | "alipay" | "wechat";
 
 export interface CheckoutRequest {
   order_type: OrderType;
@@ -105,6 +107,7 @@ export interface CheckoutResponse {
   session_url: string;
   qr_code_url?: string;
   expires_at: string;
+  provider?: PaymentProvider;
 }
 
 export interface CheckoutStatus {

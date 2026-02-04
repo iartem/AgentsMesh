@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   billingApi,
@@ -10,6 +11,7 @@ import {
   CheckoutResponse,
   DeploymentInfo,
 } from "@/lib/api/billing";
+import { useLemonSqueezy } from "@/hooks/useLemonSqueezy";
 
 export interface CheckoutFlowProps {
   // Plan to checkout (for subscription/upgrade)
@@ -46,9 +48,24 @@ export function CheckoutFlow({
   onError,
   onCancel,
 }: CheckoutFlowProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedCycle, setSelectedCycle] = useState<BillingCycle>(billingCycle);
   const [checkoutResponse, setCheckoutResponse] = useState<CheckoutResponse | null>(null);
+
+  // LemonSqueezy overlay checkout hook
+  const { openCheckout: openLemonCheckout } = useLemonSqueezy({
+    onCheckoutSuccess: () => {
+      // Refresh page to show updated subscription status
+      router.refresh();
+      // Also reload to ensure all state is updated
+      window.location.href = `${currentUrl}?payment=success`;
+    },
+    onCheckoutClose: () => {
+      // User closed checkout without completing payment
+      setLoading(false);
+    },
+  });
 
   // Calculate price based on billing cycle
   const getPrice = useCallback(() => {
@@ -86,14 +103,20 @@ export function CheckoutFlow({
       setCheckoutResponse(response);
       onCheckoutCreated?.(response);
 
-      // For Stripe, redirect to checkout page
+      // Handle checkout based on provider
       if (response.session_url) {
-        window.location.href = response.session_url;
+        if (response.provider === "lemonsqueezy") {
+          // Use LemonSqueezy overlay checkout for better UX
+          openLemonCheckout(response.session_url);
+          // Don't set loading to false - will be done by onCheckoutClose
+        } else {
+          // For Stripe and others, redirect to checkout page
+          window.location.href = response.session_url;
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Checkout failed";
       onError?.(errorMessage);
-    } finally {
       setLoading(false);
     }
   };
@@ -209,7 +232,7 @@ export function CheckoutFlow({
       {deploymentInfo && (
         <div className="text-sm text-muted-foreground">
           {deploymentInfo.deployment_type === "global" && (
-            <span>{t("billing.checkout.stripePayment")}</span>
+            <span>{t("billing.checkout.globalPayment")}</span>
           )}
           {deploymentInfo.deployment_type === "cn" && (
             <span>{t("billing.checkout.cnPayment")}</span>
