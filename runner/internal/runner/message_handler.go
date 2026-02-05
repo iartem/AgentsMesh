@@ -9,14 +9,11 @@ import (
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
-	"github.com/anthropics/agentsmesh/runner/internal/monitor"
-	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // RunnerMessageHandler implements client.MessageHandler interface.
-// It bridges the client protocol layer with the runner pod management.
 type RunnerMessageHandler struct {
 	runner   *Runner
 	podStore PodStore
@@ -33,8 +30,6 @@ func NewRunnerMessageHandler(runner *Runner, store PodStore, conn client.Connect
 }
 
 // OnCreatePod handles create pod requests from server.
-// Uses Proto type directly for zero-copy message passing.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error {
 	log := logger.Pod()
 	log.Info("Creating pod", "pod_key", cmd.PodKey, "command", cmd.LaunchCommand, "args", cmd.LaunchArgs)
@@ -47,8 +42,7 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("max concurrent pods reached")
 	}
 
-	// Build pod using Proto command directly
-	// Use terminal size from command (sent by frontend based on actual browser terminal size)
+	// Build pod
 	cols := int(cmd.Cols)
 	rows := int(cmd.Rows)
 	if cols <= 0 {
@@ -62,10 +56,8 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		WithCommand(cmd).
 		WithTerminalSize(cols, rows)
 
-	// Build pod
 	pod, err := builder.Build(ctx)
 	if err != nil {
-		// Check if it's a PodError with error code
 		if podErr, ok := err.(*client.PodError); ok {
 			h.sendPodErrorWithCode(cmd.PodKey, podErr)
 		} else {
@@ -74,28 +66,14 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("failed to build pod: %w", err)
 	}
 
-	// Create VirtualTerminal for terminal state management and snapshots
-	// Use actual terminal size from command
-	// Use small history size (100 lines) to avoid OOM - TUI apps like Claude Code
-	// use alt screen which doesn't scroll to history anyway
+	// Create VirtualTerminal
 	pod.VirtualTerminal = NewVirtualTerminal(cols, rows, 100)
 
-	// Create SmartAggregator for adaptive frame rate output
-	// Data flow (parallel branches):
-	//   PTY → OutputHandler → VirtualTerminal.Feed() [state tracking for snapshots]
-	//                       → SmartAggregator.Write() → Relay/gRPC → Browser → xterm
+	// Create SmartAggregator
 	podKey := cmd.PodKey
 	vt := pod.VirtualTerminal
-
-	// Set up OSC sequence handler for terminal notifications
-	// OSC sequences are detected in VT.Feed() and sent via high-priority controlCh
-	// to avoid being throttled/dropped by SmartAggregator
 	vt.SetOSCHandler(h.createOSCHandler(podKey))
 
-	// Create aggregator with full redraw throttling
-	// Full redraw throttling detects high-frequency screen refreshes (like `glab ci status --live`)
-	// and reduces transmission rate to save bandwidth while preserving latest state
-	// NOTE: No gRPC fallback - terminal output is exclusively streamed via Relay
 	aggregator := terminal.NewSmartAggregator(nil, nil,
 		terminal.WithFullRedrawThrottling(),
 	)
@@ -113,10 +91,8 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		}
 	}
 
-	// Set output handler: PTY → VirtualTerminal → StateDetector → Aggregator
-	// Single-direction data flow: no reverse lock acquisition
+	// Set output handler
 	pod.Terminal.SetOutputHandler(func(data []byte) {
-		// Recover from any panic to prevent Runner crash
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Terminal().Error("PANIC in OutputHandler recovered",
@@ -126,19 +102,11 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 			}
 		}()
 
-		// Feed VirtualTerminal and get screen lines in one lock acquisition
-		// This enables single-direction data flow without reverse lock contention
 		var screenLines []string
 		if vt != nil {
 			screenLines = vt.Feed(data)
 		}
-
-		// Notify state detector with both output activity AND screen content
-		// This is the single-direction data flow: PTY → Feed → StateDetector
-		// No need for StateDetector to reverse-fetch from VirtualTerminal
 		go pod.NotifyStateDetectorWithScreen(len(data), screenLines)
-
-		// Write to aggregator - it handles Relay vs gRPC routing internally
 		aggregator.Write(data)
 	})
 	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey))
@@ -153,32 +121,22 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 	h.podStore.Put(cmd.PodKey, pod)
 	pod.SetStatus(PodStatusRunning)
 
-	// Register pod with MCP HTTP Server for tool access
+	// Register with MCP server and Claude monitor
 	if h.runner.mcpServer != nil {
 		orgSlug := h.conn.GetOrgSlug()
 		h.runner.mcpServer.RegisterPod(cmd.PodKey, orgSlug, nil, nil, cmd.LaunchCommand)
-		log.Debug("Registered pod with MCP server", "pod_key", cmd.PodKey, "org", orgSlug)
 	}
-
-	// Register pod with Claude Monitor for agent status detection
 	if h.runner.claudeMonitor != nil {
 		h.runner.claudeMonitor.RegisterPod(cmd.PodKey, pod.Terminal.PID())
-		log.Debug("Registered pod with Claude monitor", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID())
 	}
 
-	// Notify server that pod is created with actual terminal size
 	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.SandboxPath, pod.Branch, uint16(cols), uint16(rows))
 
-	// NOTE: Initial terminal setup sequence (clear screen + cursor home) is no longer sent via gRPC.
-	// Terminal output is exclusively streamed via Relay. When browser connects and subscribes,
-	// it receives a terminal snapshot that contains the complete terminal state.
-
-	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "sandbox", pod.SandboxPath, "branch", pod.Branch, "cols", cols, "rows", rows)
+	log.Info("Pod created", "pod_key", cmd.PodKey, "pid", pod.Terminal.PID(), "sandbox", pod.SandboxPath)
 	return nil
 }
 
 // OnTerminatePod handles terminate pod requests from server.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) error {
 	log := logger.Pod()
 	log.Info("Terminating pod", "pod_key", req.PodKey)
@@ -188,43 +146,30 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	// Close PTY logger if enabled
 	if pod.PTYLogger != nil {
 		pod.PTYLogger.Close()
 	}
-
-	// Stop state detector if running (used by Autopilot)
 	pod.StopStateDetector()
-
-	// Stop aggregator first to ensure no more output is sent
 	if pod.Aggregator != nil {
 		pod.Aggregator.Stop()
 	}
-
-	// Stop terminal
 	if pod.Terminal != nil {
 		pod.Terminal.Stop()
 	}
 
-	// Unregister pod from MCP HTTP Server
 	if h.runner.mcpServer != nil {
 		h.runner.mcpServer.UnregisterPod(req.PodKey)
 	}
-
-	// Unregister pod from Claude Monitor
 	if h.runner.claudeMonitor != nil {
 		h.runner.claudeMonitor.UnregisterPod(req.PodKey)
 	}
 
-	// Notify server
 	h.sendPodTerminated(req.PodKey)
-
 	log.Info("Pod terminated", "pod_key", req.PodKey)
 	return nil
 }
 
 // OnListPods returns current pods.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnListPods() []client.PodInfo {
 	pods := h.podStore.All()
 	result := make([]client.PodInfo, 0, len(pods))
@@ -245,91 +190,68 @@ func (h *RunnerMessageHandler) OnListPods() []client.PodInfo {
 }
 
 // OnTerminalInput handles terminal input from server.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnTerminalInput(req client.TerminalInputRequest) error {
 	pod, ok := h.podStore.Get(req.PodKey)
 	if !ok {
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
-
 	if pod.Terminal == nil {
 		return fmt.Errorf("terminal not initialized for pod: %s", req.PodKey)
 	}
-
-	// gRPC uses native bytes, no decoding needed
 	return pod.Terminal.Write(req.Data)
 }
 
 // OnTerminalResize handles terminal resize requests from server.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnTerminalResize(req client.TerminalResizeRequest) error {
 	pod, ok := h.podStore.Get(req.PodKey)
 	if !ok {
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	// All resize functions use (cols, rows) order
 	if err := pod.Terminal.Resize(int(req.Cols), int(req.Rows)); err != nil {
 		return err
 	}
-
-	// Also resize VirtualTerminal to keep it in sync
 	if pod.VirtualTerminal != nil {
 		pod.VirtualTerminal.Resize(int(req.Cols), int(req.Rows))
 	}
 
-	// Notify server of resize
 	h.sendPtyResized(req.PodKey, req.Cols, req.Rows)
 	return nil
 }
 
 // OnTerminalRedraw handles terminal redraw requests from server.
-// Uses resize +1/-1 trick to trigger terminal redraw (SIGWINCH alone doesn't work
-// for programs in idle state like Claude Code waiting for input).
-// Used for restoring terminal state after server restart.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnTerminalRedraw(req client.TerminalRedrawRequest) error {
 	pod, ok := h.podStore.Get(req.PodKey)
 	if !ok {
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
-
 	logger.Pod().Info("Triggering terminal redraw", "pod_key", req.PodKey)
-
-	// Use resize trick to trigger redraw - no pty_resized event sent back
 	return pod.Terminal.Redraw()
 }
 
 // OnSubscribeTerminal handles subscribe terminal command from server.
-// This notifies the Runner that a browser wants to observe the terminal via Relay.
-// The Runner should connect to the specified Relay URL and start streaming terminal output.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalRequest) error {
 	log := logger.Pod()
 	log.Info("Subscribing to terminal via Relay",
 		"pod_key", req.PodKey,
 		"relay_url", req.RelayURL,
-		"session_id", req.SessionID,
-		"include_snapshot", req.IncludeSnapshot)
+		"session_id", req.SessionID)
 
 	pod, ok := h.podStore.Get(req.PodKey)
 	if !ok {
 		return fmt.Errorf("pod not found: %s", req.PodKey)
 	}
 
-	// Check if relay client exists (connected or reconnecting)
-	// If it exists, this is a token refresh response - deliver the new token
+	// Check if relay client exists - token refresh case
 	existingClient := pod.GetRelayClient()
 	if existingClient != nil {
-		log.Info("Delivering new token to existing relay client",
-			"pod_key", req.PodKey,
-			"is_connected", existingClient.IsConnected())
+		log.Info("Delivering new token to existing relay client", "pod_key", req.PodKey)
 		existingClient.UpdateToken(req.RunnerToken)
 		pod.DeliverNewToken(req.RunnerToken)
 		return nil
 	}
 
-	// Create relay client with JWT token for authentication
+	// Create new relay client
 	relayClient := relay.NewClient(
 		req.RelayURL,
 		req.PodKey,
@@ -338,76 +260,86 @@ func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalR
 		slog.Default().With("pod_key", req.PodKey),
 	)
 
-	// Set input handler - relay user input to PTY
+	h.setupRelayClientHandlers(relayClient, pod, req)
+
+	if err := relayClient.Connect(); err != nil {
+		return fmt.Errorf("failed to connect to relay: %w", err)
+	}
+
+	relayClient.Start()
+	pod.SetRelayClient(relayClient)
+
+	if pod.Aggregator != nil {
+		pod.Aggregator.SetRelayOutput(func(data []byte) {
+			if err := relayClient.SendOutput(data); err != nil {
+				log.Debug("Failed to send output to relay", "pod_key", req.PodKey, "error", err)
+			}
+		})
+	}
+
+	// Trigger TUI redraw if needed
+	if pod.VirtualTerminal != nil && pod.VirtualTerminal.IsAltScreen() && pod.Terminal != nil {
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			pod.Terminal.Redraw()
+		}()
+	}
+
+	log.Info("Successfully subscribed to terminal via Relay", "pod_key", req.PodKey)
+	return nil
+}
+
+// setupRelayClientHandlers sets up all handlers for a relay client
+func (h *RunnerMessageHandler) setupRelayClientHandlers(relayClient *relay.Client, pod *Pod, req client.SubscribeTerminalRequest) {
+	log := logger.Pod()
+	podKey := req.PodKey
+
 	relayClient.SetInputHandler(func(data []byte) {
 		if pod.Terminal != nil {
 			if err := pod.Terminal.Write(data); err != nil {
-				log.Error("Failed to write relay input to terminal", "pod_key", req.PodKey, "error", err)
+				log.Error("Failed to write relay input to terminal", "pod_key", podKey, "error", err)
 			}
 		}
 	})
 
-	// Set resize handler - relay resize requests to PTY and VirtualTerminal
-	// All resize functions use (cols, rows) order
 	relayClient.SetResizeHandler(func(cols, rows uint16) {
-		log.Info("Received resize from relay", "pod_key", req.PodKey, "cols", cols, "rows", rows)
+		log.Info("Received resize from relay", "pod_key", podKey, "cols", cols, "rows", rows)
 		if pod.Terminal != nil {
-			if err := pod.Terminal.Resize(int(cols), int(rows)); err != nil {
-				log.Error("Failed to resize terminal from relay", "pod_key", req.PodKey, "error", err)
-			}
+			pod.Terminal.Resize(int(cols), int(rows))
 		}
-		// Also resize VirtualTerminal to keep it in sync
 		if pod.VirtualTerminal != nil {
 			pod.VirtualTerminal.Resize(int(cols), int(rows))
 		}
 	})
 
-	// Set close handler - clean up relay client and aggregator relay output when connection closes
-	// NOTE: This is only called when connection is permanently closed (not during reconnect attempts)
 	relayClient.SetCloseHandler(func() {
-		log.Info("Relay connection closed permanently", "pod_key", req.PodKey)
+		log.Info("Relay connection closed permanently", "pod_key", podKey)
 		pod.SetRelayClient(nil)
-		// Clear aggregator relay output - will fall back to gRPC
 		if pod.Aggregator != nil {
 			pod.Aggregator.SetRelayOutput(nil)
 		}
 	})
 
-	// Set token expired handler - request new token from Backend when relay connection fails due to token expiration
 	relayClient.SetTokenExpiredHandler(func() string {
-		log.Info("Relay token expired, requesting new token from Backend", "pod_key", req.PodKey)
-
-		// Send request to Backend via gRPC
-		if err := h.conn.SendRequestRelayToken(req.PodKey, relayClient.GetSessionID(), relayClient.GetRelayURL()); err != nil {
-			log.Error("Failed to send token refresh request", "pod_key", req.PodKey, "error", err)
+		log.Info("Relay token expired, requesting new token", "pod_key", podKey)
+		if err := h.conn.SendRequestRelayToken(podKey, relayClient.GetSessionID(), relayClient.GetRelayURL()); err != nil {
+			log.Error("Failed to send token refresh request", "pod_key", podKey, "error", err)
 			return ""
 		}
-
-		// Wait for Backend to respond with new token (via new SubscribeTerminalCommand)
-		// Backend will call OnSubscribeTerminal which will deliver the token
 		newToken := pod.WaitForNewToken(30 * time.Second)
 		if newToken == "" {
-			log.Warn("Timeout waiting for new token from Backend", "pod_key", req.PodKey)
-		} else {
-			log.Info("Received new token from Backend", "pod_key", req.PodKey)
+			log.Warn("Timeout waiting for new token", "pod_key", podKey)
 		}
 		return newToken
 	})
 
-	// Set reconnect handler - restore relay output routing and resend snapshot after reconnection
 	relayClient.SetReconnectHandler(func() {
-		log.Info("Relay reconnected, restoring relay output", "pod_key", req.PodKey)
-
-		// Restore aggregator to route output through Relay
+		log.Info("Relay reconnected, restoring relay output", "pod_key", podKey)
 		if pod.Aggregator != nil {
 			pod.Aggregator.SetRelayOutput(func(data []byte) {
-				if err := relayClient.SendOutput(data); err != nil {
-					log.Debug("Failed to send output to relay", "pod_key", req.PodKey, "error", err)
-				}
+				relayClient.SendOutput(data)
 			})
 		}
-
-		// Resend terminal snapshot to restore state
 		if pod.VirtualTerminal != nil {
 			termSnapshot := pod.VirtualTerminal.GetSnapshot()
 			relaySnapshot := &relay.TerminalSnapshot{
@@ -420,383 +352,49 @@ func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalR
 				CursorVisible:     termSnapshot.CursorVisible,
 				IsAltScreen:       termSnapshot.IsAltScreen,
 			}
-			if err := relayClient.SendSnapshot(relaySnapshot); err != nil {
-				log.Error("Failed to send snapshot after reconnect", "pod_key", req.PodKey, "error", err)
-			} else {
-				log.Info("Sent snapshot after reconnect", "pod_key", req.PodKey)
-			}
+			relayClient.SendSnapshot(relaySnapshot)
 		}
-
-		// For TUI apps, trigger redraw to refresh the display
 		if pod.VirtualTerminal != nil && pod.VirtualTerminal.IsAltScreen() && pod.Terminal != nil {
 			go func() {
 				time.Sleep(100 * time.Millisecond)
-				if err := pod.Terminal.Redraw(); err != nil {
-					log.Debug("Failed to trigger TUI redraw after reconnect", "pod_key", req.PodKey, "error", err)
-				} else {
-					log.Debug("Triggered TUI redraw after reconnect", "pod_key", req.PodKey)
-				}
+				pod.Terminal.Redraw()
 			}()
 		}
 	})
-
-	// Connect to relay
-	if err := relayClient.Connect(); err != nil {
-		return fmt.Errorf("failed to connect to relay: %w", err)
-	}
-
-	// Start read/write loops
-	relayClient.Start()
-
-	// Store relay client in pod
-	pod.SetRelayClient(relayClient)
-
-	// Set aggregator to route output through Relay instead of gRPC
-	if pod.Aggregator != nil {
-		pod.Aggregator.SetRelayOutput(func(data []byte) {
-			if err := relayClient.SendOutput(data); err != nil {
-				log.Debug("Failed to send output to relay", "pod_key", req.PodKey, "error", err)
-			}
-		})
-	}
-
-	// For TUI apps (alt screen mode), trigger redraw to refresh the display
-	// TUI apps like Claude Code need SIGWINCH to repaint when a new observer connects
-	if pod.VirtualTerminal != nil && pod.VirtualTerminal.IsAltScreen() && pod.Terminal != nil {
-		go func() {
-			// Small delay to ensure relay connection is fully established
-			time.Sleep(100 * time.Millisecond)
-			if err := pod.Terminal.Redraw(); err != nil {
-				log.Debug("Failed to trigger TUI redraw", "pod_key", req.PodKey, "error", err)
-			} else {
-				log.Debug("Triggered TUI redraw for alt screen mode", "pod_key", req.PodKey)
-			}
-		}()
-	}
-
-	log.Info("Successfully subscribed to terminal via Relay", "pod_key", req.PodKey)
-	return nil
 }
 
 // OnUnsubscribeTerminal handles unsubscribe terminal command from server.
-// This notifies the Runner that all browsers have disconnected.
-// The Runner should disconnect from the Relay.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnUnsubscribeTerminal(req client.UnsubscribeTerminalRequest) error {
 	log := logger.Pod()
 	log.Info("Unsubscribing from terminal relay", "pod_key", req.PodKey)
 
 	pod, ok := h.podStore.Get(req.PodKey)
 	if !ok {
-		// Pod might have been terminated, that's OK
-		log.Debug("Pod not found for unsubscribe, ignoring", "pod_key", req.PodKey)
 		return nil
 	}
 
-	// Disconnect from relay
-	// NOTE: Output will automatically fall back to gRPC via Terminal.OutputHandler
 	pod.DisconnectRelay()
-
 	log.Info("Successfully unsubscribed from terminal relay", "pod_key", req.PodKey)
 	return nil
 }
 
 // OnQuerySandboxes handles sandbox status query from server.
-// Returns sandbox status for each requested pod key.
-// Implements client.MessageHandler interface.
 func (h *RunnerMessageHandler) OnQuerySandboxes(req client.QuerySandboxesRequest) error {
 	log := logger.Pod()
 	log.Info("Querying sandbox status", "request_id", req.RequestID, "queries", len(req.Queries))
 
 	results := make([]*client.SandboxStatusInfo, 0, len(req.Queries))
-
 	for _, query := range req.Queries {
 		status := h.runner.GetSandboxStatus(query.PodKey)
 		results = append(results, status)
 	}
 
-	// Send response back to server
 	if err := h.conn.SendSandboxesStatus(req.RequestID, results); err != nil {
 		log.Error("Failed to send sandbox status response", "request_id", req.RequestID, "error", err)
 		return err
 	}
 
 	log.Info("Sent sandbox status response", "request_id", req.RequestID, "results", len(results))
-	return nil
-}
-
-// Helper methods
-
-// createOSCHandler creates an OSC handler that sends terminal notifications to the server.
-// OSC sequences are used by terminal programs to trigger desktop notifications:
-//   - OSC 777: iTerm2/Kitty format "notify;title;body"
-//   - OSC 9: ConEmu/Windows Terminal format "message"
-//   - OSC 0/2: Window/tab title change
-func (h *RunnerMessageHandler) createOSCHandler(podKey string) terminal.OSCHandler {
-	return func(oscType int, params []string) {
-		log := logger.Terminal()
-
-		switch oscType {
-		case 777:
-			// OSC 777;notify;title;body - iTerm2/Kitty notification format
-			// params[0] = "notify", params[1] = title, params[2] = body
-			if len(params) >= 3 && params[0] == "notify" {
-				title := params[1]
-				body := params[2]
-				log.Debug("OSC 777 notification detected", "pod_key", podKey, "title", title, "body", body)
-				if err := h.conn.SendOSCNotification(podKey, title, body); err != nil {
-					log.Error("Failed to send OSC notification", "pod_key", podKey, "error", err)
-				}
-			}
-
-		case 9:
-			// OSC 9;message - ConEmu/Windows Terminal notification format
-			if len(params) >= 1 {
-				body := params[0]
-				log.Debug("OSC 9 notification detected", "pod_key", podKey, "body", body)
-				if err := h.conn.SendOSCNotification(podKey, "Notification", body); err != nil {
-					log.Error("Failed to send OSC notification", "pod_key", podKey, "error", err)
-				}
-			}
-
-		case 0, 2:
-			// OSC 0/2;title - Window/tab title
-			if len(params) >= 1 {
-				title := params[0]
-				log.Debug("OSC title change detected", "pod_key", podKey, "title", title)
-				if err := h.conn.SendOSCTitle(podKey, title); err != nil {
-					log.Error("Failed to send OSC title", "pod_key", podKey, "error", err)
-				}
-			}
-		}
-	}
-}
-
-// createExitHandler creates an exit handler that notifies server when pod exits.
-func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
-	return func(exitCode int) {
-		logger.Pod().Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
-
-		pod := h.podStore.Delete(podKey)
-		if pod != nil {
-			pod.SetStatus(PodStatusStopped)
-
-			// 1. Close PTY logger if enabled
-			if pod.PTYLogger != nil {
-				pod.PTYLogger.Close()
-			}
-
-			// 2. Stop state detector if running (used by Autopilot)
-			pod.StopStateDetector()
-
-			// 3. Disconnect Relay connection
-			pod.DisconnectRelay()
-
-			// 4. Stop aggregator to flush any remaining output
-			if pod.Aggregator != nil {
-				pod.Aggregator.Stop()
-			}
-		}
-
-		h.sendPodTerminated(podKey)
-	}
-}
-
-// Event sending methods - using gRPC-specific methods
-
-func (h *RunnerMessageHandler) sendPodCreated(podKey string, pid int, sandboxPath, branchName string, cols, rows uint16) {
-	if h.conn == nil {
-		return
-	}
-	// Use gRPC-specific method with sandbox_path and branch_name for Resume functionality
-	if err := h.conn.SendPodCreated(podKey, int32(pid), sandboxPath, branchName); err != nil {
-		logger.Pod().Error("Failed to send pod created event", "error", err)
-	}
-}
-
-func (h *RunnerMessageHandler) sendPodTerminated(podKey string) {
-	if h.conn == nil {
-		return
-	}
-	// Use gRPC-specific method with exit code 0 (normal termination)
-	if err := h.conn.SendPodTerminated(podKey, 0, ""); err != nil {
-		logger.Pod().Error("Failed to send pod terminated event", "error", err)
-	}
-}
-
-// NOTE: sendTerminalOutput removed - terminal output is exclusively streamed via Relay
-
-func (h *RunnerMessageHandler) sendPtyResized(podKey string, cols, rows uint16) {
-	if h.conn == nil {
-		return
-	}
-	// Use gRPC-specific method
-	if err := h.conn.SendPtyResized(podKey, int32(cols), int32(rows)); err != nil {
-		logger.Terminal().Error("Failed to send pty resized event", "error", err)
-	}
-}
-
-func (h *RunnerMessageHandler) sendPodError(podKey, errorMsg string) {
-	if h.conn == nil {
-		return
-	}
-	// Use gRPC-specific method
-	if err := h.conn.SendError(podKey, "error", errorMsg); err != nil {
-		logger.Pod().Error("Failed to send error event", "error", err)
-	}
-}
-
-func (h *RunnerMessageHandler) sendPodErrorWithCode(podKey string, podErr *client.PodError) {
-	if h.conn == nil {
-		return
-	}
-	// Use gRPC-specific method with error code
-	if err := h.conn.SendError(podKey, podErr.Code, podErr.Message); err != nil {
-		logger.Pod().Error("Failed to send error event", "error", err)
-	}
-}
-
-// ==================== Autopilot Command Handlers ====================
-
-// OnCreateAutopilot handles Autopilot creation command from server.
-// Implements client.MessageHandler interface.
-func (h *RunnerMessageHandler) OnCreateAutopilot(cmd *runnerv1.CreateAutopilotCommand) error {
-	log := logger.Autopilot()
-	log.Info("Creating Autopilot",
-		"autopilot_key", cmd.AutopilotKey,
-		"pod_key", cmd.PodKey)
-
-	// Check if Autopilot already exists
-	if h.runner.GetAutopilot(cmd.AutopilotKey) != nil {
-		return fmt.Errorf("Autopilot already exists: %s", cmd.AutopilotKey)
-	}
-
-	var targetPod *Pod
-	var podKey string
-
-	// Method 1: Bind to existing Pod
-	if cmd.PodKey != "" {
-		podKey = cmd.PodKey
-		var ok bool
-		targetPod, ok = h.podStore.Get(podKey)
-		if !ok {
-			return fmt.Errorf("Pod not found: %s", podKey)
-		}
-	}
-
-	// Method 2: Create Pod along with Autopilot
-	if cmd.PodConfig != nil && targetPod == nil {
-		podKey = cmd.PodConfig.PodKey
-		if err := h.OnCreatePod(cmd.PodConfig); err != nil {
-			return fmt.Errorf("failed to create Pod: %w", err)
-		}
-		var ok bool
-		targetPod, ok = h.podStore.Get(podKey)
-		if !ok {
-			return fmt.Errorf("Pod not found after creation: %s", podKey)
-		}
-	}
-
-	if targetPod == nil {
-		return fmt.Errorf("either pod_key or pod_config is required")
-	}
-
-	// Create PodController
-	podCtrl := NewPodController(targetPod, h.runner)
-
-	// Create event reporter
-	reporter := autopilot.NewGRPCEventReporter(func(msg *runnerv1.RunnerMessage) error {
-		return h.conn.SendMessage(msg)
-	})
-
-	// Create Autopilot with MCP port for control process
-	mcpPort := h.runner.cfg.GetMCPPort()
-	ac := autopilot.NewAutopilotController(autopilot.Config{
-		AutopilotKey: cmd.AutopilotKey,
-		PodKey:       podKey,
-		ProtoConfig:  cmd.Config,
-		PodCtrl:      podCtrl,
-		Reporter:     reporter,
-		MCPPort:      mcpPort,
-	})
-
-	// Store Autopilot
-	h.runner.AddAutopilot(ac)
-
-	// Register with Monitor for event-driven callbacks
-	// Use Autopilot key as unique subscriber ID to support multiple Autopilots
-	if h.runner.claudeMonitor != nil {
-		subscriberID := "autopilot-" + cmd.AutopilotKey
-		h.runner.claudeMonitor.Subscribe(subscriberID, func(status monitor.PodStatus) {
-			// Check if this status change is for the specific Pod
-			if status.PodID == podKey && status.ClaudeStatus == monitor.StatusWaiting {
-				// Trigger Autopilot when Pod transitions to waiting
-				ac.OnPodWaiting()
-			}
-		})
-	}
-
-	// Start Autopilot
-	if err := ac.Start(); err != nil {
-		h.runner.RemoveAutopilot(cmd.AutopilotKey)
-		return fmt.Errorf("failed to start Autopilot: %w", err)
-	}
-
-	log.Info("Autopilot created successfully",
-		"autopilot_key", cmd.AutopilotKey,
-		"pod_key", podKey)
-
-	return nil
-}
-
-// OnAutopilotControl handles Autopilot control commands (pause/resume/stop/approve/takeover/handback).
-// Implements client.MessageHandler interface.
-func (h *RunnerMessageHandler) OnAutopilotControl(cmd *runnerv1.AutopilotControlCommand) error {
-	log := logger.Autopilot()
-	log.Info("Handling Autopilot control command", "autopilot_key", cmd.AutopilotKey)
-
-	ac := h.runner.GetAutopilot(cmd.AutopilotKey)
-	if ac == nil {
-		return fmt.Errorf("Autopilot not found: %s", cmd.AutopilotKey)
-	}
-
-	switch action := cmd.Action.(type) {
-	case *runnerv1.AutopilotControlCommand_Pause:
-		log.Info("Pausing Autopilot", "autopilot_key", cmd.AutopilotKey)
-		ac.Pause()
-
-	case *runnerv1.AutopilotControlCommand_Resume:
-		log.Info("Resuming Autopilot", "autopilot_key", cmd.AutopilotKey)
-		ac.Resume()
-
-	case *runnerv1.AutopilotControlCommand_Stop:
-		log.Info("Stopping Autopilot", "autopilot_key", cmd.AutopilotKey)
-		ac.Stop()
-		// Unsubscribe from Monitor
-		if h.runner.claudeMonitor != nil {
-			h.runner.claudeMonitor.Unsubscribe("autopilot-" + cmd.AutopilotKey)
-		}
-		h.runner.RemoveAutopilot(cmd.AutopilotKey)
-
-	case *runnerv1.AutopilotControlCommand_Approve:
-		log.Info("Approving Autopilot continuation",
-			"autopilot_key", cmd.AutopilotKey,
-			"continue", action.Approve.ContinueExecution,
-			"additional_iterations", action.Approve.AdditionalIterations)
-		ac.Approve(action.Approve.ContinueExecution, action.Approve.AdditionalIterations)
-
-	case *runnerv1.AutopilotControlCommand_Takeover:
-		log.Info("User takeover", "autopilot_key", cmd.AutopilotKey)
-		ac.Takeover()
-
-	case *runnerv1.AutopilotControlCommand_Handback:
-		log.Info("User handback", "autopilot_key", cmd.AutopilotKey)
-		ac.Handback()
-
-	default:
-		return fmt.Errorf("unknown Autopilot control action")
-	}
-
 	return nil
 }
 
