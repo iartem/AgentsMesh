@@ -1,0 +1,120 @@
+package workspace
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// prepareAuthURL prepares the repository URL with authentication if needed
+// For HTTPS URLs with token, embeds token in URL using standard format:
+// - Generic: https://x-access-token:TOKEN@host/path (works for GitHub, GitLab, etc.)
+func (m *Manager) prepareAuthURL(repoURL string, opts *WorktreeOptions) string {
+	if opts == nil || opts.GitToken == "" {
+		return repoURL
+	}
+
+	// Only modify HTTPS URLs
+	if strings.HasPrefix(repoURL, "https://") {
+		// Use x-access-token as username - this is a standard format that works with:
+		// - GitHub (accepts any username with PAT as password)
+		// - GitLab (accepts oauth2 or any username with PAT as password)
+		// - Azure DevOps (accepts any username with PAT as password)
+		// - Bitbucket (accepts x-token-auth with app password)
+		return strings.Replace(repoURL, "https://", fmt.Sprintf("https://x-access-token:%s@", opts.GitToken), 1)
+	}
+
+	return repoURL
+}
+
+// setGitAuthEnv sets environment variables for git authentication
+func (m *Manager) setGitAuthEnv(cmd *exec.Cmd, opts *WorktreeOptions) {
+	// Start with current environment
+	env := os.Environ()
+
+	if opts == nil {
+		cmd.Env = env
+		return
+	}
+
+	// Set SSH key path if provided
+	if opts.SSHKeyPath != "" {
+		sshCmd := fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=no", opts.SSHKeyPath)
+		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
+	}
+
+	// Disable interactive prompts for HTTPS authentication
+	if opts.GitToken != "" {
+		env = append(env, "GIT_TERMINAL_PROMPT=0")
+	}
+
+	cmd.Env = env
+}
+
+// TempWorkspace creates a temporary workspace directory
+func (m *Manager) TempWorkspace(podKey string) string {
+	path := filepath.Join(m.root, "temp", podKey)
+	os.MkdirAll(path, 0755)
+	return path
+}
+
+// GetWorkspaceRoot returns the workspace root directory
+func (m *Manager) GetWorkspaceRoot() string {
+	return m.root
+}
+
+// ListWorktrees lists all active worktrees.
+// Worktrees are located at sandboxes/{podKey}/worktree
+func (m *Manager) ListWorktrees() ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sandboxesDir := filepath.Join(m.root, "sandboxes")
+	entries, err := os.ReadDir(sandboxesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var worktrees []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		worktreePath := filepath.Join(sandboxesDir, entry.Name(), "worktree")
+		// Only include if worktree actually exists
+		if _, err := os.Stat(worktreePath); err == nil {
+			worktrees = append(worktrees, worktreePath)
+		}
+	}
+
+	return worktrees, nil
+}
+
+// extractRepoName extracts repository name from URL
+func extractRepoName(repoURL string) string {
+	// Handle SSH URLs: git@github.com:user/repo.git
+	if strings.Contains(repoURL, "@") {
+		parts := strings.Split(repoURL, ":")
+		if len(parts) == 2 {
+			path := parts[1]
+			path = strings.TrimSuffix(path, ".git")
+			return strings.ReplaceAll(path, "/", "-")
+		}
+	}
+
+	// Handle HTTPS URLs: https://github.com/user/repo.git
+	parts := strings.Split(repoURL, "/")
+	if len(parts) >= 2 {
+		name := parts[len(parts)-1]
+		name = strings.TrimSuffix(name, ".git")
+		owner := parts[len(parts)-2]
+		return fmt.Sprintf("%s-%s", owner, name)
+	}
+
+	return ""
+}

@@ -2,7 +2,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/tls/certprovider"
 	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -91,67 +89,6 @@ type GRPCConnection struct {
 	certExpiryWarningDays    int
 	certRenewalDays          int // Days before expiry to trigger renewal (default 30)
 	certUrgentDays           int // Days before expiry for urgent reconnection (default 7)
-}
-
-// GRPCConnectionOption is a functional option for GRPCConnection.
-type GRPCConnectionOption func(*GRPCConnection)
-
-// WithGRPCHeartbeatInterval sets the heartbeat interval.
-func WithGRPCHeartbeatInterval(d time.Duration) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.heartbeatInterval = d
-	}
-}
-
-// WithGRPCInitTimeout sets the initialization timeout.
-func WithGRPCInitTimeout(d time.Duration) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.initTimeout = d
-	}
-}
-
-// WithGRPCRunnerVersion sets the runner version.
-func WithGRPCRunnerVersion(version string) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.runnerVersion = version
-	}
-}
-
-// WithGRPCMCPPort sets the MCP port.
-func WithGRPCMCPPort(port int) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.mcpPort = port
-	}
-}
-
-// WithGRPCTerminalRateLimit sets the terminal output rate limit in bytes per second.
-// Default is 100KB/s. Set to 0 to disable rate limiting.
-// Recommended: Set to ~80% of server upload bandwidth to leave room for control messages.
-func WithGRPCTerminalRateLimit(bytesPerSecond int) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.terminalRateLimit = bytesPerSecond
-	}
-}
-
-// WithGRPCServerURL sets the HTTP server URL for REST API calls.
-func WithGRPCServerURL(serverURL string) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.serverURL = serverURL
-	}
-}
-
-// WithGRPCCertRenewalDays sets the days before expiry to trigger renewal.
-func WithGRPCCertRenewalDays(days int) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.certRenewalDays = days
-	}
-}
-
-// WithGRPCCertUrgentDays sets the days before expiry for urgent reconnection.
-func WithGRPCCertUrgentDays(days int) GRPCConnectionOption {
-	return func(c *GRPCConnection) {
-		c.certUrgentDays = days
-	}
 }
 
 // NewGRPCConnection creates a new gRPC connection with mTLS.
@@ -309,140 +246,7 @@ func (c *GRPCConnection) Stop() {
 	})
 }
 
-// connectionLoop manages the connection lifecycle with auto-reconnection.
-func (c *GRPCConnection) connectionLoop() {
-	for {
-		select {
-		case <-c.stopCh:
-			logger.GRPC().Info("Connection loop stopped")
-			return
-		default:
-		}
-
-		// Try to connect
-		if err := c.Connect(); err != nil {
-			delay := c.reconnectStrategy.NextDelay()
-			logger.GRPC().Warn("Failed to connect, will retry",
-				"attempt", c.reconnectStrategy.AttemptCount(),
-				"error", err,
-				"retry_in", delay)
-
-			select {
-			case <-c.stopCh:
-				return
-			case <-time.After(delay):
-			}
-			continue
-		}
-
-		// Reset reconnect strategy on successful connection
-		c.reconnectStrategy.Reset()
-
-		// Run the connection (blocks until disconnected)
-		c.runConnection()
-
-		// Check if we should stop
-		select {
-		case <-c.stopCh:
-			return
-		default:
-		}
-
-		// Wait before reconnecting
-		logger.GRPC().Info("Connection closed, will attempt to reconnect")
-		select {
-		case <-c.stopCh:
-			return
-		case <-time.After(c.reconnectStrategy.CurrentInterval()):
-		}
-	}
-}
-
-// runConnection establishes the bidirectional stream and handles messages.
-func (c *GRPCConnection) runConnection() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Clear terminal queue before establishing new connection
-	// Old terminal output is stale after reconnection and would:
-	// 1. Delay initialization by flooding the new stream
-	// 2. Potentially cause immediate timeout if backend is slow
-	// TUI frames are expendable - users will see fresh output after reconnection
-	c.drainTerminalQueue()
-
-	// Add org_slug to metadata for organization routing
-	ctx = metadata.AppendToOutgoingContext(ctx, "x-org-slug", c.orgSlug)
-
-	logger.GRPC().Debug("Establishing bidirectional stream", "org", c.orgSlug)
-
-	// Create bidirectional stream
-	stream, err := c.client.Connect(ctx)
-	if err != nil {
-		logger.GRPC().Error("Failed to establish stream", "error", err)
-		return
-	}
-
-	c.mu.Lock()
-	c.stream = stream
-	c.mu.Unlock()
-
-	logger.GRPC().Info("Bidirectional stream established")
-
-	done := make(chan struct{})
-	readLoopDone := make(chan struct{}) // Signal when readLoop exits
-
-	// Start write loop
-	go c.writeLoop(ctx, done)
-
-	// IMPORTANT: Start read loop BEFORE initialization
-	// The read loop must be running to receive the initialize_result response
-	go c.readLoop(ctx, readLoopDone)
-
-	// Perform initialization (blocks until handshake completes or times out)
-	if err := c.performInitialization(ctx); err != nil {
-		logger.GRPC().Error("Initialization failed", "error", err)
-		close(done)
-		return
-	}
-
-	// Start heartbeat loop (only after successful initialization)
-	go c.heartbeatLoop(ctx, done)
-
-	// Start certificate renewal checker
-	go c.certRenewalChecker(ctx, done)
-
-	// Monitor for reconnection signal (certificate renewal)
-	go func() {
-		select {
-		case <-c.reconnectCh:
-			logger.GRPC().Info("Reconnection requested for certificate renewal")
-			cancel() // Cancel context to trigger reconnection
-		case <-done:
-			return
-		case <-c.stopCh:
-			return
-		}
-	}()
-
-	// Wait for context cancellation, stop signal, or readLoop exit
-	select {
-	case <-ctx.Done():
-		logger.GRPC().Debug("Context cancelled, closing connection")
-	case <-c.stopCh:
-		logger.GRPC().Debug("Stop signal received, closing connection")
-	case <-readLoopDone:
-		logger.GRPC().Debug("Read loop exited, closing connection")
-	}
-
-	// Clear stream to prevent sending to disconnected stream
-	// This ensures sendTerminal/sendControl will reject new messages during reconnect
-	c.mu.Lock()
-	c.stream = nil
-	c.mu.Unlock()
-
-	// Signal other goroutines to stop
-	close(done)
-}
+// Note: connectionLoop and runConnection are in grpc_connection_loop.go
 
 // ==================== gRPC Error Handling ====================
 

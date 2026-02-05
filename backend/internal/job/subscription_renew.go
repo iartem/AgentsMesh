@@ -9,7 +9,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
-	"github.com/anthropics/agentsmesh/backend/internal/service/payment/types"
 	"gorm.io/gorm"
 )
 
@@ -36,22 +35,9 @@ func (j *SubscriptionRenewJob) Run(ctx context.Context) error {
 	j.logger.Info("starting subscription renewal job")
 
 	// Find subscriptions that need renewal
-	// - status is active
-	// - auto_renew is true
-	// - current_period_end is within the next 24 hours
-	// - has a valid agreement (for CN payments)
-	var subscriptions []billing.Subscription
-	checkTime := time.Now().Add(24 * time.Hour)
-
-	err := j.db.WithContext(ctx).
-		Where("status = ?", billing.SubscriptionStatusActive).
-		Where("auto_renew = ?", true).
-		Where("current_period_end <= ?", checkTime).
-		Where("current_period_end > ?", time.Now()). // Not yet expired
-		Where("(alipay_agreement_no IS NOT NULL AND alipay_agreement_no != '') OR (wechat_contract_id IS NOT NULL AND wechat_contract_id != '')").
-		Find(&subscriptions).Error
+	subscriptions, err := j.findSubscriptionsForRenewal(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to find subscriptions for renewal: %w", err)
+		return err
 	}
 
 	j.logger.Info("found subscriptions for renewal", "count", len(subscriptions))
@@ -73,6 +59,25 @@ func (j *SubscriptionRenewJob) Run(ctx context.Context) error {
 	return nil
 }
 
+// findSubscriptionsForRenewal finds subscriptions that need renewal
+func (j *SubscriptionRenewJob) findSubscriptionsForRenewal(ctx context.Context) ([]billing.Subscription, error) {
+	var subscriptions []billing.Subscription
+	checkTime := time.Now().Add(24 * time.Hour)
+
+	err := j.db.WithContext(ctx).
+		Where("status = ?", billing.SubscriptionStatusActive).
+		Where("auto_renew = ?", true).
+		Where("current_period_end <= ?", checkTime).
+		Where("current_period_end > ?", time.Now()). // Not yet expired
+		Where("(alipay_agreement_no IS NOT NULL AND alipay_agreement_no != '') OR (wechat_contract_id IS NOT NULL AND wechat_contract_id != '')").
+		Find(&subscriptions).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to find subscriptions for renewal: %w", err)
+	}
+
+	return subscriptions, nil
+}
+
 // processRenewal processes a single subscription renewal
 func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.Subscription) error {
 	j.logger.Info("processing subscription renewal",
@@ -81,14 +86,54 @@ func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.
 		"provider", sub.PaymentProvider,
 	)
 
+	// Create payment order
+	order, currency, err := j.createRenewalOrder(ctx, sub)
+	if err != nil {
+		return err
+	}
+
+	// Determine provider
+	var provider string
+	if sub.PaymentProvider != nil {
+		provider = *sub.PaymentProvider
+	}
+
+	// Execute agreement payment based on provider
+	var payErr error
+	switch provider {
+	case billing.PaymentProviderAlipay:
+		payErr = j.executeAlipayAgreementPay(ctx, sub, order)
+	case billing.PaymentProviderWeChat:
+		payErr = j.executeWeChatAgreementPay(ctx, sub, order)
+	default:
+		// Stripe handles renewals automatically via their subscription system
+		j.logger.Debug("skipping non-CN subscription renewal", "provider", provider)
+		return nil
+	}
+
+	if payErr != nil {
+		// Update order status to failed
+		j.db.WithContext(ctx).Model(order).Updates(map[string]interface{}{
+			"status":      billing.OrderStatusFailed,
+			"fail_reason": payErr.Error(),
+		})
+		return payErr
+	}
+
+	// Currency is used for logging/debugging
+	_ = currency
+	return nil
+}
+
+// createRenewalOrder creates a payment order for subscription renewal
+func (j *SubscriptionRenewJob) createRenewalOrder(ctx context.Context, sub *billing.Subscription) (*billing.PaymentOrder, string, error) {
 	// Get the plan to calculate renewal amount
 	var plan billing.SubscriptionPlan
 	if err := j.db.WithContext(ctx).First(&plan, sub.PlanID).Error; err != nil {
-		return fmt.Errorf("failed to get plan: %w", err)
+		return nil, "", fmt.Errorf("failed to get plan: %w", err)
 	}
 
 	// Determine currency based on payment provider
-	// CN providers (Alipay/WeChat) use CNY, others use USD
 	var provider string
 	if sub.PaymentProvider != nil {
 		provider = *sub.PaymentProvider
@@ -99,35 +144,7 @@ func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.
 	}
 
 	// Get price from plan_prices table (Single Source of Truth)
-	var planPrice billing.PlanPrice
-	if err := j.db.WithContext(ctx).
-		Where("plan_id = ? AND currency = ?", sub.PlanID, currency).
-		First(&planPrice).Error; err != nil {
-		// Fallback to plan's legacy price fields if plan_prices not found
-		j.logger.Warn("plan price not found, using legacy fields",
-			"plan_id", sub.PlanID,
-			"currency", currency,
-		)
-		var amount float64
-		if sub.BillingCycle == billing.BillingCycleYearly {
-			amount = plan.PricePerSeatYearly * float64(sub.SeatCount)
-		} else {
-			amount = plan.PricePerSeatMonthly * float64(sub.SeatCount)
-		}
-		planPrice = billing.PlanPrice{
-			PriceMonthly: amount / float64(sub.SeatCount),
-			PriceYearly:  amount / float64(sub.SeatCount),
-		}
-		currency = billing.CurrencyUSD // Legacy prices are in USD
-	}
-
-	// Calculate renewal amount from plan_prices
-	var amount float64
-	if sub.BillingCycle == billing.BillingCycleYearly {
-		amount = planPrice.PriceYearly * float64(sub.SeatCount)
-	} else {
-		amount = planPrice.PriceMonthly * float64(sub.SeatCount)
-	}
+	amount, currency := j.calculateRenewalAmount(ctx, sub, &plan, currency)
 
 	// Generate order number
 	orderNo := fmt.Sprintf("RENEW-%d-%d", sub.OrganizationID, time.Now().Unix())
@@ -154,136 +171,41 @@ func (j *SubscriptionRenewJob) processRenewal(ctx context.Context, sub *billing.
 	}
 
 	if err := j.db.WithContext(ctx).Create(order).Error; err != nil {
-		return fmt.Errorf("failed to create payment order: %w", err)
+		return nil, "", fmt.Errorf("failed to create payment order: %w", err)
 	}
 
-	// Execute agreement payment based on provider
-	var payErr error
-	switch provider {
-	case billing.PaymentProviderAlipay:
-		payErr = j.executeAlipayAgreementPay(ctx, sub, order)
-	case billing.PaymentProviderWeChat:
-		payErr = j.executeWeChatAgreementPay(ctx, sub, order)
-	default:
-		// Stripe handles renewals automatically via their subscription system
-		j.logger.Debug("skipping non-CN subscription renewal", "provider", provider)
-		return nil
-	}
-
-	if payErr != nil {
-		// Update order status to failed
-		j.db.WithContext(ctx).Model(order).Updates(map[string]interface{}{
-			"status":      billing.OrderStatusFailed,
-			"fail_reason": payErr.Error(),
-		})
-		return payErr
-	}
-
-	return nil
+	return order, currency, nil
 }
 
-// executeAlipayAgreementPay executes Alipay agreement payment (代扣)
-func (j *SubscriptionRenewJob) executeAlipayAgreementPay(ctx context.Context, sub *billing.Subscription, order *billing.PaymentOrder) error {
-	if sub.AlipayAgreementNo == nil || *sub.AlipayAgreementNo == "" {
-		return fmt.Errorf("no alipay agreement found")
+// calculateRenewalAmount calculates the renewal amount based on plan prices
+func (j *SubscriptionRenewJob) calculateRenewalAmount(ctx context.Context, sub *billing.Subscription, plan *billing.SubscriptionPlan, currency string) (float64, string) {
+	var planPrice billing.PlanPrice
+	if err := j.db.WithContext(ctx).
+		Where("plan_id = ? AND currency = ?", sub.PlanID, currency).
+		First(&planPrice).Error; err != nil {
+		// Fallback to plan's legacy price fields if plan_prices not found
+		j.logger.Warn("plan price not found, using legacy fields",
+			"plan_id", sub.PlanID,
+			"currency", currency,
+		)
+		var amount float64
+		if sub.BillingCycle == billing.BillingCycleYearly {
+			amount = plan.PricePerSeatYearly * float64(sub.SeatCount)
+		} else {
+			amount = plan.PricePerSeatMonthly * float64(sub.SeatCount)
+		}
+		return amount, billing.CurrencyUSD // Legacy prices are in USD
 	}
 
-	provider, err := j.paymentFactory.GetProvider(billing.PaymentProviderAlipay)
-	if err != nil {
-		return fmt.Errorf("failed to get alipay provider: %w", err)
+	// Calculate renewal amount from plan_prices
+	var amount float64
+	if sub.BillingCycle == billing.BillingCycleYearly {
+		amount = planPrice.PriceYearly * float64(sub.SeatCount)
+	} else {
+		amount = planPrice.PriceMonthly * float64(sub.SeatCount)
 	}
 
-	// Type assert to AgreementProvider
-	agreementProvider, ok := provider.(payment.AgreementProvider)
-	if !ok {
-		return fmt.Errorf("alipay provider does not support agreements")
-	}
-
-	// Execute agreement payment
-	resp, err := agreementProvider.ExecuteAgreementPay(ctx, &types.AgreementPayRequest{
-		AgreementNo:    *sub.AlipayAgreementNo,
-		OrderNo:        order.OrderNo,
-		Amount:         order.ActualAmount,
-		Currency:       order.Currency,
-		Description:    fmt.Sprintf("AgentsMesh Subscription Renewal - %s", sub.BillingCycle),
-		IdempotencyKey: order.OrderNo,
-	})
-	if err != nil {
-		return fmt.Errorf("alipay agreement pay failed: %w", err)
-	}
-
-	// Update order with transaction info
-	updates := map[string]interface{}{
-		"external_order_no": resp.TransactionID,
-	}
-
-	if resp.Status == "success" {
-		updates["status"] = billing.OrderStatusSucceeded
-		updates["paid_at"] = resp.PaidAt
-	}
-
-	if err := j.db.WithContext(ctx).Model(order).Updates(updates).Error; err != nil {
-		return fmt.Errorf("failed to update order: %w", err)
-	}
-
-	// If payment succeeded, extend subscription period
-	if resp.Status == "success" {
-		return j.extendSubscription(ctx, sub)
-	}
-
-	return nil
-}
-
-// executeWeChatAgreementPay executes WeChat agreement payment (委托代扣)
-func (j *SubscriptionRenewJob) executeWeChatAgreementPay(ctx context.Context, sub *billing.Subscription, order *billing.PaymentOrder) error {
-	if sub.WeChatContractID == nil || *sub.WeChatContractID == "" {
-		return fmt.Errorf("no wechat contract found")
-	}
-
-	provider, err := j.paymentFactory.GetProvider(billing.PaymentProviderWeChat)
-	if err != nil {
-		return fmt.Errorf("failed to get wechat provider: %w", err)
-	}
-
-	// Type assert to AgreementProvider
-	agreementProvider, ok := provider.(payment.AgreementProvider)
-	if !ok {
-		return fmt.Errorf("wechat provider does not support agreements")
-	}
-
-	// Execute agreement payment
-	resp, err := agreementProvider.ExecuteAgreementPay(ctx, &types.AgreementPayRequest{
-		AgreementNo:    *sub.WeChatContractID,
-		OrderNo:        order.OrderNo,
-		Amount:         order.ActualAmount,
-		Currency:       order.Currency,
-		Description:    fmt.Sprintf("AgentsMesh Subscription Renewal - %s", sub.BillingCycle),
-		IdempotencyKey: order.OrderNo,
-	})
-	if err != nil {
-		return fmt.Errorf("wechat agreement pay failed: %w", err)
-	}
-
-	// Update order with transaction info
-	updates := map[string]interface{}{
-		"external_order_no": resp.TransactionID,
-	}
-
-	if resp.Status == "success" {
-		updates["status"] = billing.OrderStatusSucceeded
-		updates["paid_at"] = resp.PaidAt
-	}
-
-	if err := j.db.WithContext(ctx).Model(order).Updates(updates).Error; err != nil {
-		return fmt.Errorf("failed to update order: %w", err)
-	}
-
-	// If payment succeeded, extend subscription period
-	if resp.Status == "success" {
-		return j.extendSubscription(ctx, sub)
-	}
-
-	return nil
+	return amount, currency
 }
 
 // extendSubscription extends the subscription period after successful payment
@@ -308,113 +230,6 @@ func (j *SubscriptionRenewJob) extendSubscription(ctx context.Context, sub *bill
 		"subscription_id", sub.ID,
 		"new_period_end", newPeriodEnd,
 	)
-
-	return nil
-}
-
-// FreezeExpiredSubscriptions freezes subscriptions that have expired without renewal
-// This includes both active subscriptions and trial subscriptions
-// This should be called periodically (e.g., every hour)
-func (j *SubscriptionRenewJob) FreezeExpiredSubscriptions(ctx context.Context) error {
-	j.logger.Info("checking for expired subscriptions to freeze")
-
-	now := time.Now()
-
-	// Freeze expired active subscriptions
-	// - status is active
-	// - current_period_end has passed
-	// - are not set to cancel (they would have been canceled already)
-	activeResult := j.db.WithContext(ctx).
-		Model(&billing.Subscription{}).
-		Where("status = ?", billing.SubscriptionStatusActive).
-		Where("current_period_end < ?", now).
-		Where("cancel_at_period_end = ?", false).
-		Updates(map[string]interface{}{
-			"status":    billing.SubscriptionStatusFrozen,
-			"frozen_at": now,
-		})
-
-	if activeResult.Error != nil {
-		return fmt.Errorf("failed to freeze expired active subscriptions: %w", activeResult.Error)
-	}
-
-	if activeResult.RowsAffected > 0 {
-		j.logger.Info("froze expired active subscriptions", "count", activeResult.RowsAffected)
-	}
-
-	// Freeze expired trial subscriptions
-	// - status is trialing
-	// - current_period_end has passed (trial ended)
-	trialResult := j.db.WithContext(ctx).
-		Model(&billing.Subscription{}).
-		Where("status = ?", billing.SubscriptionStatusTrialing).
-		Where("current_period_end < ?", now).
-		Updates(map[string]interface{}{
-			"status":    billing.SubscriptionStatusFrozen,
-			"frozen_at": now,
-		})
-
-	if trialResult.Error != nil {
-		return fmt.Errorf("failed to freeze expired trial subscriptions: %w", trialResult.Error)
-	}
-
-	if trialResult.RowsAffected > 0 {
-		j.logger.Info("froze expired trial subscriptions", "count", trialResult.RowsAffected)
-	}
-
-	// Also update organization subscription_status for frozen subscriptions
-	if activeResult.RowsAffected > 0 || trialResult.RowsAffected > 0 {
-		j.db.WithContext(ctx).Exec(`
-			UPDATE organizations o
-			SET subscription_status = 'frozen'
-			FROM subscriptions s
-			WHERE s.organization_id = o.id
-			AND s.status = 'frozen'
-			AND o.subscription_status != 'frozen'
-		`)
-	}
-
-	return nil
-}
-
-// SendRenewalReminders sends reminder emails for upcoming renewals
-// This should be called daily
-func (j *SubscriptionRenewJob) SendRenewalReminders(ctx context.Context) error {
-	j.logger.Info("sending renewal reminder emails")
-
-	// Find subscriptions expiring in 7 days, 3 days, or 1 day
-	reminderDays := []int{7, 3, 1}
-
-	for _, days := range reminderDays {
-		targetDate := time.Now().AddDate(0, 0, days)
-		startOfDay := time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, time.UTC)
-		endOfDay := startOfDay.AddDate(0, 0, 1)
-
-		var subscriptions []billing.Subscription
-		err := j.db.WithContext(ctx).
-			Where("status = ?", billing.SubscriptionStatusActive).
-			Where("auto_renew = ?", false). // Only remind manual renewal users
-			Where("current_period_end >= ?", startOfDay).
-			Where("current_period_end < ?", endOfDay).
-			Find(&subscriptions).Error
-		if err != nil {
-			j.logger.Error("failed to find subscriptions for reminder",
-				"days", days,
-				"error", err,
-			)
-			continue
-		}
-
-		for _, sub := range subscriptions {
-			// TODO: Send email reminder
-			// This would integrate with the email service
-			j.logger.Info("would send renewal reminder",
-				"subscription_id", sub.ID,
-				"organization_id", sub.OrganizationID,
-				"days_until_expiry", days,
-			)
-		}
-	}
 
 	return nil
 }

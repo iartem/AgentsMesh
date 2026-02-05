@@ -50,75 +50,7 @@ type SmartAggregator struct {
 	ptyLogger *PTYLogger
 }
 
-// SmartAggregatorOption is a functional option for SmartAggregator.
-type SmartAggregatorOption func(*SmartAggregator)
-
-// WithSmartBaseDelay sets the base delay for aggregation.
-func WithSmartBaseDelay(d time.Duration) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.delay.SetBaseDelay(d)
-	}
-}
-
-// WithSmartMaxDelay sets the maximum delay for aggregation.
-func WithSmartMaxDelay(d time.Duration) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.delay.SetMaxDelay(d)
-	}
-}
-
-// WithSmartMaxSize sets the maximum buffer size.
-func WithSmartMaxSize(size int) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.buffer.SetMaxSize(size)
-	}
-}
-
-// WithBackpressureCallbacks sets the callbacks for ttyd-style backpressure propagation.
-// onPause is called when aggregator is paused (should call Terminal.PauseRead)
-// onResume is called when aggregator is resumed (should call Terminal.ResumeRead)
-func WithBackpressureCallbacks(onPause, onResume func()) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.backpressure.SetCallbacks(onPause, onResume)
-	}
-}
-
-// WithSerializeCallback sets a callback that returns serialized terminal content.
-// When set, flushLocked() calls this callback to get compressed data instead of using raw buffer.
-// This enables bandwidth optimization by using VirtualTerminal.Serialize() which compresses
-// spaces to CSI CUF sequences.
-//
-// In serialize mode:
-// - Write() only marks "has pending data", doesn't buffer the actual data
-// - flushLocked() calls serializeCallback to get compressed output
-// - The callback should return VT.Serialize() result
-func WithSerializeCallback(fn func() []byte) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.serializeCallback = fn
-	}
-}
-
-// WithFullRedrawThrottling enables throttling for high-frequency full-screen redraws.
-// When applications produce rapid full-screen refreshes (like `glab ci status --live`),
-// this option detects the pattern and reduces transmission frequency to save bandwidth.
-//
-// This only applies to Legacy mode (non-Serialize mode). In Serialize mode, the
-// VirtualTerminal already handles optimization.
-//
-// Default parameters:
-//   - Window size: 2 seconds
-//   - Threshold: 2.5 redraws/second (triggers throttling)
-//   - Min delay: 200ms (at threshold)
-//   - Max delay: 1000ms (at 10+ redraws/second)
-//
-// Example bandwidth savings:
-//   - 10 redraws/sec → ~80% reduction (only ~2 flushes/sec)
-//   - 20 redraws/sec → ~95% reduction (only ~1 flush/sec)
-func WithFullRedrawThrottling(opts ...FullRedrawThrottlerOption) SmartAggregatorOption {
-	return func(a *SmartAggregator) {
-		a.fullRedrawThrottler = NewFullRedrawThrottler(opts...)
-	}
-}
+// Note: SmartAggregatorOption and With* functions are in smart_aggregator_options.go
 
 // NewSmartAggregator creates a new smart aggregator.
 //
@@ -243,114 +175,7 @@ func (a *SmartAggregator) Write(data []byte) {
 	}
 }
 
-// timerFlush is called when the timer fires.
-func (a *SmartAggregator) timerFlush() {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	if a.stopped {
-		return
-	}
-
-	// Check if paused by consumer (backpressure)
-	if a.backpressure.IsPaused() {
-		logger.Terminal().Debug("SmartAggregator timerFlush: paused, rescheduling",
-			"buffer_len", a.buffer.Len())
-		a.timer = time.AfterFunc(a.delay.MaxDelay(), a.timerFlush)
-		return
-	}
-
-	// If still in critical load, reschedule instead of flushing
-	if a.delay.IsCriticalLoad() {
-		logger.Terminal().Debug("SmartAggregator timerFlush: critical load, rescheduling",
-			"usage", a.delay.GetUsage(), "buffer_len", a.buffer.Len())
-		a.timer = time.AfterFunc(a.delay.MaxDelay(), a.timerFlush)
-		return
-	}
-
-	a.flushLocked()
-}
-
-// flushLocked flushes the buffer. Must be called with lock held.
-func (a *SmartAggregator) flushLocked() {
-	if a.timer != nil {
-		a.timer.Stop()
-		a.timer = nil
-	}
-
-	var data []byte
-
-	// Serialize mode: use callback to get compressed data from VirtualTerminal
-	if a.serializeCallback != nil {
-		// Check if there's pending data to serialize
-		if !a.hasPendingData {
-			return
-		}
-
-		// Get serialized data from VirtualTerminal
-		data = a.serializeCallback()
-		a.hasPendingData = false
-		a.buffer.Reset() // Clear any trigger markers
-
-		if len(data) == 0 {
-			return
-		}
-
-		logger.Terminal().Debug("SmartAggregator flushing (serialize mode)", "bytes", len(data))
-	} else {
-		// Legacy mode: use frame-aware buffer flush
-		// FlushComplete ensures we don't break incomplete frames
-
-		// Full redraw throttling: detect high-frequency redraws and reduce transmission rate
-		if a.fullRedrawThrottler != nil && a.buffer.IsLastFrameFullRedraw() {
-			// Record redraw with frame size for bandwidth-aware throttling
-			a.fullRedrawThrottler.RecordRedraw(a.buffer.Len())
-
-			// Check if we should throttle (skip this flush)
-			if !a.fullRedrawThrottler.ShouldFlush() {
-				// Throttling: skip this flush, schedule next check
-				// Data stays in buffer until next allowed flush
-				delay := a.fullRedrawThrottler.GetNextCheckDelay()
-				a.timer = time.AfterFunc(delay, a.timerFlush)
-				logger.Terminal().Debug("SmartAggregator: throttling full redraw",
-					"next_check", delay,
-					"frequency", a.fullRedrawThrottler.GetFrequency(),
-					"bandwidth_kbps", a.fullRedrawThrottler.GetBandwidth()/1024,
-					"effective_window", a.fullRedrawThrottler.GetEffectiveWindowSize())
-				return
-			}
-		}
-
-		var remaining int
-		data, remaining = a.buffer.FlushComplete()
-
-		if len(data) == 0 {
-			// No complete frames to flush - reschedule if there's data
-			if remaining > 0 {
-				// There's an incomplete frame - schedule check for when it completes
-				a.timer = time.AfterFunc(a.delay.Calculate(), a.timerFlush)
-			}
-			return
-		}
-
-		logger.Terminal().Debug("SmartAggregator flushing (legacy mode)",
-			"bytes", len(data), "remaining", remaining)
-	}
-
-	// Mark flush time for throttler (if active)
-	if a.fullRedrawThrottler != nil {
-		a.fullRedrawThrottler.MarkFlushed()
-	}
-
-	// Log aggregated output if logger is set
-	if a.ptyLogger != nil && len(data) > 0 {
-		a.ptyLogger.WriteAggregated(data)
-	}
-
-	// Route output (async to avoid holding lock)
-	dataCopy := data
-	go a.router.Route(dataCopy)
-}
+// Note: timerFlush and flushLocked are in smart_aggregator_flush.go
 
 // Flush forces an immediate flush of the buffer.
 // Thread-safe: can be called from any goroutine.
@@ -362,44 +187,7 @@ func (a *SmartAggregator) Flush() {
 	}
 }
 
-// forceFlushLocked flushes all data including incomplete frames.
-// Used by Flush() and Stop().
-func (a *SmartAggregator) forceFlushLocked() {
-	if a.timer != nil {
-		a.timer.Stop()
-		a.timer = nil
-	}
-
-	var data []byte
-
-	if a.serializeCallback != nil {
-		if !a.hasPendingData {
-			return
-		}
-		data = a.serializeCallback()
-		a.hasPendingData = false
-		a.buffer.Reset()
-	} else {
-		// FlushAll flushes everything including incomplete frames
-		var _ int
-		data, _ = a.buffer.FlushAll()
-	}
-
-	if len(data) == 0 {
-		return
-	}
-
-	// Log aggregated output if logger is set
-	if a.ptyLogger != nil {
-		a.ptyLogger.WriteAggregated(data)
-	}
-
-	logger.Terminal().Debug("SmartAggregator force flushing", "bytes", len(data))
-
-	// Route output (async to avoid holding lock)
-	dataCopy := data
-	go a.router.Route(dataCopy)
-}
+// Note: forceFlushLocked is in smart_aggregator_flush.go
 
 // Stop stops the aggregator and flushes remaining data.
 // After Stop(), Write() calls are ignored.
