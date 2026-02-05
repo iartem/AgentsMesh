@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   repositoryApi,
   userRepositoryProviderApi,
@@ -10,49 +10,67 @@ import {
 } from "@/lib/api";
 import type { ImportWizardState, ImportWizardActions, ImportWizardStep } from "./types";
 
-const initialState: ImportWizardState = {
-  step: "source",
-  providers: [],
-  selectedProvider: null,
-  repositories: [],
-  selectedRepo: null,
-  search: "",
-  page: 1,
-  loadingProviders: true,
-  loadingRepos: false,
-  importing: false,
-  error: null,
-  manualProviderType: "github",
-  manualBaseURL: "https://github.com",
-  manualCloneURL: "",
-  manualName: "",
-  manualFullPath: "",
-  manualDefaultBranch: "main",
-  ticketPrefix: "",
-  visibility: "organization",
-};
+/**
+ * Creates the initial state for the import wizard.
+ * Call this function to get a fresh state object.
+ */
+function createInitialState(): ImportWizardState {
+  return {
+    step: "source",
+    providers: [],
+    selectedProvider: null,
+    repositories: [],
+    selectedRepo: null,
+    search: "",
+    page: 1,
+    loadingProviders: false,
+    loadingRepos: false,
+    importing: false,
+    error: null,
+    manualProviderType: "github",
+    manualBaseURL: "https://github.com",
+    manualCloneURL: "",
+    manualName: "",
+    manualFullPath: "",
+    manualDefaultBranch: "main",
+    ticketPrefix: "",
+    visibility: "organization",
+  };
+}
 
 interface UseImportWizardOptions {
-  open: boolean;
   onClose: () => void;
   onImported?: () => void;
   existingRepositories?: RepositoryData[];
   t: (key: string) => string;
+  /**
+   * Callback invoked once when the hook is first used.
+   * The parent component should call this to trigger initial data loading.
+   */
+  onInit?: (actions: Pick<ImportWizardActions, "loadProviders">) => void;
 }
 
 /**
- * Hook for managing import repository wizard state and actions
+ * Hook for managing import repository wizard state and actions.
+ *
+ * This hook follows React best practices by avoiding useEffect for data fetching.
+ * Instead, data loading is triggered explicitly via:
+ * 1. Parent component calling actions.loadProviders() on mount
+ * 2. selectProvider action triggering repository loading
+ *
+ * State reset is handled by the parent component using the key pattern.
  */
 export function useImportWizard({
-  open,
   onClose,
   onImported,
-  existingRepositories = [],
+  existingRepositories: _existingRepositories = [],
   t,
 }: UseImportWizardOptions): [ImportWizardState, ImportWizardActions] {
-  const [state, setState] = useState<ImportWizardState>(initialState);
+  // Note: existingRepositories is available for future duplicate detection
+  void _existingRepositories;
+  const [state, setState] = useState<ImportWizardState>(createInitialState);
 
-  // Load providers
+  // Load providers - call this explicitly, not via useEffect
   const loadProviders = useCallback(async () => {
     try {
       setState(s => ({ ...s, loadingProviders: true }));
@@ -96,28 +114,31 @@ export function useImportWizard({
     }
   }, [state.selectedProvider, state.page, state.search, t]);
 
-  // Load providers when modal opens
-  useEffect(() => {
-    if (open) {
-      loadProviders();
-    }
-  }, [open, loadProviders]);
+  // Select provider and immediately load repositories (event-driven, not effect-driven)
+  const selectProvider = useCallback((provider: RepositoryProviderData) => {
+    setState(s => ({ ...s, selectedProvider: provider, step: "browse", loadingRepos: true }));
 
-  // Load repositories when step changes to browse
-  useEffect(() => {
-    if (state.step === "browse" && state.selectedProvider) {
-      loadRepositories();
-    }
-  }, [state.step, state.selectedProvider, loadRepositories]);
+    // Directly trigger repository loading (not via useEffect)
+    userRepositoryProviderApi.listRepositories(provider.id, {
+      page: 1,
+      perPage: 20,
+      search: undefined,
+    }).then(response => {
+      setState(s => ({
+        ...s,
+        repositories: response.repositories || [],
+        loadingRepos: false,
+      }));
+    }).catch(err => {
+      console.error("Failed to load repositories:", err);
+      setState(s => ({
+        ...s,
+        error: t("repositories.modal.failedToLoadRepos"),
+        loadingRepos: false,
+      }));
+    });
+  }, [t]);
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!open) {
-      setState(initialState);
-    }
-  }, [open]);
-
-  // Actions
   const actions: ImportWizardActions = {
     setStep: (step: ImportWizardStep) => setState(s => ({ ...s, step })),
     setSearch: (search: string) => setState(s => ({ ...s, search })),
@@ -127,9 +148,7 @@ export function useImportWizard({
     })),
     setError: (error) => setState(s => ({ ...s, error })),
 
-    selectProvider: (provider: RepositoryProviderData) => {
-      setState(s => ({ ...s, selectedProvider: provider, step: "browse" }));
-    },
+    selectProvider,
 
     clearProvider: () => {
       setState(s => ({
@@ -237,7 +256,7 @@ export function useImportWizard({
       });
     },
 
-    reset: () => setState(initialState),
+    reset: () => setState(createInitialState),
   };
 
   return [state, actions];

@@ -31,6 +31,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const orgSlug = currentOrg?.slug || "";
 
+  // Wrap onOpenChange to reset search when closing
+  const handleOpenChange = useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      setSearch("");
+    }
+    onOpenChange(newOpen);
+  }, [onOpenChange]);
+
   // Search results
   const { pods, tickets, repositories, loading } = useCommandPaletteSearch(search);
 
@@ -42,55 +50,49 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        onOpenChange(!open);
+        handleOpenChange(!open);
       }
       if (e.key === "Escape" && open) {
-        onOpenChange(false);
+        handleOpenChange(false);
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onOpenChange]);
+  }, [open, handleOpenChange]);
 
-  // Reset search when closing
-  useEffect(() => {
-    if (!open) {
-      setSearch("");
-    }
-  }, [open]);
 
   const handleSelect = useCallback(
     async (item: CommandItemData) => {
-      onOpenChange(false);
+      handleOpenChange(false);
       await item.action();
     },
-    [onOpenChange]
+    [handleOpenChange]
   );
 
   const handleSelectPod = useCallback(
     (pod: PodSearchResult) => {
       addPane(pod.pod_key, getPodDisplayName(pod));
       router.push(`/${orgSlug}/workspace`);
-      onOpenChange(false);
+      handleOpenChange(false);
     },
-    [addPane, router, orgSlug, onOpenChange]
+    [addPane, router, orgSlug, handleOpenChange]
   );
 
   const handleSelectTicket = useCallback(
     (ticket: TicketSearchResult) => {
       router.push(`/${orgSlug}/tickets/${ticket.identifier}`);
-      onOpenChange(false);
+      handleOpenChange(false);
     },
-    [router, orgSlug, onOpenChange]
+    [router, orgSlug, handleOpenChange]
   );
 
   const handleSelectRepository = useCallback(
     (repo: RepositorySearchResult) => {
       router.push(`/${orgSlug}/repositories/${repo.id}`);
-      onOpenChange(false);
+      handleOpenChange(false);
     },
-    [router, orgSlug, onOpenChange]
+    [router, orgSlug, handleOpenChange]
   );
 
   if (!open) return null;

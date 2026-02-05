@@ -843,6 +843,10 @@
       "roleMember": "成员",
       "remove": "移除",
       "confirmRemove": "确定要移除该成员吗？",
+      "removeDialog": {
+        "title": "移除成员",
+        "description": "确定要将此成员从组织中移除吗？他们将失去对所有组织资源的访问权限。"
+      },
       "dismiss": "关闭",
       "failedToLoad": "加载成员失败",
       "failedToRemove": "移除成员失败",
@@ -1588,6 +1592,10 @@
     "view": "查看",
     "search": "搜索仓库...",
     "confirmDelete": "确定要删除仓库「{name}」吗？",
+    "deleteDialog": {
+      "title": "删除仓库",
+      "description": "确定要删除此仓库吗？此操作无法撤销。"
+    },
     "columns": {
       "name": "名称",
       "provider": "服务",
@@ -1688,6 +1696,10 @@
       "setupWebhook": "配置 Webhook",
       "webhookFailed": "配置 Webhook 失败，请重试。",
       "confirmDelete": "确定要删除仓库「{name}」吗？此操作无法撤销。",
+      "deleteDialog": {
+        "title": "删除仓库",
+        "description": "确定要删除此仓库吗？此操作无法撤销。"
+      },
       "branchesRequireCredentials": "分支列表需要 Git 凭据",
       "configureGitConnection": "在设置中配置 Git 连接以浏览分支"
     },
@@ -1763,6 +1775,10 @@
       "disable": "禁用",
       "delete": "删除",
       "confirmDelete": "确定要删除 Runner「{nodeId}」吗？",
+      "deleteDialog": {
+        "title": "删除 Runner",
+        "description": "确定要删除此 Runner 吗？此操作无法撤销。"
+      },
       "cores": "核心",
       "mobilePodsLabel": "Pod：",
       "mobileCpuLabel": "CPU：",
@@ -1799,6 +1815,10 @@
       "disable": "禁用",
       "enable": "启用",
       "confirmDelete": "确定要删除 Runner「{nodeId}」吗？此操作无法撤销。",
+      "deleteDialog": {
+        "title": "删除 Runner",
+        "description": "确定要删除此 Runner 吗？此操作无法撤销。"
+      },
       "confirmResume": "要从「{podKey}」的 Sandbox 恢复一个新 Pod 吗？这将使用现有工作区创建新 Pod。",
       "resumeFailed": "恢复 Pod 失败，请重试。",
       "tabs": {

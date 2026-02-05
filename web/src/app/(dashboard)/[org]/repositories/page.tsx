@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CenteredSpinner } from "@/components/ui/spinner";
+import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { repositoryApi } from "@/lib/api";
 import type { RepositoryData } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
@@ -18,6 +19,13 @@ export default function RepositoriesPage() {
   const [filter, setFilter] = useState("");
   const [providerFilter, setProviderFilter] = useState<string>("");
   const [showImportModal, setShowImportModal] = useState(false);
+
+  const deleteDialog = useConfirmDialog({
+    title: t("repositories.deleteDialog.title"),
+    description: t("repositories.deleteDialog.description"),
+    confirmText: t("common.delete"),
+    variant: "destructive",
+  });
 
   useEffect(() => {
     loadData();
@@ -34,17 +42,17 @@ export default function RepositoriesPage() {
     }
   };
 
-  const handleDelete = useCallback(async (id: number, name: string) => {
-    if (!confirm(t("repositories.confirmDelete", { name }))) {
-      return;
+  const handleDelete = useCallback(async (id: number) => {
+    const confirmed = await deleteDialog.confirm();
+    if (confirmed) {
+      try {
+        await repositoryApi.delete(id);
+        setRepositories((prev) => prev.filter((r) => r.id !== id));
+      } catch (error) {
+        console.error("Failed to delete repository:", error);
+      }
     }
-    try {
-      await repositoryApi.delete(id);
-      setRepositories((prev) => prev.filter((r) => r.id !== id));
-    } catch (error) {
-      console.error("Failed to delete repository:", error);
-    }
-  }, [t]);
+  }, [deleteDialog]);
 
   const filteredRepositories = repositories.filter((repo) => {
     const matchesSearch =
@@ -179,7 +187,7 @@ export default function RepositoriesPage() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => handleDelete(repo.id, repo.name)}
+                    onClick={() => handleDelete(repo.id)}
                   >
                     {t("repositories.delete")}
                   </Button>
@@ -209,6 +217,9 @@ export default function RepositoriesPage() {
         }}
         existingRepositories={repositories}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog {...deleteDialog.dialogProps} />
     </div>
   );
 }

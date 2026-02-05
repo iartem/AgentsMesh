@@ -4,6 +4,7 @@ import { useState, useCallback, lazy, Suspense } from "react";
 import { useTranslations } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField, FormRow } from "@/components/ui/form-field";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -147,27 +148,28 @@ export function TicketCreateDialog({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <ResponsiveDialogBody className="space-y-4">
             {/* Title */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                {t("tickets.createDialog.titleLabel")} <span className="text-destructive">*</span>
-              </label>
+            <FormField
+              label={t("tickets.createDialog.titleLabel")}
+              htmlFor="ticket-title"
+              required
+            >
               <Input
+                id="ticket-title"
                 placeholder={t("tickets.createDialog.titlePlaceholder")}
                 value={form.title}
                 onChange={(e) => updateField("title", e.target.value)}
                 autoFocus
               />
-            </div>
+            </FormField>
 
             {/* Type & Priority */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("tickets.filters.type")}</label>
+            <FormRow>
+              <FormField label={t("tickets.filters.type")} htmlFor="ticket-type">
                 <Select
                   value={form.type}
                   onValueChange={(val) => updateField("type", val as TicketType)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="ticket-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -178,15 +180,14 @@ export function TicketCreateDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("tickets.filters.priority")}</label>
+              <FormField label={t("tickets.filters.priority")} htmlFor="ticket-priority">
                 <Select
                   value={form.priority}
                   onValueChange={(val) => updateField("priority", val as TicketPriority)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="ticket-priority">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,36 +198,32 @@ export function TicketCreateDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
+              </FormField>
+            </FormRow>
 
             {/* Repository */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                {t("tickets.createDialog.repository")}
-              </label>
+            <FormField label={t("tickets.createDialog.repository")} htmlFor="ticket-repo">
               <RepositorySelect
                 value={form.repositoryId}
                 onChange={(value) => updateField("repositoryId", value)}
                 placeholder={t("tickets.createDialog.selectRepository")}
               />
-            </div>
+            </FormField>
 
             {/* Summary */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("tickets.createDialog.summary")}</label>
+            <FormField label={t("tickets.createDialog.summary")} htmlFor="ticket-summary">
               <textarea
+                id="ticket-summary"
                 className="w-full min-h-[60px] px-3 py-2 text-sm rounded-md border border-input bg-transparent shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                 placeholder={t("tickets.createDialog.summaryPlaceholder")}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 rows={2}
               />
-            </div>
+            </FormField>
 
             {/* Content - Rich Text Editor */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("tickets.createDialog.content")}</label>
+            <FormField label={t("tickets.createDialog.content")}>
               <div className="border border-input rounded-md overflow-hidden min-h-[150px] bg-card">
                 <Suspense fallback={<div className="h-[150px] animate-pulse bg-muted" />}>
                   <BlockEditor
@@ -236,7 +233,7 @@ export function TicketCreateDialog({
                   />
                 </Suspense>
               </div>
-            </div>
+            </FormField>
 
             {/* Error Message */}
             {error && (

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { runnerApi, type RunnerData } from "@/lib/api";
 
 interface RunnerConfigModalProps {
@@ -42,35 +44,37 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
         </h2>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">{t("runners.configModal.nodeIdLabel")}</label>
+          <FormField label={t("runners.configModal.nodeIdLabel")}>
             <code className="block w-full p-3 bg-muted rounded text-sm">
               {runner.node_id}
             </code>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{t("runners.configModal.descriptionLabel")}</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background"
+          </FormField>
+
+          <FormField
+            label={t("runners.configModal.descriptionLabel")}
+            htmlFor="runner-description"
+          >
+            <Input
+              id="runner-description"
               placeholder={t("runners.configModal.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("runners.configModal.maxPodsLabel")}
-            </label>
-            <input
+          </FormField>
+
+          <FormField
+            label={t("runners.configModal.maxPodsLabel")}
+            htmlFor="runner-max-pods"
+          >
+            <Input
+              id="runner-max-pods"
               type="number"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background"
               value={maxPods}
               onChange={(e) => setMaxPods(parseInt(e.target.value) || 1)}
               min={1}
               max={100}
             />
-          </div>
+          </FormField>
 
           {runner.active_pods && runner.active_pods.length > 0 && (
             <div>

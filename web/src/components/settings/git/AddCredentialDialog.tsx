@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { userGitCredentialApi } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -77,10 +78,7 @@ export function AddCredentialDialog({ onClose, onSuccess }: AddCredentialDialogP
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.credentials.dialog.type")}
-            </label>
+          <FormField label={t("settings.gitSettings.credentials.dialog.type")}>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
                 <input
@@ -101,63 +99,63 @@ export function AddCredentialDialog({ onClose, onSuccess }: AddCredentialDialogP
                 <span className="text-sm">SSH Key</span>
               </label>
             </div>
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.credentials.dialog.name")}
-            </label>
+          <FormField
+            label={t("settings.gitSettings.credentials.dialog.name")}
+            htmlFor="credential-name"
+          >
             <Input
+              id="credential-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("settings.gitSettings.credentials.dialog.namePlaceholder")}
             />
-          </div>
+          </FormField>
 
           {credentialType === "pat" && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Personal Access Token
-              </label>
+            <FormField
+              label="Personal Access Token"
+              htmlFor="credential-pat"
+              hint={t("settings.gitSettings.credentials.dialog.patHint")}
+            >
               <Input
+                id="credential-pat"
                 type="password"
                 value={pat}
                 onChange={(e) => setPat(e.target.value)}
                 placeholder="ghp_xxx or glpat-xxx"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("settings.gitSettings.credentials.dialog.patHint")}
-              </p>
-            </div>
+            </FormField>
           )}
 
           {credentialType === "ssh_key" && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {t("settings.gitSettings.credentials.dialog.privateKey")}
-              </label>
+            <FormField
+              label={t("settings.gitSettings.credentials.dialog.privateKey")}
+              htmlFor="credential-ssh"
+            >
               <textarea
+                id="credential-ssh"
                 value={privateKey}
                 onChange={(e) => setPrivateKey(e.target.value)}
                 placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
-            </div>
+            </FormField>
           )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.credentials.dialog.hostPattern")}
-            </label>
+          <FormField
+            label={t("settings.gitSettings.credentials.dialog.hostPattern")}
+            htmlFor="credential-host"
+            hint={t("settings.gitSettings.credentials.dialog.hostPatternHint")}
+          >
             <Input
+              id="credential-host"
               value={hostPattern}
               onChange={(e) => setHostPattern(e.target.value)}
               placeholder="github.com, gitlab.company.com"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("settings.gitSettings.credentials.dialog.hostPatternHint")}
-            </p>
-          </div>
+          </FormField>
         </div>
 
         <div className="flex justify-end gap-3 p-4 border-t border-border">

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { AlertMessage } from "@/components/ui/alert-message";
+import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslations } from "@/lib/i18n/client";
 import { Bot, AlertCircle } from "lucide-react";
 import type { CredentialProfileData } from "@/lib/api";
@@ -46,6 +47,9 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
     setSuccess,
   } = useAgentConfig(agentSlug, t);
 
+  // Confirm dialog for delete
+  const { dialogProps, confirm } = useConfirmDialog();
+
   // Open credential add dialog
   const handleOpenAddDialog = useCallback(() => {
     setEditingProfile(null);
@@ -66,6 +70,20 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
     await handleSaveProfile(data, profile);
     setShowCredentialDialog(false);
   }, [handleSaveProfile]);
+
+  // Handle delete with confirmation
+  const handleDeleteWithConfirm = useCallback(async (profileId: number) => {
+    const confirmed = await confirm({
+      title: t("common.confirmDelete"),
+      description: t("settings.agentCredentials.confirmDelete"),
+      variant: "destructive",
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel"),
+    });
+    if (confirmed) {
+      await handleDeleteProfile(profileId);
+    }
+  }, [confirm, handleDeleteProfile, t]);
 
   if (loading) {
     return <CenteredSpinner className="py-12" />;
@@ -104,7 +122,7 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
         onSetRunnerHostDefault={handleSetRunnerHostDefault}
         onSetDefault={handleSetDefault}
         onEdit={handleOpenEditDialog}
-        onDelete={handleDeleteProfile}
+        onDelete={handleDeleteWithConfirm}
         onAdd={handleOpenAddDialog}
         t={t}
       />
@@ -128,6 +146,9 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
         onSubmit={handleCredentialSubmit}
         t={t}
       />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

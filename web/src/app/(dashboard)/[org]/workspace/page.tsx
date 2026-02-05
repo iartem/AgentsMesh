@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -10,7 +10,7 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import { Terminal, Plus } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 import { CreatePodModal } from "@/components/ide/CreatePodModal";
-import { PodData } from "@/lib/api";
+import type { PodData } from "@/lib/api";
 
 export default function WorkspacePage() {
   const t = useTranslations();
@@ -20,9 +20,9 @@ export default function WorkspacePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const processedPodRef = useRef<string | null>(null);
 
-  const handleOpenPod = (podKey: string, title?: string) => {
+  const handleOpenPod = useCallback((podKey: string, title?: string) => {
     addPane(podKey, title || `Pod ${podKey.substring(0, 8)}`);
-  };
+  }, [addPane]);
 
   // Handle ?pod=xxx query param to auto-open a pod
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function WorkspacePage() {
       // Clear the query param to avoid re-opening on refresh
       router.replace(window.location.pathname);
     }
-  }, [_hasHydrated, searchParams, panes, router, t]);
+  }, [_hasHydrated, searchParams, panes, router, t, handleOpenPod]);
 
   // Show loading while hydrating
   if (!_hasHydrated) {

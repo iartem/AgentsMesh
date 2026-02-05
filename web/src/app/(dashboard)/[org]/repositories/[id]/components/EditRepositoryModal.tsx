@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { repositoryApi, RepositoryData } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -65,31 +66,40 @@ export function EditRepositoryModal({
         )}
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("repositories.edit.name")} <span className="text-destructive">*</span>
-            </label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">{t("repositories.edit.defaultBranch")}</label>
+          <FormField
+            label={t("repositories.edit.name")}
+            htmlFor="repo-name"
+            required
+          >
             <Input
+              id="repo-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormField>
+
+          <FormField
+            label={t("repositories.edit.defaultBranch")}
+            htmlFor="repo-branch"
+          >
+            <Input
+              id="repo-branch"
               value={defaultBranch}
               onChange={(e) => setDefaultBranch(e.target.value)}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("repositories.edit.ticketPrefixOptional")}
-            </label>
+          <FormField
+            label={t("repositories.edit.ticketPrefixOptional")}
+            htmlFor="repo-prefix"
+          >
             <Input
+              id="repo-prefix"
               placeholder="PROJ"
               value={ticketPrefix}
               onChange={(e) => setTicketPrefix(e.target.value.toUpperCase())}
             />
-          </div>
+          </FormField>
 
           <div className="flex items-center gap-2">
             <input

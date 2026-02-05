@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { organizationApi } from "@/lib/api";
 
 export type TranslationFn = (key: string, params?: Record<string, string | number>) => string;
@@ -32,25 +33,25 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
       <div className="border border-border rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">{t("settings.organizationDetails.title")}</h2>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.organizationDetails.nameLabel")}
-            </label>
+          <FormField
+            label={t("settings.organizationDetails.nameLabel")}
+            htmlFor="org-name"
+          >
             <Input
+              id="org-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("settings.organizationDetails.namePlaceholder")}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.organizationDetails.slugLabel")}
-            </label>
-            <Input value={org?.slug || ""} disabled />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("settings.organizationDetails.slugHint")}
-            </p>
-          </div>
+          </FormField>
+
+          <FormField
+            label={t("settings.organizationDetails.slugLabel")}
+            htmlFor="org-slug"
+            hint={t("settings.organizationDetails.slugHint")}
+          >
+            <Input id="org-slug" value={org?.slug || ""} disabled />
+          </FormField>
         </div>
         <div className="mt-6">
           <Button onClick={handleSave} disabled={saving}>

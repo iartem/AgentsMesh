@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { runnerApi, type RunnerData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
+import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Server,
   Plus,
@@ -34,6 +35,13 @@ export default function RunnersPage() {
   const [showAddRunnerModal, setShowAddRunnerModal] = useState(false);
   const [selectedRunner, setSelectedRunner] = useState<RunnerData | null>(null);
   const serverUrl = useServerUrl();
+
+  const deleteDialog = useConfirmDialog({
+    title: t("runners.page.deleteDialog.title"),
+    description: t("runners.page.deleteDialog.description"),
+    confirmText: t("common.delete"),
+    variant: "destructive",
+  });
 
   useEffect(() => {
     loadData();
@@ -90,9 +98,8 @@ export default function RunnersPage() {
   };
 
   const handleDeleteRunner = async (runner: RunnerData) => {
-    if (!confirm(t("runners.page.confirmDelete", { nodeId: runner.node_id }))) {
-      return;
-    }
+    const confirmed = await deleteDialog.confirm();
+    if (!confirmed) return;
     try {
       await runnerApi.delete(runner.id);
       loadData();
@@ -359,6 +366,9 @@ export default function RunnersPage() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog {...deleteDialog.dialogProps} />
     </div>
   );
 }

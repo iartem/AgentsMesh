@@ -41,14 +41,15 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
     fetchTicket(identifier);
   }, [identifier, fetchTicket]);
 
-  // Initialize edit fields when ticket changes
-  useEffect(() => {
+  // Start editing - initialize edit fields from current ticket data
+  const startEditing = () => {
     if (currentTicket) {
       setEditTitle(currentTicket.title);
       setEditDescription(currentTicket.description || "");
       setEditContent(currentTicket.content || "");
     }
-  }, [currentTicket]);
+    setIsEditing(true);
+  };
 
   // Handle status change
   const handleStatusChange = async (newStatus: TicketStatus) => {
@@ -227,7 +228,7 @@ export function TicketDetail({ identifier }: TicketDetailProps) {
             <Button
               className="w-full"
               variant="outline"
-              onClick={() => setIsEditing(true)}
+              onClick={startEditing}
               disabled={isEditing}
             >
               {t("common.edit")}

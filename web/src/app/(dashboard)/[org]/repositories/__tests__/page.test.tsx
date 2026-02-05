@@ -111,8 +111,6 @@ describe("RepositoriesPage", () => {
     vi.clearAllMocks();
     mockRepositoryApi.list.mockResolvedValue({ repositories: mockRepositories });
     mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: mockProviders });
-    // Mock window.confirm
-    vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -290,7 +288,7 @@ describe("RepositoriesPage", () => {
   });
 
   describe("delete functionality", () => {
-    it("should call delete API when delete button clicked and confirmed", async () => {
+    it("should show confirm dialog when delete button clicked", async () => {
       mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
 
       render(<RepositoriesPage />);
@@ -299,18 +297,18 @@ describe("RepositoriesPage", () => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Find and click the first delete button (text-based)
+      // Find and click the first delete button
       const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
       fireEvent.click(deleteButtons[0]);
 
-      expect(window.confirm).toHaveBeenCalled();
+      // ConfirmDialog should be shown
       await waitFor(() => {
-        expect(mockRepositoryApi.delete).toHaveBeenCalledWith(1);
+        expect(screen.getByText("Delete Repository")).toBeInTheDocument();
       });
     });
 
-    it("should not call delete API when cancelled", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(false);
+    it("should call delete API when confirmed in dialog", async () => {
+      mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
 
       render(<RepositoriesPage />);
 
@@ -318,10 +316,50 @@ describe("RepositoriesPage", () => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
+      // Click delete button to open dialog
       const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
       fireEvent.click(deleteButtons[0]);
 
-      expect(window.confirm).toHaveBeenCalled();
+      // Wait for dialog and click confirm
+      await waitFor(() => {
+        expect(screen.getByText("Delete Repository")).toBeInTheDocument();
+      });
+
+      // Click the confirm button in the dialog (there should be a "Delete" button in dialog footer)
+      // Note: The first "Delete" button opens the dialog, then there are two "Delete" buttons visible
+      const confirmButtons = screen.getAllByRole("button", { name: "Delete" });
+      // The last "Delete" button is the confirm button in the dialog
+      fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+      await waitFor(() => {
+        expect(mockRepositoryApi.delete).toHaveBeenCalledWith(1);
+      });
+    });
+
+    it("should not call delete API when cancelled in dialog", async () => {
+      render(<RepositoriesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("repo-one")).toBeInTheDocument();
+      });
+
+      // Click delete button to open dialog
+      const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButtons[0]);
+
+      // Wait for dialog
+      await waitFor(() => {
+        expect(screen.getByText("Delete Repository")).toBeInTheDocument();
+      });
+
+      // Click cancel button
+      const cancelButton = screen.getByRole("button", { name: "Cancel" });
+      fireEvent.click(cancelButton);
+
+      // Dialog should close and delete should not be called
+      await waitFor(() => {
+        expect(screen.queryByText("Delete Repository")).not.toBeInTheDocument();
+      });
       expect(mockRepositoryApi.delete).not.toHaveBeenCalled();
     });
   });

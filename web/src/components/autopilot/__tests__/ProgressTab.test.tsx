@@ -5,16 +5,16 @@ import type { AutopilotThinking } from "@/stores/autopilot";
 
 // Helper to create mock thinking data with progress
 const createMockThinking = (
-  progress: AutopilotThinking["progress"] | null = null
+  progress: AutopilotThinking["progress"] = undefined
 ): AutopilotThinking => ({
   autopilot_controller_key: "test-autopilot-key",
   iteration: 1,
   decision_type: "CONTINUE",
   reasoning: "Test reasoning",
   confidence: 0.85,
-  action: null,
+  action: undefined,
   progress,
-  help_request: null,
+  help_request: undefined,
 });
 
 describe("ProgressTab", () => {
@@ -24,8 +24,8 @@ describe("ProgressTab", () => {
       expect(screen.getByText("No progress data available")).toBeInTheDocument();
     });
 
-    it("should show no progress message when progress is null", () => {
-      render(<ProgressTab thinking={createMockThinking(null)} />);
+    it("should show no progress message when progress is undefined", () => {
+      render(<ProgressTab thinking={createMockThinking(undefined)} />);
       expect(screen.getByText("No progress data available")).toBeInTheDocument();
     });
   });
@@ -44,7 +44,7 @@ describe("ProgressTab", () => {
 
     it("should display default summary when not provided", () => {
       const thinking = createMockThinking({
-        summary: null,
+        summary: "",
         percent: 30,
         completed_steps: [],
         remaining_steps: [],

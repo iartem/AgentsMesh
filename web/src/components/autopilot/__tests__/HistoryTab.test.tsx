@@ -16,13 +16,13 @@ vi.mock("@/stores/autopilot", () => ({
 
 // Helper to create mock iteration
 const createMockIteration = (overrides: Partial<AutopilotIteration> = {}): AutopilotIteration => ({
-  id: "iter-1",
-  autopilot_controller_key: "test-key",
+  id: 1,
+  autopilot_controller_id: 1,
   iteration: 1,
   phase: "completed",
-  summary: null,
-  files_changed: null,
-  duration_ms: null,
+  summary: undefined,
+  files_changed: undefined,
+  duration_ms: undefined,
   created_at: new Date().toISOString(),
   ...overrides,
 });
@@ -49,9 +49,9 @@ describe("HistoryTab", () => {
   describe("iteration list", () => {
     it("should display iterations in reverse order (most recent first)", () => {
       mockIterations["test-key"] = [
-        createMockIteration({ id: "1", iteration: 1, phase: "completed" }),
-        createMockIteration({ id: "2", iteration: 2, phase: "completed" }),
-        createMockIteration({ id: "3", iteration: 3, phase: "control_running" }),
+        createMockIteration({ id: 1, iteration: 1, phase: "completed" }),
+        createMockIteration({ id: 2, iteration: 2, phase: "completed" }),
+        createMockIteration({ id: 3, iteration: 3, phase: "control_running" }),
       ];
 
       render(<HistoryTab autopilotControllerKey="test-key" />);
@@ -73,9 +73,9 @@ describe("HistoryTab", () => {
 
     it("should display different phase labels", () => {
       mockIterations["test-key"] = [
-        createMockIteration({ id: "1", iteration: 1, phase: "initial_prompt" }),
-        createMockIteration({ id: "2", iteration: 2, phase: "control_running" }),
-        createMockIteration({ id: "3", iteration: 3, phase: "error" }),
+        createMockIteration({ id: 1, iteration: 1, phase: "initial_prompt" }),
+        createMockIteration({ id: 2, iteration: 2, phase: "control_running" }),
+        createMockIteration({ id: 3, iteration: 3, phase: "error" }),
       ];
 
       render(<HistoryTab autopilotControllerKey="test-key" />);
@@ -93,9 +93,9 @@ describe("HistoryTab", () => {
       expect(screen.getByText("2.5s")).toBeInTheDocument();
     });
 
-    it("should not display duration when null", () => {
+    it("should not display duration when undefined", () => {
       mockIterations["test-key"] = [
-        createMockIteration({ duration_ms: null }),
+        createMockIteration({ duration_ms: undefined }),
       ];
 
       render(<HistoryTab autopilotControllerKey="test-key" />);
@@ -108,7 +108,7 @@ describe("HistoryTab", () => {
       mockIterations["test-key"] = [
         createMockIteration({
           summary: "Created hello.py file",
-          files_changed: null,
+          files_changed: undefined,
         }),
       ];
 
@@ -130,7 +130,7 @@ describe("HistoryTab", () => {
     it("should expand when only files_changed is present (no summary)", () => {
       mockIterations["test-key"] = [
         createMockIteration({
-          summary: null,
+          summary: undefined,
           files_changed: ["src/file.ts"],
         }),
       ];
@@ -192,7 +192,7 @@ describe("HistoryTab", () => {
       mockIterations["test-key"] = [
         createMockIteration({
           summary: "Test summary",
-          files_changed: null,
+          files_changed: undefined,
         }),
       ];
 
@@ -213,8 +213,8 @@ describe("HistoryTab", () => {
     it("should not be expandable when no details available", () => {
       mockIterations["test-key"] = [
         createMockIteration({
-          summary: null,
-          files_changed: null,
+          summary: undefined,
+          files_changed: undefined,
         }),
       ];
 

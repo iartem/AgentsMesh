@@ -125,9 +125,8 @@ export function useAgentCredentials(
     }
   }, [loadData, t]);
 
-  // Delete profile
+  // Delete profile (no confirmation - caller should handle confirmation dialog)
   const handleDelete = useCallback(async (profileId: number) => {
-    if (!confirm(t("settings.agentCredentials.confirmDelete"))) return;
     try {
       setError(null);
       await userAgentCredentialApi.delete(profileId);

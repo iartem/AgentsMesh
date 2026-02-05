@@ -843,6 +843,10 @@
       "roleMember": "member",
       "remove": "Remove",
       "confirmRemove": "Are you sure you want to remove this member?",
+      "removeDialog": {
+        "title": "Remove Member",
+        "description": "Are you sure you want to remove this member from the organization? They will lose access to all organization resources."
+      },
       "dismiss": "Dismiss",
       "failedToLoad": "Failed to load members",
       "failedToRemove": "Failed to remove member",
@@ -1588,6 +1592,10 @@
     "view": "View",
     "search": "Search repositories...",
     "confirmDelete": "Are you sure you want to delete repository \"{name}\"?",
+    "deleteDialog": {
+      "title": "Delete Repository",
+      "description": "Are you sure you want to delete this repository? This action cannot be undone."
+    },
     "columns": {
       "name": "Name",
       "provider": "Provider",
@@ -1688,6 +1696,10 @@
       "setupWebhook": "Setup Webhook",
       "webhookFailed": "Failed to setup webhook. Please try again.",
       "confirmDelete": "Are you sure you want to delete repository \"{name}\"? This action cannot be undone.",
+      "deleteDialog": {
+        "title": "Delete Repository",
+        "description": "Are you sure you want to delete this repository? This action cannot be undone."
+      },
       "branchesRequireCredentials": "Branch listing requires Git credentials",
       "configureGitConnection": "Configure a Git connection in your settings to browse branches"
     },
@@ -1763,6 +1775,10 @@
       "disable": "Disable",
       "delete": "Delete",
       "confirmDelete": "Are you sure you want to delete runner \"{nodeId}\"?",
+      "deleteDialog": {
+        "title": "Delete Runner",
+        "description": "Are you sure you want to delete this runner? This action cannot be undone."
+      },
       "cores": "cores",
       "mobilePodsLabel": "Pods:",
       "mobileOsLabel": "OS:",
@@ -1799,6 +1815,10 @@
       "disable": "Disable",
       "enable": "Enable",
       "confirmDelete": "Are you sure you want to delete runner \"{nodeId}\"? This action cannot be undone.",
+      "deleteDialog": {
+        "title": "Delete Runner",
+        "description": "Are you sure you want to delete this runner? This action cannot be undone."
+      },
       "confirmResume": "Resume a new pod from sandbox of \"{podKey}\"? This will create a new pod using the existing workspace.",
       "resumeFailed": "Failed to resume pod. Please try again.",
       "tabs": {

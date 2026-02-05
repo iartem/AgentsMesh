@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormField } from "@/components/ui/form-field";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api";
 import type { TranslationFn } from "./GeneralSettings";
@@ -28,6 +30,13 @@ export function MembersSettings({ t }: MembersSettingsProps) {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const removeMemberDialog = useConfirmDialog({
+    title: t("settings.members.removeDialog.title"),
+    description: t("settings.members.removeDialog.description"),
+    confirmText: t("settings.members.remove"),
+    variant: "destructive",
+  });
 
   const loadMembers = useCallback(async () => {
     if (!currentOrg) return;
@@ -67,7 +76,8 @@ export function MembersSettings({ t }: MembersSettingsProps) {
 
   const handleRemove = async (userId: number) => {
     if (!currentOrg) return;
-    if (!confirm("Are you sure you want to remove this member?")) return;
+    const confirmed = await removeMemberDialog.confirm();
+    if (!confirmed) return;
     try {
       await organizationApi.removeMember(currentOrg.slug, userId);
       await loadMembers();
@@ -193,6 +203,9 @@ export function MembersSettings({ t }: MembersSettingsProps) {
           t={t}
         />
       )}
+
+      {/* Remove Member Confirmation Dialog */}
+      <ConfirmDialog {...removeMemberDialog.dialogProps} />
     </div>
   );
 }
@@ -221,18 +234,18 @@ function InviteDialog({
       <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4">{t("settings.members.inviteDialog.title")}</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">{t("settings.members.inviteDialog.emailLabel")}</label>
+          <FormField label={t("settings.members.inviteDialog.emailLabel")} htmlFor="invite-email">
             <Input
+              id="invite-email"
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder={t("settings.members.inviteDialog.emailPlaceholder")}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{t("settings.members.inviteDialog.roleLabel")}</label>
+          </FormField>
+          <FormField label={t("settings.members.inviteDialog.roleLabel")} htmlFor="invite-role">
             <select
+              id="invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value)}
               className="w-full border border-border rounded px-3 py-2 bg-background"
@@ -240,7 +253,7 @@ function InviteDialog({
               <option value="member">{t("settings.members.roleMember")}</option>
               <option value="admin">{t("settings.members.roleAdmin")}</option>
             </select>
-          </div>
+          </FormField>
         </div>
         <div className="flex gap-3 mt-6">
           <Button variant="outline" className="flex-1" onClick={onClose}>

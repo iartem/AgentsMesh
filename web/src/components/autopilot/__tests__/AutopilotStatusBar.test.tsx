@@ -27,6 +27,7 @@ const createMockController = (
   phase: AutopilotController["phase"],
   overrides: Partial<AutopilotController> = {}
 ): AutopilotController => ({
+  id: 1,
   autopilot_controller_key: "test-key-123",
   pod_key: "pod-123",
   phase,
@@ -37,9 +38,8 @@ const createMockController = (
     state: "closed",
     reason: undefined,
   },
-  task_description: "Test task",
+  initial_prompt: "Test task",
   created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
   ...overrides,
 });
 
@@ -50,9 +50,9 @@ const createMockThinking = (overrides: Partial<AutopilotThinking> = {}): Autopil
   decision_type: "CONTINUE",
   reasoning: "Processing the task...",
   confidence: 0.85,
-  action: null,
-  progress: null,
-  help_request: null,
+  action: undefined,
+  progress: undefined,
+  help_request: undefined,
   ...overrides,
 });
 

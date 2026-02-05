@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
+import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   runnerApi,
   podApi,
@@ -50,6 +51,13 @@ export default function RunnerDetailPage() {
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const [resumingPod, setResumingPod] = useState<RunnerPodData | null>(null);
   const [resumeLoading, setResumeLoading] = useState(false);
+
+  const deleteDialog = useConfirmDialog({
+    title: t("runners.detail.deleteDialog.title"),
+    description: t("runners.detail.deleteDialog.description"),
+    confirmText: t("common.delete"),
+    variant: "destructive",
+  });
 
   const loadRunner = useCallback(async () => {
     try {
@@ -148,9 +156,8 @@ export default function RunnerDetailPage() {
 
   const handleDelete = async () => {
     if (!runner) return;
-    if (!confirm(t("runners.detail.confirmDelete", { nodeId: runner.node_id }))) {
-      return;
-    }
+    const confirmed = await deleteDialog.confirm();
+    if (!confirmed) return;
     try {
       await runnerApi.delete(runner.id);
       router.push("../runners");
@@ -312,6 +319,9 @@ export default function RunnerDetailPage() {
         loading={resumeLoading}
         onConfirm={handleConfirmResume}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog {...deleteDialog.dialogProps} />
     </div>
   );
 }

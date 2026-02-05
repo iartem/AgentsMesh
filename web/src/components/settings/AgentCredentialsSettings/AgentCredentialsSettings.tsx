@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { AlertMessage } from "@/components/ui/alert-message";
+import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslations } from "@/lib/i18n/client";
 import type { CredentialProfileData } from "@/lib/api";
 import { useAgentCredentials } from "./useAgentCredentials";
@@ -42,6 +43,9 @@ export function AgentCredentialsSettings() {
     setSuccess,
   } = useAgentCredentials(t);
 
+  // Confirm dialog for delete
+  const { dialogProps, confirm } = useConfirmDialog();
+
   // Open add dialog
   const handleOpenAddDialog = useCallback((agentTypeId: number) => {
     setSelectedAgentTypeId(agentTypeId);
@@ -62,6 +66,20 @@ export function AgentCredentialsSettings() {
     await handleSaveProfile(selectedAgentTypeId, data, editingProfile);
     setShowDialog(false);
   }, [selectedAgentTypeId, editingProfile, handleSaveProfile]);
+
+  // Handle delete with confirmation
+  const handleDeleteWithConfirm = useCallback(async (profileId: number) => {
+    const confirmed = await confirm({
+      title: t("common.confirmDelete"),
+      description: t("settings.agentCredentials.confirmDelete"),
+      variant: "destructive",
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel"),
+    });
+    if (confirmed) {
+      await handleDelete(profileId);
+    }
+  }, [confirm, handleDelete, t]);
 
   if (loading) {
     return <CenteredSpinner className="py-12" />;
@@ -99,7 +117,7 @@ export function AgentCredentialsSettings() {
               onSetRunnerHostDefault={() => handleSetRunnerHostDefault(agentType.id)}
               onSetDefault={handleSetDefault}
               onEdit={handleOpenEditDialog}
-              onDelete={handleDelete}
+              onDelete={handleDeleteWithConfirm}
               onAdd={() => handleOpenAddDialog(agentType.id)}
               t={t}
             />
@@ -121,6 +139,9 @@ export function AgentCredentialsSettings() {
         onSubmit={handleDialogSubmit}
         t={t}
       />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

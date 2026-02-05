@@ -1,7 +1,7 @@
 "use client";
 
 import { useTicketPrefetch } from "@/hooks/useTicketPrefetch";
-import { Ticket, TicketStatus } from "@/stores/ticket";
+import type { Ticket } from "@/stores/ticket";
 import { StatusIcon, PriorityIcon, TypeIcon, getStatusDisplayInfo } from "@/components/tickets";
 import { cn } from "@/lib/utils";
 

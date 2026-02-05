@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { useAutopilotStore } from "@/stores/autopilot";
 import { Bot, Play, X, Loader2, Settings2 } from "lucide-react";
 
@@ -101,10 +103,11 @@ export function CreateAutopilotControllerModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Initial Prompt */}
-          <div>
-            <label htmlFor="initial-prompt" className="block text-sm font-medium mb-2">
-              Task Description
-            </label>
+          <FormField
+            label="Task Description"
+            htmlFor="initial-prompt"
+            hint="Optional. If not provided, Autopilot will continue from current state."
+          >
             <textarea
               id="initial-prompt"
               className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none"
@@ -113,29 +116,23 @@ export function CreateAutopilotControllerModal({
               value={initialPrompt}
               onChange={(e) => setInitialPrompt(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Optional. If not provided, Autopilot will continue from current state.
-            </p>
-          </div>
+          </FormField>
 
           {/* Max Iterations */}
-          <div>
-            <label htmlFor="max-iterations" className="block text-sm font-medium mb-2">
-              Max Iterations
-            </label>
-            <input
+          <FormField
+            label="Max Iterations"
+            htmlFor="max-iterations"
+            hint="Maximum number of decision cycles before stopping."
+          >
+            <Input
               id="max-iterations"
               type="number"
               min={1}
               max={100}
-              className="w-full px-3 py-2 border border-border rounded-md bg-background"
               value={maxIterations}
               onChange={(e) => setMaxIterations(Number(e.target.value))}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Maximum number of decision cycles before stopping.
-            </p>
-          </div>
+          </FormField>
 
           {/* Advanced Settings Toggle */}
           <button
@@ -150,74 +147,61 @@ export function CreateAutopilotControllerModal({
           {/* Advanced Settings */}
           {showAdvanced && (
             <div className="space-y-4 p-3 bg-muted/50 rounded-md">
-              <div>
-                <label htmlFor="iteration-timeout" className="block text-sm font-medium mb-1">
-                  Iteration Timeout (seconds)
-                </label>
-                <input
+              <FormField label="Iteration Timeout (seconds)" htmlFor="iteration-timeout">
+                <Input
                   id="iteration-timeout"
                   type="number"
                   min={60}
                   max={1800}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   value={iterationTimeout}
                   onChange={(e) => setIterationTimeout(Number(e.target.value))}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label htmlFor="no-progress-threshold" className="block text-sm font-medium mb-1">
-                  No Progress Threshold
-                </label>
-                <input
+              <FormField
+                label="No Progress Threshold"
+                htmlFor="no-progress-threshold"
+                hint="Circuit breaker triggers after this many iterations without file changes."
+              >
+                <Input
                   id="no-progress-threshold"
                   type="number"
                   min={1}
                   max={10}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   value={noProgressThreshold}
                   onChange={(e) => setNoProgressThreshold(Number(e.target.value))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Circuit breaker triggers after this many iterations without file changes.
-                </p>
-              </div>
+              </FormField>
 
-              <div>
-                <label htmlFor="same-error-threshold" className="block text-sm font-medium mb-1">
-                  Same Error Threshold
-                </label>
-                <input
+              <FormField
+                label="Same Error Threshold"
+                htmlFor="same-error-threshold"
+                hint="Circuit breaker triggers after this many identical errors."
+              >
+                <Input
                   id="same-error-threshold"
                   type="number"
                   min={1}
                   max={10}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   value={sameErrorThreshold}
                   onChange={(e) => setSameErrorThreshold(Number(e.target.value))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Circuit breaker triggers after this many identical errors.
-                </p>
-              </div>
+              </FormField>
 
-              <div>
-                <label htmlFor="approval-timeout" className="block text-sm font-medium mb-1">
-                  Approval Timeout (minutes)
-                </label>
-                <input
+              <FormField
+                label="Approval Timeout (minutes)"
+                htmlFor="approval-timeout"
+                hint="Auto-stop if circuit breaker is not approved within this time."
+              >
+                <Input
                   id="approval-timeout"
                   type="number"
                   min={5}
                   max={120}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   value={approvalTimeoutMin}
                   onChange={(e) => setApprovalTimeoutMin(Number(e.target.value))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Auto-stop if circuit breaker is not approved within this time.
-                </p>
-              </div>
+              </FormField>
             </div>
           )}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { userRepositoryProviderApi, RepositoryProviderData } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -61,37 +62,40 @@ export function EditProviderDialog({ provider, onClose, onSuccess }: EditProvide
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.providers.dialog.name")}
-            </label>
+          <FormField
+            label={t("settings.gitSettings.providers.dialog.name")}
+            htmlFor="provider-name"
+          >
             <Input
+              id="provider-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.providers.dialog.baseUrl")}
-            </label>
+          <FormField
+            label={t("settings.gitSettings.providers.dialog.baseUrl")}
+            htmlFor="provider-url"
+          >
             <Input
+              id="provider-url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("settings.gitSettings.providers.dialog.token")}
-            </label>
+          <FormField
+            label={t("settings.gitSettings.providers.dialog.token")}
+            htmlFor="provider-token"
+            hint={t("settings.gitSettings.providers.dialog.tokenUpdateHint")}
+          >
             <Input
+              id="provider-token"
               type="password"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
-              placeholder={t("settings.gitSettings.providers.dialog.tokenUpdateHint")}
             />
-          </div>
+          </FormField>
 
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium">

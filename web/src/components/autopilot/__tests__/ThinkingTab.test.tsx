@@ -10,9 +10,9 @@ const createMockThinking = (overrides: Partial<AutopilotThinking> = {}): Autopil
   decision_type: "CONTINUE",
   reasoning: "Test reasoning text",
   confidence: 0.85,
-  action: null,
-  progress: null,
-  help_request: null,
+  action: undefined,
+  progress: undefined,
+  help_request: undefined,
   ...overrides,
 });
 
@@ -105,7 +105,7 @@ describe("ThinkingTab", () => {
       const thinking = createMockThinking({
         action: {
           type: "observe",
-          content: null,
+          content: "",
           reason: "Checking terminal state",
         },
       });
@@ -117,7 +117,7 @@ describe("ThinkingTab", () => {
       const thinking = createMockThinking({
         action: {
           type: "wait",
-          content: null,
+          content: "",
           reason: "Waiting for process",
         },
       });
@@ -125,8 +125,8 @@ describe("ThinkingTab", () => {
       expect(screen.getByText("Waiting")).toBeInTheDocument();
     });
 
-    it("should not display action section when action is null", () => {
-      render(<ThinkingTab thinking={createMockThinking({ action: null })} />);
+    it("should not display action section when action is undefined", () => {
+      render(<ThinkingTab thinking={createMockThinking({ action: undefined })} />);
       expect(screen.queryByText("Sending Input")).not.toBeInTheDocument();
       expect(screen.queryByText("Observing")).not.toBeInTheDocument();
     });
@@ -154,8 +154,8 @@ describe("ThinkingTab", () => {
       const thinking = createMockThinking({
         help_request: {
           reason: "Need user input",
-          context: null,
-          terminal_excerpt: null,
+          context: "",
+          terminal_excerpt: "",
           suggestions: [],
         },
       });
@@ -170,7 +170,7 @@ describe("ThinkingTab", () => {
         help_request: {
           reason: "Needs approval",
           context: "Deleting files",
-          terminal_excerpt: null,
+          terminal_excerpt: "",
           suggestions: [],
         },
       });
@@ -179,8 +179,8 @@ describe("ThinkingTab", () => {
       expect(screen.queryByRole("code")).not.toBeInTheDocument();
     });
 
-    it("should not display help request when null", () => {
-      render(<ThinkingTab thinking={createMockThinking({ help_request: null })} />);
+    it("should not display help request when undefined", () => {
+      render(<ThinkingTab thinking={createMockThinking({ help_request: undefined })} />);
       expect(screen.queryByText("Help Needed")).not.toBeInTheDocument();
     });
   });

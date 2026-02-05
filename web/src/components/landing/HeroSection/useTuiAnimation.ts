@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import type { TuiFrame } from "./types";
 import { getTuiFrames } from "./tuiFrames";
 
 /**

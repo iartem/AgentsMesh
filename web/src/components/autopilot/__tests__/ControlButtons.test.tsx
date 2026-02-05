@@ -24,6 +24,7 @@ vi.mock("@/stores/autopilot", () => ({
 const createMockController = (
   phase: AutopilotController["phase"]
 ): AutopilotController => ({
+  id: 1,
   autopilot_controller_key: "test-key-123",
   pod_key: "pod-123",
   phase,
@@ -34,9 +35,8 @@ const createMockController = (
     state: "closed",
     reason: undefined,
   },
-  task_description: "Test task",
+  initial_prompt: "Test task",
   created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
 });
 
 describe("ControlButtons", () => {

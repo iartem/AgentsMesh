@@ -98,12 +98,12 @@ export function BottomPanel({ className }: BottomPanelProps) {
   const podChannels = useMemo(() => {
     if (!selectedPodKey) return [];
     return getChannelsForNode(selectedPodKey);
-  }, [selectedPodKey, getChannelsForNode, topology]);
+  }, [selectedPodKey, getChannelsForNode]);
 
   const podEdges = useMemo(() => {
     if (!selectedPodKey) return [];
     return getEdgesForNode(selectedPodKey);
-  }, [selectedPodKey, getEdgesForNode, topology]);
+  }, [selectedPodKey, getEdgesForNode]);
 
   // Separate incoming and outgoing bindings
   const { incomingBindings, outgoingBindings } = useMemo(() => {

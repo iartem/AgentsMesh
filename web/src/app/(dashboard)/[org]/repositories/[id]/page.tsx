@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CenteredSpinner, Spinner } from "@/components/ui/spinner";
+import { CenteredSpinner } from "@/components/ui/spinner";
+import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { repositoryApi, RepositoryData } from "@/lib/api";
 import { useTranslations } from "@/lib/i18n/client";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
@@ -22,6 +23,13 @@ export default function RepositoryDetailPage() {
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [activeTab, setActiveTab] = useState<"info" | "branches">("info");
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const deleteDialog = useConfirmDialog({
+    title: t("repositories.detail.deleteDialog.title"),
+    description: t("repositories.detail.deleteDialog.description"),
+    confirmText: t("common.delete"),
+    variant: "destructive",
+  });
 
   const loadRepository = useCallback(async () => {
     try {
@@ -56,18 +64,15 @@ export default function RepositoryDetailPage() {
 
   const handleDelete = useCallback(async () => {
     if (!repository) return;
-    if (
-      !confirm(t("repositories.detail.confirmDelete", { name: repository.name }))
-    ) {
-      return;
-    }
+    const confirmed = await deleteDialog.confirm();
+    if (!confirmed) return;
     try {
       await repositoryApi.delete(repositoryId);
       router.push("../repositories");
     } catch (error) {
       console.error("Failed to delete repository:", error);
     }
-  }, [repository, repositoryId, router, t]);
+  }, [repository, repositoryId, router, deleteDialog]);
 
   const handleSetupWebhook = useCallback(async () => {
     if (!repository) return;
@@ -329,6 +334,9 @@ export default function RepositoryDetailPage() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog {...deleteDialog.dialogProps} />
     </div>
   );
 }
