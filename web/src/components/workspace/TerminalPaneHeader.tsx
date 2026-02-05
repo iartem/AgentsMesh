@@ -1,0 +1,149 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  X,
+  Maximize2,
+  Minimize2,
+  ExternalLink,
+  Circle,
+  RefreshCw,
+  Bot,
+} from "lucide-react";
+
+type ConnectionStatus = "connected" | "connecting" | "disconnected" | "error";
+
+interface TerminalPaneHeaderProps {
+  title: string;
+  podKey: string;
+  connectionStatus: ConnectionStatus;
+  isMaximized: boolean;
+  isPodReady: boolean;
+  hasAutopilot: boolean;
+  onSyncSize: () => void;
+  onStartAutopilot: () => void;
+  onPopout?: () => void;
+  onMaximize: () => void;
+  onClose?: () => void;
+}
+
+/**
+ * Header component for TerminalPane
+ * Contains status indicator, title, and action buttons
+ */
+export function TerminalPaneHeader({
+  title,
+  podKey,
+  connectionStatus,
+  isMaximized,
+  isPodReady,
+  hasAutopilot,
+  onSyncSize,
+  onStartAutopilot,
+  onPopout,
+  onMaximize,
+  onClose,
+}: TerminalPaneHeaderProps) {
+  const getStatusColor = () => {
+    switch (connectionStatus) {
+      case "connected":
+        return "text-green-500 dark:text-green-400";
+      case "connecting":
+        return "text-yellow-500 dark:text-yellow-400 animate-pulse";
+      case "disconnected":
+        return "text-gray-500 dark:text-gray-400";
+      case "error":
+        return "text-red-500 dark:text-red-400";
+      default:
+        return "text-gray-500 dark:text-gray-400";
+    }
+  };
+
+  return (
+    <div className="h-8 flex items-center justify-between px-2 bg-terminal-bg-secondary border-b border-terminal-border">
+      <div className="flex items-center gap-2 min-w-0">
+        <Circle className={cn("w-2 h-2 flex-shrink-0", getStatusColor())} />
+        <span className="text-xs text-terminal-text truncate">{title}</span>
+        <code className="text-[10px] text-terminal-text-muted truncate">
+          {podKey.substring(0, 8)}
+        </code>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSyncSize();
+          }}
+          title="Sync terminal size"
+        >
+          <RefreshCw className="w-3 h-3" />
+        </Button>
+        {/* Start Autopilot button - only show when no active AutopilotController */}
+        {!hasAutopilot && isPodReady && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text hover:text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartAutopilot();
+            }}
+            title="Start Autopilot Mode"
+          >
+            <Bot className="w-3 h-3" />
+          </Button>
+        )}
+        {onPopout && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPopout();
+            }}
+            title="Popout"
+          >
+            <ExternalLink className="w-3 h-3" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMaximize();
+          }}
+          title={isMaximized ? "Restore" : "Maximize"}
+        >
+          {isMaximized ? (
+            <Minimize2 className="w-3 h-3" />
+          ) : (
+            <Maximize2 className="w-3 h-3" />
+          )}
+        </Button>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text hover:text-red-500 dark:hover:text-red-400"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            title="Close"
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default TerminalPaneHeader;

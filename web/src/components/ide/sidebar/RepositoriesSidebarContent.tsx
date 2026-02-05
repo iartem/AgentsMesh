@@ -9,33 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   FolderGit2,
-  GitBranch,
   Loader2,
   Plus,
   Search,
   RefreshCw,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  Github,
-  Globe,
 } from "lucide-react";
-// Collapsible imports reserved for future use
 import { useTranslations } from "@/lib/i18n/client";
+import { RepositoryItem } from "./RepositoryItem";
 
 interface RepositoriesSidebarContentProps {
   className?: string;
   /** Callback when "Import Repository" is clicked. If provided, opens modal; otherwise navigates to repositories page */
   onImportRepo?: () => void;
 }
-
-// Provider icons
-const providerIcons: Record<string, React.ReactNode> = {
-  github: <Github className="w-3.5 h-3.5" />,
-  gitlab: <FolderGit2 className="w-3.5 h-3.5" />,
-  gitee: <FolderGit2 className="w-3.5 h-3.5" />,
-  generic: <Globe className="w-3.5 h-3.5" />,
-};
 
 // Provider filter values - labels will be translated
 const PROVIDER_FILTER_VALUES = ["all", "github", "gitlab", "gitee"] as const;
@@ -217,84 +203,17 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
           </div>
         ) : (
           <div className="py-1">
-            {filteredRepositories.map((repo) => {
-              const isSelected = selectedRepoId === repo.id;
-              const isExpanded = expandedRepos.has(repo.id);
-              const providerIcon = providerIcons[repo.provider_type] || providerIcons.generic;
-
-              return (
-                <div key={repo.id}>
-                  <div
-                    className={cn(
-                      "group flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer",
-                      isSelected && "bg-muted/30"
-                    )}
-                    onClick={() => handleRepoClick(repo)}
-                  >
-                    {/* Expand button */}
-                    <button
-                      className="p-0.5 hover:bg-muted rounded"
-                      onClick={(e) => toggleRepoExpand(repo.id, e)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                      )}
-                    </button>
-
-                    {/* Provider icon */}
-                    <span className="text-muted-foreground">
-                      {providerIcon}
-                    </span>
-
-                    {/* Repo info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate font-medium">{repo.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {repo.full_path}
-                      </p>
-                    </div>
-
-                    {/* Active indicator */}
-                    {repo.is_active && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                    )}
-                  </div>
-
-                  {/* Expanded content - branch info */}
-                  {isExpanded && (
-                    <div className="pl-10 pr-3 pb-2">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <GitBranch className="w-3 h-3" />
-                        <span>{repo.default_branch}</span>
-                        <span className="text-muted-foreground/50">({t("repositories.repository.default")})</span>
-                      </div>
-                      {repo.ticket_prefix && (
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                          <span className="font-mono bg-muted px-1 rounded">
-                            {repo.ticket_prefix}
-                          </span>
-                          <span>{t("repositories.repository.ticketPrefix")}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <a
-                          href={repo.clone_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          {t("repositories.repository.viewOnProvider", { provider: repo.provider_type })}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {filteredRepositories.map((repo) => (
+              <RepositoryItem
+                key={repo.id}
+                repo={repo}
+                isSelected={selectedRepoId === repo.id}
+                isExpanded={expandedRepos.has(repo.id)}
+                onClick={() => handleRepoClick(repo)}
+                onToggleExpand={(e) => toggleRepoExpand(repo.id, e)}
+                t={t}
+              />
+            ))}
           </div>
         )}
       </div>

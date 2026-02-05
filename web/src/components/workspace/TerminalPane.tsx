@@ -14,20 +14,8 @@ import {
   AutopilotStatusBar,
 } from "@/components/autopilot";
 import { useIDEStore } from "@/stores/ide";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import {
-  X,
-  Maximize2,
-  Minimize2,
-  ExternalLink,
-  Circle,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  Square,
-  Bot,
-} from "lucide-react";
+import { TerminalPaneHeader } from "./TerminalPaneHeader";
+import { TerminalLoadingState, TerminalErrorState } from "./TerminalStateViews";
 
 interface TerminalPaneProps {
   paneId: string;
@@ -70,7 +58,6 @@ export function TerminalPane({
     : null;
 
   // Auto-open BottomPanel Autopilot tab when help is needed
-  // Backend sends NEED_HUMAN_HELP, frontend expects need_help
   React.useEffect(() => {
     if (
       thinking?.decision_type === "need_help" ||
@@ -122,21 +109,6 @@ export function TerminalPane({
     }
   }, [podKey, terminatePod, onClose]);
 
-  const getStatusColor = () => {
-    switch (connectionStatus) {
-      case "connected":
-        return "text-green-500 dark:text-green-400";
-      case "connecting":
-        return "text-yellow-500 dark:text-yellow-400 animate-pulse";
-      case "disconnected":
-        return "text-gray-500 dark:text-gray-400";
-      case "error":
-        return "text-red-500 dark:text-red-400";
-      default:
-        return "text-gray-500 dark:text-gray-400";
-    }
-  };
-
   return (
     <div
       className={cn(
@@ -149,152 +121,33 @@ export function TerminalPane({
     >
       {/* Header */}
       {showHeader && (
-        <div className="h-8 flex items-center justify-between px-2 bg-terminal-bg-secondary border-b border-terminal-border">
-          <div className="flex items-center gap-2 min-w-0">
-            <Circle className={cn("w-2 h-2 flex-shrink-0", getStatusColor())} />
-            <span className="text-xs text-terminal-text truncate">{title}</span>
-            <code className="text-[10px] text-terminal-text-muted truncate">
-              {podKey.substring(0, 8)}
-            </code>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
-              onClick={(e) => {
-                e.stopPropagation();
-                syncSize();
-              }}
-              title="Sync terminal size"
-            >
-              <RefreshCw className="w-3 h-3" />
-            </Button>
-            {/* Start Autopilot button - only show when no active AutopilotController */}
-            {!autopilotController && isPodReady && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text hover:text-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAutopilotModal(true);
-                }}
-                title="Start Autopilot Mode"
-              >
-                <Bot className="w-3 h-3" />
-              </Button>
-            )}
-            {onPopout && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPopout();
-                }}
-                title="Popout"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMaximize();
-              }}
-              title={isMaximized ? "Restore" : "Maximize"}
-            >
-              {isMaximized ? (
-                <Minimize2 className="w-3 h-3" />
-              ) : (
-                <Maximize2 className="w-3 h-3" />
-              )}
-            </Button>
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 hover:bg-terminal-bg-active text-terminal-text hover:text-red-500 dark:hover:text-red-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose();
-                }}
-                title="Close"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        </div>
+        <TerminalPaneHeader
+          title={title}
+          podKey={podKey}
+          connectionStatus={connectionStatus}
+          isMaximized={isMaximized}
+          isPodReady={isPodReady}
+          hasAutopilot={!!autopilotController}
+          onSyncSize={syncSize}
+          onStartAutopilot={() => setShowAutopilotModal(true)}
+          onPopout={onPopout}
+          onMaximize={handleMaximize}
+          onClose={onClose}
+        />
       )}
 
       {/* Terminal or Loading/Error State */}
       {!isPodReady ? (
-        <div className="flex-1 flex items-center justify-center bg-terminal-bg">
-          {podError ? (
-            // Error state
-            <div className="text-center p-4">
-              <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-3" />
-              <p className="text-terminal-text font-medium mb-1">{podError}</p>
-              <p className="text-sm text-terminal-text-muted mb-4">
-                The pod cannot be connected. Please check the pod status or create a new one.
-              </p>
-              {onClose && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-500 dark:text-red-400 border-red-500/50 hover:bg-red-500/10"
-                  onClick={onClose}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Close Terminal
-                </Button>
-              )}
-            </div>
-          ) : (
-            // Waiting state with progress
-            <div className="text-center p-4 max-w-sm">
-              <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-3" />
-              <p className="text-terminal-text font-medium mb-1">
-                {initProgress?.message || "Waiting for Pod to be ready..."}
-              </p>
-              {initProgress ? (
-                <div className="mt-3 space-y-2">
-                  <Progress value={initProgress.progress} className="h-2" />
-                  <p className="text-xs text-terminal-text-muted">
-                    {initProgress.phase} - {initProgress.progress}%
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-terminal-text-muted">
-                  Status: <span className="text-yellow-500 dark:text-yellow-400">{podStatus}</span>
-                </p>
-              )}
-              {/* Show terminate button when status is unknown */}
-              {podStatus === "unknown" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 text-red-500 dark:text-red-400 border-red-500/50 hover:bg-red-500/10"
-                  onClick={handleTerminate}
-                  disabled={isTerminating}
-                >
-                  {isTerminating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Square className="w-4 h-4 mr-2" />
-                  )}
-                  Terminate Pod
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+        podError ? (
+          <TerminalErrorState error={podError} onClose={onClose} />
+        ) : (
+          <TerminalLoadingState
+            podStatus={podStatus}
+            initProgress={initProgress}
+            isTerminating={isTerminating}
+            onTerminate={handleTerminate}
+          />
+        )
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
           {/* AutopilotController Components - show when terminal is ready and AutopilotController exists */}
