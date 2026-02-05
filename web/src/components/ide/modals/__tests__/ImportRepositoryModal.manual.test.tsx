@@ -1,30 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Manual Entry", () => {
   const mockOnClose = vi.fn();
@@ -47,14 +37,13 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
-      // The label includes " *" for required field marker
-      expect(screen.getByText(/repositories\.modal\.cloneUrl/)).toBeInTheDocument();
+      expect(screen.getByText(/Clone URL/)).toBeInTheDocument();
     });
   });
 
@@ -65,13 +54,13 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.providerType")).toBeInTheDocument();
+      expect(screen.getByText("Provider Type")).toBeInTheDocument();
     });
   });
 
@@ -82,10 +71,10 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
       const baseUrlInput = screen.getByPlaceholderText("https://github.com") as HTMLInputElement;
@@ -100,10 +89,10 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText("https://github.com/org/repo.git")).toBeInTheDocument();
@@ -129,20 +118,20 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.continue")).toBeInTheDocument();
+      expect(screen.getByText("Continue")).toBeInTheDocument();
     });
 
     // Click continue without filling required fields
-    await user.click(screen.getByText("repositories.modal.continue"));
+    await user.click(screen.getByText("Continue"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.fillRequiredFields")).toBeInTheDocument();
+      expect(screen.getByText(/Please fill in all required fields/)).toBeInTheDocument();
     });
   });
 
@@ -153,10 +142,10 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("repositories.modal.enterManually"));
+    await user.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText("https://github.com/org/repo.git")).toBeInTheDocument();
@@ -174,10 +163,10 @@ describe("ImportRepositoryModal - Manual Entry", () => {
     await user.clear(fullPathInput);
     await user.type(fullPathInput, "test/repo");
 
-    await user.click(screen.getByText("repositories.modal.continue"));
+    await user.click(screen.getByText("Continue"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.confirmImport")).toBeInTheDocument();
+      expect(screen.getByText("Confirm Import")).toBeInTheDocument();
     });
   });
 });

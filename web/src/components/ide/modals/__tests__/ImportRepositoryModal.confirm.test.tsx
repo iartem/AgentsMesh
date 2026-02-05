@@ -1,30 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
   createRepositoryResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Confirmation Step", () => {
   const mockOnClose = vi.fn();
@@ -58,7 +48,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByText("org/my-project"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.confirmImport")).toBeInTheDocument();
+      expect(screen.getByText("Confirm Import")).toBeInTheDocument();
     });
   });
 
@@ -81,7 +71,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
 
     await waitFor(() => {
       expect(screen.getByText("my-project")).toBeInTheDocument();
-      expect(screen.getByText("repositories.modal.ticketPrefixOptional")).toBeInTheDocument();
+      expect(screen.getByText(/Ticket Prefix/)).toBeInTheDocument();
     });
   });
 
@@ -103,9 +93,9 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByText("org/my-project"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.visibility")).toBeInTheDocument();
-      expect(screen.getByText("repositories.modal.organization")).toBeInTheDocument();
-      expect(screen.getByText("repositories.modal.privateOnly")).toBeInTheDocument();
+      expect(screen.getByText("Visibility")).toBeInTheDocument();
+      expect(screen.getByText("Organization")).toBeInTheDocument();
+      expect(screen.getByText("Private (only you)")).toBeInTheDocument();
     });
   });
 
@@ -136,7 +126,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
       target: { value: "TEST" },
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.importRepository"));
+    fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
       expect(repositoryApi.create).toHaveBeenCalledWith(

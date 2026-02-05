@@ -1,29 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/test-utils";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Rendering", () => {
   const mockOnClose = vi.fn();
@@ -43,7 +33,7 @@ describe("ImportRepositoryModal - Rendering", () => {
     render(
       <ImportRepositoryModal open={false} onClose={mockOnClose} onImported={mockOnImported} />
     );
-    expect(screen.queryByText("repositories.modal.title")).not.toBeInTheDocument();
+    expect(screen.queryByText("Import Repository")).not.toBeInTheDocument();
   });
 
   it("should render when open is true", async () => {
@@ -52,7 +42,7 @@ describe("ImportRepositoryModal - Rendering", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.title")).toBeInTheDocument();
+      expect(screen.getByText("Import Repository")).toBeInTheDocument();
     });
   });
 
@@ -89,8 +79,7 @@ describe("ImportRepositoryModal - Rendering", () => {
     );
 
     await waitFor(() => {
-      // The text is part of a paragraph with additional content (link, etc.)
-      expect(screen.getByText(/repositories\.modal\.noConnections/)).toBeInTheDocument();
+      expect(screen.getByText(/No Git connections configured/)).toBeInTheDocument();
     });
   });
 
@@ -100,7 +89,7 @@ describe("ImportRepositoryModal - Rendering", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
   });
 });

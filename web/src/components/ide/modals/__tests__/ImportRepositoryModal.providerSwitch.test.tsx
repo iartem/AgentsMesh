@@ -1,29 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Provider Type Switching", () => {
   const mockOnClose = vi.fn();
@@ -45,10 +35,10 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.enterManually"));
+    fireEvent.click(screen.getByText("Enter Manually"));
 
     await waitFor(() => {
       const baseUrlInput = screen.getByPlaceholderText("https://github.com") as HTMLInputElement;
@@ -71,10 +61,10 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.enterManually"));
+    fireEvent.click(screen.getByText("Enter Manually"));
 
     const providerSelect = document.querySelector("select") as HTMLSelectElement;
     fireEvent.change(providerSelect, { target: { value: "gitee" } });
@@ -91,10 +81,10 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.enterManually")).toBeInTheDocument();
+      expect(screen.getByText("Enter Manually")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.enterManually"));
+    fireEvent.click(screen.getByText("Enter Manually"));
 
     const providerSelect = document.querySelector("select") as HTMLSelectElement;
     fireEvent.change(providerSelect, { target: { value: "generic" } });

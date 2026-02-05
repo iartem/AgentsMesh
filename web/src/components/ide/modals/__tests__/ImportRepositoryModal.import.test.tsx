@@ -1,30 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
   createRepositoryResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Import Actions", () => {
   const mockOnClose = vi.fn();
@@ -60,10 +50,10 @@ describe("ImportRepositoryModal - Import Actions", () => {
     fireEvent.click(screen.getByText("org/my-project"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.importRepository")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import Repository" })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.importRepository"));
+    fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
       expect(repositoryApi.create).toHaveBeenCalledWith(
@@ -97,10 +87,10 @@ describe("ImportRepositoryModal - Import Actions", () => {
     fireEvent.click(screen.getByText("org/my-project"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.importRepository")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import Repository" })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.importRepository"));
+    fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
       expect(mockOnImported).toHaveBeenCalled();
@@ -129,13 +119,13 @@ describe("ImportRepositoryModal - Import Actions", () => {
     fireEvent.click(screen.getByText("org/my-project"));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.importRepository")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import Repository" })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("repositories.modal.importRepository"));
+    fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.failedToImport")).toBeInTheDocument();
+      expect(screen.getByText(/Failed to import repository/)).toBeInTheDocument();
     });
 
     consoleSpy.mockRestore();

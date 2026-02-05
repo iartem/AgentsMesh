@@ -1,29 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
+
+// Mock API module
+vi.mock("@/lib/api", () => ({
+  repositoryApi: { create: vi.fn() },
+  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
+}));
+
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
+import { userRepositoryProviderApi } from "@/lib/api";
 import {
   mockProvider,
   mockGitLabProvider,
   createListRepositoriesResponse,
 } from "./ImportRepositoryModal.utils";
-
-// Mock the API
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-// Mock translations
-vi.mock("@/lib/i18n/client", () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
-import { userRepositoryProviderApi } from "@/lib/api";
 
 describe("ImportRepositoryModal - Close and Cancel", () => {
   const mockOnClose = vi.fn();
@@ -45,10 +35,10 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("common.cancel")).toBeInTheDocument();
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("common.cancel"));
+    fireEvent.click(screen.getByText("Cancel"));
 
     expect(mockOnClose).toHaveBeenCalled();
   });
@@ -59,7 +49,7 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("repositories.modal.title")).toBeInTheDocument();
+      expect(screen.getByText("Import Repository")).toBeInTheDocument();
     });
 
     // Find and click the X button in the header
