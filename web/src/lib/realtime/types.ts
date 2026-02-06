@@ -24,6 +24,13 @@ export type EventType =
   | "autopilot:created"
   | "autopilot:terminated"
   | "autopilot:thinking"
+  // MergeRequest events
+  | "mr:created"
+  | "mr:updated"
+  | "mr:merged"
+  | "mr:closed"
+  // Pipeline events
+  | "pipeline:updated"
   // Notification events (targeted to specific users)
   | "terminal:notification"
   | "task:completed"
@@ -222,6 +229,38 @@ export interface AutopilotThinkingData {
       label: string;
     }>;
   };
+}
+
+/**
+ * MergeRequest event payload
+ */
+export interface MREventData {
+  mr_id: number;
+  mr_iid: number;
+  mr_url: string;
+  source_branch: string;
+  target_branch?: string;
+  title?: string;
+  state: string;
+  action?: string; // opened, updated, merged, closed
+  ticket_id?: number;
+  pod_id?: number;
+  repository_id: number;
+  pipeline_status?: string;
+}
+
+/**
+ * Pipeline event payload
+ */
+export interface PipelineEventData {
+  mr_id?: number;
+  pipeline_id: number;
+  pipeline_status: string;
+  pipeline_url?: string;
+  source_branch?: string;
+  ticket_id?: number;
+  pod_id?: number;
+  repository_id: number;
 }
 
 /**

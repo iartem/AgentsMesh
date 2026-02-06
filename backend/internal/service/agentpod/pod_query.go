@@ -12,6 +12,7 @@ func (s *PodService) GetPod(ctx context.Context, podKey string) (*agentpod.Pod, 
 	if err := s.db.WithContext(ctx).
 		Preload("Runner").
 		Preload("AgentType").
+		Preload("Repository").
 		Where("pod_key = ?", podKey).
 		First(&pod).Error; err != nil {
 		return nil, ErrPodNotFound
@@ -25,6 +26,7 @@ func (s *PodService) GetPodByID(ctx context.Context, podID int64) (*agentpod.Pod
 	if err := s.db.WithContext(ctx).
 		Preload("Runner").
 		Preload("AgentType").
+		Preload("Repository").
 		First(&pod, podID).Error; err != nil {
 		return nil, ErrPodNotFound
 	}
@@ -69,6 +71,7 @@ func (s *PodService) GetPodsByTicket(ctx context.Context, ticketID int64) ([]*ag
 	if err := s.db.WithContext(ctx).
 		Preload("Runner").
 		Preload("AgentType").
+		Preload("Repository").
 		Where("ticket_id = ?", ticketID).
 		Order("created_at DESC").
 		Find(&pods).Error; err != nil {
@@ -94,6 +97,7 @@ func (s *PodService) ListPods(ctx context.Context, orgID int64, status string, l
 		Preload("AgentType").
 		Preload("Ticket").
 		Preload("CreatedBy").
+		Preload("Repository").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -131,6 +135,7 @@ func (s *PodService) ListByRunner(ctx context.Context, runnerID int64, status st
 	if err := query.
 		Preload("Runner").
 		Preload("AgentType").
+		Preload("Repository").
 		Order("created_at DESC").
 		Find(&pods).Error; err != nil {
 		return nil, err
@@ -144,6 +149,7 @@ func (s *PodService) ListByTicket(ctx context.Context, ticketID int64) ([]*agent
 	if err := s.db.WithContext(ctx).
 		Preload("Runner").
 		Preload("AgentType").
+		Preload("Repository").
 		Where("ticket_id = ?", ticketID).
 		Order("created_at DESC").
 		Find(&pods).Error; err != nil {
@@ -170,6 +176,7 @@ func (s *PodService) ListPodsByRunner(ctx context.Context, runnerID int64, statu
 		Preload("AgentType").
 		Preload("Ticket").
 		Preload("CreatedBy").
+		Preload("Repository").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -200,6 +207,21 @@ func (s *PodService) GetActivePodBySourcePodKey(ctx context.Context, sourcePodKe
 
 	if err != nil {
 		// Not found is expected when no active pod exists
+		return nil, err
+	}
+	return &pod, nil
+}
+
+// FindByBranchAndRepo finds a Pod by branch name and repository ID
+// Used for associating MR webhook events with Pods
+// Returns the most recently created Pod matching the criteria
+func (s *PodService) FindByBranchAndRepo(ctx context.Context, orgID, repoID int64, branchName string) (*agentpod.Pod, error) {
+	var pod agentpod.Pod
+	err := s.db.WithContext(ctx).
+		Where("organization_id = ? AND repository_id = ? AND branch_name = ?", orgID, repoID, branchName).
+		Order("created_at DESC"). // Get the most recent Pod
+		First(&pod).Error
+	if err != nil {
 		return nil, err
 	}
 	return &pod, nil

@@ -210,9 +210,16 @@ export const ticketApi = {
         mr_iid: number;
         title: string;
         state: string;
+        mr_url: string;
         web_url: string;
         source_branch: string;
         target_branch: string;
+        // Pipeline information
+        pipeline_status?: string;
+        pipeline_id?: number;
+        pipeline_url?: string;
+        // Pod association
+        pod_id?: number;
       }>;
     }>(`${orgPath("/tickets")}/${identifier}/merge-requests`),
 

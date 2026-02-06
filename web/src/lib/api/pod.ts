@@ -28,6 +28,7 @@ export interface PodData {
     id: number;
     name: string;
     full_path: string;
+    provider_type?: string; // github, gitlab, gitee
   };
   ticket?: {
     id: number;

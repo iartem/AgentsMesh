@@ -53,6 +53,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			preparation_script TEXT,
 			preparation_timeout INTEGER DEFAULT 300,
 			is_active INTEGER NOT NULL DEFAULT 1,
+			webhook_config TEXT,
 			deleted_at DATETIME,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

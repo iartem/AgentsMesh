@@ -1430,6 +1430,7 @@
       "channels": "频道",
       "activity": "活动",
       "autopilot": "自动驾驶",
+      "delivery": "交付",
       "noOutput": "暂无输出",
       "noProblems": "未检测到问题",
       "noChannels": "暂无活跃频道",
@@ -1442,7 +1443,16 @@
       "outgoingBindings": "出向绑定",
       "currentPod": "当前 Pod",
       "sendMessagePlaceholder": "发送消息...",
-      "channelDocument": "频道文档"
+      "channelDocument": "频道文档",
+      "deliveryTab": {
+        "notAvailable": "无法显示交付状态",
+        "requiresRepoBranch": "需要选择仓库并创建分支",
+        "loading": "加载合并请求...",
+        "loadError": "加载失败",
+        "noMergeRequests": "暂无合并请求",
+        "mrCount": "{count} 个合并请求",
+        "untitled": "无标题"
+      }
     },
     "createPod": {
       "title": "创建新 Pod",
@@ -1713,6 +1723,24 @@
       "updateFailed": "更新仓库失败，请重试。",
       "saving": "保存中...",
       "saveChanges": "保存更改"
+    },
+    "webhook": {
+      "title": "Webhook 设置",
+      "loading": "正在加载 Webhook 状态...",
+      "status": {
+        "registered": "已注册",
+        "needsManualSetup": "需要手动配置",
+        "notRegistered": "未注册"
+      },
+      "events": "事件",
+      "reregister": "重新注册",
+      "delete": "删除 Webhook",
+      "manualSetupInstructions": "无法自动注册 Webhook。请使用以下信息在 Git 服务设置中手动配置 Webhook。",
+      "markConfigured": "已完成配置",
+      "tryAgain": "重试",
+      "notRegisteredDescription": "Webhook 未注册。注册 Webhook 以接收 PR/MR 和 Pipeline 状态更新。",
+      "register": "注册 Webhook",
+      "retry": "重试"
     }
   },
   "runners": {

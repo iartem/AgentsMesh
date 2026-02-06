@@ -103,7 +103,16 @@ func registerRepositoryRoutes(rg *gin.RouterGroup, svc *Services) {
 		repositories.DELETE("/:id", repositoryHandler.DeleteRepository)
 		repositories.GET("/:id/branches", repositoryHandler.ListBranches)
 		repositories.POST("/:id/sync-branches", repositoryHandler.SyncBranches)
-		repositories.POST("/:id/webhook", repositoryHandler.SetupWebhook)
+
+		// Webhook management routes
+		repositories.POST("/:id/webhook", repositoryHandler.RegisterRepositoryWebhook)
+		repositories.DELETE("/:id/webhook", repositoryHandler.DeleteRepositoryWebhook)
+		repositories.GET("/:id/webhook/status", repositoryHandler.GetRepositoryWebhookStatus)
+		repositories.GET("/:id/webhook/secret", repositoryHandler.GetRepositoryWebhookSecret)
+		repositories.POST("/:id/webhook/configured", repositoryHandler.MarkRepositoryWebhookConfigured)
+
+		// Merge requests route
+		repositories.GET("/:id/merge-requests", repositoryHandler.ListRepositoryMergeRequests)
 	}
 }
 

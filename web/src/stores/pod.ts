@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { podApi, PodData } from "@/lib/api";
+import { podApi, PodData, ApiError } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 
 // Re-export PodData as Pod for cleaner component API
@@ -121,19 +121,26 @@ export const usePodStore = create<PodState>((set) => ({
   terminatePod: async (podKey) => {
     try {
       await podApi.terminate(podKey);
-      set((state) => ({
-        pods: state.pods.map((p) =>
-          p.pod_key === podKey ? { ...p, status: "terminated" as const } : p
-        ),
-        currentPod:
-          state.currentPod?.pod_key === podKey
-            ? { ...state.currentPod, status: "terminated" as const }
-            : state.currentPod,
-      }));
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to terminate pod") });
-      throw error;
+      // If pod is not found (404), treat it as already terminated
+      // This can happen when the pod was already terminated or deleted
+      const isNotFound = error instanceof ApiError && error.status === 404;
+      if (!isNotFound) {
+        set({ error: getErrorMessage(error, "Failed to terminate pod") });
+        throw error;
+      }
+      // Pod doesn't exist (404), treat as terminated - continue to update local state
     }
+    // Always update local state to mark pod as terminated
+    set((state) => ({
+      pods: state.pods.map((p) =>
+        p.pod_key === podKey ? { ...p, status: "terminated" as const } : p
+      ),
+      currentPod:
+        state.currentPod?.pod_key === podKey
+          ? { ...state.currentPod, status: "terminated" as const }
+          : state.currentPod,
+    }));
   },
 
   setCurrentPod: (pod) => {

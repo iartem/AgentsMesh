@@ -30,7 +30,7 @@ func TestGetTicketMRs(t *testing.T) {
 	// Create MRs for the ticket
 	mr1 := &ticket.MergeRequest{
 		OrganizationID: 1,
-		TicketID:       tkt.ID,
+		TicketID:       &tkt.ID,
 		MRIID:          1,
 		MRURL:          "https://gitlab.com/org/repo/-/merge_requests/1",
 		SourceBranch:   "feature/1",
@@ -39,7 +39,7 @@ func TestGetTicketMRs(t *testing.T) {
 	}
 	mr2 := &ticket.MergeRequest{
 		OrganizationID: 1,
-		TicketID:       tkt.ID,
+		TicketID:       &tkt.ID,
 		MRIID:          2,
 		MRURL:          "https://gitlab.com/org/repo/-/merge_requests/2",
 		SourceBranch:   "feature/2",
@@ -68,11 +68,12 @@ func TestGetPodMRs(t *testing.T) {
 	service := NewMRSyncService(db, nil)
 
 	podID := int64(100)
+	ticketID := int64(1)
 
 	// Create MRs for a pod
 	mr := &ticket.MergeRequest{
 		OrganizationID: 1,
-		TicketID:       1,
+		TicketID:       &ticketID,
 		PodID:          &podID,
 		MRIID:          1,
 		MRURL:          "https://gitlab.com/org/repo/-/merge_requests/1",
@@ -192,7 +193,7 @@ func TestSyncMRByURL(t *testing.T) {
 		// Create MR
 		mr := &ticket.MergeRequest{
 			OrganizationID: 1,
-			TicketID:       tkt.ID,
+			TicketID:       &tkt.ID,
 			MRIID:          1,
 			MRURL:          "https://gitlab.com/org/repo/-/merge_requests/1",
 			SourceBranch:   "feature/test",
@@ -226,7 +227,7 @@ func TestSyncMRByURL(t *testing.T) {
 		// Create MR
 		mr := &ticket.MergeRequest{
 			OrganizationID: 1,
-			TicketID:       tkt.ID,
+			TicketID:       &tkt.ID,
 			MRIID:          99,
 			MRURL:          "https://gitlab.com/org/repo/-/merge_requests/99",
 			SourceBranch:   "feature/test",

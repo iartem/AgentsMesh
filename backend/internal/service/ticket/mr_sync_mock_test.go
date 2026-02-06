@@ -172,9 +172,10 @@ func setupMRSyncTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE IF NOT EXISTS ticket_merge_requests (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			organization_id INTEGER NOT NULL,
-			ticket_id INTEGER NOT NULL,
+			repository_id INTEGER NOT NULL DEFAULT 0,
+			ticket_id INTEGER,
 			pod_id INTEGER,
-			mri_id INTEGER NOT NULL,
+			mr_iid INTEGER NOT NULL,
 			mr_url TEXT NOT NULL UNIQUE,
 			source_branch TEXT NOT NULL,
 			target_branch TEXT NOT NULL DEFAULT 'main',

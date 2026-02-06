@@ -12,7 +12,7 @@ import (
 func (s *Service) LinkMergeRequest(ctx context.Context, orgID, ticketID int64, podID *int64, mrIID int, mrURL, sourceBranch, targetBranch, title, state string) (*ticket.MergeRequest, error) {
 	mr := &ticket.MergeRequest{
 		OrganizationID: orgID,
-		TicketID:       ticketID,
+		TicketID:       &ticketID,
 		PodID:          podID,
 		MRIID:          mrIID,
 		MRURL:          mrURL,

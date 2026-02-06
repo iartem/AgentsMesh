@@ -278,6 +278,10 @@ services:
       - runner_claude_config:/home/runner/.claude
       - runner_codex_config:/home/runner/.codex
       - runner_gemini_config:/home/runner/.gemini
+      # ============================================
+      # SSH keys for Git operations (deploy keys)
+      # ============================================
+      - ./runner-ssh:/home/runner/.ssh:ro
     # Use entrypoint script for auto-configuration
     entrypoint: ["/usr/local/bin/runner-entrypoint.sh"]
     # Runner communicates with backend via gRPC through traefik (TLS passthrough)

@@ -1,6 +1,9 @@
 package gitprovider
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 )
 
@@ -46,6 +49,9 @@ type Repository struct {
 
 	IsActive bool `gorm:"not null;default:true" json:"is_active"`
 
+	// Webhook configuration stored as JSONB
+	WebhookConfig *WebhookConfig `gorm:"type:jsonb" json:"webhook_config,omitempty"`
+
 	CreatedAt time.Time  `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt time.Time  `gorm:"not null;default:now()" json:"updated_at"`
 	DeletedAt *time.Time `gorm:"index" json:"deleted_at,omitempty"` // Soft delete support
@@ -53,4 +59,65 @@ type Repository struct {
 
 func (Repository) TableName() string {
 	return "repositories"
+}
+
+// WebhookConfig represents webhook configuration for a repository
+type WebhookConfig struct {
+	ID               string   `json:"id"`
+	URL              string   `json:"url"`
+	Secret           string   `json:"secret,omitempty"`     // Repository-specific webhook secret (not exposed in API responses)
+	Events           []string `json:"events"`
+	IsActive         bool     `json:"is_active"`
+	NeedsManualSetup bool     `json:"needs_manual_setup"`   // Whether manual configuration is required
+	LastError        string   `json:"last_error,omitempty"` // Last error message
+	CreatedAt        string   `json:"created_at,omitempty"`
+}
+
+// Value implements driver.Valuer for GORM JSONB support
+func (wc WebhookConfig) Value() (driver.Value, error) {
+	return json.Marshal(wc)
+}
+
+// Scan implements sql.Scanner for GORM JSONB support
+func (wc *WebhookConfig) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("failed to unmarshal WebhookConfig: value is not []byte")
+	}
+	if len(bytes) == 0 {
+		return nil
+	}
+	return json.Unmarshal(bytes, wc)
+}
+
+// WebhookStatus represents the public-facing webhook status (without secret)
+type WebhookStatus struct {
+	Registered   bool     `json:"registered"`
+	WebhookID    string   `json:"webhook_id,omitempty"`
+	WebhookURL   string   `json:"webhook_url,omitempty"`
+	Events       []string `json:"events,omitempty"`
+	IsActive     bool     `json:"is_active"`
+	NeedsManualSetup bool `json:"needs_manual_setup"`
+	LastError    string   `json:"last_error,omitempty"`
+	RegisteredAt string   `json:"registered_at,omitempty"`
+}
+
+// ToStatus converts WebhookConfig to WebhookStatus (hiding the secret)
+func (wc *WebhookConfig) ToStatus() *WebhookStatus {
+	if wc == nil {
+		return &WebhookStatus{Registered: false}
+	}
+	return &WebhookStatus{
+		Registered:       wc.ID != "" || wc.NeedsManualSetup,
+		WebhookID:        wc.ID,
+		WebhookURL:       wc.URL,
+		Events:           wc.Events,
+		IsActive:         wc.IsActive,
+		NeedsManualSetup: wc.NeedsManualSetup,
+		LastError:        wc.LastError,
+		RegisteredAt:     wc.CreatedAt,
+	}
 }

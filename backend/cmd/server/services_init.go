@@ -39,11 +39,13 @@ type serviceContainer struct {
 	credentialProfile *agent.CredentialProfileService
 	userConfig        *agent.UserConfigService
 	repository        *repository.Service
+	webhook           *repository.WebhookService
 	runner            *runner.Service
 	pod               *agentpod.PodService
 	autopilot         *agentpod.AutopilotControllerService
 	channel           *channel.Service
 	ticket            *ticket.Service
+	mrSync            *ticket.MRSyncService
 	billing           *billing.Service
 	binding           *binding.Service
 	mesh              *mesh.Service
@@ -75,12 +77,18 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	userConfigSvc := agent.NewUserConfigService(db, agentTypeSvc)
 
 	repoSvc := repository.NewService(db)
+	webhookSvc := repository.NewWebhookService(db, cfg, userSvc, slog.Default())
+	// Connect webhook service to repository service for automatic registration
+	repoSvc.SetWebhookService(webhookSvc)
 	billingSvc := billing.NewServiceWithConfig(db, cfg)
 	runnerSvc := runner.NewService(db, billingSvc)
 	podSvc := agentpod.NewPodService(db)
 	autopilotSvc := agentpod.NewAutopilotControllerService(db)
 	channelSvc := channel.NewService(db)
 	ticketSvc := ticket.NewService(db)
+	// gitProvider is nil for webhook-only usage; batch sync functions won't work
+	// but FindOrCreateMR and FindTicketByBranch work fine without it
+	mrSyncSvc := ticket.NewMRSyncService(db, nil)
 	bindingSvc := binding.NewService(db, podSvc)
 	meshSvc := mesh.NewService(db, podSvc, channelSvc, bindingSvc)
 
@@ -115,11 +123,13 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		credentialProfile:  credentialProfileSvc,
 		userConfig:         userConfigSvc,
 		repository:         repoSvc,
+		webhook:            webhookSvc,
 		runner:             runnerSvc,
 		pod:                podSvc,
 		autopilot:          autopilotSvc,
 		channel:            channelSvc,
 		ticket:             ticketSvc,
+		mrSync:             mrSyncSvc,
 		billing:            billingSvc,
 		binding:            bindingSvc,
 		mesh:               meshSvc,

@@ -88,9 +88,8 @@ func (h *RepositoryHandler) ListBranches(c *gin.Context) {
 
 // SetupWebhook sets up webhook for repository
 // POST /api/v1/organizations/:slug/repositories/:id/webhook
+// Deprecated: Use RegisterRepositoryWebhook instead
 func (h *RepositoryHandler) SetupWebhook(c *gin.Context) {
-	// TODO: Implement webhook setup
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error": "Webhook setup not implemented yet",
-	})
+	// Delegate to the new RegisterRepositoryWebhook handler
+	h.RegisterRepositoryWebhook(c)
 }

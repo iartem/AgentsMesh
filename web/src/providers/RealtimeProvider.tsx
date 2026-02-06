@@ -9,7 +9,7 @@ import { useMeshStore } from "@/stores/mesh";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useChannelStore } from "@/stores/channel";
 import { useAutopilotStore } from "@/stores/autopilot";
-import type { ConnectionState, RealtimeEvent, PodStatusChangedData, PodCreatedData, RunnerStatusData, TicketStatusChangedData, TerminalNotificationData, TaskCompletedData, PodTitleChangedData, PodInitProgressData, ChannelMessageData, AutopilotStatusChangedData, AutopilotIterationData, AutopilotCreatedData, AutopilotTerminatedData, AutopilotThinkingData } from "@/lib/realtime";
+import type { ConnectionState, RealtimeEvent, PodStatusChangedData, PodCreatedData, RunnerStatusData, TicketStatusChangedData, TerminalNotificationData, TaskCompletedData, PodTitleChangedData, PodInitProgressData, ChannelMessageData, AutopilotStatusChangedData, AutopilotIterationData, AutopilotCreatedData, AutopilotTerminatedData, AutopilotThinkingData, MREventData, PipelineEventData } from "@/lib/realtime";
 
 interface RealtimeContextValue {
   connectionState: ConnectionState;
@@ -258,6 +258,39 @@ export function RealtimeProvider({
           const data = event.data as AutopilotThinkingData;
           autopilotStore.updateThinking(data.autopilot_controller_key, data);
           console.log("[Realtime] Autopilot thinking:", data.autopilot_controller_key, data.decision_type);
+          break;
+        }
+
+        // MergeRequest events
+        case "mr:created":
+        case "mr:updated":
+        case "mr:merged":
+        case "mr:closed": {
+          const data = event.data as MREventData;
+          // Refresh tickets if this MR is associated with a ticket
+          if (data.ticket_id) {
+            ticketStore.fetchTickets?.();
+          }
+          // Refresh pods if this MR is associated with a pod
+          if (data.pod_id) {
+            podStore.fetchPods?.();
+          }
+          console.log("[Realtime] MR event:", event.type, data.mr_iid, data.state);
+          break;
+        }
+
+        // Pipeline events
+        case "pipeline:updated": {
+          const data = event.data as PipelineEventData;
+          // Refresh tickets if this pipeline is associated with a ticket
+          if (data.ticket_id) {
+            ticketStore.fetchTickets?.();
+          }
+          // Refresh pods if this pipeline is associated with a pod
+          if (data.pod_id) {
+            podStore.fetchPods?.();
+          }
+          console.log("[Realtime] Pipeline event:", data.pipeline_id, data.pipeline_status);
           break;
         }
 

@@ -18,7 +18,8 @@ var (
 
 // Service handles repository operations
 type Service struct {
-	db *gorm.DB
+	db             *gorm.DB
+	webhookService *WebhookService
 }
 
 // NewService creates a new repository service
@@ -26,6 +27,20 @@ func NewService(db *gorm.DB) *Service {
 	return &Service{
 		db: db,
 	}
+}
+
+// SetWebhookService sets the webhook service for automatic webhook registration
+// This is set separately to avoid circular dependencies during initialization
+func (s *Service) SetWebhookService(ws *WebhookService) {
+	s.webhookService = ws
+}
+
+// GetWebhookService returns the webhook service
+func (s *Service) GetWebhookService() WebhookServiceInterface {
+	if s.webhookService == nil {
+		return nil
+	}
+	return s.webhookService
 }
 
 // CreateRequest represents repository creation request
@@ -87,6 +102,47 @@ func (s *Service) Create(ctx context.Context, req *CreateRequest) (*gitprovider.
 	}
 
 	return repo, nil
+}
+
+// CreateWithWebhook creates a repository and registers a webhook
+// orgSlug is required for building the webhook URL
+func (s *Service) CreateWithWebhook(ctx context.Context, req *CreateRequest, orgSlug string) (*gitprovider.Repository, *WebhookResult, error) {
+	repo, err := s.Create(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// If webhook service is configured and user ID is available, try to register webhook
+	var webhookResult *WebhookResult
+	if s.webhookService != nil && req.ImportedByUserID != nil {
+		// Register webhook asynchronously to not block repository creation
+		go func() {
+			bgCtx := context.Background()
+			result, err := s.webhookService.RegisterWebhookForRepository(bgCtx, repo, orgSlug, *req.ImportedByUserID)
+			if err != nil {
+				// Log error but don't fail - webhook can be registered manually later
+				if s.webhookService.logger != nil {
+					s.webhookService.logger.Error("Failed to register webhook during repository creation",
+						"repo_id", repo.ID,
+						"error", err)
+				}
+			} else if result.NeedsManualSetup {
+				if s.webhookService.logger != nil {
+					s.webhookService.logger.Info("Webhook requires manual setup",
+						"repo_id", repo.ID,
+						"webhook_url", result.ManualWebhookURL)
+				}
+			}
+		}()
+
+		// Return a placeholder result indicating webhook registration is in progress
+		webhookResult = &WebhookResult{
+			RepoID: repo.ID,
+			Error:  "Webhook registration in progress",
+		}
+	}
+
+	return repo, webhookResult, nil
 }
 
 // generateCloneURL generates clone URL based on provider type

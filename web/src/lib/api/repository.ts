@@ -1,5 +1,33 @@
 import { request, orgPath } from "./base";
 
+// Webhook status types
+export interface WebhookStatus {
+  registered: boolean;
+  webhook_id?: string;
+  webhook_url?: string;
+  events?: string[];
+  is_active: boolean;
+  needs_manual_setup: boolean;
+  last_error?: string;
+  registered_at?: string;
+}
+
+export interface WebhookResult {
+  repo_id: number;
+  registered: boolean;
+  webhook_id?: string;
+  needs_manual_setup: boolean;
+  manual_webhook_url?: string;
+  manual_webhook_secret?: string;
+  error?: string;
+}
+
+export interface WebhookSecretResponse {
+  webhook_url: string;
+  webhook_secret: string;
+  events: string[];
+}
+
 // Repository types (self-contained, no git_provider_id)
 export interface RepositoryData {
   id: number;
@@ -15,6 +43,15 @@ export interface RepositoryData {
   visibility: string; // "organization" or "private"
   imported_by_user_id?: number;
   is_active: boolean;
+  webhook_config?: {
+    id: string;
+    url: string;
+    events: string[];
+    is_active: boolean;
+    needs_manual_setup: boolean;
+    last_error?: string;
+    created_at?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -75,8 +112,55 @@ export const repositoryApi = {
       body: { access_token: accessToken },
     }),
 
+  // Webhook management
+  registerWebhook: (id: number) =>
+    request<{ result: WebhookResult }>(`${orgPath("/repositories")}/${id}/webhook`, {
+      method: "POST",
+    }),
+
+  deleteWebhook: (id: number) =>
+    request<{ message: string }>(`${orgPath("/repositories")}/${id}/webhook`, {
+      method: "DELETE",
+    }),
+
+  getWebhookStatus: (id: number) =>
+    request<{ webhook_status: WebhookStatus }>(`${orgPath("/repositories")}/${id}/webhook/status`),
+
+  getWebhookSecret: (id: number) =>
+    request<WebhookSecretResponse>(`${orgPath("/repositories")}/${id}/webhook/secret`),
+
+  markWebhookConfigured: (id: number) =>
+    request<{ message: string }>(`${orgPath("/repositories")}/${id}/webhook/configured`, {
+      method: "POST",
+    }),
+
+  // Merge requests
+  listMergeRequests: (id: number, branch?: string, state?: string) => {
+    const params = new URLSearchParams();
+    if (branch) params.append("branch", branch);
+    if (state) params.append("state", state);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return request<{
+      merge_requests: Array<{
+        id: number;
+        mr_iid: number;
+        title: string;
+        state: string;
+        mr_url: string;
+        source_branch: string;
+        target_branch: string;
+        pipeline_status?: string;
+        pipeline_id?: number;
+        pipeline_url?: string;
+        ticket_id?: number;
+        pod_id?: number;
+      }>;
+    }>(`${orgPath("/repositories")}/${id}/merge-requests${query}`);
+  },
+
+  // Deprecated: Use registerWebhook instead
   setupWebhook: (id: number) =>
-    request<{ message: string; webhook_url?: string }>(`${orgPath("/repositories")}/${id}/webhook`, {
+    request<{ result: WebhookResult }>(`${orgPath("/repositories")}/${id}/webhook`, {
       method: "POST",
     }),
 };

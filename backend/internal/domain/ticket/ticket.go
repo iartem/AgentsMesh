@@ -170,16 +170,21 @@ const (
 	PipelineStatusManual   = "manual"
 )
 
-// MergeRequest represents a merge request linked to a ticket
+// MergeRequest represents a merge request linked to a repository
+// Can optionally be associated with a ticket and/or pod
 type MergeRequest struct {
 	ID             int64 `gorm:"primaryKey" json:"id"`
 	OrganizationID int64 `gorm:"not null;index" json:"organization_id"`
 
-	TicketID int64  `gorm:"not null;index" json:"ticket_id"`
-	PodID    *int64 `json:"pod_id,omitempty"`
+	// Repository is required - MR always belongs to a repository
+	RepositoryID int64 `gorm:"not null;index" json:"repository_id"`
 
-	MRIID        int    `gorm:"not null" json:"mr_iid"`
-	MRURL        string `gorm:"type:text;not null;uniqueIndex" json:"mr_url"`
+	// Ticket and Pod are optional associations
+	TicketID *int64 `gorm:"index" json:"ticket_id,omitempty"`
+	PodID    *int64 `gorm:"index" json:"pod_id,omitempty"`
+
+	MRIID        int    `gorm:"column:mr_iid;not null" json:"mr_iid"`
+	MRURL        string `gorm:"column:mr_url;type:text;not null;uniqueIndex" json:"mr_url"`
 	SourceBranch string `gorm:"size:255;not null" json:"source_branch"`
 	TargetBranch string `gorm:"size:255;not null;default:'main'" json:"target_branch"`
 	Title        string `gorm:"size:500" json:"title,omitempty"`
