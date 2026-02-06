@@ -42,7 +42,7 @@ func (s *MRSyncService) FindOrCreateMR(ctx context.Context, orgID int64, t *tick
 	now := time.Now()
 	mr := &ticket.MergeRequest{
 		OrganizationID: orgID,
-		TicketID:       t.ID,
+		TicketID:       &t.ID,
 		PodID:          podID,
 		MRIID:          mrData.IID,
 		MRURL:          mrData.WebURL,

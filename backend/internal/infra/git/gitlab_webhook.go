@@ -16,17 +16,20 @@ func (p *GitLabProvider) RegisterWebhook(ctx context.Context, projectID string, 
 
 	pushEvents := false
 	mrEvents := false
+	pipelineEvents := false
 	for _, event := range config.Events {
 		switch event {
 		case "push":
 			pushEvents = true
 		case "merge_request":
 			mrEvents = true
+		case "pipeline":
+			pipelineEvents = true
 		}
 	}
 
-	body := fmt.Sprintf(`{"url":"%s","token":"%s","push_events":%t,"merge_requests_events":%t}`,
-		config.URL, config.Secret, pushEvents, mrEvents)
+	body := fmt.Sprintf(`{"url":"%s","token":"%s","push_events":%t,"merge_requests_events":%t,"pipeline_events":%t}`,
+		config.URL, config.Secret, pushEvents, mrEvents, pipelineEvents)
 
 	resp, err := p.doRequest(ctx, "POST", path, strings.NewReader(body))
 	if err != nil {

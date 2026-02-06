@@ -4,3 +4,11 @@
  */
 
 export { EditRepositoryModal } from "./EditRepositoryModal";
+export { useRepositoryDetail, type RepositoryTab } from "./useRepositoryDetail";
+export { RepositoryHeader } from "./RepositoryHeader";
+export { RepositoryInfoCard } from "./RepositoryInfoCard";
+export { GitProviderCard } from "./GitProviderCard";
+export { RepositoryActionsCard } from "./RepositoryActionsCard";
+export { BranchesTab } from "./BranchesTab";
+export { RepositoryTabs } from "./RepositoryTabs";
+export { WebhookSettingsCard } from "./WebhookSettingsCard";

@@ -50,6 +50,15 @@ const (
 	EventAutopilotCreated       EventType = "autopilot:created"
 	EventAutopilotTerminated    EventType = "autopilot:terminated"
 	EventAutopilotThinking      EventType = "autopilot:thinking"
+
+	// MergeRequest events
+	EventMRCreated EventType = "mr:created"
+	EventMRUpdated EventType = "mr:updated"
+	EventMRMerged  EventType = "mr:merged"
+	EventMRClosed  EventType = "mr:closed"
+
+	// Pipeline events
+	EventPipelineUpdated EventType = "pipeline:updated"
 )
 
 // ===== Notification Events (Category: notification) =====
@@ -244,4 +253,32 @@ type AutopilotHelpRequestData struct {
 type AutopilotHelpSuggestionData struct {
 	Action string `json:"action"`
 	Label  string `json:"label"`
+}
+
+// MREventData represents the payload for merge request events
+type MREventData struct {
+	MRID           int64  `json:"mr_id"`
+	MRIID          int    `json:"mr_iid"`
+	MRURL          string `json:"mr_url"`
+	SourceBranch   string `json:"source_branch"`
+	TargetBranch   string `json:"target_branch,omitempty"`
+	Title          string `json:"title,omitempty"`
+	State          string `json:"state"`
+	Action         string `json:"action,omitempty"` // opened, updated, merged, closed
+	TicketID       *int64 `json:"ticket_id,omitempty"`
+	PodID          *int64 `json:"pod_id,omitempty"`
+	RepositoryID   int64  `json:"repository_id"`
+	PipelineStatus string `json:"pipeline_status,omitempty"`
+}
+
+// PipelineEventData represents the payload for pipeline events
+type PipelineEventData struct {
+	MRID           int64  `json:"mr_id,omitempty"`
+	PipelineID     int64  `json:"pipeline_id"`
+	PipelineStatus string `json:"pipeline_status"`
+	PipelineURL    string `json:"pipeline_url,omitempty"`
+	SourceBranch   string `json:"source_branch,omitempty"`
+	TicketID       *int64 `json:"ticket_id,omitempty"`
+	PodID          *int64 `json:"pod_id,omitempty"`
+	RepositoryID   int64  `json:"repository_id"`
 }

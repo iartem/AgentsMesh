@@ -52,6 +52,9 @@ export type {
   RepositoryData,
   CreateRepositoryRequest,
   UpdateRepositoryRequest,
+  WebhookStatus,
+  WebhookResult,
+  WebhookSecretResponse,
 } from "./repository";
 
 // User Repository Provider (Personal Settings)

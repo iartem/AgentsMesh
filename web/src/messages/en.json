@@ -1430,6 +1430,7 @@
       "channels": "Channels",
       "activity": "Activity",
       "autopilot": "Autopilot",
+      "delivery": "Delivery",
       "noOutput": "No output yet",
       "noProblems": "No problems detected",
       "noChannels": "No active channels",
@@ -1442,7 +1443,16 @@
       "outgoingBindings": "Outgoing Bindings",
       "currentPod": "This Pod",
       "sendMessagePlaceholder": "Send a message...",
-      "channelDocument": "Channel Document"
+      "channelDocument": "Channel Document",
+      "deliveryTab": {
+        "notAvailable": "Delivery status not available",
+        "requiresRepoBranch": "Requires repository and branch",
+        "loading": "Loading merge requests...",
+        "loadError": "Failed to load",
+        "noMergeRequests": "No merge requests",
+        "mrCount": "{count} merge request(s)",
+        "untitled": "Untitled"
+      }
     },
     "createPod": {
       "title": "Create New Pod",
@@ -1713,6 +1723,24 @@
       "updateFailed": "Failed to update repository. Please try again.",
       "saving": "Saving...",
       "saveChanges": "Save Changes"
+    },
+    "webhook": {
+      "title": "Webhook Settings",
+      "loading": "Loading webhook status...",
+      "status": {
+        "registered": "Registered",
+        "needsManualSetup": "Needs Manual Setup",
+        "notRegistered": "Not Registered"
+      },
+      "events": "Events",
+      "reregister": "Re-register",
+      "delete": "Delete Webhook",
+      "manualSetupInstructions": "Automatic webhook registration is not available. Please configure the webhook manually in your Git provider settings using the information below.",
+      "markConfigured": "I've configured it",
+      "tryAgain": "Try Again",
+      "notRegisteredDescription": "Webhook is not registered. Register to receive PR/MR and Pipeline status updates.",
+      "register": "Register Webhook",
+      "retry": "Retry"
     }
   },
   "runners": {

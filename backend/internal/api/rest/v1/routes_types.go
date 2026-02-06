@@ -37,6 +37,7 @@ type Services struct {
 	CredentialProfile *agent.CredentialProfileService
 	UserConfig        *agent.UserConfigService
 	Repository        *repository.Service
+	Webhook           *repository.WebhookService // Webhook management for repositories
 	Runner            *runner.Service
 	RunnerConnMgr     *runner.RunnerConnectionManager // Runner gRPC connection manager
 	PodCoordinator    *runner.PodCoordinator          // Pod lifecycle coordinator
@@ -46,6 +47,7 @@ type Services struct {
 	Channel           *channel.Service
 	Binding           *binding.Service
 	Ticket            *ticket.Service
+	MRSync            *ticket.MRSyncService // MR sync for webhook events
 	Mesh              *mesh.Service
 	AgentPodSettings   *agentpod.SettingsService    // AgentPod user settings
 	AgentPodAIProvider *agentpod.AIProviderService  // AgentPod AI provider management

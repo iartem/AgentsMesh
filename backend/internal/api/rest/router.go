@@ -89,7 +89,24 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 
 		// Webhook endpoints (no auth required, use token verification)
 		// Use shared billing service to ensure mock provider sessions are shared
-		webhookRouter := webhooks.NewWebhookRouterWithBillingSvc(db, cfg, logger, svc.Billing)
+		// Inject services for MR/Pipeline event processing
+		webhookOpts := []webhooks.WebhookRouterOption{}
+		if svc.Repository != nil {
+			webhookOpts = append(webhookOpts, webhooks.WithRepositoryService(svc.Repository))
+		}
+		if svc.Webhook != nil {
+			webhookOpts = append(webhookOpts, webhooks.WithWebhookService(svc.Webhook))
+		}
+		if svc.MRSync != nil {
+			webhookOpts = append(webhookOpts, webhooks.WithMRSyncService(svc.MRSync))
+		}
+		if svc.Pod != nil {
+			webhookOpts = append(webhookOpts, webhooks.WithPodService(svc.Pod))
+		}
+		if svc.EventBus != nil {
+			webhookOpts = append(webhookOpts, webhooks.WithEventBus(svc.EventBus))
+		}
+		webhookRouter := webhooks.NewWebhookRouterWithBillingSvc(db, cfg, logger, svc.Billing, webhookOpts...)
 		webhookRouter.RegisterRoutes(apiV1.Group("/webhooks"))
 
 		// Public invitation routes (token-based access)

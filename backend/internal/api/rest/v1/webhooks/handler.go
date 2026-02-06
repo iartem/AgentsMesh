@@ -15,6 +15,11 @@ type WebhookContext struct {
 	ObjectKind string
 	ProjectID  string
 
+	// Organization and Repository info (from URL params)
+	OrgSlug        string
+	RepoID         int64
+	OrganizationID int64
+
 	// Pipeline-specific
 	PipelineID     int64
 	PipelineStatus string

@@ -2,17 +2,31 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
 import { usePodStore, Pod } from "../pod";
 
-// Mock the pod API
-vi.mock("@/lib/api", () => ({
-  podApi: {
-    list: vi.fn(),
-    get: vi.fn(),
-    create: vi.fn(),
-    terminate: vi.fn(),
-  },
-}));
+// Mock the pod API with inline class definition
+vi.mock("@/lib/api", () => {
+  // Define MockApiError class inline to avoid hoisting issues
+  class MockApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.name = "ApiError";
+      this.status = status;
+    }
+  }
 
-import { podApi } from "@/lib/api";
+  return {
+    podApi: {
+      list: vi.fn(),
+      get: vi.fn(),
+      create: vi.fn(),
+      terminate: vi.fn(),
+    },
+    ApiError: MockApiError,
+  };
+});
+
+import { podApi, ApiError } from "@/lib/api";
+const MockApiError = ApiError as unknown as new (message: string, status: number) => Error & { status: number };
 
 const mockPod: Pod = {
   id: 1,
@@ -316,16 +330,32 @@ describe("Pod Store", () => {
     });
 
     it("should handle terminate error", async () => {
-      vi.mocked(podApi.terminate).mockRejectedValue({ message: "Terminate failed" });
+      const error = new MockApiError("Terminate failed", 500);
+      vi.mocked(podApi.terminate).mockRejectedValue(error);
 
       await expect(
         act(async () => {
           await usePodStore.getState().terminatePod("pod-abc-123");
         })
-      ).rejects.toEqual({ message: "Terminate failed" });
+      ).rejects.toThrow("Terminate failed");
 
       const state = usePodStore.getState();
       expect(state.error).toBe("Terminate failed");
+    });
+
+    it("should treat 404 as already terminated", async () => {
+      const error = new MockApiError("Not found", 404);
+      vi.mocked(podApi.terminate).mockRejectedValue(error);
+
+      // Should not throw for 404
+      await act(async () => {
+        await usePodStore.getState().terminatePod("pod-abc-123");
+      });
+
+      const state = usePodStore.getState();
+      // Pod should still be marked as terminated locally
+      expect(state.pods[0].status).toBe("terminated");
+      expect(state.error).toBeNull();
     });
   });
 

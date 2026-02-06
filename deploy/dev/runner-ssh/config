@@ -1,0 +1,10 @@
+# SSH Configuration for AgentsMesh Dev Runner
+# GitLab corporate server uses non-standard SSH port
+
+Host gitlab.corp.signalrender.com
+    HostName gitlab.corp.signalrender.com
+    Port 2222
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new

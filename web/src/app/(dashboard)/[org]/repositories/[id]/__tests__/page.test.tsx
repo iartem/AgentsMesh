@@ -24,7 +24,11 @@ vi.mock("@/lib/api", () => ({
     delete: vi.fn(),
     listBranches: vi.fn(),
     syncBranches: vi.fn(),
-    setupWebhook: vi.fn(),
+    registerWebhook: vi.fn(),
+    getWebhookStatus: vi.fn(),
+    getWebhookSecret: vi.fn(),
+    deleteWebhook: vi.fn(),
+    markWebhookConfigured: vi.fn(),
   },
 }));
 
@@ -59,14 +63,23 @@ describe("RepositoryDetailPage", () => {
     mockRepositoryApi.syncBranches.mockResolvedValue({
       branches: mockBranches,
     });
-    mockRepositoryApi.setupWebhook.mockResolvedValue({
-      message: "Webhook created",
-      webhook_url: "https://api.example.com/webhooks/123",
+    mockRepositoryApi.registerWebhook.mockResolvedValue({
+      result: {
+        repo_id: 123,
+        registered: true,
+        webhook_id: "wh_123",
+        needs_manual_setup: false,
+      },
+    });
+    mockRepositoryApi.getWebhookStatus.mockResolvedValue({
+      webhook_status: {
+        registered: false,
+        is_active: false,
+        needs_manual_setup: false,
+      },
     });
     mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
     mockRepositoryApi.update.mockResolvedValue({ repository: mockRepository });
-    // Mock window.alert (confirm is no longer needed as we use ConfirmDialog)
-    vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -226,12 +239,12 @@ describe("RepositoryDetailPage", () => {
       });
     });
 
-    it("should show actions section", async () => {
+    it("should show webhook settings section", async () => {
       render(<RepositoryDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("Actions")).toBeInTheDocument();
-        expect(screen.getByText("Setup Webhook")).toBeInTheDocument();
+        expect(screen.getByText("Webhook Settings")).toBeInTheDocument();
+        expect(screen.getByText("Register Webhook")).toBeInTheDocument();
       });
     });
   });
@@ -343,33 +356,52 @@ describe("RepositoryDetailPage", () => {
   });
 
   describe("webhook setup", () => {
-    it("should call setupWebhook API when button clicked", async () => {
+    it("should call registerWebhook API when button clicked", async () => {
       render(<RepositoryDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("Setup Webhook")).toBeInTheDocument();
+        expect(screen.getByText("Register Webhook")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Setup Webhook"));
+      fireEvent.click(screen.getByText("Register Webhook"));
 
       await waitFor(() => {
-        expect(mockRepositoryApi.setupWebhook).toHaveBeenCalledWith(1);
+        expect(mockRepositoryApi.registerWebhook).toHaveBeenCalledWith(1);
       });
     });
 
-    it("should show alert with webhook info", async () => {
+    it("should refresh webhook status after successful registration", async () => {
+      // Initial status: not registered
+      mockRepositoryApi.getWebhookStatus.mockResolvedValueOnce({
+        webhook_status: {
+          registered: false,
+          is_active: false,
+          needs_manual_setup: false,
+        },
+      });
+
+      // After registration: registered and active
+      mockRepositoryApi.getWebhookStatus.mockResolvedValueOnce({
+        webhook_status: {
+          registered: true,
+          is_active: true,
+          needs_manual_setup: false,
+          webhook_id: "wh_123",
+        },
+      });
+
       render(<RepositoryDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("Setup Webhook")).toBeInTheDocument();
+        expect(screen.getByText("Register Webhook")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Setup Webhook"));
+      fireEvent.click(screen.getByText("Register Webhook"));
 
+      // Should refresh status after registration
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith(
-          expect.stringContaining("Webhook created")
-        );
+        // getWebhookStatus called twice: once on load, once after registration
+        expect(mockRepositoryApi.getWebhookStatus).toHaveBeenCalledTimes(2);
       });
     });
   });

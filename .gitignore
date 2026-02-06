@@ -77,6 +77,14 @@ relay/coverage.html
 .docker/
 
 # =========================
+# Dev environment secrets
+# =========================
+# SSH private keys for dev runner (keep public key for reference)
+deploy/dev/runner-ssh/id_*
+!deploy/dev/runner-ssh/id_*.pub
+deploy/dev/runner-ssh/known_hosts
+
+# =========================
 # Test artifacts
 # =========================
 *.out

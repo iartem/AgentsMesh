@@ -7,12 +7,12 @@ import (
 
 // RepositoryHandler handles repository-related requests
 type RepositoryHandler struct {
-	repositoryService *repository.Service
+	repositoryService repository.RepositoryServiceInterface
 	billingService    *billing.Service
 }
 
 // NewRepositoryHandler creates a new repository handler
-func NewRepositoryHandler(repositoryService *repository.Service, billingService ...*billing.Service) *RepositoryHandler {
+func NewRepositoryHandler(repositoryService repository.RepositoryServiceInterface, billingService ...*billing.Service) *RepositoryHandler {
 	h := &RepositoryHandler{
 		repositoryService: repositoryService,
 	}

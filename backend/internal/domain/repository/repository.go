@@ -49,9 +49,12 @@ type Branch struct {
 
 // WebhookConfig represents webhook configuration for a repository
 type WebhookConfig struct {
-	ID        string   `json:"id"`
-	URL       string   `json:"url"`
-	Events    []string `json:"events"`
-	IsActive  bool     `json:"is_active"`
-	CreatedAt string   `json:"created_at,omitempty"`
+	ID               string   `json:"id"`
+	URL              string   `json:"url"`
+	Secret           string   `json:"secret,omitempty"`            // Repository-specific webhook secret (not exposed in API responses)
+	Events           []string `json:"events"`
+	IsActive         bool     `json:"is_active"`
+	NeedsManualSetup bool     `json:"needs_manual_setup"`          // Whether manual configuration is required
+	LastError        string   `json:"last_error,omitempty"`        // Last error message
+	CreatedAt        string   `json:"created_at,omitempty"`
 }

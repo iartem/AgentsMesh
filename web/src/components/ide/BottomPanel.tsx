@@ -15,10 +15,12 @@ import {
   MessageSquare,
   Activity,
   Bot,
+  GitPullRequest,
 } from "lucide-react";
 import { AutopilotPanelContent } from "@/components/autopilot";
 import { useAutopilotStore } from "@/stores/autopilot";
-import { ChannelsTabContent, ActivityTabContent } from "./BottomPanel/index";
+import { usePodStore } from "@/stores/pod";
+import { ChannelsTabContent, ActivityTabContent, DeliveryTabContent } from "./BottomPanel/index";
 
 interface BottomPanelProps {
   className?: string;
@@ -28,9 +30,10 @@ const TAB_ICONS: Record<BottomPanelTab, React.ReactNode> = {
   channels: <MessageSquare className="w-3.5 h-3.5" />,
   activity: <Activity className="w-3.5 h-3.5" />,
   autopilot: <Bot className="w-3.5 h-3.5" />,
+  delivery: <GitPullRequest className="w-3.5 h-3.5" />,
 };
 
-const TAB_IDS: BottomPanelTab[] = ["channels", "activity", "autopilot"];
+const TAB_IDS: BottomPanelTab[] = ["channels", "activity", "autopilot", "delivery"];
 
 export function BottomPanel({ className }: BottomPanelProps) {
   const t = useTranslations();
@@ -89,6 +92,13 @@ export function BottomPanel({ className }: BottomPanelProps) {
     const pane = panes.find((p) => p.id === activePane);
     return pane?.podKey ?? null;
   }, [activePane, panes]);
+
+  // Get current pod data for Delivery tab
+  const { pods } = usePodStore();
+  const currentPod = useMemo(() => {
+    if (!selectedPodKey) return null;
+    return pods.find((p) => p.pod_key === selectedPodKey) || null;
+  }, [selectedPodKey, pods]);
 
   // Get autopilot status for the selected pod
   const { getAutopilotControllerByPodKey } = useAutopilotStore();
@@ -315,6 +325,13 @@ export function BottomPanel({ className }: BottomPanelProps) {
           />
         )}
         {bottomPanelTab === "autopilot" && <AutopilotPanelContent podKey={selectedPodKey} />}
+        {bottomPanelTab === "delivery" && (
+          <DeliveryTabContent
+            selectedPodKey={selectedPodKey}
+            pod={currentPod}
+            t={t}
+          />
+        )}
       </div>
     </div>
   );

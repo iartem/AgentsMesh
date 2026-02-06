@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/repository"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
@@ -97,11 +98,12 @@ type Pod struct {
 	UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
 
 	// Associations
-	Runner          *runner.Runner         `gorm:"foreignKey:RunnerID" json:"runner,omitempty"`
-	AgentType       *agent.AgentType       `gorm:"foreignKey:AgentTypeID" json:"agent_type,omitempty"`
-	CustomAgentType *agent.CustomAgentType `gorm:"foreignKey:CustomAgentTypeID" json:"custom_agent_type,omitempty"`
-	Ticket          *ticket.Ticket         `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
-	CreatedBy       *user.User             `gorm:"foreignKey:CreatedByID" json:"created_by,omitempty"`
+	Runner          *runner.Runner             `gorm:"foreignKey:RunnerID" json:"runner,omitempty"`
+	AgentType       *agent.AgentType           `gorm:"foreignKey:AgentTypeID" json:"agent_type,omitempty"`
+	CustomAgentType *agent.CustomAgentType     `gorm:"foreignKey:CustomAgentTypeID" json:"custom_agent_type,omitempty"`
+	Repository      *repository.Repository     `gorm:"foreignKey:RepositoryID" json:"repository,omitempty"`
+	Ticket          *ticket.Ticket             `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
+	CreatedBy       *user.User                 `gorm:"foreignKey:CreatedByID" json:"created_by,omitempty"`
 }
 
 func (Pod) TableName() string {

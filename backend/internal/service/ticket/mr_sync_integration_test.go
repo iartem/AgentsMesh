@@ -209,7 +209,7 @@ func TestMRSyncServiceIntegration(t *testing.T) {
 		// Create MR
 		mr := &ticket.MergeRequest{
 			OrganizationID: 1,
-			TicketID:       tkt.ID,
+			TicketID:       &tkt.ID,
 			MRIID:          100,
 			MRURL:          "https://gitlab.com/org/error-repo/-/merge_requests/100",
 			SourceBranch:   "feature/test",
