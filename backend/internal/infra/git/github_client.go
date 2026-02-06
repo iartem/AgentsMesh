@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -61,6 +62,13 @@ func (p *GitHubProvider) doRequest(ctx context.Context, method, path string, bod
 	if resp.StatusCode == http.StatusForbidden {
 		resp.Body.Close()
 		return nil, ErrRateLimited
+	}
+
+	// Handle other 4xx/5xx errors
+	if resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("GitHub API error %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	return resp, nil

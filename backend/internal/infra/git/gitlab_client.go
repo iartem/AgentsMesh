@@ -63,5 +63,12 @@ func (p *GitLabProvider) doRequest(ctx context.Context, method, path string, bod
 		return nil, ErrRateLimited
 	}
 
+	// Handle other 4xx/5xx errors
+	if resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("GitLab API error %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
 	return resp, nil
 }
