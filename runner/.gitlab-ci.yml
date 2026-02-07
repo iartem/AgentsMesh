@@ -6,10 +6,9 @@
 #   - GITHUB_RELEASE_TOKEN: GitHub PAT with repo access to AgentsMesh/AgentsMeshRunner
 #
 # Required Runners:
-#   - Docker runner (for CLI builds)
-#   - macOS runner with tags: [macos, amd64] and [macos, arm64]
+#   - Docker runner with tags: [x86, docker] (for CLI builds and Linux desktop)
+#   - macOS runner with tags: [macos, xcode]
 #   - Windows runner with tag: [windows]
-#   - Linux runner with tag: [linux] (for desktop build with GTK)
 
 stages:
   - build
@@ -26,7 +25,7 @@ variables:
 
 build:cli:
   stage: build
-  tags: [amd64, docker]
+  tags: [x86, docker]
   image:
     name: goreleaser/goreleaser:latest
     entrypoint: [""]
@@ -98,7 +97,7 @@ build:desktop:macos:
 
 build:desktop:linux:
   stage: build
-  tags: [amd64, docker]
+  tags: [x86, docker]
   # Use Docker executor with GTK dependencies pre-installed
   # If using shell executor, ensure libgtk-3-dev and libappindicator3-dev are installed
   image: golang:${GO_VERSION}
@@ -198,7 +197,7 @@ package:macos-dmg:
 
 package:linux-archive:
   stage: package
-  tags: [amd64, docker]
+  tags: [x86, docker]
   image: alpine:latest
   needs:
     - job: build:desktop:linux
@@ -217,7 +216,7 @@ package:linux-archive:
 
 package:windows-archive:
   stage: package
-  tags: [amd64, docker]
+  tags: [x86, docker]
   image: alpine:latest
   needs:
     - job: build:desktop:windows
@@ -242,7 +241,7 @@ package:windows-archive:
 
 release:github:
   stage: release
-  tags: [amd64, docker]
+  tags: [x86, docker]
   image: alpine:latest
   needs:
     - job: build:cli
