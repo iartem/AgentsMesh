@@ -156,7 +156,7 @@ export default function RepositoriesPage() {
               <tr key={repo.id} className="hover:bg-muted/50">
                 <td className="px-4 py-3">
                   <Link
-                    href={`repositories/${repo.id}`}
+                    href={`./${repo.id}`}
                     className="font-medium hover:text-primary"
                   >
                     {repo.name}

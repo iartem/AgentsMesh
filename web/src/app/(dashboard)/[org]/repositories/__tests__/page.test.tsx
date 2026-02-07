@@ -478,7 +478,7 @@ describe("RepositoriesPage", () => {
       });
 
       const link = screen.getByRole("link", { name: "repo-one" });
-      expect(link).toHaveAttribute("href", "repositories/1");
+      expect(link).toHaveAttribute("href", "./1");
     });
 
     it("should have links to all repositories", async () => {
@@ -493,9 +493,9 @@ describe("RepositoriesPage", () => {
       const repoTwoLink = screen.getByRole("link", { name: "repo-two" });
       const inactiveLink = screen.getByRole("link", { name: "inactive-repo" });
 
-      expect(repoOneLink).toHaveAttribute("href", "repositories/1");
-      expect(repoTwoLink).toHaveAttribute("href", "repositories/2");
-      expect(inactiveLink).toHaveAttribute("href", "repositories/3");
+      expect(repoOneLink).toHaveAttribute("href", "./1");
+      expect(repoTwoLink).toHaveAttribute("href", "./2");
+      expect(inactiveLink).toHaveAttribute("href", "./3");
     });
   });
 
