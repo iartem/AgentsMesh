@@ -460,6 +460,7 @@ deploy:cn-prod:web-admin:
       when: manual
 
 # Deploy Relay to China Production
+# Note: Relay runs on cn-relay-01, not aliyun-s001
 deploy:cn-prod:relay:
   stage: deploy
   needs:
@@ -471,11 +472,10 @@ deploy:cn-prod:relay:
     DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
-    url: https://agentsmesh.cn
+    url: https://01.relay.agentsmesh.cn:8443
   script:
     - echo "Deploying Relay ${DEPLOY_VERSION} to China Production..."
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && git pull origin main"
-    - ssh root@aliyun-s001 "cd /opt/agentsmesh && ./deploy.sh cn-prod --service relay --version ${DEPLOY_VERSION}"
+    - ssh cn-relay-01 "cd /opt/relay && docker compose pull && docker compose up -d"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
