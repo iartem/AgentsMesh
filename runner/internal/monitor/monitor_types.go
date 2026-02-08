@@ -7,7 +7,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/process"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // Module logger for monitor
@@ -17,7 +17,7 @@ var log = logger.Monitor()
 type PodStatus struct {
 	PodID       string             `json:"pod_id"`
 	Pid         int                `json:"pid"`
-	AgentStatus terminal.AgentState `json:"agent_status"`
+	AgentStatus detector.AgentState `json:"agent_status"`
 	AgentPid    int                `json:"agent_pid,omitempty"`
 	IsRunning   bool               `json:"is_running"`
 	UpdatedAt   time.Time          `json:"updated_at"`

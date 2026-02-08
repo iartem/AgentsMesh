@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // StateDetector is an interface for detecting terminal/agent state.
@@ -15,11 +15,11 @@ import (
 // implementations like terminal.MultiSignalDetector.
 type StateDetector interface {
 	// DetectState analyzes and returns the current agent state.
-	DetectState() terminal.AgentState
+	DetectState() detector.AgentState
 	// GetState returns the current state without performing detection.
-	GetState() terminal.AgentState
+	GetState() detector.AgentState
 	// SetCallback sets the state change callback.
-	SetCallback(cb terminal.StateChangeCallback)
+	SetCallback(cb detector.StateChangeCallback)
 	// Reset resets the detector state.
 	Reset()
 	// OnOutput should be called when terminal output is received.
@@ -71,9 +71,9 @@ func NewStateDetectorCoordinator(cfg StateDetectorCoordinatorConfig) *StateDetec
 
 	// Setup callback if detector is provided
 	if cfg.Detector != nil {
-		cfg.Detector.SetCallback(func(newState, prevState terminal.AgentState) {
+		cfg.Detector.SetCallback(func(newState, prevState detector.AgentState) {
 			// Only trigger when transitioning from executing to waiting
-			if newState == terminal.StateWaiting && prevState == terminal.StateExecuting {
+			if newState == detector.StateWaiting && prevState == detector.StateExecuting {
 				if sdc.log != nil {
 					sdc.log.Debug("StateDetector: Pod transitioned to waiting",
 						"autopilot_key", sdc.autopilotKey,

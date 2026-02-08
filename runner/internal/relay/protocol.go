@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
 // Message types for Relay protocol
@@ -61,7 +61,7 @@ func DecodeMessage(data []byte) (*Message, error) {
 }
 
 // EncodeSnapshot encodes a terminal snapshot
-func EncodeSnapshot(snapshot *terminal.TerminalSnapshot) ([]byte, error) {
+func EncodeSnapshot(snapshot *vt.TerminalSnapshot) ([]byte, error) {
 	payload, err := json.Marshal(snapshot)
 	if err != nil {
 		return nil, err

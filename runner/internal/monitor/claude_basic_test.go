@@ -4,23 +4,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // Tests for constants and basic structs
 
 func TestAgentStateConstants(t *testing.T) {
-	if terminal.StateUnknown != "unknown" {
-		t.Errorf("StateUnknown: got %v, want unknown", terminal.StateUnknown)
+	if detector.StateUnknown != "unknown" {
+		t.Errorf("StateUnknown: got %v, want unknown", detector.StateUnknown)
 	}
-	if terminal.StateNotRunning != "not_running" {
-		t.Errorf("StateNotRunning: got %v, want not_running", terminal.StateNotRunning)
+	if detector.StateNotRunning != "not_running" {
+		t.Errorf("StateNotRunning: got %v, want not_running", detector.StateNotRunning)
 	}
-	if terminal.StateExecuting != "executing" {
-		t.Errorf("StateExecuting: got %v, want executing", terminal.StateExecuting)
+	if detector.StateExecuting != "executing" {
+		t.Errorf("StateExecuting: got %v, want executing", detector.StateExecuting)
 	}
-	if terminal.StateWaiting != "waiting" {
-		t.Errorf("StateWaiting: got %v, want waiting", terminal.StateWaiting)
+	if detector.StateWaiting != "waiting" {
+		t.Errorf("StateWaiting: got %v, want waiting", detector.StateWaiting)
 	}
 }
 
@@ -29,7 +29,7 @@ func TestPodStatusStruct(t *testing.T) {
 	status := PodStatus{
 		PodID:       "pod-1",
 		Pid:         12345,
-		AgentStatus: terminal.StateExecuting,
+		AgentStatus: detector.StateExecuting,
 		AgentPid:    67890,
 		IsRunning:   true,
 		UpdatedAt:   now,
@@ -43,7 +43,7 @@ func TestPodStatusStruct(t *testing.T) {
 		t.Errorf("Pid: got %v, want 12345", status.Pid)
 	}
 
-	if status.AgentStatus != terminal.StateExecuting {
+	if status.AgentStatus != detector.StateExecuting {
 		t.Errorf("AgentStatus: got %v, want executing", status.AgentStatus)
 	}
 

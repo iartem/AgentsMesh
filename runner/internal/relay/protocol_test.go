@@ -3,7 +3,7 @@ package relay
 import (
 	"testing"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
 func TestEncodeDecodeMessage(t *testing.T) {
@@ -90,7 +90,7 @@ func TestEncodePingPong(t *testing.T) {
 }
 
 func TestEncodeSnapshot(t *testing.T) {
-	snapshot := &terminal.TerminalSnapshot{
+	snapshot := &vt.TerminalSnapshot{
 		Cols:              80,
 		Rows:              24,
 		Lines:             []string{"line1", "line2"},

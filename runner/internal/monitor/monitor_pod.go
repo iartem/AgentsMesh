@@ -3,7 +3,7 @@ package monitor
 import (
 	"time"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // RegisterPod registers a pod for monitoring.
@@ -14,7 +14,7 @@ func (m *Monitor) RegisterPod(podID string, pid int) {
 	m.statuses[podID] = &PodStatus{
 		PodID:       podID,
 		Pid:         pid,
-		AgentStatus: terminal.StateUnknown,
+		AgentStatus: detector.StateUnknown,
 		IsRunning:   true,
 		UpdatedAt:   time.Now(),
 	}

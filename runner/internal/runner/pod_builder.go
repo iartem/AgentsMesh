@@ -12,6 +12,8 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/config"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/aggregator"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 	"github.com/anthropics/agentsmesh/runner/internal/workspace"
 )
 
@@ -51,7 +53,7 @@ type PodBuilder struct {
 	ptyLogDir        string
 
 	// OSC handler (called when OSC sequences are received)
-	oscHandler terminal.OSCHandler
+	oscHandler vt.OSCHandler
 
 	// Setup strategies (Strategy Pattern for OCP compliance)
 	// Strategies are tried in order; first matching strategy is used.
@@ -122,7 +124,7 @@ func (b *PodBuilder) WithPTYLogging(logDir string) *PodBuilder {
 }
 
 // WithOSCHandler sets the handler for OSC (Operating System Command) sequences.
-func (b *PodBuilder) WithOSCHandler(handler terminal.OSCHandler) *PodBuilder {
+func (b *PodBuilder) WithOSCHandler(handler vt.OSCHandler) *PodBuilder {
 	b.oscHandler = handler
 	return b
 }
@@ -192,25 +194,25 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 	}
 
 	// Create VirtualTerminal for terminal state management and snapshots
-	vt := terminal.NewVirtualTerminal(b.cols, b.rows, b.vtHistoryLimit)
+	virtualTerm := vt.NewVirtualTerminal(b.cols, b.rows, b.vtHistoryLimit)
 	if b.oscHandler != nil {
-		vt.SetOSCHandler(b.oscHandler)
+		virtualTerm.SetOSCHandler(b.oscHandler)
 	}
 
 	// Create SmartAggregator for adaptive frame rate output
-	aggregator := terminal.NewSmartAggregator(nil, nil,
-		terminal.WithFullRedrawThrottling(),
+	agg := aggregator.NewSmartAggregator(nil, nil,
+		aggregator.WithFullRedrawThrottling(),
 	)
 
 	// Set up PTY logging if enabled
-	var ptyLogger *terminal.PTYLogger
+	var ptyLogger *aggregator.PTYLogger
 	if b.enablePTYLogging && b.ptyLogDir != "" {
 		var logErr error
-		ptyLogger, logErr = terminal.NewPTYLogger(b.ptyLogDir, b.cmd.PodKey)
+		ptyLogger, logErr = aggregator.NewPTYLogger(b.ptyLogDir, b.cmd.PodKey)
 		if logErr != nil {
 			logger.Pod().Warn("Failed to create PTY logger", "pod_key", b.cmd.PodKey, "error", logErr)
 		} else {
-			aggregator.SetPTYLogger(ptyLogger)
+			agg.SetPTYLogger(ptyLogger)
 			logger.Pod().Info("PTY logging enabled for pod", "pod_key", b.cmd.PodKey, "log_dir", ptyLogger.LogDir())
 		}
 	}
@@ -223,8 +225,8 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		Branch:          branchName,
 		SandboxPath:     sandboxRoot,
 		Terminal:        term,
-		VirtualTerminal: vt,
-		Aggregator:      aggregator,
+		VirtualTerminal: virtualTerm,
+		Aggregator:      agg,
 		PTYLogger:       ptyLogger,
 		StartedAt:       time.Now(),
 		Status:          PodStatusInitializing,
@@ -243,11 +245,11 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		}()
 
 		var screenLines []string
-		if vt != nil {
-			screenLines = vt.Feed(data)
+		if virtualTerm != nil {
+			screenLines = virtualTerm.Feed(data)
 		}
 		go pod.NotifyStateDetectorWithScreen(len(data), screenLines)
-		aggregator.Write(data)
+		agg.Write(data)
 	})
 
 	logger.Pod().Info("Pod built", "pod_key", b.cmd.PodKey, "working_dir", workingDir, "cols", b.cols, "rows", b.rows)

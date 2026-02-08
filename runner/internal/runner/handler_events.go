@@ -3,11 +3,11 @@ package runner
 import (
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
 // createOSCHandler creates an OSC handler that sends terminal notifications to the server.
-func (h *RunnerMessageHandler) createOSCHandler(podKey string) terminal.OSCHandler {
+func (h *RunnerMessageHandler) createOSCHandler(podKey string) vt.OSCHandler {
 	return func(oscType int, params []string) {
 		log := logger.TerminalTrace()
 

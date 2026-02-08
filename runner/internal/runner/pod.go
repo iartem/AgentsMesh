@@ -7,6 +7,8 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/relay"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/aggregator"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
 // Pod represents an active terminal pod
@@ -18,15 +20,15 @@ type Pod struct {
 	Branch           string
 	SandboxPath      string
 	Terminal         *terminal.Terminal
-	VirtualTerminal  *terminal.VirtualTerminal  // Virtual terminal for state management and snapshots
-	Aggregator       *terminal.SmartAggregator  // Output aggregator for adaptive frame rate
+	VirtualTerminal  *vt.VirtualTerminal        // Virtual terminal for state management and snapshots
+	Aggregator       *aggregator.SmartAggregator // Output aggregator for adaptive frame rate
 	RelayClient      *relay.Client              // WebSocket client for Relay connection
 	relayMu          sync.RWMutex               // Protects RelayClient field
 	StartedAt        time.Time
 	Status           string              // Pod status - use statusMu for thread-safe access
 	statusMu         sync.RWMutex        // Protects Status field
 	TicketIdentifier string              // Ticket ID for worktree-based pods
-	PTYLogger        *terminal.PTYLogger // PTY logger for debugging (optional)
+	PTYLogger        *aggregator.PTYLogger // PTY logger for debugging (optional)
 
 	// StateDetector for multi-signal state detection (used by Autopilot)
 	stateDetector   *ManagedStateDetector

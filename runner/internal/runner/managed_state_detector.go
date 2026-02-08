@@ -6,18 +6,19 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
-// ManagedStateDetector wraps terminal.MultiSignalDetector and adds:
+// ManagedStateDetector wraps detector.MultiSignalDetector and adds:
 // - Background detection loop for timeout-based state transitions
 // - Lifecycle management (Start/Stop)
 // - Configuration of detection parameters
 //
 // This implements autopilot.StateDetector interface.
 type ManagedStateDetector struct {
-	detector *terminal.MultiSignalDetector
-	vt       *terminal.VirtualTerminal
+	detector *detector.MultiSignalDetector
+	vt       *vt.VirtualTerminal
 	ctx      context.Context
 	cancel   context.CancelFunc
 }
@@ -27,8 +28,8 @@ var _ autopilot.StateDetector = (*ManagedStateDetector)(nil)
 
 // NewManagedStateDetector creates a new managed state detector.
 // It starts a background goroutine to periodically run detection for timeout-based transitions.
-func NewManagedStateDetector(vt *terminal.VirtualTerminal) *ManagedStateDetector {
-	detector := terminal.NewMultiSignalDetector(terminal.MultiSignalConfig{
+func NewManagedStateDetector(vt *vt.VirtualTerminal) *ManagedStateDetector {
+	detector := detector.NewMultiSignalDetector(detector.MultiSignalConfig{
 		// Responsive detection thresholds
 		IdleThreshold:    500 * time.Millisecond,
 		ConfirmThreshold: 500 * time.Millisecond,
@@ -85,17 +86,17 @@ func (m *ManagedStateDetector) OnOSCTitle(title string) {
 }
 
 // DetectState analyzes and returns the current agent state.
-func (m *ManagedStateDetector) DetectState() terminal.AgentState {
+func (m *ManagedStateDetector) DetectState() detector.AgentState {
 	return m.detector.DetectState()
 }
 
 // GetState returns the current state without performing detection.
-func (m *ManagedStateDetector) GetState() terminal.AgentState {
+func (m *ManagedStateDetector) GetState() detector.AgentState {
 	return m.detector.GetState()
 }
 
 // SetCallback sets the state change callback.
-func (m *ManagedStateDetector) SetCallback(cb terminal.StateChangeCallback) {
+func (m *ManagedStateDetector) SetCallback(cb detector.StateChangeCallback) {
 	m.detector.SetCallback(cb)
 }
 

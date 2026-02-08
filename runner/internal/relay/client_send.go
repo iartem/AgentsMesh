@@ -3,11 +3,11 @@ package relay
 import (
 	"fmt"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
 
 // SendSnapshot sends a terminal snapshot to the relay
-func (c *Client) SendSnapshot(snapshot *terminal.TerminalSnapshot) error {
+func (c *Client) SendSnapshot(snapshot *vt.TerminalSnapshot) error {
 	data, err := EncodeSnapshot(snapshot)
 	if err != nil {
 		return fmt.Errorf("encode snapshot: %w", err)

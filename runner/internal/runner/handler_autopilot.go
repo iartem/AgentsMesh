@@ -7,7 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/monitor"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // OnCreateAutopilot handles Autopilot creation command from server.
@@ -79,7 +79,7 @@ func (h *RunnerMessageHandler) OnCreateAutopilot(cmd *runnerv1.CreateAutopilotCo
 	if h.runner.agentMonitor != nil {
 		subscriberID := "autopilot-" + cmd.AutopilotKey
 		h.runner.agentMonitor.Subscribe(subscriberID, func(status monitor.PodStatus) {
-			if status.PodID == podKey && status.AgentStatus == terminal.StateWaiting {
+			if status.PodID == podKey && status.AgentStatus == detector.StateWaiting {
 				ac.OnPodWaiting()
 			}
 		})

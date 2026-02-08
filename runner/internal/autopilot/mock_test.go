@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // MockPodController is a mock implementation of TargetPodController for testing
@@ -126,20 +126,20 @@ func (m *MockEventReporter) GetCreatedEvents() []*runnerv1.AutopilotCreatedEvent
 
 // MockStateDetector is a mock implementation of StateDetector for testing
 type MockStateDetector struct {
-	state           terminal.AgentState
+	state           detector.AgentState
 	stateMu         sync.RWMutex
-	callback        terminal.StateChangeCallback
+	callback        detector.StateChangeCallback
 	callbackMu      sync.RWMutex
 	detectCallCount atomic.Int32 // Track number of DetectState calls (atomic for race safety)
 }
 
 func NewMockStateDetector() *MockStateDetector {
 	return &MockStateDetector{
-		state: terminal.StateNotRunning,
+		state: detector.StateNotRunning,
 	}
 }
 
-func (m *MockStateDetector) DetectState() terminal.AgentState {
+func (m *MockStateDetector) DetectState() detector.AgentState {
 	m.detectCallCount.Add(1)
 	m.stateMu.RLock()
 	defer m.stateMu.RUnlock()
@@ -150,13 +150,13 @@ func (m *MockStateDetector) GetDetectCallCount() int {
 	return int(m.detectCallCount.Load())
 }
 
-func (m *MockStateDetector) GetState() terminal.AgentState {
+func (m *MockStateDetector) GetState() detector.AgentState {
 	m.stateMu.RLock()
 	defer m.stateMu.RUnlock()
 	return m.state
 }
 
-func (m *MockStateDetector) SetCallback(cb terminal.StateChangeCallback) {
+func (m *MockStateDetector) SetCallback(cb detector.StateChangeCallback) {
 	m.callbackMu.Lock()
 	defer m.callbackMu.Unlock()
 	m.callback = cb
@@ -165,10 +165,10 @@ func (m *MockStateDetector) SetCallback(cb terminal.StateChangeCallback) {
 func (m *MockStateDetector) Reset() {
 	m.stateMu.Lock()
 	defer m.stateMu.Unlock()
-	m.state = terminal.StateNotRunning
+	m.state = detector.StateNotRunning
 }
 
-func (m *MockStateDetector) SetState(state terminal.AgentState) {
+func (m *MockStateDetector) SetState(state detector.AgentState) {
 	m.stateMu.Lock()
 	prevState := m.state
 	m.state = state

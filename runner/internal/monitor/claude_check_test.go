@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // Tests for pod status checking and process inspection
@@ -33,7 +33,7 @@ func TestMonitorCheckPodNotRunning(t *testing.T) {
 		t.Error("pod should not be running")
 	}
 
-	if status.AgentStatus != terminal.StateNotRunning {
+	if status.AgentStatus != detector.StateNotRunning {
 		t.Errorf("AgentStatus: got %v, want not_running", status.AgentStatus)
 	}
 }
@@ -58,7 +58,7 @@ func TestMonitorCheckPodRunningNoAgent(t *testing.T) {
 		t.Error("pod should be running")
 	}
 
-	if status.AgentStatus != terminal.StateNotRunning {
+	if status.AgentStatus != detector.StateNotRunning {
 		t.Errorf("AgentStatus without agent child: got %v, want not_running", status.AgentStatus)
 	}
 }
@@ -86,7 +86,7 @@ func TestMonitorCheckPodWithAgentExecuting(t *testing.T) {
 		t.Errorf("AgentPid: got %v, want 67890", status.AgentPid)
 	}
 
-	if status.AgentStatus != terminal.StateExecuting {
+	if status.AgentStatus != detector.StateExecuting {
 		t.Errorf("AgentStatus: got %v, want executing", status.AgentStatus)
 	}
 }
@@ -109,7 +109,7 @@ func TestMonitorCheckPodWithAgentWaiting(t *testing.T) {
 	monitor.Stop()
 
 	status, _ := monitor.GetStatus("pod-1")
-	if status.AgentStatus != terminal.StateWaiting {
+	if status.AgentStatus != detector.StateWaiting {
 		t.Errorf("AgentStatus: got %v, want waiting", status.AgentStatus)
 	}
 }

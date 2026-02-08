@@ -3,7 +3,7 @@ package monitor
 import (
 	"time"
 
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
 // monitorLoop periodically checks all pod statuses.
@@ -34,7 +34,7 @@ func (m *Monitor) checkAllPods() {
 		// Check if shell process is still running
 		if !m.inspector.IsRunning(status.Pid) {
 			status.IsRunning = false
-			status.AgentStatus = terminal.StateNotRunning
+			status.AgentStatus = detector.StateNotRunning
 			status.AgentPid = 0
 		} else {
 			status.IsRunning = true
@@ -63,30 +63,30 @@ func (m *Monitor) checkAllPods() {
 }
 
 // getAgentStatus checks the status of agent process in the process tree.
-func (m *Monitor) getAgentStatus(shellPid int) (int, terminal.AgentState) {
+func (m *Monitor) getAgentStatus(shellPid int) (int, detector.AgentState) {
 	// First check if the shell process itself is an agent (claude/node)
 	// This happens when PTY directly runs agent (not via bash)
 	shellName := m.inspector.GetProcessName(shellPid)
 	if shellName == "claude" || shellName == "node" {
 		// The shell process IS the agent process
 		if m.hasActiveChildren(shellPid) {
-			return shellPid, terminal.StateExecuting
+			return shellPid, detector.StateExecuting
 		}
-		return shellPid, terminal.StateWaiting
+		return shellPid, detector.StateWaiting
 	}
 
 	// Otherwise, find agent process in the process tree
 	agentPid := m.findAgentProcess(shellPid)
 	if agentPid == 0 {
-		return 0, terminal.StateNotRunning
+		return 0, detector.StateNotRunning
 	}
 
 	// Check if agent has active child processes
 	if m.hasActiveChildren(agentPid) {
-		return agentPid, terminal.StateExecuting
+		return agentPid, detector.StateExecuting
 	}
 
-	return agentPid, terminal.StateWaiting
+	return agentPid, detector.StateWaiting
 }
 
 // findAgentProcess finds agent process in the process tree rooted at pid.
