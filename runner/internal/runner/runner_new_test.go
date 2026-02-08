@@ -203,8 +203,8 @@ func TestInitEnhancedComponentsDefaultShell(t *testing.T) {
 	r.initEnhancedComponents(cfg)
 
 	// Verify that enhanced components are initialized
-	if r.claudeMonitor == nil {
-		t.Error("claudeMonitor should be initialized")
+	if r.agentMonitor == nil {
+		t.Error("agentMonitor should be initialized")
 	}
 }
 

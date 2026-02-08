@@ -112,7 +112,7 @@ func TestBackgroundChecker_Run_PeriodicCheck(t *testing.T) {
 	}()
 
 	c.run(ctx)
-	_ = checkCount
+	_ = checkCount.Load() // Use Load() to avoid copying atomic value
 
 	// Verify running state is reset after context cancellation
 	assert.False(t, c.IsRunning())

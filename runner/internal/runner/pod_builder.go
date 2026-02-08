@@ -43,6 +43,16 @@ type PodBuilder struct {
 	rows int
 	cols int
 
+	// VirtualTerminal configuration
+	vtHistoryLimit int
+
+	// PTY logging configuration
+	enablePTYLogging bool
+	ptyLogDir        string
+
+	// OSC handler (called when OSC sequences are received)
+	oscHandler terminal.OSCHandler
+
 	// Setup strategies (Strategy Pattern for OCP compliance)
 	// Strategies are tried in order; first matching strategy is used.
 	setupStrategies []SetupStrategy
@@ -52,9 +62,10 @@ type PodBuilder struct {
 // This is the preferred constructor for new code.
 func NewPodBuilder(deps PodBuilderDeps) *PodBuilder {
 	b := &PodBuilder{
-		deps: deps,
-		rows: 24,
-		cols: 80,
+		deps:           deps,
+		rows:           24,
+		cols:           80,
+		vtHistoryLimit: 100, // Default scrollback history
 	}
 	// Register default setup strategies
 	b.setupStrategies = DefaultSetupStrategies(b)
@@ -103,6 +114,27 @@ func (b *PodBuilder) WithTerminalSize(cols, rows int) *PodBuilder {
 	return b
 }
 
+// WithPTYLogging enables PTY logging to the specified directory.
+func (b *PodBuilder) WithPTYLogging(logDir string) *PodBuilder {
+	b.enablePTYLogging = true
+	b.ptyLogDir = logDir
+	return b
+}
+
+// WithOSCHandler sets the handler for OSC (Operating System Command) sequences.
+func (b *PodBuilder) WithOSCHandler(handler terminal.OSCHandler) *PodBuilder {
+	b.oscHandler = handler
+	return b
+}
+
+// WithVirtualTerminalHistoryLimit sets the scrollback history limit.
+func (b *PodBuilder) WithVirtualTerminalHistoryLimit(limit int) *PodBuilder {
+	if limit > 0 {
+		b.vtHistoryLimit = limit
+	}
+	return b
+}
+
 // Build creates the pod.
 func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 	if b.cmd == nil {
@@ -145,8 +177,8 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		Env:      envVars,
 		Rows:     b.rows,
 		Cols:     b.cols,
-		OnOutput: nil, // Will be set by caller
-		OnExit:   nil, // Will be set by caller
+		OnOutput: nil, // Will be wired up after all components are created
+		OnExit:   nil, // Will be set by caller (MessageHandler)
 	})
 	if err != nil {
 		// Cleanup sandbox on failure
@@ -159,17 +191,64 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		}
 	}
 
-	// Create pod
-	pod := &Pod{
-		ID:          b.cmd.PodKey,
-		PodKey:      b.cmd.PodKey,
-		AgentType:   "", // Could be extracted from command if needed
-		Branch:      branchName,
-		SandboxPath: sandboxRoot,
-		Terminal:    term,
-		StartedAt:   time.Now(),
-		Status:      PodStatusInitializing,
+	// Create VirtualTerminal for terminal state management and snapshots
+	vt := terminal.NewVirtualTerminal(b.cols, b.rows, b.vtHistoryLimit)
+	if b.oscHandler != nil {
+		vt.SetOSCHandler(b.oscHandler)
 	}
+
+	// Create SmartAggregator for adaptive frame rate output
+	aggregator := terminal.NewSmartAggregator(nil, nil,
+		terminal.WithFullRedrawThrottling(),
+	)
+
+	// Set up PTY logging if enabled
+	var ptyLogger *terminal.PTYLogger
+	if b.enablePTYLogging && b.ptyLogDir != "" {
+		var logErr error
+		ptyLogger, logErr = terminal.NewPTYLogger(b.ptyLogDir, b.cmd.PodKey)
+		if logErr != nil {
+			logger.Pod().Warn("Failed to create PTY logger", "pod_key", b.cmd.PodKey, "error", logErr)
+		} else {
+			aggregator.SetPTYLogger(ptyLogger)
+			logger.Pod().Info("PTY logging enabled for pod", "pod_key", b.cmd.PodKey, "log_dir", ptyLogger.LogDir())
+		}
+	}
+
+	// Create pod with all components
+	pod := &Pod{
+		ID:              b.cmd.PodKey,
+		PodKey:          b.cmd.PodKey,
+		AgentType:       "", // Could be extracted from command if needed
+		Branch:          branchName,
+		SandboxPath:     sandboxRoot,
+		Terminal:        term,
+		VirtualTerminal: vt,
+		Aggregator:      aggregator,
+		PTYLogger:       ptyLogger,
+		StartedAt:       time.Now(),
+		Status:          PodStatusInitializing,
+	}
+
+	// Wire up output handler (integrates VirtualTerminal, StateDetector, and Aggregator)
+	podKey := b.cmd.PodKey
+	term.SetOutputHandler(func(data []byte) {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Terminal().Error("PANIC in OutputHandler recovered",
+					"pod_key", podKey,
+					"panic", fmt.Sprintf("%v", r),
+					"data_len", len(data))
+			}
+		}()
+
+		var screenLines []string
+		if vt != nil {
+			screenLines = vt.Feed(data)
+		}
+		go pod.NotifyStateDetectorWithScreen(len(data), screenLines)
+		aggregator.Write(data)
+	})
 
 	logger.Pod().Info("Pod built", "pod_key", b.cmd.PodKey, "working_dir", workingDir, "cols", b.cols, "rows", b.rows)
 

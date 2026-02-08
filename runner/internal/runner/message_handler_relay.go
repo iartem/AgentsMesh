@@ -124,18 +124,8 @@ func (h *RunnerMessageHandler) setupRelayClientHandlers(relayClient *relay.Clien
 			})
 		}
 		if pod.VirtualTerminal != nil {
-			termSnapshot := pod.VirtualTerminal.GetSnapshot()
-			relaySnapshot := &relay.TerminalSnapshot{
-				Cols:              uint16(termSnapshot.Cols),
-				Rows:              uint16(termSnapshot.Rows),
-				Lines:             termSnapshot.Lines,
-				SerializedContent: termSnapshot.SerializedContent,
-				CursorX:           termSnapshot.CursorX,
-				CursorY:           termSnapshot.CursorY,
-				CursorVisible:     termSnapshot.CursorVisible,
-				IsAltScreen:       termSnapshot.IsAltScreen,
-			}
-			relayClient.SendSnapshot(relaySnapshot)
+			snapshot := pod.VirtualTerminal.GetSnapshot()
+			relayClient.SendSnapshot(snapshot)
 		}
 		if pod.VirtualTerminal != nil && pod.VirtualTerminal.IsAltScreen() && pod.Terminal != nil {
 			go func() {

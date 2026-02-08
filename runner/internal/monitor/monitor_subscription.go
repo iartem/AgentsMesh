@@ -1,11 +1,5 @@
 package monitor
 
-// SetCallback sets the status change callback.
-// Deprecated: Use Subscribe/Unsubscribe for multi-subscriber support.
-func (m *Monitor) SetCallback(callback func(PodStatus)) {
-	m.Subscribe("default", callback)
-}
-
 // Subscribe registers a callback for status change notifications.
 // Multiple subscribers can be registered with unique IDs.
 // If the same ID is used, the previous callback will be replaced.

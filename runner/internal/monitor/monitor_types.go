@@ -7,29 +7,20 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/process"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Module logger for monitor
 var log = logger.Monitor()
 
-// ClaudeStatus represents the status of claude process.
-type ClaudeStatus string
-
-const (
-	StatusUnknown    ClaudeStatus = "unknown"
-	StatusNotRunning ClaudeStatus = "not_running"
-	StatusExecuting  ClaudeStatus = "executing"
-	StatusWaiting    ClaudeStatus = "waiting"
-)
-
 // PodStatus represents the full status of a pod.
 type PodStatus struct {
-	PodID        string       `json:"pod_id"`
-	Pid          int          `json:"pid"`
-	ClaudeStatus ClaudeStatus `json:"claude_status"`
-	ClaudePid    int          `json:"claude_pid,omitempty"`
-	IsRunning    bool         `json:"is_running"`
-	UpdatedAt    time.Time    `json:"updated_at"`
+	PodID       string             `json:"pod_id"`
+	Pid         int                `json:"pid"`
+	AgentStatus terminal.AgentState `json:"agent_status"`
+	AgentPid    int                `json:"agent_pid,omitempty"`
+	IsRunning   bool               `json:"is_running"`
+	UpdatedAt   time.Time          `json:"updated_at"`
 }
 
 // Monitor monitors pod processes for claude status.

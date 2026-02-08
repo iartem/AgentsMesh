@@ -27,10 +27,10 @@ type TerminatePodRequest struct {
 
 // PodInfo contains pod information for heartbeat messages.
 type PodInfo struct {
-	PodKey       string `json:"pod_key"`
-	Status       string `json:"status"`
-	ClaudeStatus string `json:"claude_status"`
-	Pid          int    `json:"pid"`
+	PodKey      string `json:"pod_key"`
+	Status      string `json:"status"`
+	AgentStatus string `json:"agent_status"`
+	Pid         int    `json:"pid"`
 }
 
 // RelayConnectionInfo contains relay connection information for heartbeat messages.

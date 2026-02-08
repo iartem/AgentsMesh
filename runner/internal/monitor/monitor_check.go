@@ -2,6 +2,8 @@ package monitor
 
 import (
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // monitorLoop periodically checks all pod statuses.
@@ -27,28 +29,28 @@ func (m *Monitor) checkAllPods() {
 
 	m.mu.Lock()
 	for podID, status := range m.statuses {
-		oldStatus := status.ClaudeStatus
+		oldStatus := status.AgentStatus
 
 		// Check if shell process is still running
 		if !m.inspector.IsRunning(status.Pid) {
 			status.IsRunning = false
-			status.ClaudeStatus = StatusNotRunning
-			status.ClaudePid = 0
+			status.AgentStatus = terminal.StateNotRunning
+			status.AgentPid = 0
 		} else {
 			status.IsRunning = true
 
-			// Check claude status
-			claudePid, claudeStatus := m.getClaudeStatus(status.Pid)
-			status.ClaudePid = claudePid
-			status.ClaudeStatus = claudeStatus
+			// Check agent status
+			agentPid, agentStatus := m.getAgentStatus(status.Pid)
+			status.AgentPid = agentPid
+			status.AgentStatus = agentStatus
 		}
 
 		status.UpdatedAt = time.Now()
 
 		// Collect changes for callback (called after releasing lock)
-		if oldStatus != status.ClaudeStatus {
-			log.Info("Claude status changed",
-				"pod_id", podID, "old_status", oldStatus, "new_status", status.ClaudeStatus)
+		if oldStatus != status.AgentStatus {
+			log.Info("Agent status changed",
+				"pod_id", podID, "old_status", oldStatus, "new_status", status.AgentStatus)
 			changes = append(changes, *status)
 		}
 	}
@@ -60,48 +62,48 @@ func (m *Monitor) checkAllPods() {
 	}
 }
 
-// getClaudeStatus checks the status of claude process in the process tree.
-func (m *Monitor) getClaudeStatus(shellPid int) (int, ClaudeStatus) {
-	// First check if the shell process itself is claude/node
-	// This happens when PTY directly runs claude (not via bash)
+// getAgentStatus checks the status of agent process in the process tree.
+func (m *Monitor) getAgentStatus(shellPid int) (int, terminal.AgentState) {
+	// First check if the shell process itself is an agent (claude/node)
+	// This happens when PTY directly runs agent (not via bash)
 	shellName := m.inspector.GetProcessName(shellPid)
 	if shellName == "claude" || shellName == "node" {
-		// The shell process IS the claude process
+		// The shell process IS the agent process
 		if m.hasActiveChildren(shellPid) {
-			return shellPid, StatusExecuting
+			return shellPid, terminal.StateExecuting
 		}
-		return shellPid, StatusWaiting
+		return shellPid, terminal.StateWaiting
 	}
 
-	// Otherwise, find claude process in the process tree
-	claudePid := m.findClaudeProcess(shellPid)
-	if claudePid == 0 {
-		return 0, StatusNotRunning
+	// Otherwise, find agent process in the process tree
+	agentPid := m.findAgentProcess(shellPid)
+	if agentPid == 0 {
+		return 0, terminal.StateNotRunning
 	}
 
-	// Check if claude has active child processes
-	if m.hasActiveChildren(claudePid) {
-		return claudePid, StatusExecuting
+	// Check if agent has active child processes
+	if m.hasActiveChildren(agentPid) {
+		return agentPid, terminal.StateExecuting
 	}
 
-	return claudePid, StatusWaiting
+	return agentPid, terminal.StateWaiting
 }
 
-// findClaudeProcess finds claude process in the process tree rooted at pid.
-// It looks for processes named "claude" or "node" (since Claude CLI is Node.js based).
-func (m *Monitor) findClaudeProcess(pid int) int {
+// findAgentProcess finds agent process in the process tree rooted at pid.
+// It looks for processes named "claude" or "node" (since many CLI agents are Node.js based).
+func (m *Monitor) findAgentProcess(pid int) int {
 	// Get direct children
 	children := m.inspector.GetChildProcesses(pid)
 
 	for _, childPid := range children {
 		name := m.inspector.GetProcessName(childPid)
-		// Claude CLI can appear as "claude" or "node" depending on how it's invoked
+		// Agent CLI can appear as "claude" or "node" depending on how it's invoked
 		if name == "claude" || name == "node" {
 			return childPid
 		}
 
 		// Recursively search in children
-		if found := m.findClaudeProcess(childPid); found != 0 {
+		if found := m.findAgentProcess(childPid); found != 0 {
 			return found
 		}
 	}

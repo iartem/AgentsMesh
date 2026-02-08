@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/gorilla/websocket"
 )
 
@@ -211,7 +212,7 @@ func TestSendSnapshot(t *testing.T) {
 	}
 	c.Start()
 
-	snapshot := &TerminalSnapshot{Cols: 80, Rows: 24}
+	snapshot := &terminal.TerminalSnapshot{Cols: 80, Rows: 24}
 	if err := c.SendSnapshot(snapshot); err != nil {
 		t.Errorf("SendSnapshot: %v", err)
 	}

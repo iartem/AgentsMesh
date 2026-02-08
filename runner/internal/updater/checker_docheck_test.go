@@ -46,7 +46,7 @@ func TestBackgroundChecker_DoCheck_CallsOnUpdate(t *testing.T) {
 
 	// DoCheck - will likely fail due to network, but callback setup is verified
 	c.doCheck(ctx)
-	_ = updateCalled // May or may not be called depending on network
+	_ = updateCalled.Load() // Use Load() to avoid copying atomic value
 }
 
 func TestBackgroundChecker_DoCheck_ClearsLastError(t *testing.T) {

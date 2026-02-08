@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Tests for pod status checking and process inspection
@@ -15,7 +17,7 @@ func TestMonitorCheckPodNotRunning(t *testing.T) {
 	// Register a pod with a non-running process
 	inspector.isRunning[12345] = false
 
-	monitor.SetCallback(func(status PodStatus) {
+	monitor.Subscribe("test", func(status PodStatus) {
 		// callback for status changes
 	})
 
@@ -31,16 +33,16 @@ func TestMonitorCheckPodNotRunning(t *testing.T) {
 		t.Error("pod should not be running")
 	}
 
-	if status.ClaudeStatus != StatusNotRunning {
-		t.Errorf("ClaudeStatus: got %v, want not_running", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateNotRunning {
+		t.Errorf("AgentStatus: got %v, want not_running", status.AgentStatus)
 	}
 }
 
-func TestMonitorCheckPodRunningNoClause(t *testing.T) {
+func TestMonitorCheckPodRunningNoAgent(t *testing.T) {
 	inspector := newMockInspector()
 	monitor := NewMonitorWithInspector(50*time.Millisecond, inspector)
 
-	// Register a pod with a running process but no claude child
+	// Register a pod with a running process but no agent child
 	inspector.isRunning[12345] = true
 	inspector.childProcesses[12345] = []int{} // No children
 
@@ -56,20 +58,20 @@ func TestMonitorCheckPodRunningNoClause(t *testing.T) {
 		t.Error("pod should be running")
 	}
 
-	if status.ClaudeStatus != StatusNotRunning {
-		t.Errorf("ClaudeStatus without claude child: got %v, want not_running", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateNotRunning {
+		t.Errorf("AgentStatus without agent child: got %v, want not_running", status.AgentStatus)
 	}
 }
 
-func TestMonitorCheckPodWithClaudeExecuting(t *testing.T) {
+func TestMonitorCheckPodWithAgentExecuting(t *testing.T) {
 	inspector := newMockInspector()
 	monitor := NewMonitorWithInspector(50*time.Millisecond, inspector)
 
-	// Register a pod with claude running and executing
+	// Register a pod with agent running and executing
 	inspector.isRunning[12345] = true
 	inspector.childProcesses[12345] = []int{67890}
 	inspector.processNames[67890] = "claude"
-	inspector.childProcesses[67890] = []int{11111} // claude has children
+	inspector.childProcesses[67890] = []int{11111} // agent has children
 	inspector.processStates[11111] = "R"           // child is running
 
 	monitor.RegisterPod("pod-1", 12345)
@@ -80,20 +82,20 @@ func TestMonitorCheckPodWithClaudeExecuting(t *testing.T) {
 	monitor.Stop()
 
 	status, _ := monitor.GetStatus("pod-1")
-	if status.ClaudePid != 67890 {
-		t.Errorf("ClaudePid: got %v, want 67890", status.ClaudePid)
+	if status.AgentPid != 67890 {
+		t.Errorf("AgentPid: got %v, want 67890", status.AgentPid)
 	}
 
-	if status.ClaudeStatus != StatusExecuting {
-		t.Errorf("ClaudeStatus: got %v, want executing", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateExecuting {
+		t.Errorf("AgentStatus: got %v, want executing", status.AgentStatus)
 	}
 }
 
-func TestMonitorCheckPodWithClaudeWaiting(t *testing.T) {
+func TestMonitorCheckPodWithAgentWaiting(t *testing.T) {
 	inspector := newMockInspector()
 	monitor := NewMonitorWithInspector(50*time.Millisecond, inspector)
 
-	// Register a pod with claude running but waiting (no active children)
+	// Register a pod with agent running but waiting (no active children)
 	inspector.isRunning[12345] = true
 	inspector.childProcesses[12345] = []int{67890}
 	inspector.processNames[67890] = "claude"
@@ -107,37 +109,37 @@ func TestMonitorCheckPodWithClaudeWaiting(t *testing.T) {
 	monitor.Stop()
 
 	status, _ := monitor.GetStatus("pod-1")
-	if status.ClaudeStatus != StatusWaiting {
-		t.Errorf("ClaudeStatus: got %v, want waiting", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateWaiting {
+		t.Errorf("AgentStatus: got %v, want waiting", status.AgentStatus)
 	}
 }
 
-func TestMonitorFindClaudeProcessRecursive(t *testing.T) {
+func TestMonitorFindAgentProcessRecursive(t *testing.T) {
 	inspector := newMockInspector()
-	monitor := NewMonitorWithInspector(time.Second, inspector)
+	m := NewMonitorWithInspector(time.Second, inspector)
 
-	// Claude is nested under another process
+	// Agent is nested under another process
 	inspector.childProcesses[1] = []int{2}
 	inspector.processNames[2] = "bash"
 	inspector.childProcesses[2] = []int{3}
 	inspector.processNames[3] = "claude"
 
-	claudePid := monitor.findClaudeProcess(1)
-	if claudePid != 3 {
-		t.Errorf("findClaudeProcess: got %v, want 3", claudePid)
+	agentPid := m.findAgentProcess(1)
+	if agentPid != 3 {
+		t.Errorf("findAgentProcess: got %v, want 3", agentPid)
 	}
 }
 
-func TestMonitorFindClaudeProcessNotFound(t *testing.T) {
+func TestMonitorFindAgentProcessNotFound(t *testing.T) {
 	inspector := newMockInspector()
-	monitor := NewMonitorWithInspector(time.Second, inspector)
+	m := NewMonitorWithInspector(time.Second, inspector)
 
 	inspector.childProcesses[1] = []int{2}
 	inspector.processNames[2] = "bash"
 
-	claudePid := monitor.findClaudeProcess(1)
-	if claudePid != 0 {
-		t.Errorf("findClaudeProcess: got %v, want 0", claudePid)
+	agentPid := m.findAgentProcess(1)
+	if agentPid != 0 {
+		t.Errorf("findAgentProcess: got %v, want 0", agentPid)
 	}
 }
 
@@ -148,7 +150,7 @@ func TestMonitorStatusChangeCallback(t *testing.T) {
 	var receivedStatuses []PodStatus
 	var mu sync.Mutex
 
-	monitor.SetCallback(func(status PodStatus) {
+	monitor.Subscribe("test", func(status PodStatus) {
 		mu.Lock()
 		receivedStatuses = append(receivedStatuses, status)
 		mu.Unlock()

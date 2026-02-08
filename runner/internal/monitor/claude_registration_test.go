@@ -3,6 +3,8 @@ package monitor
 import (
 	"testing"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Tests for pod registration and status retrieval
@@ -25,8 +27,8 @@ func TestMonitorRegisterPod(t *testing.T) {
 		t.Errorf("Pid: got %v, want 12345", status.Pid)
 	}
 
-	if status.ClaudeStatus != StatusUnknown {
-		t.Errorf("ClaudeStatus: got %v, want unknown", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateUnknown {
+		t.Errorf("AgentStatus: got %v, want unknown", status.AgentStatus)
 	}
 
 	if !status.IsRunning {

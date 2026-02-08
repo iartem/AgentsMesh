@@ -21,11 +21,11 @@ func (r *Runner) GetPodStatus(podKey string) (agentStatus string, podStatus stri
 		shellPid = pod.Terminal.PID()
 	}
 
-	// Get agent status from Claude monitor
-	if r.claudeMonitor != nil && shellPid > 0 {
-		status, exists := r.claudeMonitor.GetStatus(podKey)
+	// Get agent status from process monitor
+	if r.agentMonitor != nil && shellPid > 0 {
+		status, exists := r.agentMonitor.GetStatus(podKey)
 		if exists {
-			agentStatus = string(status.ClaudeStatus)
+			agentStatus = string(status.AgentStatus)
 			return agentStatus, podStatus, shellPid, true
 		}
 	}
@@ -40,9 +40,9 @@ func (r *Runner) GetPodStatus(podKey string) (agentStatus string, podStatus stri
 	return agentStatus, podStatus, shellPid, true
 }
 
-// GetClaudeMonitor returns the Claude process monitor.
-func (r *Runner) GetClaudeMonitor() *monitor.Monitor {
-	return r.claudeMonitor
+// GetAgentMonitor returns the agent process monitor.
+func (r *Runner) GetAgentMonitor() *monitor.Monitor {
+	return r.agentMonitor
 }
 
 // GetTerminalOutput returns the terminal output for a local pod.

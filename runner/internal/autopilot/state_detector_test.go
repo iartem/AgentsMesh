@@ -7,17 +7,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStateDetectorCoordinator_NewStateDetectorCoordinator(t *testing.T) {
 	mockDetector := NewMockStateDetector()
-	var calledWith AgentState
+	var calledWith terminal.AgentState
 
 	sdc := NewStateDetectorCoordinator(StateDetectorCoordinatorConfig{
 		Detector: mockDetector,
 		OnWaiting: func() {
-			calledWith = StateWaiting
+			calledWith = terminal.StateWaiting
 		},
 		CheckPeriod: 100 * time.Millisecond,
 		Logger:      nil,
@@ -27,11 +28,11 @@ func TestStateDetectorCoordinator_NewStateDetectorCoordinator(t *testing.T) {
 	assert.NotNil(t, sdc)
 
 	// Simulate state change from executing to waiting
-	mockDetector.SetState(StateExecuting)
-	mockDetector.SetState(StateWaiting)
+	mockDetector.SetState(terminal.StateExecuting)
+	mockDetector.SetState(terminal.StateWaiting)
 
 	// Callback should have been triggered
-	assert.Equal(t, StateWaiting, calledWith)
+	assert.Equal(t, terminal.StateWaiting, calledWith)
 }
 
 func TestStateDetectorCoordinator_DefaultCheckPeriod(t *testing.T) {
@@ -123,19 +124,19 @@ func TestStateDetectorCoordinator_CallbackOnlyOnExecutingToWaiting(t *testing.T)
 	})
 
 	// Start from not_running
-	mockDetector.SetState(StateNotRunning)
+	mockDetector.SetState(terminal.StateNotRunning)
 	assert.Equal(t, int32(0), callCount.Load())
 
 	// Transition to waiting (not from executing) - should NOT trigger
-	mockDetector.SetState(StateWaiting)
+	mockDetector.SetState(terminal.StateWaiting)
 	assert.Equal(t, int32(0), callCount.Load())
 
 	// Transition to executing
-	mockDetector.SetState(StateExecuting)
+	mockDetector.SetState(terminal.StateExecuting)
 	assert.Equal(t, int32(0), callCount.Load())
 
 	// Transition from executing to waiting - SHOULD trigger
-	mockDetector.SetState(StateWaiting)
+	mockDetector.SetState(terminal.StateWaiting)
 	// Note: callback is triggered in a goroutine, wait a bit
 	time.Sleep(10 * time.Millisecond)
 	assert.Equal(t, int32(1), callCount.Load())
@@ -172,22 +173,22 @@ func TestStateDetectorCoordinator_NilCallback(t *testing.T) {
 	})
 
 	// Should not panic when state changes
-	mockDetector.SetState(StateExecuting)
-	mockDetector.SetState(StateWaiting)
+	mockDetector.SetState(terminal.StateExecuting)
+	mockDetector.SetState(terminal.StateWaiting)
 
 	sdc.Stop()
 }
 
 // Test AgentState constants
 func TestAgentState_Constants(t *testing.T) {
-	assert.Equal(t, AgentState("not_running"), StateNotRunning)
-	assert.Equal(t, AgentState("executing"), StateExecuting)
-	assert.Equal(t, AgentState("waiting"), StateWaiting)
+	assert.Equal(t, terminal.AgentState("not_running"), terminal.StateNotRunning)
+	assert.Equal(t, terminal.AgentState("executing"), terminal.StateExecuting)
+	assert.Equal(t, terminal.AgentState("waiting"), terminal.StateWaiting)
 }
 
 func TestStateDetectorCoordinator_WithLogger(t *testing.T) {
 	mockDetector := NewMockStateDetector()
-	var calledWith AgentState
+	var calledWith terminal.AgentState
 
 	// Create a logger to cover the log branch
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -195,7 +196,7 @@ func TestStateDetectorCoordinator_WithLogger(t *testing.T) {
 	sdc := NewStateDetectorCoordinator(StateDetectorCoordinatorConfig{
 		Detector: mockDetector,
 		OnWaiting: func() {
-			calledWith = StateWaiting
+			calledWith = terminal.StateWaiting
 		},
 		CheckPeriod: 100 * time.Millisecond,
 		Logger:      logger,
@@ -205,11 +206,11 @@ func TestStateDetectorCoordinator_WithLogger(t *testing.T) {
 	assert.NotNil(t, sdc)
 
 	// Simulate state change from executing to waiting - should trigger log
-	mockDetector.SetState(StateExecuting)
-	mockDetector.SetState(StateWaiting)
+	mockDetector.SetState(terminal.StateExecuting)
+	mockDetector.SetState(terminal.StateWaiting)
 
 	// Callback should have been triggered
-	assert.Equal(t, StateWaiting, calledWith)
+	assert.Equal(t, terminal.StateWaiting, calledWith)
 
 	sdc.Stop()
 }

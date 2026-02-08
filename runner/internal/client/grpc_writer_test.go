@@ -73,7 +73,7 @@ func buildHeartbeatMessage(nodeID string, handler MessageHandler) *runnerv1.Runn
 			pods = append(pods, &runnerv1.PodInfo{
 				PodKey:      p.PodKey,
 				Status:      p.Status,
-				AgentStatus: p.ClaudeStatus,
+				AgentStatus: p.AgentStatus,
 			})
 		}
 
@@ -251,7 +251,7 @@ func TestBuildHeartbeatMessage_NodeIdIncluded(t *testing.T) {
 func TestBuildHeartbeatMessage_PodFieldsMapping(t *testing.T) {
 	handler := &mockHandlerWithRelayConnections{
 		pods: []PodInfo{
-			{PodKey: "pod-1", Status: "running", ClaudeStatus: "thinking", Pid: 1234},
+			{PodKey: "pod-1", Status: "running", AgentStatus: "thinking", Pid: 1234},
 		},
 		relayConnections: []RelayConnectionInfo{},
 	}

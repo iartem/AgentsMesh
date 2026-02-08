@@ -164,7 +164,7 @@ func (c *GRPCConnection) sendHeartbeat() {
 			pods = append(pods, &runnerv1.PodInfo{
 				PodKey:      p.PodKey,
 				Status:      p.Status,
-				AgentStatus: p.ClaudeStatus,
+				AgentStatus: p.AgentStatus,
 			})
 		}
 

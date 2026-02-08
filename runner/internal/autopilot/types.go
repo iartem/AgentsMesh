@@ -43,8 +43,9 @@ type EventReporter interface {
 	ReportAutopilotThinking(event *runnerv1.AutopilotThinkingEvent)
 }
 
-// PodController provides methods to interact with the controlled Pod.
-type PodController interface {
+// TargetPodController provides methods to interact with the controlled Pod.
+// This interface is implemented by runner.PodControllerImpl.
+type TargetPodController interface {
 	// SendTerminalText sends text to the pod's terminal.
 	SendTerminalText(text string) error
 	// GetWorkDir returns the pod's working directory.

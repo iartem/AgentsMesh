@@ -29,7 +29,7 @@ type AutopilotController struct {
 	config *runnerv1.AutopilotConfig
 
 	// Pod controller
-	podCtrl PodController
+	podCtrl TargetPodController
 
 	// MCP port for control process to connect to
 	mcpPort int
@@ -69,7 +69,7 @@ type Config struct {
 	AutopilotKey string
 	PodKey       string
 	ProtoConfig  *runnerv1.AutopilotConfig
-	PodCtrl      PodController
+	PodCtrl      TargetPodController
 	Reporter     EventReporter
 	MCPPort      int // MCP HTTP Server port for control process
 }

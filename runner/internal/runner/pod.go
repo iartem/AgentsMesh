@@ -29,8 +29,8 @@ type Pod struct {
 	PTYLogger        *terminal.PTYLogger // PTY logger for debugging (optional)
 
 	// StateDetector for multi-signal state detection (used by Autopilot)
-	stateDetector    *multiSignalDetectorAdapter
-	stateDetectorMu  sync.RWMutex
+	stateDetector   *ManagedStateDetector
+	stateDetectorMu sync.RWMutex
 
 	// Token refresh channel - used when relay token expires and needs to be refreshed
 	tokenRefreshCh   chan string
@@ -44,12 +44,6 @@ const (
 	PodStatusStopped      = "stopped"
 	PodStatusFailed       = "failed"
 )
-
-// NewVirtualTerminal creates a new VirtualTerminal.
-// This is a wrapper for terminal.NewVirtualTerminal to avoid importing terminal package in message_handler.
-func NewVirtualTerminal(cols, rows, historyLimit int) *terminal.VirtualTerminal {
-	return terminal.NewVirtualTerminal(cols, rows, historyLimit)
-}
 
 // SetStatus sets the pod status in a thread-safe manner
 func (p *Pod) SetStatus(status string) {
@@ -107,7 +101,7 @@ func (p *Pod) DisconnectRelay() {
 }
 
 // GetOrCreateStateDetector returns the state detector for this pod, creating one if needed.
-func (p *Pod) GetOrCreateStateDetector() *multiSignalDetectorAdapter {
+func (p *Pod) GetOrCreateStateDetector() *ManagedStateDetector {
 	p.stateDetectorMu.RLock()
 	if p.stateDetector != nil {
 		defer p.stateDetectorMu.RUnlock()
@@ -126,21 +120,9 @@ func (p *Pod) GetOrCreateStateDetector() *multiSignalDetectorAdapter {
 
 	// Create new detector if VirtualTerminal is available
 	if p.VirtualTerminal != nil {
-		p.stateDetector = newMultiSignalDetectorAdapter(p.VirtualTerminal)
+		p.stateDetector = NewManagedStateDetector(p.VirtualTerminal)
 	}
 	return p.stateDetector
-}
-
-// NotifyStateDetectorOutput notifies the state detector about new output.
-// Deprecated: Use NotifyStateDetectorWithScreen for single-direction data flow.
-func (p *Pod) NotifyStateDetectorOutput(bytes int) {
-	p.stateDetectorMu.RLock()
-	detector := p.stateDetector
-	p.stateDetectorMu.RUnlock()
-
-	if detector != nil {
-		detector.OnOutput(bytes)
-	}
 }
 
 // NotifyStateDetectorWithScreen notifies the state detector about new output

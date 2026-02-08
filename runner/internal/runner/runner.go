@@ -28,7 +28,7 @@ type Runner struct {
 	// Enhanced components
 	mcpManager    *mcp.Manager
 	mcpServer     *mcp.HTTPServer
-	claudeMonitor *monitor.Monitor
+	agentMonitor *monitor.Monitor
 
 	// Autopilot management
 	autopilots   map[string]*autopilot.AutopilotController
@@ -160,8 +160,8 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 	}()
 
 	// Initialize and start Claude monitor
-	r.claudeMonitor = monitor.NewMonitor(5 * time.Second)
-	r.claudeMonitor.Start()
+	r.agentMonitor = monitor.NewMonitor(5 * time.Second)
+	r.agentMonitor.Start()
 	log.Debug("Enhanced components initialized")
 }
 

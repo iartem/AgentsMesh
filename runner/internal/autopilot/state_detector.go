@@ -7,34 +7,19 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
-
-// AgentState represents the detected state of an AI agent.
-// This mirrors terminal.AgentState to avoid direct dependency.
-type AgentState string
-
-const (
-	// StateNotRunning indicates the agent is not running.
-	StateNotRunning AgentState = "not_running"
-	// StateExecuting indicates the agent is actively executing.
-	StateExecuting AgentState = "executing"
-	// StateWaiting indicates the agent is waiting for user input.
-	StateWaiting AgentState = "waiting"
-)
-
-// StateChangeCallback is called when the agent state changes.
-type StateChangeCallback func(newState, prevState AgentState)
 
 // StateDetector is an interface for detecting terminal/agent state.
-// This abstraction allows AutopilotController to be decoupled from the concrete
-// terminal.TerminalStateDetector implementation.
+// This abstraction allows AutopilotController to be decoupled from concrete
+// implementations like terminal.MultiSignalDetector.
 type StateDetector interface {
 	// DetectState analyzes and returns the current agent state.
-	DetectState() AgentState
+	DetectState() terminal.AgentState
 	// GetState returns the current state without performing detection.
-	GetState() AgentState
+	GetState() terminal.AgentState
 	// SetCallback sets the state change callback.
-	SetCallback(cb StateChangeCallback)
+	SetCallback(cb terminal.StateChangeCallback)
 	// Reset resets the detector state.
 	Reset()
 	// OnOutput should be called when terminal output is received.
@@ -86,9 +71,9 @@ func NewStateDetectorCoordinator(cfg StateDetectorCoordinatorConfig) *StateDetec
 
 	// Setup callback if detector is provided
 	if cfg.Detector != nil {
-		cfg.Detector.SetCallback(func(newState, prevState AgentState) {
+		cfg.Detector.SetCallback(func(newState, prevState terminal.AgentState) {
 			// Only trigger when transitioning from executing to waiting
-			if newState == StateWaiting && prevState == StateExecuting {
+			if newState == terminal.StateWaiting && prevState == terminal.StateExecuting {
 				if sdc.log != nil {
 					sdc.log.Debug("StateDetector: Pod transitioned to waiting",
 						"autopilot_key", sdc.autopilotKey,

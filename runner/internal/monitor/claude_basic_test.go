@@ -3,34 +3,36 @@ package monitor
 import (
 	"testing"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // Tests for constants and basic structs
 
-func TestClaudeStatusConstants(t *testing.T) {
-	if StatusUnknown != "unknown" {
-		t.Errorf("StatusUnknown: got %v, want unknown", StatusUnknown)
+func TestAgentStateConstants(t *testing.T) {
+	if terminal.StateUnknown != "unknown" {
+		t.Errorf("StateUnknown: got %v, want unknown", terminal.StateUnknown)
 	}
-	if StatusNotRunning != "not_running" {
-		t.Errorf("StatusNotRunning: got %v, want not_running", StatusNotRunning)
+	if terminal.StateNotRunning != "not_running" {
+		t.Errorf("StateNotRunning: got %v, want not_running", terminal.StateNotRunning)
 	}
-	if StatusExecuting != "executing" {
-		t.Errorf("StatusExecuting: got %v, want executing", StatusExecuting)
+	if terminal.StateExecuting != "executing" {
+		t.Errorf("StateExecuting: got %v, want executing", terminal.StateExecuting)
 	}
-	if StatusWaiting != "waiting" {
-		t.Errorf("StatusWaiting: got %v, want waiting", StatusWaiting)
+	if terminal.StateWaiting != "waiting" {
+		t.Errorf("StateWaiting: got %v, want waiting", terminal.StateWaiting)
 	}
 }
 
 func TestPodStatusStruct(t *testing.T) {
 	now := time.Now()
 	status := PodStatus{
-		PodID:        "pod-1",
-		Pid:          12345,
-		ClaudeStatus: StatusExecuting,
-		ClaudePid:    67890,
-		IsRunning:    true,
-		UpdatedAt:    now,
+		PodID:       "pod-1",
+		Pid:         12345,
+		AgentStatus: terminal.StateExecuting,
+		AgentPid:    67890,
+		IsRunning:   true,
+		UpdatedAt:   now,
 	}
 
 	if status.PodID != "pod-1" {
@@ -41,8 +43,8 @@ func TestPodStatusStruct(t *testing.T) {
 		t.Errorf("Pid: got %v, want 12345", status.Pid)
 	}
 
-	if status.ClaudeStatus != StatusExecuting {
-		t.Errorf("ClaudeStatus: got %v, want executing", status.ClaudeStatus)
+	if status.AgentStatus != terminal.StateExecuting {
+		t.Errorf("AgentStatus: got %v, want executing", status.AgentStatus)
 	}
 
 	if !status.IsRunning {
@@ -80,26 +82,6 @@ func TestNewMonitorWithInspector(t *testing.T) {
 
 	if monitor.inspector != inspector {
 		t.Error("inspector should be the provided one")
-	}
-}
-
-func TestMonitorSetCallback(t *testing.T) {
-	monitor := NewMonitor(time.Second)
-
-	callback := func(status PodStatus) {
-		// callback implementation
-	}
-
-	monitor.SetCallback(callback)
-
-	// SetCallback internally calls Subscribe("default", callback)
-	// Verify by checking subscribers map size
-	monitor.subMu.RLock()
-	hasDefaultSubscriber := monitor.subscribers["default"] != nil
-	monitor.subMu.RUnlock()
-
-	if !hasDefaultSubscriber {
-		t.Error("callback should be set as default subscriber")
 	}
 }
 

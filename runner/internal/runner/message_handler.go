@@ -7,7 +7,6 @@ import (
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
-	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 )
 
 // RunnerMessageHandler implements client.MessageHandler interface.
@@ -40,7 +39,7 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("max concurrent pods reached")
 	}
 
-	// Build pod
+	// Build pod with all components (SRP: PodBuilder handles all component creation)
 	cols := int(cmd.Cols)
 	rows := int(cmd.Rows)
 	if cols <= 0 {
@@ -52,7 +51,13 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 
 	builder := NewPodBuilderFromRunner(h.runner).
 		WithCommand(cmd).
-		WithTerminalSize(cols, rows)
+		WithTerminalSize(cols, rows).
+		WithOSCHandler(h.createOSCHandler(cmd.PodKey))
+
+	// Enable PTY logging if configured
+	if h.runner.cfg.LogPTY {
+		builder.WithPTYLogging(h.runner.cfg.GetLogPTYDir())
+	}
 
 	pod, err := builder.Build(ctx)
 	if err != nil {
@@ -64,49 +69,7 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		return fmt.Errorf("failed to build pod: %w", err)
 	}
 
-	// Create VirtualTerminal
-	pod.VirtualTerminal = NewVirtualTerminal(cols, rows, 100)
-
-	// Create SmartAggregator
-	podKey := cmd.PodKey
-	vt := pod.VirtualTerminal
-	vt.SetOSCHandler(h.createOSCHandler(podKey))
-
-	aggregator := terminal.NewSmartAggregator(nil, nil,
-		terminal.WithFullRedrawThrottling(),
-	)
-	pod.Aggregator = aggregator
-
-	// Set up PTY logging if enabled
-	if h.runner.cfg.LogPTY {
-		ptyLogger, err := terminal.NewPTYLogger(h.runner.cfg.GetLogPTYDir(), cmd.PodKey)
-		if err != nil {
-			log.Warn("Failed to create PTY logger", "pod_key", cmd.PodKey, "error", err)
-		} else {
-			aggregator.SetPTYLogger(ptyLogger)
-			pod.PTYLogger = ptyLogger
-			log.Info("PTY logging enabled for pod", "pod_key", cmd.PodKey, "log_dir", ptyLogger.LogDir())
-		}
-	}
-
-	// Set output handler
-	pod.Terminal.SetOutputHandler(func(data []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				logger.Terminal().Error("PANIC in OutputHandler recovered",
-					"pod_key", podKey,
-					"panic", fmt.Sprintf("%v", r),
-					"data_len", len(data))
-			}
-		}()
-
-		var screenLines []string
-		if vt != nil {
-			screenLines = vt.Feed(data)
-		}
-		go pod.NotifyStateDetectorWithScreen(len(data), screenLines)
-		aggregator.Write(data)
-	})
+	// Set exit handler (callback to MessageHandler for lifecycle events)
 	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey))
 
 	// Start terminal
@@ -124,8 +87,8 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 		orgSlug := h.conn.GetOrgSlug()
 		h.runner.mcpServer.RegisterPod(cmd.PodKey, orgSlug, nil, nil, cmd.LaunchCommand)
 	}
-	if h.runner.claudeMonitor != nil {
-		h.runner.claudeMonitor.RegisterPod(cmd.PodKey, pod.Terminal.PID())
+	if h.runner.agentMonitor != nil {
+		h.runner.agentMonitor.RegisterPod(cmd.PodKey, pod.Terminal.PID())
 	}
 
 	h.sendPodCreated(cmd.PodKey, pod.Terminal.PID(), pod.SandboxPath, pod.Branch, uint16(cols), uint16(rows))
@@ -159,8 +122,8 @@ func (h *RunnerMessageHandler) OnTerminatePod(req client.TerminatePodRequest) er
 	if h.runner.mcpServer != nil {
 		h.runner.mcpServer.UnregisterPod(req.PodKey)
 	}
-	if h.runner.claudeMonitor != nil {
-		h.runner.claudeMonitor.UnregisterPod(req.PodKey)
+	if h.runner.agentMonitor != nil {
+		h.runner.agentMonitor.UnregisterPod(req.PodKey)
 	}
 
 	h.sendPodTerminated(req.PodKey)
@@ -175,9 +138,9 @@ func (h *RunnerMessageHandler) OnListPods() []client.PodInfo {
 
 	for _, s := range pods {
 		info := client.PodInfo{
-			PodKey:       s.PodKey,
-			Status:       s.GetStatus(),
-			ClaudeStatus: "",
+			PodKey:      s.PodKey,
+			Status:      s.GetStatus(),
+			AgentStatus: "",
 		}
 		if s.Terminal != nil {
 			info.Pid = s.Terminal.PID()
