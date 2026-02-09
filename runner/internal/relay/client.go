@@ -54,6 +54,7 @@ type Client struct {
 	connected    atomic.Bool
 	connectedAt  atomic.Int64  // Unix milliseconds timestamp when connected
 	reconnecting atomic.Bool   // Prevents concurrent reconnect attempts
+	stopped      atomic.Bool   // Indicates client has been permanently stopped
 	stopCh       chan struct{} // Signals client shutdown (permanent)
 	connDoneCh   chan struct{} // Signals current connection is done (closed on disconnect)
 	stopOnce     sync.Once
@@ -62,6 +63,7 @@ type Client struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	wg           sync.WaitGroup
+	wgMu         sync.Mutex // Protects wg.Add() to ensure atomicity with stopped check
 	reconnectMu  sync.Mutex
 }
 

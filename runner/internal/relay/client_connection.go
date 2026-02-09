@@ -74,11 +74,23 @@ func (c *Client) connectInternal() error {
 }
 
 // Start starts the read and write loops
-func (c *Client) Start() {
+// Returns false if client is already stopped
+func (c *Client) Start() bool {
+	c.wgMu.Lock()
+	defer c.wgMu.Unlock()
+
+	// Check if already stopped before adding to WaitGroup
+	// This check + wg.Add must be atomic to prevent race with Stop()
+	if c.stopped.Load() {
+		c.logger.Debug("Client already stopped, not starting loops")
+		return false
+	}
+
 	c.logger.Info("Starting relay client loops")
 	c.wg.Add(2)
 	go c.readLoop()
 	go c.writeLoop()
+	return true
 }
 
 // Stop gracefully closes the connection
@@ -86,8 +98,13 @@ func (c *Client) Stop() {
 	c.stopOnce.Do(func() {
 		c.logger.Info("Stopping relay client")
 
-		// Mark as disconnected immediately so HasRelayClient() returns false
-		// This allows new subscribe_terminal to create a fresh connection
+		// Acquire wgMu to ensure no new wg.Add() can happen while we set stopped=true
+		// This guarantees that after this block, no new goroutines will be added to wg
+		c.wgMu.Lock()
+		c.stopped.Store(true)
+		c.wgMu.Unlock()
+
+		// Mark as disconnected so HasRelayClient() returns false
 		c.connected.Store(false)
 
 		close(c.stopCh)
@@ -96,12 +113,12 @@ func (c *Client) Stop() {
 		// Close connection to unblock readLoop immediately
 		c.connMu.Lock()
 		if c.conn != nil {
-			// Close connection to interrupt any pending reads
 			c.conn.Close()
 		}
 		c.connMu.Unlock()
 
 		// Wait for read/write loops to exit with timeout
+		// Since stopped=true and wgMu was held, no new loops can be started
 		done := make(chan struct{})
 		go func() {
 			c.wg.Wait()

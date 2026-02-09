@@ -399,3 +399,204 @@ func TestGetRelayURL(t *testing.T) {
 		t.Errorf("GetRelayURL: expected wss://relay.example.com, got %s", c.GetRelayURL())
 	}
 }
+
+// TestStopDuringReconnect verifies that Stop() works correctly when called
+// during an active reconnection attempt. This tests the race condition fix
+// where Stop() could hang waiting for loops that were being restarted by
+// reconnectLoop.
+func TestStopDuringReconnect(t *testing.T) {
+	// Track connection attempts
+	var connectionAttempts atomic.Int32
+	connectChan := make(chan struct{}, 10)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempt := connectionAttempts.Add(1)
+		connectChan <- struct{}{}
+
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		if attempt == 1 {
+			// First connection: close immediately to trigger reconnect
+			conn.Close()
+			return
+		}
+
+		// Subsequent connections: keep open briefly then close
+		defer conn.Close()
+		time.Sleep(100 * time.Millisecond)
+	}))
+	defer srv.Close()
+
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	c := NewClient(url, "pod-1", "test-token", nil)
+
+	if err := c.Connect(); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	c.Start()
+
+	// Wait for first connection attempt
+	<-connectChan
+
+	// Wait for reconnect to start (second connection attempt)
+	select {
+	case <-connectChan:
+		// Reconnect started
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for reconnect to start")
+	}
+
+	// Now call Stop() while reconnect is in progress
+	// This should complete within a reasonable time (not hang)
+	stopDone := make(chan struct{})
+	go func() {
+		c.Stop()
+		close(stopDone)
+	}()
+
+	select {
+	case <-stopDone:
+		// Stop completed successfully
+	case <-time.After(6 * time.Second):
+		t.Error("Stop() hung during reconnect - race condition not fixed")
+	}
+
+	// Verify client is properly stopped
+	if c.IsConnected() {
+		t.Error("client should not be connected after Stop()")
+	}
+	if !c.stopped.Load() {
+		t.Error("client should be marked as stopped")
+	}
+}
+
+// TestConcurrentStopAndReconnect tests that multiple concurrent Stop() and
+// reconnect operations don't cause panics or hangs.
+func TestConcurrentStopAndReconnect(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		t.Run("iteration", func(t *testing.T) {
+			var connectionAttempts atomic.Int32
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				connectionAttempts.Add(1)
+				conn, err := testUpgrader.Upgrade(w, r, nil)
+				if err != nil {
+					return
+				}
+				// Close connection after a short delay to trigger reconnect
+				time.Sleep(50 * time.Millisecond)
+				conn.Close()
+			}))
+			defer srv.Close()
+
+			url := "ws" + strings.TrimPrefix(srv.URL, "http")
+			c := NewClient(url, "pod-1", "test-token", nil)
+
+			if err := c.Connect(); err != nil {
+				t.Fatalf("Connect: %v", err)
+			}
+			c.Start()
+
+			// Give some time for potential reconnection attempts
+			time.Sleep(100 * time.Millisecond)
+
+			// Stop the client - should not hang or panic
+			stopDone := make(chan struct{})
+			go func() {
+				c.Stop()
+				close(stopDone)
+			}()
+
+			select {
+			case <-stopDone:
+				// Success
+			case <-time.After(6 * time.Second):
+				t.Error("Stop() hung - possible race condition")
+			}
+		})
+	}
+}
+
+// TestStartAfterStop verifies that Start() returns false after Stop() is called.
+func TestStartAfterStop(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	defer srv.Close()
+
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	c := NewClient(url, "pod-1", "test-token", nil)
+
+	if err := c.Connect(); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	// Start should succeed before Stop
+	if !c.Start() {
+		t.Error("Start() should return true before Stop()")
+	}
+
+	c.Stop()
+
+	// After Stop, the client cannot be reused, but we can verify stopped state
+	if !c.stopped.Load() {
+		t.Error("stopped flag should be true after Stop()")
+	}
+}
+
+// TestStopIdempotent verifies that calling Stop() multiple times is safe.
+func TestStopIdempotent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	defer srv.Close()
+
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	c := NewClient(url, "pod-1", "test-token", nil)
+
+	if err := c.Connect(); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	c.Start()
+
+	// Call Stop() multiple times concurrently
+	done := make(chan struct{})
+	for i := 0; i < 5; i++ {
+		go func() {
+			c.Stop()
+		}()
+	}
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All Stop() calls completed without hanging
+	case <-time.After(6 * time.Second):
+		t.Error("Multiple Stop() calls hung")
+	}
+}

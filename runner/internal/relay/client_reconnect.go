@@ -22,6 +22,15 @@ func isHandshakeError(err error) bool {
 func (c *Client) reconnectLoop() {
 	defer c.reconnecting.Store(false)
 
+	// Check if client is already stopped - no point in reconnecting
+	if c.stopped.Load() {
+		c.logger.Debug("Client stopped, skipping reconnect")
+		if c.onClose != nil {
+			c.onClose()
+		}
+		return
+	}
+
 	// First, ensure the old connection is properly closed
 	// The connDoneCh is already closed by readLoop's defer, which signals writeLoop to exit
 	c.connMu.Lock()
@@ -117,11 +126,32 @@ func (c *Client) reconnectLoop() {
 
 		c.logger.Info("Reconnected to relay successfully")
 
+		// Atomically check stopped and add to wg
+		// This prevents race condition where Stop() sets stopped=true
+		// between our check and wg.Add(2)
+		c.wgMu.Lock()
+		if c.stopped.Load() {
+			c.wgMu.Unlock()
+			c.logger.Info("Client stopped during reconnection, closing new connection")
+			c.connMu.Lock()
+			if c.conn != nil {
+				c.conn.Close()
+				c.conn = nil
+			}
+			c.connMu.Unlock()
+			if c.onClose != nil {
+				c.onClose()
+			}
+			return
+		}
+
 		// Create a new connDoneCh for the new connection
 		c.connDoneCh = make(chan struct{})
 
 		// Restart read/write loops
 		c.wg.Add(2)
+		c.wgMu.Unlock()
+
 		go c.readLoop()
 		go c.writeLoop()
 

@@ -8,8 +8,11 @@ import (
 
 func (c *Client) readLoop() {
 	c.logger.Debug("Read loop starting")
-	defer c.wg.Done()
 	defer func() {
+		// IMPORTANT: Call wg.Done() FIRST to ensure Stop() doesn't wait unnecessarily
+		// This must happen before any callbacks that might block
+		c.wg.Done()
+
 		c.connected.Store(false)
 		c.logger.Info("Read loop exited")
 

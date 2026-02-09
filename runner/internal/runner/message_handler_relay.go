@@ -49,7 +49,9 @@ func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalR
 		return fmt.Errorf("failed to connect to relay: %w", err)
 	}
 
-	relayClient.Start()
+	if !relayClient.Start() {
+		return fmt.Errorf("failed to start relay client: client already stopped")
+	}
 	pod.SetRelayClient(relayClient)
 
 	if pod.Aggregator != nil {
