@@ -197,3 +197,156 @@ func TestReconcilePodsCompletedNotAffected(t *testing.T) {
 		t.Errorf("completed pod should not be affected: got %q", status)
 	}
 }
+
+func TestReconcilePodsOrphanedCallsStatusChangeCallback(t *testing.T) {
+	pc, _, _ := setupPodEventHandlerDeps(t)
+
+	// Create a runner
+	r := &runner.Runner{
+		OrganizationID: 1,
+		NodeID:         "orphan-callback-node",
+		Status:         "online",
+	}
+	if err := pc.db.Create(r).Error; err != nil {
+		t.Fatalf("failed to create runner: %v", err)
+	}
+
+	// Create running pods
+	pc.db.Exec(`INSERT INTO pods (pod_key, runner_id, status) VALUES (?, ?, ?)`,
+		"orphan-cb-pod-1", r.ID, agentpod.StatusRunning)
+	pc.db.Exec(`INSERT INTO pods (pod_key, runner_id, status) VALUES (?, ?, ?)`,
+		"orphan-cb-pod-2", r.ID, agentpod.StatusRunning)
+
+	// Track callback invocations
+	var callbackCalls []struct {
+		podKey      string
+		status      string
+		agentStatus string
+	}
+	pc.SetStatusChangeCallback(func(podKey, status, agentStatus string) {
+		callbackCalls = append(callbackCalls, struct {
+			podKey      string
+			status      string
+			agentStatus string
+		}{podKey, status, agentStatus})
+	})
+
+	ctx := context.Background()
+	// Report empty pods - both should become orphaned
+	reportedPods := map[string]bool{}
+
+	pc.reconcilePods(ctx, r.ID, reportedPods)
+
+	// Verify both pods are orphaned in DB
+	var status1, status2 string
+	pc.db.Raw(`SELECT status FROM pods WHERE pod_key = ?`, "orphan-cb-pod-1").Scan(&status1)
+	pc.db.Raw(`SELECT status FROM pods WHERE pod_key = ?`, "orphan-cb-pod-2").Scan(&status2)
+	if status1 != agentpod.StatusOrphaned {
+		t.Errorf("pod-1 should be orphaned: got %q", status1)
+	}
+	if status2 != agentpod.StatusOrphaned {
+		t.Errorf("pod-2 should be orphaned: got %q", status2)
+	}
+
+	// Verify callback was called for each orphaned pod
+	if len(callbackCalls) != 2 {
+		t.Errorf("expected 2 callback calls, got %d", len(callbackCalls))
+	}
+
+	// Check each callback invocation
+	orphanedPods := make(map[string]bool)
+	for _, call := range callbackCalls {
+		if call.status != agentpod.StatusOrphaned {
+			t.Errorf("callback status should be %q, got %q", agentpod.StatusOrphaned, call.status)
+		}
+		if call.agentStatus != "" {
+			t.Errorf("callback agentStatus should be empty, got %q", call.agentStatus)
+		}
+		orphanedPods[call.podKey] = true
+	}
+
+	if !orphanedPods["orphan-cb-pod-1"] {
+		t.Error("callback should have been called for orphan-cb-pod-1")
+	}
+	if !orphanedPods["orphan-cb-pod-2"] {
+		t.Error("callback should have been called for orphan-cb-pod-2")
+	}
+}
+
+func TestReconcilePodsRestoredCallsStatusChangeCallback(t *testing.T) {
+	pc, _, _ := setupPodEventHandlerDeps(t)
+
+	// Create a runner
+	r := &runner.Runner{
+		OrganizationID: 1,
+		NodeID:         "restore-callback-node",
+		Status:         "online",
+	}
+	if err := pc.db.Create(r).Error; err != nil {
+		t.Fatalf("failed to create runner: %v", err)
+	}
+
+	// Create orphaned pods
+	pc.db.Exec(`INSERT INTO pods (pod_key, runner_id, status) VALUES (?, ?, ?)`,
+		"restore-cb-pod-1", r.ID, agentpod.StatusOrphaned)
+	pc.db.Exec(`INSERT INTO pods (pod_key, runner_id, status) VALUES (?, ?, ?)`,
+		"restore-cb-pod-2", r.ID, agentpod.StatusOrphaned)
+
+	// Track callback invocations
+	var callbackCalls []struct {
+		podKey      string
+		status      string
+		agentStatus string
+	}
+	pc.SetStatusChangeCallback(func(podKey, status, agentStatus string) {
+		callbackCalls = append(callbackCalls, struct {
+			podKey      string
+			status      string
+			agentStatus string
+		}{podKey, status, agentStatus})
+	})
+
+	ctx := context.Background()
+	// Report both orphaned pods as running
+	reportedPods := map[string]bool{
+		"restore-cb-pod-1": true,
+		"restore-cb-pod-2": true,
+	}
+
+	pc.reconcilePods(ctx, r.ID, reportedPods)
+
+	// Verify both pods are restored to running in DB
+	var status1, status2 string
+	pc.db.Raw(`SELECT status FROM pods WHERE pod_key = ?`, "restore-cb-pod-1").Scan(&status1)
+	pc.db.Raw(`SELECT status FROM pods WHERE pod_key = ?`, "restore-cb-pod-2").Scan(&status2)
+	if status1 != agentpod.StatusRunning {
+		t.Errorf("pod-1 should be running: got %q", status1)
+	}
+	if status2 != agentpod.StatusRunning {
+		t.Errorf("pod-2 should be running: got %q", status2)
+	}
+
+	// Verify callback was called for each restored pod
+	if len(callbackCalls) != 2 {
+		t.Errorf("expected 2 callback calls, got %d", len(callbackCalls))
+	}
+
+	// Check each callback invocation
+	restoredPods := make(map[string]bool)
+	for _, call := range callbackCalls {
+		if call.status != agentpod.StatusRunning {
+			t.Errorf("callback status should be %q, got %q", agentpod.StatusRunning, call.status)
+		}
+		if call.agentStatus != "" {
+			t.Errorf("callback agentStatus should be empty, got %q", call.agentStatus)
+		}
+		restoredPods[call.podKey] = true
+	}
+
+	if !restoredPods["restore-cb-pod-1"] {
+		t.Error("callback should have been called for restore-cb-pod-1")
+	}
+	if !restoredPods["restore-cb-pod-2"] {
+		t.Error("callback should have been called for restore-cb-pod-2")
+	}
+}

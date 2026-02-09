@@ -113,6 +113,11 @@ func (pc *PodCoordinator) reconcilePods(ctx context.Context, runnerID int64, rep
 				pc.logger.Info("restored orphaned pod reported by runner",
 					"pod_key", podKey,
 					"runner_id", runnerID)
+
+				// Notify status change for WebSocket event
+				if pc.onStatusChange != nil {
+					pc.onStatusChange(podKey, agentpod.StatusRunning, "")
+				}
 			}
 		}
 	}
@@ -147,6 +152,11 @@ func (pc *PodCoordinator) reconcilePods(ctx context.Context, runnerID int64, rep
 					"runner_id", runnerID)
 				// Unregister from terminal router
 				pc.terminalRouter.UnregisterPod(p.PodKey)
+
+				// Notify status change for WebSocket event
+				if pc.onStatusChange != nil {
+					pc.onStatusChange(p.PodKey, agentpod.StatusOrphaned, "")
+				}
 			}
 		}
 	}
