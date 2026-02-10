@@ -34,6 +34,7 @@ interface KanbanBoardProps {
   tickets: Ticket[];
   onStatusChange?: (identifier: string, newStatus: Status) => void;
   onTicketClick?: (ticket: Ticket) => void;
+  onCreatePodRequest?: (ticket: Ticket) => void;
   excludeStatuses?: Status[];
 }
 
@@ -174,6 +175,7 @@ export function KanbanBoard({
   tickets,
   onStatusChange,
   onTicketClick,
+  onCreatePodRequest,
   excludeStatuses = ["cancelled"],
 }: KanbanBoardProps) {
   const t = useTranslations();
@@ -303,6 +305,15 @@ export function KanbanBoard({
     // Update status if changed
     if (targetStatus && activeTicket.status !== targetStatus) {
       onStatusChange?.(activeId, targetStatus);
+
+      // Trigger create pod modal when moving from backlog/todo to in_progress
+      const podTriggerSources: Status[] = ["backlog", "todo"];
+      if (
+        targetStatus === "in_progress" &&
+        podTriggerSources.includes(activeTicket.status)
+      ) {
+        onCreatePodRequest?.(activeTicket);
+      }
     }
   };
 
