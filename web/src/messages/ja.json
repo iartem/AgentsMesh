@@ -547,6 +547,8 @@
       "problems": "問題",
       "channels": "チャンネル",
       "activity": "アクティビティ",
+      "delivery": "デリバリー",
+      "info": "情報",
       "noOutput": "出力はまだありません",
       "noProblems": "問題は検出されていません",
       "noChannels": "アクティブなチャンネルはありません",
@@ -559,7 +561,32 @@
       "outgoingBindings": "送信バインディング",
       "currentPod": "このPod",
       "sendMessagePlaceholder": "メッセージを送信...",
-      "channelDocument": "チャンネルドキュメント"
+      "channelDocument": "チャンネルドキュメント",
+      "deliveryTab": {
+        "notAvailable": "デリバリーステータスが利用できません",
+        "requiresRepoBranch": "リポジトリとブランチが必要です",
+        "loading": "マージリクエストを読み込み中...",
+        "loadError": "読み込みに失敗しました",
+        "noMergeRequests": "マージリクエストはありません",
+        "mrCount": "{count} 件のマージリクエスト",
+        "untitled": "無題"
+      },
+      "infoTab": {
+        "notFound": "Pod情報が利用できません",
+        "podKey": "Pod Key",
+        "agentType": "エージェント",
+        "agentStatus": "エージェント状態",
+        "runner": "Runner",
+        "repository": "リポジトリ",
+        "branch": "ブランチ",
+        "worktree": "ワークツリー",
+        "ticket": "チケット",
+        "createdBy": "作成者",
+        "startedAt": "開始",
+        "createdAt": "作成",
+        "error": "エラー",
+        "relatedPods": "{count} 個の関連Pod"
+      }
     },
     "createPod": {
       "title": "新しいPodを作成",

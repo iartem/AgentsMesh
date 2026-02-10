@@ -16,11 +16,12 @@ import {
   Activity,
   Bot,
   GitPullRequest,
+  Info,
 } from "lucide-react";
 import { AutopilotPanelContent } from "@/components/autopilot";
 import { useAutopilotStore } from "@/stores/autopilot";
 import { usePodStore } from "@/stores/pod";
-import { ChannelsTabContent, ActivityTabContent, DeliveryTabContent } from "./BottomPanel/index";
+import { ChannelsTabContent, ActivityTabContent, DeliveryTabContent, InfoTabContent } from "./BottomPanel/index";
 
 interface BottomPanelProps {
   className?: string;
@@ -31,9 +32,10 @@ const TAB_ICONS: Record<BottomPanelTab, React.ReactNode> = {
   activity: <Activity className="w-3.5 h-3.5" />,
   autopilot: <Bot className="w-3.5 h-3.5" />,
   delivery: <GitPullRequest className="w-3.5 h-3.5" />,
+  info: <Info className="w-3.5 h-3.5" />,
 };
 
-const TAB_IDS: BottomPanelTab[] = ["channels", "activity", "autopilot", "delivery"];
+const TAB_IDS: BottomPanelTab[] = ["channels", "activity", "autopilot", "delivery", "info"];
 
 export function BottomPanel({ className }: BottomPanelProps) {
   const t = useTranslations();
@@ -327,6 +329,13 @@ export function BottomPanel({ className }: BottomPanelProps) {
         {bottomPanelTab === "autopilot" && <AutopilotPanelContent podKey={selectedPodKey} />}
         {bottomPanelTab === "delivery" && (
           <DeliveryTabContent
+            selectedPodKey={selectedPodKey}
+            pod={currentPod}
+            t={t}
+          />
+        )}
+        {bottomPanelTab === "info" && (
+          <InfoTabContent
             selectedPodKey={selectedPodKey}
             pod={currentPod}
             t={t}

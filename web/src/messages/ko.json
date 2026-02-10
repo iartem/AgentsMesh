@@ -547,6 +547,8 @@
       "problems": "문제",
       "channels": "채널",
       "activity": "활동",
+      "delivery": "배포",
+      "info": "정보",
       "noOutput": "아직 출력이 없습니다",
       "noProblems": "감지된 문제가 없습니다",
       "noChannels": "활성 채널이 없습니다",
@@ -559,7 +561,32 @@
       "outgoingBindings": "발신 바인딩",
       "currentPod": "이 Pod",
       "sendMessagePlaceholder": "메시지 보내기...",
-      "channelDocument": "채널 문서"
+      "channelDocument": "채널 문서",
+      "deliveryTab": {
+        "notAvailable": "배포 상태를 사용할 수 없습니다",
+        "requiresRepoBranch": "저장소와 브랜치가 필요합니다",
+        "loading": "머지 리퀘스트 로딩 중...",
+        "loadError": "로드 실패",
+        "noMergeRequests": "머지 리퀘스트 없음",
+        "mrCount": "{count}개의 머지 리퀘스트",
+        "untitled": "제목 없음"
+      },
+      "infoTab": {
+        "notFound": "Pod 정보를 사용할 수 없습니다",
+        "podKey": "Pod Key",
+        "agentType": "에이전트",
+        "agentStatus": "에이전트 상태",
+        "runner": "Runner",
+        "repository": "저장소",
+        "branch": "브랜치",
+        "worktree": "워크트리",
+        "ticket": "티켓",
+        "createdBy": "생성자",
+        "startedAt": "시작",
+        "createdAt": "생성",
+        "error": "오류",
+        "relatedPods": "{count}개의 관련 Pod"
+      }
     },
     "createPod": {
       "title": "새 Pod 생성",

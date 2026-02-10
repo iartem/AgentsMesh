@@ -1433,6 +1433,7 @@
       "activity": "Activity",
       "autopilot": "Autopilot",
       "delivery": "Delivery",
+      "info": "Info",
       "noOutput": "No output yet",
       "noProblems": "No problems detected",
       "noChannels": "No active channels",
@@ -1454,6 +1455,22 @@
         "noMergeRequests": "No merge requests",
         "mrCount": "{count} merge request(s)",
         "untitled": "Untitled"
+      },
+      "infoTab": {
+        "notFound": "Pod information not available",
+        "podKey": "Pod Key",
+        "agentType": "Agent",
+        "agentStatus": "Agent Status",
+        "runner": "Runner",
+        "repository": "Repository",
+        "branch": "Branch",
+        "worktree": "Worktree",
+        "ticket": "Ticket",
+        "createdBy": "Created By",
+        "startedAt": "Started",
+        "createdAt": "Created",
+        "error": "Error",
+        "relatedPods": "{count} related pod(s)"
       }
     },
     "createPod": {

@@ -548,6 +548,8 @@
       "problems": "Problèmes",
       "channels": "Canaux",
       "activity": "Activité",
+      "delivery": "Livraison",
+      "info": "Info",
       "noOutput": "Pas encore de sortie",
       "noProblems": "Aucun problème détecté",
       "noChannels": "Aucun canal actif",
@@ -560,7 +562,32 @@
       "outgoingBindings": "Liaisons sortantes",
       "currentPod": "Ce Pod",
       "sendMessagePlaceholder": "Envoyer un message...",
-      "channelDocument": "Document du Canal"
+      "channelDocument": "Document du Canal",
+      "deliveryTab": {
+        "notAvailable": "Statut de livraison non disponible",
+        "requiresRepoBranch": "Nécessite un dépôt et une branche",
+        "loading": "Chargement des merge requests...",
+        "loadError": "Échec du chargement",
+        "noMergeRequests": "Aucune merge request",
+        "mrCount": "{count} merge request(s)",
+        "untitled": "Sans titre"
+      },
+      "infoTab": {
+        "notFound": "Informations du Pod non disponibles",
+        "podKey": "Pod Key",
+        "agentType": "Agent",
+        "agentStatus": "Statut de l'agent",
+        "runner": "Runner",
+        "repository": "Dépôt",
+        "branch": "Branche",
+        "worktree": "Répertoire de travail",
+        "ticket": "Ticket",
+        "createdBy": "Créé par",
+        "startedAt": "Démarré",
+        "createdAt": "Créé",
+        "error": "Erreur",
+        "relatedPods": "{count} pod(s) associé(s)"
+      }
     },
     "createPod": {
       "title": "Créer un Nouveau Pod",

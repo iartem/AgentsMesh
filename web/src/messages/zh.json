@@ -1433,6 +1433,7 @@
       "activity": "活动",
       "autopilot": "自动驾驶",
       "delivery": "交付",
+      "info": "信息",
       "noOutput": "暂无输出",
       "noProblems": "未检测到问题",
       "noChannels": "暂无活跃频道",
@@ -1454,6 +1455,22 @@
         "noMergeRequests": "暂无合并请求",
         "mrCount": "{count} 个合并请求",
         "untitled": "无标题"
+      },
+      "infoTab": {
+        "notFound": "Pod 信息不可用",
+        "podKey": "Pod Key",
+        "agentType": "智能体",
+        "agentStatus": "智能体状态",
+        "runner": "Runner",
+        "repository": "仓库",
+        "branch": "分支",
+        "worktree": "工作目录",
+        "ticket": "工单",
+        "createdBy": "创建者",
+        "startedAt": "启动时间",
+        "createdAt": "创建时间",
+        "error": "错误",
+        "relatedPods": "{count} 个关联 Pod"
       }
     },
     "createPod": {
