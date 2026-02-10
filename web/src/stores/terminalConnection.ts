@@ -95,6 +95,13 @@ function decodeMessage(data: Uint8Array): { type: number; payload: Uint8Array } 
  * - Connection stays open as long as at least one subscriber exists
  * - Uses delayed disconnect (30s) when last subscriber leaves to handle rapid open/close
  */
+export type RelayStatusInfo = {
+  status: TerminalConnection["status"] | "none";
+  runnerDisconnected: boolean;
+};
+
+type StatusListener = (info: RelayStatusInfo) => void;
+
 class TerminalConnectionPool {
   private connections: Map<string, TerminalConnection> = new Map();
   private maxReconnectAttempts = 5;
@@ -109,8 +116,55 @@ class TerminalConnectionPool {
   private lastInputs: Map<string, { data: string; time: number }> = new Map();
   private deduplicateWindow = 50; // 50ms window for deduplication
 
+  /** Status change listeners per podKey */
+  private statusListeners: Map<string, Set<StatusListener>> = new Map();
+
   getConnection(podKey: string): TerminalConnection | undefined {
     return this.connections.get(podKey);
+  }
+
+  /**
+   * Subscribe to status changes for a pod.
+   * Listener is called immediately with current status and on every change.
+   * @returns Unsubscribe function
+   */
+  onStatusChange(podKey: string, listener: StatusListener): () => void {
+    let listeners = this.statusListeners.get(podKey);
+    if (!listeners) {
+      listeners = new Set();
+      this.statusListeners.set(podKey, listeners);
+    }
+    listeners.add(listener);
+
+    // Immediately call with current status
+    const conn = this.connections.get(podKey);
+    listener({
+      status: conn?.status ?? "none",
+      runnerDisconnected: conn?.runnerDisconnected ?? false,
+    });
+
+    return () => {
+      listeners!.delete(listener);
+      if (listeners!.size === 0) {
+        this.statusListeners.delete(podKey);
+      }
+    };
+  }
+
+  /**
+   * Notify all status listeners for a pod of the current status.
+   */
+  private notifyStatusChange(podKey: string): void {
+    const listeners = this.statusListeners.get(podKey);
+    if (!listeners || listeners.size === 0) return;
+    const conn = this.connections.get(podKey);
+    const info: RelayStatusInfo = {
+      status: conn?.status ?? "none",
+      runnerDisconnected: conn?.runnerDisconnected ?? false,
+    };
+    for (const listener of listeners) {
+      listener(info);
+    }
   }
 
   /**
@@ -175,6 +229,7 @@ class TerminalConnectionPool {
 
     this.connections.set(podKey, conn);
     this.setupWebSocketHandlers(podKey, ws);
+    this.notifyStatusChange(podKey);
     console.log(`[Relay] Created connection for ${podKey}, subscriber: ${subscriptionId}`);
 
     return {
@@ -219,6 +274,7 @@ class TerminalConnectionPool {
         c.lastActivity = Date.now();
         c.reconnectAttempts = 0;
         console.log(`Terminal WebSocket connected to Relay for ${podKey}`);
+        this.notifyStatusChange(podKey);
         if (c.pendingResize) {
           // Note: doSendResize signature is (podKey, cols, rows)
           this.doSendResize(podKey, c.pendingResize.cols, c.pendingResize.rows);
@@ -240,6 +296,7 @@ class TerminalConnectionPool {
       const c = this.connections.get(podKey);
       if (c) {
         c.status = "error";
+        this.notifyStatusChange(podKey);
         if (c.subscribers.size > 0 && !c.reconnectTimer) {
           this.scheduleReconnect(podKey);
         }
@@ -251,6 +308,7 @@ class TerminalConnectionPool {
       if (c) {
         c.status = "disconnected";
         console.log(`Terminal WebSocket disconnected for ${podKey}`);
+        this.notifyStatusChange(podKey);
         if (c.subscribers.size > 0) {
           this.scheduleReconnect(podKey);
         }
@@ -325,6 +383,7 @@ class TerminalConnectionPool {
         // Runner has disconnected from Relay, waiting for reconnection
         console.warn(`Runner disconnected for pod ${conn.podKey}`);
         conn.runnerDisconnected = true;
+        this.notifyStatusChange(conn.podKey);
         // Display disconnection message in terminal
         const disconnectMsg = new TextEncoder().encode(
           "\r\n\x1b[33m⚠ Runner disconnected. Waiting for reconnection...\x1b[0m\r\n"
@@ -338,6 +397,7 @@ class TerminalConnectionPool {
         // Runner has reconnected to Relay
         console.log(`Runner reconnected for pod ${conn.podKey}`);
         conn.runnerDisconnected = false;
+        this.notifyStatusChange(conn.podKey);
         // Display reconnection message in terminal
         const reconnectMsg = new TextEncoder().encode(
           "\r\n\x1b[32m✓ Runner reconnected.\x1b[0m\r\n"
@@ -504,6 +564,8 @@ class TerminalConnectionPool {
       this.connections.delete(podKey);
       // Clean up input deduplication state
       this.lastInputs.delete(podKey);
+      // Notify listeners that connection is gone
+      this.notifyStatusChange(podKey);
       // Now close WebSocket - onclose won't find this connection in the map
       if (conn.ws.readyState === WebSocket.OPEN || conn.ws.readyState === WebSocket.CONNECTING) {
         conn.ws.close();

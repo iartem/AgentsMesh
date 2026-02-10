@@ -19,6 +19,7 @@ interface UseTerminalResult {
   xtermRef: MutableRefObject<XTerm | null>;
   fitAddonRef: MutableRefObject<FitAddon | null>;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
+  isRunnerDisconnected: boolean;
   syncSize: () => void;
 }
 
@@ -84,6 +85,7 @@ export function useTerminal(
   // Track last synced size to avoid redundant resize messages
   const lastSyncedSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected" | "error">("connecting");
+  const [isRunnerDisconnected, setIsRunnerDisconnected] = useState(false);
 
   /**
    * Debounced size sync to PTY.
@@ -213,15 +215,13 @@ export function useTerminal(
       }
     })();
 
-    // Update connection status
-    const checkStatus = () => {
-      const status = terminalPool.getStatus(podKey);
-      if (status !== "none") {
-        setConnectionStatus(status);
+    // Subscribe to connection status changes (event-based, real-time)
+    const unsubscribeStatus = terminalPool.onStatusChange(podKey, (info) => {
+      if (info.status !== "none") {
+        setConnectionStatus(info.status);
       }
-    };
-    checkStatus();
-    const statusInterval = setInterval(checkStatus, 1000);
+      setIsRunnerDisconnected(info.runnerDisconnected);
+    });
 
     // IME composition state tracking
     // During composition (e.g., Chinese input), we should not send partial data
@@ -303,7 +303,7 @@ export function useTerminal(
     // Cleanup
     return () => {
       isMounted = false;  // Prevent late connection from being stored
-      clearInterval(statusInterval);
+      unsubscribeStatus();
       // Clear any pending size sync timer
       if (sizeSyncTimerRef.current) {
         clearTimeout(sizeSyncTimerRef.current);
@@ -454,6 +454,7 @@ export function useTerminal(
     xtermRef,
     fitAddonRef,
     connectionStatus,
+    isRunnerDisconnected,
     syncSize,
   };
 }

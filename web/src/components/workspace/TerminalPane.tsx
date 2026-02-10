@@ -16,6 +16,7 @@ import {
 import { useIDEStore } from "@/stores/ide";
 import { TerminalPaneHeader } from "./TerminalPaneHeader";
 import { TerminalLoadingState, TerminalErrorState } from "./TerminalStateViews";
+import { RelayStatusOverlay } from "./RelayStatusOverlay";
 
 interface TerminalPaneProps {
   paneId: string;
@@ -78,6 +79,7 @@ export function TerminalPane({
     xtermRef,
     fitAddonRef,
     connectionStatus,
+    isRunnerDisconnected,
     syncSize,
   } = useTerminal(podKey, terminalFontSize, isPodReady, isActive);
 
@@ -170,13 +172,20 @@ export function TerminalPane({
               />
             </>
           )}
-          <div
-            ref={terminalRef}
-            className="flex-1 min-h-0 overflow-auto"
-            style={{
-              touchAction: "pan-y pinch-zoom", // Enable touch scrolling and zoom
-            }}
-          />
+          <div className="relative flex-1 min-h-0">
+            {/* Relay connection status overlay - always visible, floating at top */}
+            <RelayStatusOverlay
+              connectionStatus={connectionStatus}
+              isRunnerDisconnected={isRunnerDisconnected}
+            />
+            <div
+              ref={terminalRef}
+              className="h-full overflow-auto"
+              style={{
+                touchAction: "pan-y pinch-zoom", // Enable touch scrolling and zoom
+              }}
+            />
+          </div>
         </div>
       )}
 

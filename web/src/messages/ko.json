@@ -825,6 +825,13 @@
     "select": "선택",
     "toOpen": "열기"
   },
+  "relayStatus": {
+    "connected": "Relay 연결됨",
+    "connecting": "Relay 연결 중...",
+    "disconnected": "Relay 연결 끊김",
+    "error": "Relay 연결 오류",
+    "runnerDisconnected": "Runner 연결 끊김"
+  },
   "terminalTabs": {
     "singleView": "단일 보기",
     "twoColumns": "2열",

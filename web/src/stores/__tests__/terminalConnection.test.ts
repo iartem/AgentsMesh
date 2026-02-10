@@ -439,4 +439,194 @@ describe("terminalConnection", () => {
     // When a new subscriber joins, the connection is closed and recreated to get buffered output from Relay.
     // So "broadcast to all subscribers" test is no longer applicable - there's only ever 1 subscriber per connection.
   });
+
+  describe("onStatusChange", () => {
+    it("should call listener immediately with current status (none for unknown pod)", () => {
+      const listener = vi.fn();
+      terminalPool.onStatusChange("unknown-pod", listener);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({
+        status: "none",
+        runnerDisconnected: false,
+      });
+    });
+
+    it("should call listener immediately with current connected status", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({
+        status: "connected",
+        runnerDisconnected: false,
+      });
+    });
+
+    it("should notify listener when connection status changes to connected", async () => {
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+
+      // Initial call with "none"
+      expect(listener).toHaveBeenCalledWith({
+        status: "none",
+        runnerDisconnected: false,
+      });
+
+      // Subscribe triggers "connecting" then "connected"
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      // Should have been called with "connecting" and "connected"
+      const calls = listener.mock.calls.map((c) => c[0].status);
+      expect(calls).toContain("connecting");
+      expect(calls).toContain("connected");
+    });
+
+    it("should notify listener when disconnected", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+      listener.mockClear(); // Clear the initial call
+
+      // Disconnect
+      terminalPool.disconnect("pod-1");
+
+      // Should be notified with "none" (connection removed from map)
+      expect(listener).toHaveBeenCalledWith({
+        status: "none",
+        runnerDisconnected: false,
+      });
+    });
+
+    it("should notify listener when runner disconnects", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+      listener.mockClear();
+
+      // Simulate RunnerDisconnected message (type 0x08)
+      const conn = terminalPool.getConnection("pod-1");
+      expect(conn).toBeDefined();
+      const message = new Uint8Array([0x08]); // MsgType.RunnerDisconnected
+      conn!.ws.onmessage?.({ data: message.buffer } as MessageEvent);
+
+      expect(listener).toHaveBeenCalledWith({
+        status: "connected",
+        runnerDisconnected: true,
+      });
+    });
+
+    it("should notify listener when runner reconnects", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const conn = terminalPool.getConnection("pod-1");
+      expect(conn).toBeDefined();
+
+      // First disconnect runner
+      const disconnectMsg = new Uint8Array([0x08]);
+      conn!.ws.onmessage?.({ data: disconnectMsg.buffer } as MessageEvent);
+
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+
+      // Initial call should show runner disconnected
+      expect(listener).toHaveBeenCalledWith({
+        status: "connected",
+        runnerDisconnected: true,
+      });
+      listener.mockClear();
+
+      // Now reconnect runner
+      const reconnectMsg = new Uint8Array([0x09]); // MsgType.RunnerReconnected
+      conn!.ws.onmessage?.({ data: reconnectMsg.buffer } as MessageEvent);
+
+      expect(listener).toHaveBeenCalledWith({
+        status: "connected",
+        runnerDisconnected: false,
+      });
+    });
+
+    it("should support multiple listeners for same pod", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener1 = vi.fn();
+      const listener2 = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener1);
+      terminalPool.onStatusChange("pod-1", listener2);
+      listener1.mockClear();
+      listener2.mockClear();
+
+      // Trigger status change
+      terminalPool.disconnect("pod-1");
+
+      expect(listener1).toHaveBeenCalled();
+      expect(listener2).toHaveBeenCalled();
+    });
+
+    it("should stop notifying after unsubscribe", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener = vi.fn();
+      const unsubscribe = terminalPool.onStatusChange("pod-1", listener);
+      listener.mockClear();
+
+      // Unsubscribe
+      unsubscribe();
+
+      // Trigger status change
+      terminalPool.disconnect("pod-1");
+
+      // Should not have been called after unsubscribe
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("should clean up listener set when last listener unsubscribes", () => {
+      const listener = vi.fn();
+      const unsubscribe = terminalPool.onStatusChange("pod-1", listener);
+
+      unsubscribe();
+
+      // Subscribe another listener and check it works fresh
+      const listener2 = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener2);
+      expect(listener2).toHaveBeenCalledTimes(1);
+    });
+
+    it("should notify on WebSocket error", async () => {
+      const onMessage = vi.fn();
+      await terminalPool.subscribe("pod-1", "sub-1", onMessage);
+      await vi.runAllTimersAsync();
+
+      const listener = vi.fn();
+      terminalPool.onStatusChange("pod-1", listener);
+      listener.mockClear();
+
+      // Simulate WebSocket error
+      const conn = terminalPool.getConnection("pod-1");
+      conn!.ws.onerror?.(new Event("error"));
+
+      expect(listener).toHaveBeenCalledWith({
+        status: "error",
+        runnerDisconnected: false,
+      });
+    });
+  });
 });

@@ -1965,6 +1965,13 @@
     "select": "选择",
     "toOpen": "打开"
   },
+  "relayStatus": {
+    "connected": "Relay 已连接",
+    "connecting": "正在连接 Relay...",
+    "disconnected": "Relay 已断开",
+    "error": "Relay 连接错误",
+    "runnerDisconnected": "Runner 已断开"
+  },
   "terminalTabs": {
     "singleView": "单视图",
     "twoColumns": "两列",

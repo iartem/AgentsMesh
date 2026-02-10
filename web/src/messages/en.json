@@ -1965,6 +1965,13 @@
     "select": "Select",
     "toOpen": "to open"
   },
+  "relayStatus": {
+    "connected": "Relay Connected",
+    "connecting": "Connecting to Relay...",
+    "disconnected": "Relay Disconnected",
+    "error": "Relay Connection Error",
+    "runnerDisconnected": "Runner Disconnected"
+  },
   "terminalTabs": {
     "singleView": "Single view",
     "twoColumns": "Two columns",

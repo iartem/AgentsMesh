@@ -825,6 +825,13 @@
     "select": "選択",
     "toOpen": "で開く"
   },
+  "relayStatus": {
+    "connected": "Relay 接続済み",
+    "connecting": "Relay に接続中...",
+    "disconnected": "Relay 切断",
+    "error": "Relay 接続エラー",
+    "runnerDisconnected": "Runner 切断"
+  },
   "terminalTabs": {
     "singleView": "シングルビュー",
     "twoColumns": "2列",

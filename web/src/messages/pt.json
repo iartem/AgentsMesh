@@ -817,6 +817,13 @@
     "select": "Selecionar",
     "toOpen": "para abrir"
   },
+  "relayStatus": {
+    "connected": "Relay Conectado",
+    "connecting": "Conectando ao Relay...",
+    "disconnected": "Relay Desconectado",
+    "error": "Erro de Conexão Relay",
+    "runnerDisconnected": "Runner Desconectado"
+  },
   "terminalTabs": {
     "singleView": "Visualização única",
     "twoColumns": "Duas colunas",
