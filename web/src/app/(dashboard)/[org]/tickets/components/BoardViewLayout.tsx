@@ -13,6 +13,7 @@ interface BoardViewLayoutProps {
   onStatusChange: (identifier: string, newStatus: TicketStatus) => Promise<void>;
   onTicketClick: (ticket: Ticket) => void;
   onClosePanel: () => void;
+  onCreatePodRequest?: (ticket: Ticket) => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export function BoardViewLayout({
   onStatusChange,
   onTicketClick,
   onClosePanel,
+  onCreatePodRequest,
 }: BoardViewLayoutProps) {
   if (!hasSelectedTicket) {
     // No selected ticket - full height board
@@ -35,6 +37,7 @@ export function BoardViewLayout({
             tickets={tickets}
             onStatusChange={onStatusChange}
             onTicketClick={onTicketClick}
+            onCreatePodRequest={onCreatePodRequest}
           />
         </div>
       </div>
@@ -50,6 +53,7 @@ export function BoardViewLayout({
             tickets={tickets}
             onStatusChange={onStatusChange}
             onTicketClick={onTicketClick}
+            onCreatePodRequest={onCreatePodRequest}
           />
         </div>
       </Panel>

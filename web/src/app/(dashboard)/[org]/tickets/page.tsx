@@ -6,6 +6,7 @@ import { useTicketStore, Ticket, TicketStatus } from "@/stores/ticket";
 import { useAuthStore } from "@/stores/auth";
 import { TicketKeyboardHandler } from "@/components/tickets";
 import { CenteredSpinner } from "@/components/ui/spinner";
+import { CreatePodModal } from "@/components/ide/CreatePodModal";
 import { useTranslations } from "@/lib/i18n/client";
 import { ListViewLayout, BoardViewLayout } from "./components";
 
@@ -29,6 +30,9 @@ export default function TicketsPage() {
 
   // Track screen size for responsive layout
   const [isDesktop, setIsDesktop] = useState(true);
+
+  // State for auto-triggered create pod modal (when dragging ticket to in_progress)
+  const [createPodTicket, setCreatePodTicket] = useState<Ticket | null>(null);
 
   // Get selected ticket from URL or store
   const selectedTicketFromUrl = searchParams.get("ticket");
@@ -74,6 +78,14 @@ export default function TicketsPage() {
       router.push(newUrl, { scroll: false });
     }
   }, [router, currentOrg, isDesktop]);
+
+  const handleCreatePodRequest = useCallback((ticket: Ticket) => {
+    setCreatePodTicket(ticket);
+  }, []);
+
+  const handleCreatePodClose = useCallback(() => {
+    setCreatePodTicket(null);
+  }, []);
 
   const handleClosePanel = useCallback(() => {
     setSelectedTicketIdentifier(null);
@@ -133,6 +145,23 @@ export default function TicketsPage() {
         onStatusChange={handleStatusChange}
         onTicketClick={handleTicketClick}
         onClosePanel={handleClosePanel}
+        onCreatePodRequest={handleCreatePodRequest}
+      />
+      <CreatePodModal
+        open={!!createPodTicket}
+        onClose={handleCreatePodClose}
+        onCreated={handleCreatePodClose}
+        ticketContext={
+          createPodTicket
+            ? {
+                id: createPodTicket.id,
+                identifier: createPodTicket.identifier,
+                title: createPodTicket.title,
+                description: createPodTicket.description,
+                repositoryId: createPodTicket.repository_id,
+              }
+            : undefined
+        }
       />
     </>
   );
