@@ -8,7 +8,7 @@ import {
   Minimize2,
   ExternalLink,
   Circle,
-  RefreshCw,
+  Scaling,
   Bot,
 } from "lucide-react";
 
@@ -80,7 +80,7 @@ export function TerminalPaneHeader({
           }}
           title="Sync terminal size"
         >
-          <RefreshCw className="w-3 h-3" />
+          <Scaling className="w-3 h-3" />
         </Button>
         {/* Start Autopilot button - only show when no active AutopilotController */}
         {!hasAutopilot && isPodReady && (
