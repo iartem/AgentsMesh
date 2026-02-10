@@ -5,7 +5,7 @@ import { useDrag } from "@use-gesture/react";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { TerminalPane } from "./TerminalPane";
-import { Terminal as TerminalIcon, Plus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Terminal as TerminalIcon, Plus, ChevronLeft, ChevronRight, Scaling } from "lucide-react";
 import { terminalPool } from "@/stores/workspace";
 import { Button } from "@/components/ui/button";
 
@@ -184,7 +184,7 @@ export function TerminalSwiper({ onAddNew, className }: TerminalSwiperProps) {
             onClick={handleSyncSize}
             title="Sync terminal size"
           >
-            <RefreshCw className="w-4 h-4" />
+            <Scaling className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
