@@ -10,12 +10,12 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/dns"
 )
 
-// DNSService manages DNS records for relay servers
+// DNSService manages DNS A records for relay servers.
+// It is responsible only for DNS record management (domain → IP),
+// not for URL generation (scheme, port, path).
 type DNSService struct {
 	provider   dns.Provider
 	baseDomain string
-	useHTTPS   bool
-	port       string // Non-standard port (e.g., "8443"), empty for default
 	enabled    bool
 	logger     *slog.Logger
 }
@@ -24,8 +24,6 @@ type DNSService struct {
 func NewDNSService(cfg config.RelayConfig) (*DNSService, error) {
 	svc := &DNSService{
 		baseDomain: cfg.BaseDomain,
-		useHTTPS:   cfg.UseHTTPS,
-		port:       cfg.Port,
 		enabled:    cfg.IsEnabled(),
 		logger:     slog.With("component", "relay_dns_service"),
 	}
@@ -44,8 +42,7 @@ func NewDNSService(cfg config.RelayConfig) (*DNSService, error) {
 
 	svc.logger.Info("DNS service initialized",
 		"base_domain", cfg.BaseDomain,
-		"provider", cfg.DNS.Provider,
-		"use_https", cfg.UseHTTPS)
+		"provider", cfg.DNS.Provider)
 
 	return svc, nil
 }
@@ -63,20 +60,6 @@ func (s *DNSService) GenerateRelayDomain(relayName string) string {
 	name = sanitizeRelayName(name)
 
 	return fmt.Sprintf("%s.%s", name, s.baseDomain)
-}
-
-// GenerateRelayURL generates the full WebSocket URL for a relay
-// e.g., "us-east-1" -> "wss://us-east-1.relay.agentsmesh.cn:8443"
-func (s *DNSService) GenerateRelayURL(relayName string) string {
-	domain := s.GenerateRelayDomain(relayName)
-	scheme := "ws"
-	if s.useHTTPS {
-		scheme = "wss"
-	}
-	if s.port != "" {
-		return fmt.Sprintf("%s://%s:%s", scheme, domain, s.port)
-	}
-	return fmt.Sprintf("%s://%s", scheme, domain)
 }
 
 // CreateRecord creates a DNS A record for a relay

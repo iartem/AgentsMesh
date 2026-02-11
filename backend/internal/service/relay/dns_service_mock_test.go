@@ -64,7 +64,6 @@ func newTestDNSService(provider *MockDNSProvider, enabled bool) *DNSService {
 	return &DNSService{
 		provider:   provider,
 		baseDomain: "relay.agentsmesh.cn",
-		useHTTPS:   true,
 		enabled:    enabled,
 		logger:     slog.Default(),
 	}

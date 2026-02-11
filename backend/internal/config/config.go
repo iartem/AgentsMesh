@@ -189,8 +189,6 @@ func Load() (*Config, error) {
 		// Relay Management Configuration
 		Relay: RelayConfig{
 			BaseDomain: getEnv("RELAY_BASE_DOMAIN", ""),
-			UseHTTPS:   getEnvBool("RELAY_USE_HTTPS", true),
-			Port:       getEnv("RELAY_PORT", ""),
 			DNS: DNSConfig{
 				Provider:              getEnv("DNS_PROVIDER", ""),
 				CloudflareAPIToken:    getEnv("CLOUDFLARE_API_TOKEN", ""),

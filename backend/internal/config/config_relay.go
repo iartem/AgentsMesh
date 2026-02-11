@@ -2,10 +2,9 @@ package config
 
 // RelayConfig holds Relay server management configuration
 type RelayConfig struct {
-	// Domain configuration for auto-generated Relay URLs
-	BaseDomain string // Base domain for relay subdomains (e.g., "relay.agentsmesh.cn")
-	UseHTTPS   bool   // Use wss:// instead of ws://
-	Port       string // Non-standard port for relay URLs (e.g., "8443"), empty for default
+	// Base domain for relay subdomains (e.g., "relay.agentsmesh.cn")
+	// Used by DNSService to generate A records like "01.relay.agentsmesh.cn → IP"
+	BaseDomain string
 
 	// DNS provider configuration
 	DNS DNSConfig

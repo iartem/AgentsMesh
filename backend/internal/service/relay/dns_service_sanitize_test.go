@@ -80,7 +80,6 @@ func TestSanitizeRelayName(t *testing.T) {
 func TestDNSServiceGenerateRelayDomain(t *testing.T) {
 	svc := &DNSService{
 		baseDomain: "relay.agentsmesh.cn",
-		useHTTPS:   true,
 		enabled:    true,
 	}
 
@@ -109,40 +108,6 @@ func TestDNSServiceGenerateRelayDomain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := svc.GenerateRelayDomain(tt.relayName)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestDNSServiceGenerateRelayURL(t *testing.T) {
-	tests := []struct {
-		name      string
-		useHTTPS  bool
-		relayName string
-		expected  string
-	}{
-		{
-			name:      "HTTPS enabled",
-			useHTTPS:  true,
-			relayName: "us-east-1",
-			expected:  "wss://us-east-1.relay.agentsmesh.cn",
-		},
-		{
-			name:      "HTTPS disabled",
-			useHTTPS:  false,
-			relayName: "us-east-1",
-			expected:  "ws://us-east-1.relay.agentsmesh.cn",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			svc := &DNSService{
-				baseDomain: "relay.agentsmesh.cn",
-				useHTTPS:   tt.useHTTPS,
-				enabled:    true,
-			}
-			result := svc.GenerateRelayURL(tt.relayName)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

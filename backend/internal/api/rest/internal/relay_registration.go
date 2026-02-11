@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
@@ -24,9 +26,11 @@ func (h *RelayHandler) Register(c *gin.Context) {
 	url := req.URL
 	dnsCreated := false
 
-	// Handle DNS auto-registration if relay_name and IP provided and DNS service enabled
+	// Handle DNS auto-registration if relay_name and IP provided and DNS service enabled.
+	// DNS service only manages A records (domain → IP).
+	// The relay's URL (scheme + port) is authoritative from the relay itself.
 	if req.RelayName != "" && req.IP != "" && h.dnsService != nil && h.dnsService.IsEnabled() {
-		// Create/update DNS record
+		// Create/update DNS A record
 		if err := h.dnsService.CreateRecord(c.Request.Context(), req.RelayName, req.IP); err != nil {
 			h.logger.Error("Failed to create DNS record",
 				"relay_name", req.RelayName,
@@ -35,8 +39,16 @@ func (h *RelayHandler) Register(c *gin.Context) {
 			// Don't fail registration, just log the error
 			// Relay can still work if URL is provided manually
 		} else {
-			// Generate URL from DNS
-			url = h.dnsService.GenerateRelayURL(req.RelayName)
+			// Replace host in relay's URL with DNS-generated domain, preserve scheme and port
+			domain := h.dnsService.GenerateRelayDomain(req.RelayName)
+			if newURL, err := replaceURLHost(url, domain); err == nil {
+				url = newURL
+			} else {
+				h.logger.Warn("Failed to replace URL host, using relay-reported URL",
+					"url", url,
+					"domain", domain,
+					"error", err)
+			}
 			dnsCreated = true
 			h.logger.Info("DNS record created for relay",
 				"relay_name", req.RelayName,
@@ -163,4 +175,25 @@ func (h *RelayHandler) ForceUnregister(c *gin.Context) {
 		"status":   "unregistered",
 		"relay_id": relayID,
 	})
+}
+
+// replaceURLHost parses rawURL and replaces only the hostname with newHost,
+// preserving scheme, port, and path.
+// e.g., replaceURLHost("wss://47.77.190.14:8443", "01.relay.agentsmesh.ai")
+//
+//	→ "wss://01.relay.agentsmesh.ai:8443"
+func replaceURLHost(rawURL, newHost string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL %q: %w", rawURL, err)
+	}
+
+	port := u.Port()
+	if port != "" {
+		u.Host = newHost + ":" + port
+	} else {
+		u.Host = newHost
+	}
+
+	return u.String(), nil
 }
