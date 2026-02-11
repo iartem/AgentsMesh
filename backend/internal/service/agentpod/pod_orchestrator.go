@@ -7,8 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/gitprovider"
+	runnerDomain "github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
@@ -90,39 +92,55 @@ type TicketServiceForOrchestrator interface {
 	GetTicket(ctx context.Context, ticketID int64) (*ticket.Ticket, error)
 }
 
+// RunnerSelectorForOrchestrator selects a runner compatible with a given agent.
+type RunnerSelectorForOrchestrator interface {
+	SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, agentSlug string) (*runnerDomain.Runner, error)
+}
+
+// AgentTypeResolverForOrchestrator resolves an agent type by ID.
+type AgentTypeResolverForOrchestrator interface {
+	GetAgentType(ctx context.Context, id int64) (*agentDomain.AgentType, error)
+}
+
 // PodOrchestratorDeps holds all dependencies for PodOrchestrator.
 type PodOrchestratorDeps struct {
-	PodService     *PodService
-	ConfigBuilder  *agent.ConfigBuilder
-	PodCoordinator PodCoordinatorForOrchestrator  // optional
-	BillingService BillingServiceForOrchestrator   // optional
-	UserService    UserServiceForOrchestrator      // optional
-	RepoService    RepositoryServiceForOrchestrator // optional
-	TicketService  TicketServiceForOrchestrator    // optional
+	PodService        *PodService
+	ConfigBuilder     *agent.ConfigBuilder
+	PodCoordinator    PodCoordinatorForOrchestrator    // optional
+	BillingService    BillingServiceForOrchestrator     // optional
+	UserService       UserServiceForOrchestrator        // optional
+	RepoService       RepositoryServiceForOrchestrator  // optional
+	TicketService     TicketServiceForOrchestrator      // optional
+	RunnerSelector    RunnerSelectorForOrchestrator     // optional
+	AgentTypeResolver AgentTypeResolverForOrchestrator  // optional
 }
 
 // PodOrchestrator encapsulates the complete Pod creation workflow.
 // Both REST and MCP paths delegate to this single implementation.
 type PodOrchestrator struct {
-	podService     *PodService
-	configBuilder  *agent.ConfigBuilder
-	podCoordinator PodCoordinatorForOrchestrator
-	billingService BillingServiceForOrchestrator
-	userService    UserServiceForOrchestrator
-	repoService    RepositoryServiceForOrchestrator
-	ticketService  TicketServiceForOrchestrator
+	podService        *PodService
+	configBuilder     *agent.ConfigBuilder
+	podCoordinator    PodCoordinatorForOrchestrator
+	billingService    BillingServiceForOrchestrator
+	userService       UserServiceForOrchestrator
+	repoService       RepositoryServiceForOrchestrator
+	ticketService     TicketServiceForOrchestrator
+	runnerSelector    RunnerSelectorForOrchestrator
+	agentTypeResolver AgentTypeResolverForOrchestrator
 }
 
 // NewPodOrchestrator creates a new PodOrchestrator.
 func NewPodOrchestrator(deps *PodOrchestratorDeps) *PodOrchestrator {
 	return &PodOrchestrator{
-		podService:     deps.PodService,
-		configBuilder:  deps.ConfigBuilder,
-		podCoordinator: deps.PodCoordinator,
-		billingService: deps.BillingService,
-		userService:    deps.UserService,
-		repoService:    deps.RepoService,
-		ticketService:  deps.TicketService,
+		podService:        deps.PodService,
+		configBuilder:     deps.ConfigBuilder,
+		podCoordinator:    deps.PodCoordinator,
+		billingService:    deps.BillingService,
+		userService:       deps.UserService,
+		repoService:       deps.RepoService,
+		ticketService:     deps.TicketService,
+		runnerSelector:    deps.RunnerSelector,
+		agentTypeResolver: deps.AgentTypeResolver,
 	}
 }
 
@@ -147,11 +165,23 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 		}
 	} else {
 		// === 2. Normal mode validation ===
-		if req.RunnerID == 0 {
-			return nil, ErrMissingRunnerID
-		}
 		if req.AgentTypeID == nil {
 			return nil, ErrMissingAgentTypeID
+		}
+		if req.RunnerID == 0 {
+			// Auto-select a runner compatible with the requested agent type
+			if o.runnerSelector == nil || o.agentTypeResolver == nil {
+				return nil, ErrMissingRunnerID
+			}
+			agentType, err := o.agentTypeResolver.GetAgentType(ctx, *req.AgentTypeID)
+			if err != nil {
+				return nil, ErrMissingAgentTypeID
+			}
+			selectedRunner, err := o.runnerSelector.SelectAvailableRunnerForAgent(ctx, req.OrganizationID, agentType.Slug)
+			if err != nil {
+				return nil, ErrNoAvailableRunner
+			}
+			req.RunnerID = selectedRunner.ID
 		}
 		sessionID = uuid.New().String()
 	}

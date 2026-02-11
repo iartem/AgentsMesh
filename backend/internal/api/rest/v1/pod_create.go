@@ -124,6 +124,10 @@ func mapOrchestratorErrorToHTTP(c *gin.Context, err error) {
 	case errors.Is(err, ErrSandboxAlreadyResumed):
 		c.JSON(http.StatusConflict, gin.H{"error": "Sandbox has already been resumed by another active pod", "code": "SANDBOX_ALREADY_RESUMED"})
 
+	// No available runner → 503
+	case errors.Is(err, agentpod.ErrNoAvailableRunner):
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "No available runner supports the requested agent type", "code": "NO_AVAILABLE_RUNNER"})
+
 	// Config build failure → 500
 	case errors.Is(err, agentpod.ErrConfigBuildFailed):
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build pod configuration", "code": "POD_CONFIG_BUILD_FAILED"})

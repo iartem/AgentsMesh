@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -111,6 +112,56 @@ func (s *Service) SelectAvailableRunner(ctx context.Context, orgID int64) (*runn
 	}
 
 	// Return the runner with least pods
+	return runners[0], nil
+}
+
+// SelectAvailableRunnerForAgent selects an available runner that supports the given agent type.
+// Uses the same cache-first, DB-fallback pattern as SelectAvailableRunner with agent compatibility filtering.
+func (s *Service) SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, agentSlug string) (*runner.Runner, error) {
+	// First, try to find available runners from cache
+	var cachedRunners []*ActiveRunner
+	s.activeRunners.Range(func(key, value interface{}) bool {
+		if ar, ok := value.(*ActiveRunner); ok && ar.Runner != nil {
+			r := ar.Runner
+			if r.OrganizationID == orgID &&
+				r.Status == runner.RunnerStatusOnline &&
+				r.IsEnabled &&
+				ar.PodCount < r.MaxConcurrentPods &&
+				time.Since(ar.LastPing) < 90*time.Second &&
+				r.SupportsAgent(agentSlug) {
+				cachedRunners = append(cachedRunners, ar)
+			}
+		}
+		return true
+	})
+
+	if len(cachedRunners) > 0 {
+		// Sort by pod count (least loaded first)
+		sort.Slice(cachedRunners, func(i, j int) bool {
+			return cachedRunners[i].PodCount < cachedRunners[j].PodCount
+		})
+		return cachedRunners[0].Runner, nil
+	}
+
+	// Fall back to database query with JSONB contains filter
+	agentJSON, err := json.Marshal([]string{agentSlug})
+	if err != nil {
+		return nil, err
+	}
+
+	var runners []*runner.Runner
+	if err := s.db.WithContext(ctx).
+		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods AND available_agents @> ?",
+			orgID, runner.RunnerStatusOnline, true, string(agentJSON)).
+		Order("current_pods ASC").
+		Find(&runners).Error; err != nil {
+		return nil, err
+	}
+
+	if len(runners) == 0 {
+		return nil, ErrNoRunnerForAgent
+	}
+
 	return runners[0], nil
 }
 
