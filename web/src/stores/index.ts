@@ -37,3 +37,6 @@ export type {
   ChannelInfo,
   MeshTopology,
 } from "./mesh";
+
+// Pod creation preferences store
+export { usePodCreationStore } from "./podCreation";

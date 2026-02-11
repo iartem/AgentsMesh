@@ -14,11 +14,12 @@ import { AgentSelect } from "./AgentSelect";
 import { CredentialSelect } from "./CredentialSelect";
 import { RepositorySelect, BranchInput } from "./RepositorySelect";
 import { PromptInput } from "./PromptInput";
+import { AdvancedOptions } from "./AdvancedOptions";
 import { estimateWorkspaceTerminalSize } from "@/lib/terminal-size";
 
 /**
  * Shared Pod creation form component
- * Supports workspace and ticket scenarios
+ * Agent-first layout with advanced options collapsed
  */
 export function CreatePodForm({
   config,
@@ -107,17 +108,16 @@ export function CreatePodForm({
   }, [enabled, defaultPrompt, form.prompt, form.setPrompt]);
 
   // Handle form submission
+  // runner_id is optional - when not manually selected, backend auto-selects
   const handleCreate = async () => {
-    if (!selectedRunner || !form.selectedAgent) return;
+    if (!form.selectedAgent) return;
 
     try {
       // Estimate terminal size based on current window/device dimensions
-      // This provides better initial PTY dimensions than hardcoded values
-      // Terminal will still resize after connection via fit addon if needed
       const { cols, rows } = estimateWorkspaceTerminalSize();
 
-      // onSuccess callback is handled in useCreatePodForm.submit
-      await form.submit(selectedRunner.id, configValues, {
+      // Pass runner as null/undefined when not manually selected (backend auto-selects)
+      await form.submit(selectedRunner?.id ?? null, configValues, {
         ticketId: context?.ticket?.id,
         initialPrompt: form.prompt,
         cols,
@@ -129,37 +129,43 @@ export function CreatePodForm({
     }
   };
 
-  const hasSelectedRunner = selectedRunner !== null;
-
   return (
     <div className={className}>
       {loadingData ? (
         <CenteredSpinner className="py-8" />
       ) : (
         <div className="space-y-4">
-          {/* Step 1: Runner Select */}
-          <RunnerSelect
-            runners={runners}
-            selectedRunnerId={selectedRunner?.id ?? null}
-            onSelect={setSelectedRunnerId}
-            error={form.validationErrors.runner}
+          {/* Agent Type Select (shown first) */}
+          <AgentSelect
+            agents={availableAgentTypes}
+            selectedAgentId={form.selectedAgent}
+            onSelect={form.setSelectedAgent}
+            error={form.validationErrors.agent}
             t={t}
           />
 
-          {/* Step 2: Agent Type Select */}
-          {hasSelectedRunner && (
-            <AgentSelect
-              agents={availableAgentTypes}
-              selectedAgentId={form.selectedAgent}
-              onSelect={form.setSelectedAgent}
-              error={form.validationErrors.agent}
+          {/* Initial Prompt (visible at top level) */}
+          {form.selectedAgent && (
+            <PromptInput
+              value={form.prompt}
+              onChange={form.setPrompt}
+              placeholder={mergedConfig.promptPlaceholder}
               t={t}
             />
           )}
 
-          {/* Step 3: Agent-specific Configuration */}
+          {/* Advanced Options (collapsed by default) */}
           {form.selectedAgent && (
-            <>
+            <AdvancedOptions t={t}>
+              {/* Runner Select (manual override, optional) */}
+              <RunnerSelect
+                runners={runners}
+                selectedRunnerId={selectedRunner?.id ?? null}
+                onSelect={setSelectedRunnerId}
+                error={form.validationErrors.runner}
+                t={t}
+              />
+
               {/* Credential Profile Select */}
               <CredentialSelect
                 profiles={form.credentialProfiles}
@@ -187,14 +193,6 @@ export function CreatePodForm({
                 />
               )}
 
-              {/* Initial Prompt */}
-              <PromptInput
-                value={form.prompt}
-                onChange={form.setPrompt}
-                placeholder={mergedConfig.promptPlaceholder}
-                t={t}
-              />
-
               {/* Agent Configuration Section */}
               {loadingConfig ? (
                 <div className="flex items-center justify-center py-4">
@@ -218,7 +216,7 @@ export function CreatePodForm({
                   </div>
                 )
               )}
-            </>
+            </AdvancedOptions>
           )}
 
           {/* Error Display */}
@@ -243,9 +241,7 @@ export function CreatePodForm({
         )}
         <Button
           onClick={handleCreate}
-          disabled={
-            !selectedRunner || !form.selectedAgent || form.loading || loadingData
-          }
+          disabled={!form.selectedAgent || form.loading || loadingData}
           className="w-full sm:w-auto"
         >
           {form.loading ? t("ide.createPod.creating") : t("ide.createPod.create")}

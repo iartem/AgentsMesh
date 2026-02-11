@@ -100,15 +100,18 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
   }, [runners, selectedRunnerId]);
 
   // Filter agent types based on selected runner's available agents
+  // When no runner is manually selected: union of all online runners' available agents
+  // When runner is manually selected: filter by that runner's available agents
   const availableAgentTypes = useMemo((): AgentTypeData[] => {
-    if (!selectedRunner?.available_agents || selectedRunner.available_agents.length === 0) {
-      // If no runner selected or no available agents, return empty list
-      return [];
+    if (selectedRunner?.available_agents?.length) {
+      return agentTypes.filter(agent => selectedRunner.available_agents!.includes(agent.slug));
     }
 
-    // Filter agent types by available_agents slugs from Runner handshake
-    return agentTypes.filter(agent => selectedRunner.available_agents!.includes(agent.slug));
-  }, [selectedRunner, agentTypes]);
+    // No runner selected: show union of all online runners' available agents
+    const allSlugs = new Set(runners.flatMap(r => r.available_agents || []));
+    if (allSlugs.size === 0) return [];
+    return agentTypes.filter(agent => allSlugs.has(agent.slug));
+  }, [selectedRunner, runners, agentTypes]);
 
   return {
     runners,

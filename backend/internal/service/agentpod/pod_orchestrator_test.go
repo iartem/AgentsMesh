@@ -11,6 +11,7 @@ import (
 	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/gitprovider"
+	runnerDomain "github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
@@ -245,6 +246,7 @@ func TestCreatePod_NormalMode_Success(t *testing.T) {
 }
 
 func TestCreatePod_NormalMode_MissingRunnerID(t *testing.T) {
+	// Without RunnerSelector/AgentTypeResolver injected, RunnerID=0 should fail with ErrMissingRunnerID
 	orch, _ := setupOrchestrator(t)
 
 	agentTypeID := int64(1)
@@ -257,6 +259,147 @@ func TestCreatePod_NormalMode_MissingRunnerID(t *testing.T) {
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrMissingRunnerID))
+}
+
+// ==================== Auto-Select Runner Tests ====================
+
+// mockRunnerSelector implements RunnerSelectorForOrchestrator for testing.
+type mockRunnerSelector struct {
+	runner *runnerDomain.Runner
+	err    error
+}
+
+func (m *mockRunnerSelector) SelectAvailableRunnerForAgent(_ context.Context, _ int64, _ string) (*runnerDomain.Runner, error) {
+	return m.runner, m.err
+}
+
+// mockAgentTypeResolver implements AgentTypeResolverForOrchestrator for testing.
+type mockAgentTypeResolver struct {
+	agentType *agentDomain.AgentType
+	err       error
+}
+
+func (m *mockAgentTypeResolver) GetAgentType(_ context.Context, _ int64) (*agentDomain.AgentType, error) {
+	return m.agentType, m.err
+}
+
+func withRunnerSelector(rs RunnerSelectorForOrchestrator) func(*PodOrchestratorDeps) {
+	return func(d *PodOrchestratorDeps) { d.RunnerSelector = rs }
+}
+
+func withAgentTypeResolver(atr AgentTypeResolverForOrchestrator) func(*PodOrchestratorDeps) {
+	return func(d *PodOrchestratorDeps) { d.AgentTypeResolver = atr }
+}
+
+func TestCreatePod_AutoSelectRunner_Success(t *testing.T) {
+	coord := &mockPodCoordinator{}
+	selector := &mockRunnerSelector{
+		runner: &runnerDomain.Runner{ID: 42, NodeID: "auto-runner"},
+	}
+	resolver := &mockAgentTypeResolver{
+		agentType: &agentDomain.AgentType{ID: 1, Slug: "claude-code"},
+	}
+
+	orch, _ := setupOrchestrator(t,
+		withCoordinator(coord),
+		withRunnerSelector(selector),
+		withAgentTypeResolver(resolver),
+	)
+
+	agentTypeID := int64(1)
+	result, err := orch.CreatePod(context.Background(), &OrchestrateCreatePodRequest{
+		OrganizationID: 1,
+		UserID:         1,
+		RunnerID:       0, // auto-select
+		AgentTypeID:    &agentTypeID,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.NotNil(t, result.Pod)
+	assert.Equal(t, int64(42), result.Pod.RunnerID) // auto-selected runner
+	assert.True(t, coord.createPodCalled)
+	assert.Equal(t, int64(42), coord.lastRunnerID)
+}
+
+func TestCreatePod_AutoSelectRunner_NoAvailableRunner(t *testing.T) {
+	selector := &mockRunnerSelector{
+		err: errors.New("no available runner supports the requested agent"),
+	}
+	resolver := &mockAgentTypeResolver{
+		agentType: &agentDomain.AgentType{ID: 1, Slug: "claude-code"},
+	}
+
+	orch, _ := setupOrchestrator(t,
+		withRunnerSelector(selector),
+		withAgentTypeResolver(resolver),
+	)
+
+	agentTypeID := int64(1)
+	_, err := orch.CreatePod(context.Background(), &OrchestrateCreatePodRequest{
+		OrganizationID: 1,
+		UserID:         1,
+		RunnerID:       0,
+		AgentTypeID:    &agentTypeID,
+	})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrNoAvailableRunner))
+}
+
+func TestCreatePod_AutoSelectRunner_AgentTypeResolveError(t *testing.T) {
+	selector := &mockRunnerSelector{
+		runner: &runnerDomain.Runner{ID: 42},
+	}
+	resolver := &mockAgentTypeResolver{
+		err: errors.New("agent type not found"),
+	}
+
+	orch, _ := setupOrchestrator(t,
+		withRunnerSelector(selector),
+		withAgentTypeResolver(resolver),
+	)
+
+	agentTypeID := int64(999)
+	_, err := orch.CreatePod(context.Background(), &OrchestrateCreatePodRequest{
+		OrganizationID: 1,
+		UserID:         1,
+		RunnerID:       0,
+		AgentTypeID:    &agentTypeID,
+	})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrMissingAgentTypeID))
+}
+
+func TestCreatePod_ExplicitRunnerID_SkipsAutoSelect(t *testing.T) {
+	// When RunnerID is explicitly provided, auto-select should NOT be invoked
+	coord := &mockPodCoordinator{}
+	selector := &mockRunnerSelector{
+		// This would fail if called, but it shouldn't be called
+		err: errors.New("should not be called"),
+	}
+	resolver := &mockAgentTypeResolver{
+		agentType: &agentDomain.AgentType{ID: 1, Slug: "claude-code"},
+	}
+
+	orch, _ := setupOrchestrator(t,
+		withCoordinator(coord),
+		withRunnerSelector(selector),
+		withAgentTypeResolver(resolver),
+	)
+
+	agentTypeID := int64(1)
+	result, err := orch.CreatePod(context.Background(), &OrchestrateCreatePodRequest{
+		OrganizationID: 1,
+		UserID:         1,
+		RunnerID:       5, // explicit runner
+		AgentTypeID:    &agentTypeID,
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, result.Pod)
+	assert.Equal(t, int64(5), result.Pod.RunnerID) // uses explicit runner, not auto-selected
 }
 
 func TestCreatePod_NormalMode_MissingAgentTypeID(t *testing.T) {

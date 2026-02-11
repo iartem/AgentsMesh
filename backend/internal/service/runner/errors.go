@@ -13,6 +13,7 @@ var (
 	ErrRunnerDisabled      = errors.New("runner is disabled")
 	ErrRunnerQuotaExceeded = errors.New("runner quota exceeded")
 	ErrGRPCTokenNotFound   = errors.New("gRPC registration token not found")
+	ErrNoRunnerForAgent    = errors.New("no available runner supports the requested agent")
 )
 
 // Connection errors - runner connection related errors

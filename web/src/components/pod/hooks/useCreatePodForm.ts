@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { podApi, PodData, AgentTypeData, RepositoryData } from "@/lib/api";
 import { userAgentCredentialApi, CredentialProfileData } from "@/lib/api";
+import { usePodCreationStore } from "@/stores/podCreation";
 
 /**
  * Validation errors for the form
@@ -46,9 +47,9 @@ export interface CreatePodFormState {
 
   // Actions
   reset: () => void;
-  validate: (selectedRunnerId: number | null) => boolean;
+  validate: (selectedRunnerId: number | null | undefined) => boolean;
   submit: (
-    selectedRunnerId: number | null,
+    selectedRunnerId: number | null | undefined,
     pluginConfig: Record<string, unknown>,
     options?: { ticketId?: number; initialPrompt?: string; cols?: number; rows?: number }
   ) => Promise<PodData | null>;
@@ -64,6 +65,10 @@ export function useCreatePodForm(
   repositories: RepositoryData[],
   onSuccess?: (pod: PodData) => void
 ): CreatePodFormState {
+  // Read saved preferences for auto-fill
+  const { lastAgentTypeId, lastRepositoryId, lastCredentialProfileId, lastBranchName, setLastChoices } = usePodCreationStore();
+  const prefsInitializedRef = useRef(false);
+
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
   const [selectedRepository, setSelectedRepository] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string>("");
@@ -76,6 +81,23 @@ export function useCreatePodForm(
   // Credential profiles state
   const [credentialProfiles, setCredentialProfiles] = useState<CredentialProfileData[]>([]);
   const [loadingCredentials, setLoadingCredentials] = useState(false);
+
+  // Auto-fill from saved preferences when agent types become available
+  useEffect(() => {
+    if (prefsInitializedRef.current || availableAgentTypes.length === 0) return;
+
+    if (lastAgentTypeId && availableAgentTypes.find(a => a.id === lastAgentTypeId)) {
+      setSelectedAgent(lastAgentTypeId);
+    }
+    if (lastRepositoryId && repositories.find(r => r.id === lastRepositoryId)) {
+      setSelectedRepository(lastRepositoryId);
+    }
+    if (lastBranchName) {
+      setSelectedBranch(lastBranchName);
+    }
+
+    prefsInitializedRef.current = true;
+  }, [availableAgentTypes, repositories, lastAgentTypeId, lastRepositoryId, lastBranchName]);
 
   // Compute agent slug from selected agent
   const selectedAgentSlug = useMemo(() => {
@@ -127,9 +149,12 @@ export function useCreatePodForm(
         const profiles = res.profiles || [];
         setCredentialProfiles(profiles);
 
-        // Auto-select: if there's a default profile, use it; otherwise use RunnerHost
+        // Auto-select: prefer saved preference, then default profile, then RunnerHost
+        const savedProfile = lastCredentialProfileId && profiles.find(p => p.id === lastCredentialProfileId);
         const defaultProfile = profiles.find((p) => p.is_default);
-        if (defaultProfile) {
+        if (savedProfile) {
+          setSelectedCredentialProfile(savedProfile.id);
+        } else if (defaultProfile) {
           setSelectedCredentialProfile(defaultProfile.id);
         } else {
           setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
@@ -144,6 +169,7 @@ export function useCreatePodForm(
     };
 
     loadCredentials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgent]);
 
   // Clear validation error when field changes
@@ -153,13 +179,9 @@ export function useCreatePodForm(
     }
   }, [selectedAgent, validationErrors.agent]);
 
-  // Validate form
-  const validate = useCallback((selectedRunnerId: number | null): boolean => {
+  // Validate form (runner is optional - backend auto-selects when not provided)
+  const validate = useCallback((selectedRunnerId: number | null | undefined): boolean => {
     const errors: FormValidationErrors = {};
-
-    if (!selectedRunnerId) {
-      errors.runner = "Please select a runner";
-    }
 
     if (!selectedAgent) {
       errors.agent = "Please select an agent type";
@@ -192,12 +214,13 @@ export function useCreatePodForm(
     setPrompt("");
     setError(null);
     setValidationErrors({});
+    prefsInitializedRef.current = false;
   }, []);
 
-  // Submit form
+  // Submit form (runner_id is optional - backend auto-selects when not provided)
   const submit = useCallback(
     async (
-      selectedRunnerId: number | null,
+      selectedRunnerId: number | null | undefined,
       pluginConfig: Record<string, unknown>,
       options?: { ticketId?: number; initialPrompt?: string; cols?: number; rows?: number }
     ): Promise<PodData | null> => {
@@ -206,8 +229,8 @@ export function useCreatePodForm(
         return null;
       }
 
-      if (!selectedRunnerId || !selectedAgent) {
-        setError("Please select a runner and agent");
+      if (!selectedAgent) {
+        setError("Please select an agent");
         return null;
       }
 
@@ -226,7 +249,7 @@ export function useCreatePodForm(
 
         const response = await podApi.create({
           agent_type_id: selectedAgent,
-          runner_id: selectedRunnerId,
+          runner_id: selectedRunnerId || undefined, // omit when not manually selected
           repository_id: selectedRepository || undefined,
           branch_name: selectedBranch || undefined,
           initial_prompt: finalPrompt,
@@ -238,6 +261,14 @@ export function useCreatePodForm(
         });
 
         if (response.pod) {
+          // Save choices for next time
+          setLastChoices({
+            lastAgentTypeId: selectedAgent,
+            lastRepositoryId: selectedRepository,
+            lastCredentialProfileId: selectedCredentialProfile > 0 ? selectedCredentialProfile : null,
+            lastBranchName: selectedBranch || null,
+          });
+
           onSuccess?.(response.pod);
           return response.pod;
         }
@@ -251,7 +282,7 @@ export function useCreatePodForm(
         setLoading(false);
       }
     },
-    [selectedAgent, selectedAgentSlug, selectedRepository, selectedBranch, selectedCredentialProfile, prompt, onSuccess, validate]
+    [selectedAgent, selectedAgentSlug, selectedRepository, selectedBranch, selectedCredentialProfile, prompt, onSuccess, validate, setLastChoices]
   );
 
   return {

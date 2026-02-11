@@ -1491,6 +1491,8 @@
       "branchPlaceholder": "main",
       "initialPrompt": "Initial Prompt",
       "initialPromptPlaceholder": "Enter the initial task for the agent...",
+      "advancedOptions": "Advanced Options",
+      "runnerAutoSelect": "Auto-select (Recommended)",
       "advanced": "Advanced Options",
       "timeout": "Timeout (minutes)",
       "autoCleanup": "Auto cleanup on completion",

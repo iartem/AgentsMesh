@@ -12,6 +12,7 @@ interface RunnerSelectProps {
 
 /**
  * Runner selection dropdown component
+ * Default option is auto-select (backend picks the best available runner)
  */
 export function RunnerSelect({
   runners,
@@ -37,13 +38,12 @@ export function RunnerSelect({
         onChange={(e) =>
           onSelect(e.target.value ? Number(e.target.value) : null)
         }
-        aria-required="true"
         aria-invalid={!!error}
         aria-describedby={
           error ? "runner-error" : runners.length === 0 ? "runner-help" : undefined
         }
       >
-        <option value="">{t("ide.createPod.selectRunnerPlaceholder")}</option>
+        <option value="">{t("ide.createPod.runnerAutoSelect")}</option>
         {runners.map((runner) => (
           <option key={runner.id} value={runner.id}>
             {runner.node_id} ({runner.current_pods}/{runner.max_concurrent_pods})

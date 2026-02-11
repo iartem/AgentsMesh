@@ -31,6 +31,30 @@ vi.mock("@/components/ide/ConfigForm", () => ({
   ConfigForm: () => <div data-testid="config-form">Config Form</div>,
 }));
 
+vi.mock("@/lib/terminal-size", () => ({
+  estimateWorkspaceTerminalSize: () => ({ cols: 80, rows: 24 }),
+}));
+
+// Mock Collapsible to always render children (no collapse animation in tests)
+vi.mock("@/components/ui/collapsible", () => ({
+  Collapsible: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CollapsibleTrigger: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
+  CollapsibleContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/stores/podCreation", () => ({
+  usePodCreationStore: () => ({
+    lastAgentTypeId: null,
+    lastRepositoryId: null,
+    lastCredentialProfileId: null,
+    lastBranchName: null,
+    setLastChoices: vi.fn(),
+    clearLastChoices: vi.fn(),
+    _hasHydrated: true,
+    setHasHydrated: vi.fn(),
+  }),
+}));
+
 import { usePodCreationData, useCreatePodForm } from "../../hooks";
 import { useConfigOptions } from "@/components/ide/hooks";
 

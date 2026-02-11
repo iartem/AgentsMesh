@@ -90,13 +90,15 @@ func main() {
 	compositeProvider := agent.NewCompositeProvider(services.agentType, services.credentialProfile, services.userConfig)
 	configBuilder := agent.NewConfigBuilder(compositeProvider)
 	podOrchestrator := agentpod.NewPodOrchestrator(&agentpod.PodOrchestratorDeps{
-		PodService:     services.pod,
-		ConfigBuilder:  configBuilder,
-		PodCoordinator: podCoordinator,
-		BillingService: services.billing,
-		UserService:    services.user,
-		RepoService:    services.repository,
-		TicketService:  services.ticket,
+		PodService:        services.pod,
+		ConfigBuilder:     configBuilder,
+		PodCoordinator:    podCoordinator,
+		BillingService:    services.billing,
+		UserService:       services.user,
+		RepoService:       services.repository,
+		TicketService:     services.ticket,
+		RunnerSelector:    services.runner,
+		AgentTypeResolver: services.agentType,
 	})
 	slog.Info("PodOrchestrator created")
 
