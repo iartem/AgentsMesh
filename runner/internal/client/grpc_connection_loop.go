@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -95,11 +96,11 @@ func (c *GRPCConnection) runConnection() {
 	logger.GRPC().Debug("Starting read/write loops")
 
 	// Start write loop
-	go c.writeLoop(ctx, done)
+	safego.Go("grpc-write-loop", func() { c.writeLoop(ctx, done) })
 
 	// IMPORTANT: Start read loop BEFORE initialization
 	// The read loop must be running to receive the initialize_result response
-	go c.readLoop(ctx, readLoopDone)
+	safego.Go("grpc-read-loop", func() { c.readLoop(ctx, readLoopDone) })
 
 	// Perform initialization (blocks until handshake completes or times out)
 	if err := c.performInitialization(ctx); err != nil {
@@ -109,13 +110,13 @@ func (c *GRPCConnection) runConnection() {
 	}
 
 	// Start heartbeat loop (only after successful initialization)
-	go c.heartbeatLoop(ctx, done)
+	safego.Go("grpc-heartbeat", func() { c.heartbeatLoop(ctx, done) })
 
 	// Start certificate renewal checker
-	go c.certRenewalChecker(ctx, done)
+	safego.Go("grpc-cert-renewal", func() { c.certRenewalChecker(ctx, done) })
 
 	// Monitor for reconnection signal (certificate renewal)
-	go func() {
+	safego.Go("grpc-reconnect-monitor", func() {
 		select {
 		case <-c.reconnectCh:
 			logger.GRPC().Info("Reconnection requested for certificate renewal")
@@ -125,7 +126,7 @@ func (c *GRPCConnection) runConnection() {
 		case <-c.stopCh:
 			return
 		}
-	}()
+	})
 
 	// Wait for context cancellation, stop signal, or readLoop exit
 	select {

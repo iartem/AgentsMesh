@@ -4,6 +4,8 @@ package detector
 import (
 	"sync"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // OutputActivityDetector detects agent state based on terminal output activity.
@@ -243,6 +245,6 @@ func (d *OutputActivityDetector) setState(newState ActivityState) {
 
 	if d.onStateChange != nil {
 		cb := d.onStateChange
-		go cb(newState, prevState)
+		safego.Go("activity-callback", func() { cb(newState, prevState) })
 	}
 }

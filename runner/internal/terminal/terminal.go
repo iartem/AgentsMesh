@@ -11,6 +11,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // Options for creating a new terminal.
@@ -121,10 +122,10 @@ func (t *Terminal) Start() error {
 	log.Debug("PTY started", "pid", t.cmd.Process.Pid, "cols", t.cols, "rows", t.rows)
 
 	// Start output reader
-	go t.readOutput()
+	safego.Go("pty-read", t.readOutput)
 
 	// Wait for process exit
-	go t.waitExit()
+	safego.Go("pty-wait", t.waitExit)
 
 	log.Info("Terminal started", "pid", t.cmd.Process.Pid, "cols", t.cols, "rows", t.rows)
 

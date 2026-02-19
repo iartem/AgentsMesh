@@ -15,6 +15,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // Module logger for console
@@ -103,11 +104,11 @@ func (s *Server) Start() error {
 
 	log.Info("Starting web console", "url", fmt.Sprintf("http://127.0.0.1:%d", s.port))
 
-	go func() {
+	safego.Go("console-http-listen", func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("Server error", "error", err)
 		}
-	}()
+	})
 
 	return nil
 }

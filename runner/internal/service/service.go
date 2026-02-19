@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sync"
 
 	"github.com/kardianos/service"
@@ -69,6 +70,16 @@ func (p *Program) Start(s service.Service) error {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("Runner panic recovered in service mode, exiting for restart",
+					"panic", fmt.Sprintf("%v", r),
+					"stack", string(debug.Stack()),
+				)
+				p.sendStatus(Status{Running: false, Error: fmt.Errorf("panic: %v", r)})
+				os.Exit(1) // Let the service manager restart the process
+			}
+		}()
 		p.sendStatus(Status{Running: true, Connected: true})
 
 		if err := p.runner.Run(p.ctx); err != nil {
@@ -119,6 +130,16 @@ func ServiceConfig() *service.Config {
 		Description: ServiceDescription,
 		Option: service.KeyValue{
 			"UserService": true,
+			// macOS launchd: auto-restart on crash
+			"KeepAlive":        true,
+			"ThrottleInterval": 10,
+			// Linux systemd: auto-restart on failure
+			"Restart":               "on-failure",
+			"RestartSec":            "10",
+			"StartLimitBurst":       "5",
+			"StartLimitIntervalSec": "60",
+			// Linux systemd: watchdog integration (WatchdogService sends heartbeats)
+			"WatchdogSec": "60",
 		},
 	}
 }

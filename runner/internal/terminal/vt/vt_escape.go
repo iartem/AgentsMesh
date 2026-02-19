@@ -3,6 +3,8 @@ package vt
 import (
 	"strconv"
 	"strings"
+
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // escapeState represents the current state of escape sequence parsing
@@ -150,5 +152,5 @@ func (vt *VirtualTerminal) handleOSC(data []byte) {
 
 	// Call handler in a goroutine to avoid blocking PTY processing
 	handler := vt.oscHandler
-	go handler(oscType, params)
+	safego.Go("osc-handler", func() { handler(oscType, params) })
 }

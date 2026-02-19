@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal/vt"
 )
@@ -46,7 +47,7 @@ func NewManagedStateDetector(vt *vt.VirtualTerminal) *ManagedStateDetector {
 	}
 
 	// Start background detection loop
-	go m.runDetectionLoop()
+	safego.Go("state-detector", m.runDetectionLoop)
 
 	return m
 }

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 	"unicode/utf8"
+
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // OSCHandler is a callback for handling OSC (Operating System Command) sequences.
@@ -151,7 +153,7 @@ func (vt *VirtualTerminal) Feed(data []byte) []string {
 			vt.firstDataFired = true
 			callback := vt.onFirstData
 			vt.onFirstDataMu.Unlock()
-			go callback() // Execute in goroutine to avoid blocking PTY reading
+			safego.Go("vt-first-data", callback) // Execute in goroutine to avoid blocking PTY reading
 		} else {
 			vt.onFirstDataMu.Unlock()
 		}

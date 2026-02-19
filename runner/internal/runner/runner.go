@@ -6,9 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/thejerf/suture/v4"
+
 	"github.com/anthropics/agentsmesh/runner/internal/autopilot"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/lifecycle"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp"
 	"github.com/anthropics/agentsmesh/runner/internal/monitor"
@@ -37,6 +40,9 @@ type Runner struct {
 	// Update management
 	draining   bool
 	drainingMu sync.RWMutex
+
+	// Supervisor services (registered before Run)
+	additionalServices []suture.Service
 
 	// Channels for coordination
 	stopChan chan struct{}
@@ -153,38 +159,72 @@ func (r *Runner) initEnhancedComponents(cfg *config.Config) {
 		grpcConn.SetRPCClient(rpcClient)
 	}
 
-	// Initialize and start MCP HTTP Server
+	// Initialize MCP HTTP Server (started by Supervisor in Run())
 	mcpPort := cfg.GetMCPPort()
 	r.mcpServer = mcp.NewHTTPServer(rpcClient, mcpPort)
 	r.mcpServer.SetStatusProvider(r)
 	r.mcpServer.SetTerminalProvider(r)
-	go func() {
-		log.Info("Starting MCP HTTP Server", "port", mcpPort)
-		if err := r.mcpServer.Start(); err != nil {
-			log.Warn("MCP HTTP Server failed", "error", err)
-		}
-	}()
 
-	// Initialize and start Claude monitor
+	// Initialize Monitor (started by Supervisor in Run())
 	r.agentMonitor = monitor.NewMonitor(5 * time.Second)
-	r.agentMonitor.Start()
 	log.Debug("Enhanced components initialized")
 }
 
-// Run starts the runner and blocks until context is cancelled
+// AddService registers an additional suture.Service to be managed by the Supervisor.
+// Must be called before Run().
+func (r *Runner) AddService(svc suture.Service) {
+	r.additionalServices = append(r.additionalServices, svc)
+}
+
+// Run starts the runner with a suture Supervisor tree and blocks until context is cancelled.
+// All core components (gRPC connection, MCP server, Monitor, etc.) are managed by the Supervisor,
+// which automatically restarts them on failure.
 func (r *Runner) Run(ctx context.Context) error {
 	log := logger.Runner()
 	log.Info("Runner starting", "node_id", r.cfg.NodeID, "org", r.cfg.OrgSlug)
 
-	r.conn.Start()
-	defer r.conn.Stop()
+	// Create top-level Supervisor
+	supervisor := suture.New("runner", suture.Spec{
+		EventHook: func(e suture.Event) {
+			log.Warn("Supervisor event", "event", e.String())
+		},
+		FailureThreshold: 5,
+		FailureDecay:     60,
+		FailureBackoff:   5 * time.Second,
+	})
 
-	<-ctx.Done()
+	// Register core services
+	supervisor.Add(&lifecycle.ConnectionService{Conn: r.conn})
+
+	if r.mcpServer != nil {
+		supervisor.Add(&lifecycle.MCPServerService{Server: r.mcpServer})
+	}
+	if r.agentMonitor != nil {
+		supervisor.Add(&lifecycle.MonitorService{Monitor: r.agentMonitor})
+	}
+
+	// Register Watchdog health monitor
+	watchdogCfg := lifecycle.WatchdogConfig{
+		Interval: 15 * time.Second,
+	}
+	// Wire up connection activity monitoring if GRPCConnection supports it
+	if am, ok := r.conn.(lifecycle.ActivityMonitor); ok {
+		watchdogCfg.ConnMonitor = am
+	}
+	supervisor.Add(lifecycle.NewWatchdogService(watchdogCfg))
+
+	// Register additional services (Console, etc.)
+	for _, svc := range r.additionalServices {
+		supervisor.Add(svc)
+	}
+
+	// Supervisor.Serve() blocks until ctx is cancelled
+	err := supervisor.Serve(ctx)
+
 	log.Info("Shutting down runner...")
-
 	r.stopAllPods()
 
-	return nil
+	return err
 }
 
 // stopAllPods stops all active pods

@@ -8,10 +8,12 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/anthropics/agentsmesh/runner/internal/config"
 	"github.com/anthropics/agentsmesh/runner/internal/console"
+	"github.com/anthropics/agentsmesh/runner/internal/lifecycle"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/runner"
 )
@@ -125,6 +127,13 @@ The runner uses gRPC/mTLS for secure communication with the server.`)
 }
 
 func startRunner(cfg *config.Config) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "FATAL: Runner panic: %v\n%s\n", r, debug.Stack())
+			os.Exit(1)
+		}
+	}()
+
 	log := logger.Runner()
 
 	// Create runner instance
@@ -134,13 +143,9 @@ func startRunner(cfg *config.Config) {
 		os.Exit(1)
 	}
 
-	// Start web console
+	// Create web console (lifecycle managed by Supervisor)
 	consoleServer := console.New(cfg, DefaultConsolePort, version)
-	if err := consoleServer.Start(); err != nil {
-		log.Warn("Failed to start web console", "error", err)
-	} else {
-		log.Info("Web console available", "url", consoleServer.GetURL())
-	}
+	r.AddService(&lifecycle.ConsoleService{Server: consoleServer})
 
 	// Setup context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -170,7 +175,5 @@ func startRunner(cfg *config.Config) {
 		os.Exit(1)
 	}
 
-	// Stop web console
-	consoleServer.Stop()
 	log.Info("Runner shutdown complete")
 }

@@ -11,6 +11,7 @@ import (
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -225,7 +226,7 @@ func (c *GRPCConnection) Connect() error {
 // Start starts the connection management loop.
 func (c *GRPCConnection) Start() {
 	logger.GRPC().Info("gRPC connection manager starting", "endpoint", c.endpoint)
-	go c.connectionLoop()
+	safego.Go("grpc-connection-loop", c.connectionLoop)
 }
 
 // Stop stops the connection and releases resources.
@@ -269,6 +270,16 @@ func isRetryableError(err error) bool {
 	default:
 		return false
 	}
+}
+
+// LastActivityTime returns the last time a message was successfully sent.
+// Used by the Watchdog health checker to detect stuck connections.
+func (c *GRPCConnection) LastActivityTime() time.Time {
+	ns := c.lastSendTime.Load()
+	if ns == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, ns)
 }
 
 // Ensure GRPCConnection implements Connection interface.

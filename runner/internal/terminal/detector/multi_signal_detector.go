@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // Note: AgentState, StateNotRunning, StateExecuting, StateWaiting, and StateChangeCallback
@@ -271,7 +272,7 @@ func (d *MultiSignalDetector) setStateWithConfidence(newState AgentState, confid
 	// Legacy callback (for backward compatibility)
 	if d.onStateChange != nil {
 		cb := d.onStateChange
-		go cb(newState, prevState)
+		safego.Go("detector-callback", func() { cb(newState, prevState) })
 	}
 
 	// Notify subscribers (use separate lock to avoid deadlock)
@@ -292,7 +293,7 @@ func (d *MultiSignalDetector) notifySubscribers(event StateChangeEvent) {
 	// Invoke callbacks asynchronously
 	for _, cb := range subs {
 		callback := cb
-		go callback(event)
+		safego.Go("detector-subscriber", func() { callback(event) })
 	}
 }
 

@@ -4,6 +4,8 @@ package autopilot
 import (
 	"log/slog"
 	"sync"
+
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // UserInteractionHandler manages user takeover, handback, and approval interactions.
@@ -86,7 +88,7 @@ func (uih *UserInteractionHandler) Handback() {
 
 	// Trigger resume callback to check if Pod is waiting and needs iteration
 	if uih.onResumeCallback != nil {
-		go uih.onResumeCallback()
+		safego.Go("resume-callback", uih.onResumeCallback)
 	}
 }
 
@@ -120,7 +122,7 @@ func (uih *UserInteractionHandler) Approve(continueExecution bool, additionalIte
 
 	// Trigger resume callback to check if Pod is waiting and needs iteration
 	if uih.onResumeCallback != nil {
-		go uih.onResumeCallback()
+		safego.Go("resume-callback", uih.onResumeCallback)
 	}
 }
 

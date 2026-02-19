@@ -11,6 +11,7 @@ import (
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // RPCCallTimeout is the default timeout for MCP RPC calls.
@@ -40,7 +41,7 @@ func NewRPCClient(conn ConnectionSender) *RPCClient {
 		conn: conn,
 		done: make(chan struct{}),
 	}
-	go r.cleanupLoop()
+	safego.Go("rpc-cleanup", r.cleanupLoop)
 	return r
 }
 

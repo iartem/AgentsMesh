@@ -6,6 +6,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"github.com/gorilla/websocket"
 )
 
@@ -88,8 +89,8 @@ func (c *Client) Start() bool {
 
 	c.logger.Info("Starting relay client loops")
 	c.wg.Add(2)
-	go c.readLoop()
-	go c.writeLoop()
+	safego.Go("relay-read", c.readLoop)
+	safego.Go("relay-write", c.writeLoop)
 	return true
 }
 

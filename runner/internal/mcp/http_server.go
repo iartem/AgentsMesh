@@ -9,6 +9,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
 )
 
@@ -108,11 +109,11 @@ func (s *HTTPServer) Start() error {
 	log := logger.MCP()
 	log.Info("Starting MCP HTTP server", "port", s.port)
 
-	go func() {
+	safego.Go("mcp-http-listen", func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("Server error", "error", err)
 		}
-	}()
+	})
 
 	return nil
 }

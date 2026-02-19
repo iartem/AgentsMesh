@@ -3,6 +3,7 @@ package monitor
 import (
 	"time"
 
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal/detector"
 )
 
@@ -56,7 +57,7 @@ func (m *Monitor) GetAllStatuses() []PodStatus {
 
 // Start starts the monitoring loop.
 func (m *Monitor) Start() {
-	go m.monitorLoop()
+	safego.Go("agent-monitor", m.monitorLoop)
 	log.Info("Started process monitor", "interval", m.interval)
 }
 

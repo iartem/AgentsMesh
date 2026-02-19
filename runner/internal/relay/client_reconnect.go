@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/anthropics/agentsmesh/runner/internal/safego"
 )
 
 // isHandshakeError checks if the error is a WebSocket handshake failure
@@ -133,6 +135,7 @@ func (c *Client) reconnectLoop() {
 		if c.stopped.Load() {
 			c.wgMu.Unlock()
 			c.logger.Info("Client stopped during reconnection, closing new connection")
+			c.connected.Store(false)
 			c.connMu.Lock()
 			if c.conn != nil {
 				c.conn.Close()
@@ -152,8 +155,8 @@ func (c *Client) reconnectLoop() {
 		c.wg.Add(2)
 		c.wgMu.Unlock()
 
-		go c.readLoop()
-		go c.writeLoop()
+		safego.Go("relay-read", c.readLoop)
+		safego.Go("relay-write", c.writeLoop)
 
 		// Trigger reconnect callback (e.g., to resend snapshot)
 		if c.onReconnect != nil {
