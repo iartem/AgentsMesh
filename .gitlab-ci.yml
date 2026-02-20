@@ -12,7 +12,7 @@ variables:
   RUNNER_IMAGE: ${REGISTRY}/agentsmesh/runner
   RELAY_IMAGE: ${REGISTRY}/agentsmesh/relay
   VERSION: ${CI_COMMIT_TAG:-dev}
-  GO_VERSION: "1.24"
+  GO_VERSION: "1.25"
   # Use China Go proxy for faster module downloads
   GOPROXY: "https://goproxy.cn,https://goproxy.io,direct"
   GOSUMDB: "sum.golang.google.cn"
