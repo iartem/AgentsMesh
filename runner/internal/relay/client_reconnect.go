@@ -128,14 +128,15 @@ func (c *Client) reconnectLoop() {
 
 		c.logger.Info("Reconnected to relay successfully")
 
-		// Atomically check stopped and add to wg
-		// This prevents race condition where Stop() sets stopped=true
-		// between our check and wg.Add(2)
+		// Atomically check stopped and mark connected inside wgMu lock.
+		// This prevents race condition where Stop() sets stopped=true and
+		// connected=false between connectInternal() and our check here.
+		// Without this lock, connectInternal succeeds → Stop() runs →
+		// connected is left as true when the test checks IsConnected().
 		c.wgMu.Lock()
 		if c.stopped.Load() {
 			c.wgMu.Unlock()
 			c.logger.Info("Client stopped during reconnection, closing new connection")
-			c.connected.Store(false)
 			c.connMu.Lock()
 			if c.conn != nil {
 				c.conn.Close()
@@ -147,6 +148,10 @@ func (c *Client) reconnectLoop() {
 			}
 			return
 		}
+
+		// Mark as connected only after confirming not stopped (under wgMu lock)
+		c.connected.Store(true)
+		c.connectedAt.Store(time.Now().UnixMilli())
 
 		// Create a new connDoneCh for the new connection
 		c.connDoneCh = make(chan struct{})

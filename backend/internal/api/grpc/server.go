@@ -58,6 +58,8 @@ type RunnerServiceInterface interface {
 	// IsCertificateRevoked checks if a certificate has been revoked.
 	// This is called at connection time to enforce certificate revocation.
 	IsCertificateRevoked(ctx context.Context, serialNumber string) (bool, error)
+	// UpdateRunnerVersionAndHostInfo persists runner version and host info from the gRPC handshake.
+	UpdateRunnerVersionAndHostInfo(ctx context.Context, runnerID int64, version string, hostInfo map[string]interface{}) error
 }
 
 // OrganizationServiceInterface defines the organization service methods needed.

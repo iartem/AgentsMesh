@@ -367,6 +367,7 @@
       "generateToken": "Generate Token",
       "delete": "Delete",
       "disabled": "Disabled",
+      "upgradeAvailable": "업그레이드",
       "deleteDialog": {
         "title": "Delete Runner",
         "description": "Are you sure you want to delete this runner? This action cannot be undone.",

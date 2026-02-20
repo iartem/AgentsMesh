@@ -504,6 +504,7 @@
       "generateToken": "生成令牌",
       "delete": "删除",
       "disabled": "已禁用",
+      "upgradeAvailable": "可升级",
       "deleteDialog": {
         "title": "删除 Runner",
         "description": "确定要删除此 Runner 吗？此操作无法撤销。",

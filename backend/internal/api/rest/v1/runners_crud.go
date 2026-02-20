@@ -20,7 +20,13 @@ func (h *RunnerHandler) ListRunners(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"runners": runners})
+	resp := gin.H{"runners": runners}
+	if h.versionChecker != nil {
+		if latestVersion := h.versionChecker.GetLatestVersion(c.Request.Context()); latestVersion != "" {
+			resp["latest_runner_version"] = latestVersion
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // GetRunner returns runner by ID
@@ -50,10 +56,16 @@ func (h *RunnerHandler) GetRunner(c *gin.Context) {
 		relayConnections = h.podCoordinator.GetRelayConnections(runnerID)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	resp := gin.H{
 		"runner":            r,
 		"relay_connections": relayConnections,
-	})
+	}
+	if h.versionChecker != nil {
+		if latestVersion := h.versionChecker.GetLatestVersion(c.Request.Context()); latestVersion != "" {
+			resp["latest_runner_version"] = latestVersion
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // UpdateRunner updates a runner

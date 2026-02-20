@@ -65,6 +65,9 @@ type Config struct {
 
 	// Auto-update settings
 	AutoUpdate AutoUpdateConfig `mapstructure:"auto_update"`
+
+	// Version is set programmatically from build-time ldflags, not from config file
+	Version string `yaml:"-" mapstructure:"-"`
 }
 
 // AutoUpdateConfig holds auto-update configuration.

@@ -137,6 +137,10 @@ func (a *grpcRunnerServiceAdapter) IsCertificateRevoked(ctx context.Context, ser
 	return a.svc.IsCertificateRevoked(ctx, serialNumber)
 }
 
+func (a *grpcRunnerServiceAdapter) UpdateRunnerVersionAndHostInfo(ctx context.Context, runnerID int64, version string, hostInfo map[string]interface{}) error {
+	return a.svc.UpdateRunnerVersionAndHostInfo(ctx, runnerID, version, hostInfo)
+}
+
 // grpcOrgServiceAdapter adapts organization.Service to grpcserver.OrganizationServiceInterface
 type grpcOrgServiceAdapter struct {
 	svc *organization.Service

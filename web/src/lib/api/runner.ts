@@ -52,17 +52,30 @@ export interface GRPCRegistrationToken {
   created_at: string;
 }
 
+// Response type for runner list API (includes optional latest version)
+export interface RunnerListResponse {
+  runners: RunnerData[];
+  latest_runner_version?: string;
+}
+
+// Response type for runner detail API
+export interface RunnerDetailResponse {
+  runner: RunnerData;
+  relay_connections?: RelayConnectionInfo[];
+  latest_runner_version?: string;
+}
+
 export const runnerApi = {
   list: (status?: string) => {
     const params = status ? `?status=${status}` : "";
-    return request<{ runners: RunnerData[] }>(`${orgPath("/runners")}${params}`);
+    return request<RunnerListResponse>(`${orgPath("/runners")}${params}`);
   },
 
   listAvailable: () =>
     request<{ runners: RunnerData[] }>(orgPath("/runners/available")),
 
   get: (id: number) =>
-    request<{ runner: RunnerData; relay_connections?: RelayConnectionInfo[] }>(`${orgPath("/runners")}/${id}`),
+    request<RunnerDetailResponse>(`${orgPath("/runners")}/${id}`),
 
   update: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean }) =>
     request<{ runner: RunnerData }>(`${orgPath("/runners")}/${id}`, {

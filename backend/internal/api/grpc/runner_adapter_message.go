@@ -120,6 +120,18 @@ func (a *GRPCRunnerAdapter) handleInitialize(ctx context.Context, runnerID int64
 		)
 	}
 
+	// Persist runner version and host info from the handshake
+	if req.RunnerInfo != nil && a.runnerService != nil {
+		hostInfo := map[string]interface{}{
+			"os":       req.RunnerInfo.GetOs(),
+			"arch":     req.RunnerInfo.GetArch(),
+			"hostname": req.RunnerInfo.GetHostname(),
+		}
+		if err := a.runnerService.UpdateRunnerVersionAndHostInfo(ctx, runnerID, req.RunnerInfo.GetVersion(), hostInfo); err != nil {
+			a.logger.Error("Failed to update runner version and host info", "runner_id", runnerID, "error", err)
+		}
+	}
+
 	// Build proto response
 	result := &runnerv1.InitializeResult{
 		ProtocolVersion: 2,

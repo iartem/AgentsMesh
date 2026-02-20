@@ -133,6 +133,9 @@ func registerRunnerRoutes(rg *gin.RouterGroup, svc *Services) {
 	if svc.PodCoordinator != nil {
 		runnerOpts = append(runnerOpts, WithPodCoordinatorForRunner(svc.PodCoordinator))
 	}
+	if svc.VersionChecker != nil {
+		runnerOpts = append(runnerOpts, WithVersionChecker(svc.VersionChecker))
+	}
 	runnerHandler := NewRunnerHandler(svc.Runner, runnerOpts...)
 	runners := rg.Group("/runners")
 	{

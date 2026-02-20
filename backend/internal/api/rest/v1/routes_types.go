@@ -78,4 +78,7 @@ type Services struct {
 	RelayTokenGenerator *relay.TokenGenerator // Relay token generation
 	RelayDNSService     *relay.DNSService     // Relay DNS management
 	RelayACMEManager    *acme.Manager         // ACME certificate management for Relay TLS
+
+	// Runner version checker (optional, checks GitHub Releases for latest version)
+	VersionChecker *runner.VersionChecker
 }

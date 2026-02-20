@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Runner, getRunnerStatusInfo } from "@/stores/runner";
+import { isVersionOutdated } from "@/lib/utils/version";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface RunnerCardProps {
@@ -10,6 +11,7 @@ interface RunnerCardProps {
   onDelete: () => void;
   formatLastSeen: (dateString?: string) => string;
   t: TranslationFn;
+  latestRunnerVersion?: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export function RunnerCard({
   onDelete,
   formatLastSeen,
   t,
+  latestRunnerVersion,
 }: RunnerCardProps) {
   const statusInfo = getRunnerStatusInfo(runner.status as "online" | "offline" | "maintenance" | "busy");
 
@@ -55,7 +58,16 @@ export function RunnerCard({
             <span>
               {t("settings.runnersSection.pods")} {runner.current_pods} / {runner.max_concurrent_pods}
             </span>
-            {runner.runner_version && <span>v{runner.runner_version}</span>}
+            {runner.runner_version && (
+              <span className="flex items-center gap-1">
+                v{runner.runner_version}
+                {isVersionOutdated(runner.runner_version, latestRunnerVersion) && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    {t("settings.runnersSection.upgradeAvailable")}
+                  </span>
+                )}
+              </span>
+            )}
             <span>{t("settings.runnersSection.lastSeen")} {formatLastSeen(runner.last_heartbeat)}</span>
           </div>
         </div>

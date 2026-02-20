@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { runnerApi, type RunnerData } from "@/lib/api";
+import { isVersionOutdated } from "@/lib/utils/version";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -30,7 +32,10 @@ import { StatCard, AddRunnerModal, RunnerConfigModal } from "./components";
  */
 export default function RunnersPage() {
   const t = useTranslations();
+  const router = useRouter();
+  const params = useParams();
   const [runners, setRunners] = useState<RunnerData[]>([]);
+  const [latestVersion, setLatestVersion] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [showAddRunnerModal, setShowAddRunnerModal] = useState(false);
   const [selectedRunner, setSelectedRunner] = useState<RunnerData | null>(null);
@@ -51,6 +56,7 @@ export default function RunnersPage() {
     try {
       const runnersRes = await runnerApi.list();
       setRunners(runnersRes.runners || []);
+      setLatestVersion(runnersRes.latest_runner_version);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -172,7 +178,8 @@ export default function RunnersPage() {
           {runners.map((runner) => (
             <div
               key={runner.id}
-              className="p-4 border border-border rounded-lg bg-card"
+              className="p-4 border border-border rounded-lg bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => router.push(`/${params.org}/runners/${runner.id}`)}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -210,11 +217,18 @@ export default function RunnersPage() {
                 )}
                 <div className="flex justify-between">
                   <span>{t("runners.page.mobileVersionLabel")}</span>
-                  <span>{runner.runner_version || "-"}</span>
+                  <span className="flex items-center gap-1">
+                    {runner.runner_version || "-"}
+                    {isVersionOutdated(runner.runner_version, latestVersion) && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        {t("runners.page.upgradeAvailable")}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -269,7 +283,11 @@ export default function RunnersPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {runners.map((runner) => (
-                <tr key={runner.id} className="hover:bg-muted/50">
+                <tr
+                  key={runner.id}
+                  className="hover:bg-muted/50 cursor-pointer"
+                  onClick={() => router.push(`/${params.org}/runners/${runner.id}`)}
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(runner.status)}
@@ -301,9 +319,16 @@ export default function RunnersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {runner.runner_version || "-"}
+                    <span className="flex items-center gap-1.5">
+                      {runner.runner_version || "-"}
+                      {isVersionOutdated(runner.runner_version, latestVersion) && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                          {t("runners.page.upgradeAvailable")}
+                        </span>
+                      )}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       variant="outline"

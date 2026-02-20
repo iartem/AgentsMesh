@@ -81,6 +81,7 @@
       "mobileOsLabel": "SE :",
       "mobileCpuLabel": "CPU :",
       "mobileVersionLabel": "Version :",
+      "upgradeAvailable": "Mise à jour disponible",
       "stats": {
         "online": "En ligne",
         "offline": "Hors ligne",
@@ -155,6 +156,7 @@
       "availableAgents": "Available Agents",
       "relayConnections": "Relay Connections",
       "connectedSince": "Connected Since",
+      "upgradeAvailable": "v{version} disponible",
       "allStatus": "All Status",
       "refreshSandbox": "Refresh Sandbox Status",
       "podKey": "Pod Key",

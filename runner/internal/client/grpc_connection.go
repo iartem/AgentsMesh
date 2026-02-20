@@ -112,7 +112,7 @@ func NewGRPCConnection(endpoint, nodeID, orgSlug, certFile, keyFile, caFile stri
 		stopCh:                   make(chan struct{}),
 		reconnectCh:              make(chan struct{}, 1),
 		initResultCh:             make(chan *runnerv1.InitializeResult, 1),
-		runnerVersion:            "1.0.0",
+		runnerVersion:            "dev",
 		mcpPort:                  19000,
 		certRenewalCheckInterval: 24 * time.Hour,
 		certExpiryWarningDays:    30,

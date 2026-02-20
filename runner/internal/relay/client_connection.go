@@ -15,7 +15,15 @@ func (c *Client) Connect() error {
 	c.reconnectMu.Lock()
 	defer c.reconnectMu.Unlock()
 
-	return c.connectInternal()
+	if err := c.connectInternal(); err != nil {
+		return err
+	}
+
+	// Mark as connected after successful dial
+	// For reconnectLoop, connected is set inside wgMu lock to prevent race with Stop()
+	c.connected.Store(true)
+	c.connectedAt.Store(time.Now().UnixMilli())
+	return nil
 }
 
 func (c *Client) connectInternal() error {
@@ -67,8 +75,9 @@ func (c *Client) connectInternal() error {
 	c.connMu.Lock()
 	c.conn = conn
 	c.connMu.Unlock()
-	c.connected.Store(true)
-	c.connectedAt.Store(time.Now().UnixMilli())
+
+	// Note: connected and connectedAt are set by the caller (Connect or reconnectLoop)
+	// to ensure proper synchronization with Stop(). Do NOT set them here.
 
 	c.logger.Info("Connected to relay successfully")
 	return nil

@@ -89,6 +89,7 @@ func New(cfg *config.Config) (*Runner, error) {
 		cfg.KeyFile,
 		cfg.CAFile,
 		client.WithGRPCServerURL(cfg.ServerURL),
+		client.WithGRPCRunnerVersion(cfg.Version),
 	)
 
 	// Check certificate validity before connecting

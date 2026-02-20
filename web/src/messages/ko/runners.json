@@ -81,6 +81,7 @@
       "mobileOsLabel": "OS:",
       "mobileCpuLabel": "CPU:",
       "mobileVersionLabel": "버전:",
+      "upgradeAvailable": "업그레이드 가능",
       "stats": {
         "online": "온라인",
         "offline": "오프라인",
@@ -155,6 +156,7 @@
       "availableAgents": "Available Agents",
       "relayConnections": "Relay Connections",
       "connectedSince": "Connected Since",
+      "upgradeAvailable": "v{version} 사용 가능",
       "allStatus": "All Status",
       "refreshSandbox": "Refresh Sandbox Status",
       "podKey": "Pod Key",

@@ -123,6 +123,9 @@ The runner uses gRPC/mTLS for secure communication with the server.`)
 
 	log.Info("Using gRPC/mTLS connection mode", "endpoint", cfg.GRPCEndpoint)
 
+	// Pass build-time version to config for gRPC handshake
+	cfg.Version = version
+
 	startRunner(cfg)
 }
 

@@ -67,7 +67,8 @@
       "mobilePodsLabel": "Pod：",
       "mobileCpuLabel": "CPU：",
       "mobileOsLabel": "系统：",
-      "mobileVersionLabel": "版本："
+      "mobileVersionLabel": "版本：",
+      "upgradeAvailable": "有新版本"
     },
     "addRunnerModal": {
       "title": "添加 Runner",
@@ -123,6 +124,7 @@
       "availableAgents": "可用智能体",
       "relayConnections": "Relay 连接",
       "connectedSince": "连接时长",
+      "upgradeAvailable": "v{version} 可用",
       "allStatus": "全部状态",
       "refreshSandbox": "刷新 Sandbox 状态",
       "podKey": "Pod Key",

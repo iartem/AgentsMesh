@@ -57,11 +57,11 @@ export function RunnerPodsTab({
     const statusColors: Record<string, string> = {
       running: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
       initializing: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      terminated: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+      terminated: "bg-muted text-muted-foreground",
       error: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
       paused: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     };
-    return statusColors[status] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+    return statusColors[status] || "bg-muted text-muted-foreground";
   };
 
   return (
@@ -75,7 +75,7 @@ export function RunnerPodsTab({
               onFilterChange(e.target.value);
               onOffsetChange(0);
             }}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm"
+            className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-foreground"
           >
             <option value="">{t("runners.detail.allStatus")}</option>
             <option value="running">{t("pods.status.running")}</option>
@@ -108,47 +108,47 @@ export function RunnerPodsTab({
       </div>
 
       {/* Pods Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-900">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.podKey")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.status")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Agent Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.sandbox")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.branch")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.createdAt")}
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.actions")}
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-border">
             {pods.map((pod) => {
               const sandboxStatus = sandboxStatuses.get(pod.pod_key);
               const isInactive = pod.status !== "running" && pod.status !== "initializing";
               const canResume = isInactive && sandboxStatus?.can_resume;
 
               return (
-                <tr key={pod.pod_key} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <tr key={pod.pod_key} className="hover:bg-muted/50">
                   <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-foreground">
                       {pod.pod_key}
                     </span>
                     {pod.source_pod_key && (
-                      <span className="ml-2 text-xs text-gray-400">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         (resumed from {pod.source_pod_key.slice(0, 8)}...)
                       </span>
                     )}
@@ -178,23 +178,23 @@ export function RunnerPodsTab({
                       </span>
                     ) : isInactive ? (
                       sandboxStatus === undefined ? (
-                        <span className="text-gray-400 text-sm">-</span>
+                        <span className="text-muted-foreground text-sm">-</span>
                       ) : sandboxStatus.exists ? (
                         <span className="flex items-center text-green-600 dark:text-green-400 text-sm">
                           <CheckCircle className="w-4 h-4 mr-1" />
                           {sandboxStatus.can_resume ? t("runners.detail.canResume") : t("runners.detail.exists")}
                         </span>
                       ) : (
-                        <span className="flex items-center text-gray-400 text-sm">
+                        <span className="flex items-center text-muted-foreground text-sm">
                           <XCircle className="w-4 h-4 mr-1" />
                           {t("runners.detail.notExists")}
                         </span>
                       )
                     ) : (
-                      <span className="text-gray-400 text-sm">-</span>
+                      <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {pod.branch_name ? (
                       <span className="flex items-center">
                         <GitBranch className="w-4 h-4 mr-1" />
@@ -204,7 +204,7 @@ export function RunnerPodsTab({
                       "-"
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(pod.created_at), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -227,7 +227,7 @@ export function RunnerPodsTab({
             })}
             {pods.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                   {t("runners.detail.noPods")}
                 </td>
               </tr>
@@ -239,7 +239,7 @@ export function RunnerPodsTab({
       {/* Pagination */}
       {total > limit && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {t("runners.detail.showing", {
               from: offset + 1,
               to: Math.min(offset + limit, total),

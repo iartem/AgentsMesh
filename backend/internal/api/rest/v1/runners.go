@@ -12,6 +12,7 @@ type RunnerHandler struct {
 	sandboxQueryService *runner.SandboxQueryService
 	sandboxQuerySender  runner.SandboxQuerySender
 	podCoordinator      *runner.PodCoordinator
+	versionChecker      *runner.VersionChecker
 }
 
 // NewRunnerHandler creates a new runner handler
@@ -53,6 +54,13 @@ func WithSandboxQuerySender(sqs runner.SandboxQuerySender) RunnerHandlerOption {
 func WithPodCoordinatorForRunner(pc *runner.PodCoordinator) RunnerHandlerOption {
 	return func(h *RunnerHandler) {
 		h.podCoordinator = pc
+	}
+}
+
+// WithVersionChecker sets the version checker for runner handler
+func WithVersionChecker(vc *runner.VersionChecker) RunnerHandlerOption {
+	return func(h *RunnerHandler) {
+		h.versionChecker = vc
 	}
 }
 

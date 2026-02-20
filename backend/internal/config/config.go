@@ -22,10 +22,15 @@ type Config struct {
 	GRPC     GRPCConfig
 	Admin    AdminConfig
 	Relay    RelayConfig
+	Runner   RunnerConfig
 
 	// Unified domain configuration - all URLs are derived from these two values
 	PrimaryDomain string // Primary domain (e.g., "localhost:10000" or "agentsmesh.com")
 	UseHTTPS      bool   // Use HTTPS/WSS protocols
+}
+
+// RunnerConfig holds runner-related configuration
+type RunnerConfig struct {
 }
 
 // Load loads configuration from environment variables
@@ -185,6 +190,9 @@ func Load() (*Config, error) {
 		Admin: AdminConfig{
 			Enabled: getEnvBool("ADMIN_ENABLED", true),
 		},
+
+		// Runner Configuration
+		Runner: RunnerConfig{},
 
 		// Relay Management Configuration
 		Relay: RelayConfig{

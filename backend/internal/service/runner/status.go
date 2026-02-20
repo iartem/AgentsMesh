@@ -60,6 +60,18 @@ func (s *Service) UpdateHostInfo(ctx context.Context, runnerID int64, hostInfo m
 		Update("host_info", hostInfo).Error
 }
 
+// UpdateRunnerVersionAndHostInfo updates runner version and host information atomically.
+// Called during gRPC initialization handshake to persist RunnerInfo from the connect request.
+func (s *Service) UpdateRunnerVersionAndHostInfo(ctx context.Context, runnerID int64, version string, hostInfo map[string]interface{}) error {
+	updates := map[string]interface{}{
+		"runner_version": version,
+		"host_info":      hostInfo,
+	}
+	return s.db.WithContext(ctx).Model(&runner.Runner{}).
+		Where("id = ?", runnerID).
+		Updates(updates).Error
+}
+
 // UpdateAvailableAgents updates the list of available agents for a runner
 // Called when runner completes initialization handshake
 func (s *Service) UpdateAvailableAgents(ctx context.Context, runnerID int64, agents []string) error {

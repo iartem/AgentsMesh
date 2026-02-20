@@ -56,6 +56,10 @@ func (m *mockRunnerService) IsCertificateRevoked(ctx context.Context, serialNumb
 	return false, nil
 }
 
+func (m *mockRunnerService) UpdateRunnerVersionAndHostInfo(ctx context.Context, runnerID int64, version string, hostInfo map[string]interface{}) error {
+	return m.err
+}
+
 func (m *mockRunnerService) AddRunner(nodeID string, runner RunnerInfo) {
 	m.runners[nodeID] = runner
 }

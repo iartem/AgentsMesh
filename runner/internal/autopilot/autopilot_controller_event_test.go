@@ -158,10 +158,11 @@ func TestAutopilotController_OnPodWaiting_Failed(t *testing.T) {
 		MaxIterations: 10,
 	}
 
+	// Start with "executing" status so Start() doesn't trigger initial prompt
 	workerCtrl := &MockPodController{
 		workDir:     t.TempDir(),
 		podKey:      "worker-123",
-		agentStatus: "waiting",
+		agentStatus: "executing",
 	}
 
 	reporter := &MockEventReporter{}

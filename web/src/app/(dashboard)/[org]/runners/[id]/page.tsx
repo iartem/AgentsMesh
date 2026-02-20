@@ -37,6 +37,7 @@ export default function RunnerDetailPage() {
   const runnerId = Number(params.id);
 
   const [runner, setRunner] = useState<RunnerData | null>(null);
+  const [latestRunnerVersion, setLatestRunnerVersion] = useState<string | undefined>();
   const [relayConnections, setRelayConnections] = useState<RelayConnectionInfo[]>([]);
   const [pods, setPods] = useState<RunnerPodData[]>([]);
   const [sandboxStatuses, setSandboxStatuses] = useState<Map<string, SandboxStatus>>(new Map());
@@ -66,6 +67,7 @@ export default function RunnerDetailPage() {
       const res = await runnerApi.get(runnerId);
       setRunner(res.runner);
       setRelayConnections(res.relay_connections || []);
+      setLatestRunnerVersion(res.latest_runner_version);
     } catch (error) {
       console.error("Failed to load runner:", error);
     } finally {
@@ -191,7 +193,7 @@ export default function RunnerDetailPage() {
   if (!runner) {
     return (
       <div className="p-6">
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-muted-foreground">
           {t("runners.detail.notFound")}
         </p>
         <Link href="../runners">
@@ -215,12 +217,12 @@ export default function RunnerDetailPage() {
             </Button>
           </Link>
           <div className="flex items-center space-x-3">
-            <Server className="w-8 h-8 text-gray-400" />
+            <Server className="w-8 h-8 text-muted-foreground" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-foreground">
                 {runner.node_id}
               </h1>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 {getStatusIcon(runner.status)}
                 <span className="capitalize">{runner.status}</span>
                 {!runner.is_enabled && (
@@ -259,15 +261,15 @@ export default function RunnerDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-border">
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab("overview")}
             className={cn(
               "py-4 px-1 border-b-2 font-medium text-sm transition-colors",
               activeTab === "overview"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {t("runners.detail.tabs.overview")}
@@ -277,8 +279,8 @@ export default function RunnerDetailPage() {
             className={cn(
               "py-4 px-1 border-b-2 font-medium text-sm transition-colors",
               activeTab === "pods"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {t("runners.detail.tabs.pods")}
@@ -287,7 +289,7 @@ export default function RunnerDetailPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "overview" && <RunnerOverviewTab runner={runner} relayConnections={relayConnections} />}
+      {activeTab === "overview" && <RunnerOverviewTab runner={runner} relayConnections={relayConnections} latestRunnerVersion={latestRunnerVersion} />}
 
       {activeTab === "pods" && (
         <RunnerPodsTab

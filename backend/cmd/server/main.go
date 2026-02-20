@@ -132,6 +132,12 @@ func main() {
 		slog.Warn("PKI CA files not configured, gRPC/mTLS disabled")
 	}
 
+	// Initialize Runner version checker (checks GitHub Releases for latest version)
+	versionChecker := runner.NewVersionChecker(redisClient)
+	if versionChecker != nil {
+		versionChecker.Start(context.Background())
+	}
+
 	// Create services container
 	svc := &v1.Services{
 		Auth:               services.auth,
@@ -172,6 +178,7 @@ func main() {
 		RelayTokenGenerator: relayTokenGenerator,
 		RelayDNSService:     relayDNSService,
 		RelayACMEManager:    relayACMEManager,
+		VersionChecker:      versionChecker,
 	}
 
 	// Initialize router
