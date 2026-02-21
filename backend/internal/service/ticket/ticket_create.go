@@ -11,10 +11,7 @@ import (
 
 // CreateTicket creates a new ticket
 func (s *Service) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*ticket.Ticket, error) {
-	var number int
-	var identifier string
-
-	// Check if repository has a ticket_prefix
+	// Determine ticket prefix
 	var prefix sql.NullString
 	if req.RepositoryID != nil {
 		s.db.WithContext(ctx).Table("repositories").
@@ -23,24 +20,9 @@ func (s *Service) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*
 			Scan(&prefix)
 	}
 
+	ticketPrefix := "TICKET"
 	if prefix.Valid && prefix.String != "" {
-		// Repository has a prefix: generate number scoped to repository
-		var maxNumber int
-		s.db.WithContext(ctx).Model(&ticket.Ticket{}).
-			Where("repository_id = ?", req.RepositoryID).
-			Select("COALESCE(MAX(number), 0)").
-			Scan(&maxNumber)
-		number = maxNumber + 1
-		identifier = fmt.Sprintf("%s-%d", prefix.String, number)
-	} else {
-		// No prefix: generate number scoped to organization with TICKET- prefix
-		var maxNumber int
-		s.db.WithContext(ctx).Model(&ticket.Ticket{}).
-			Where("organization_id = ? AND identifier LIKE 'TICKET-%'", req.OrganizationID).
-			Select("COALESCE(MAX(number), 0)").
-			Scan(&maxNumber)
-		number = maxNumber + 1
-		identifier = fmt.Sprintf("TICKET-%d", number)
+		ticketPrefix = prefix.String
 	}
 
 	status := req.Status
@@ -48,23 +30,36 @@ func (s *Service) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*
 		status = ticket.TicketStatusBacklog
 	}
 
-	t := &ticket.Ticket{
-		OrganizationID: req.OrganizationID,
-		Number:         number,
-		Identifier:     identifier,
-		Type:           req.Type,
-		Title:          req.Title,
-		Description:    req.Description,
-		Content:        req.Content,
-		Status:         status,
-		Priority:       req.Priority,
-		DueDate:        req.DueDate,
-		RepositoryID:   req.RepositoryID,
-		ReporterID:     req.ReporterID,
-		ParentTicketID: req.ParentTicketID,
-	}
+	var t *ticket.Ticket
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Generate next number within transaction to prevent race conditions.
+		// Scoped to (organization_id, prefix) since identifier uniqueness is per-org.
+		var maxNumber int
+		likePattern := fmt.Sprintf("%s-%%", ticketPrefix)
+		tx.Model(&ticket.Ticket{}).
+			Where("organization_id = ? AND identifier LIKE ?", req.OrganizationID, likePattern).
+			Select("COALESCE(MAX(number), 0)").
+			Scan(&maxNumber)
+		number := maxNumber + 1
+		identifier := fmt.Sprintf("%s-%d", ticketPrefix, number)
+
+		t = &ticket.Ticket{
+			OrganizationID: req.OrganizationID,
+			Number:         number,
+			Identifier:     identifier,
+			Type:           req.Type,
+			Title:          req.Title,
+			Description:    req.Description,
+			Content:        req.Content,
+			Status:         status,
+			Priority:       req.Priority,
+			DueDate:        req.DueDate,
+			RepositoryID:   req.RepositoryID,
+			ReporterID:     req.ReporterID,
+			ParentTicketID: req.ParentTicketID,
+		}
+
 		if err := tx.Create(t).Error; err != nil {
 			return err
 		}

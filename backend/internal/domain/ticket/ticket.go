@@ -49,7 +49,7 @@ type Ticket struct {
 	OrganizationID int64 `gorm:"not null;index" json:"organization_id"`
 
 	Number     int    `gorm:"not null" json:"number"`
-	Identifier string `gorm:"size:50;not null;uniqueIndex" json:"identifier"` // e.g., "AM-123"
+	Identifier string `gorm:"size:50;not null;uniqueIndex:idx_tickets_org_identifier" json:"identifier"` // e.g., "AM-123"
 
 	Type        string  `gorm:"size:50;not null;default:'task'" json:"type"`
 	Title       string  `gorm:"size:500;not null" json:"title"`
