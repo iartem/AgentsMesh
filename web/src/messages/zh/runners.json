@@ -68,7 +68,9 @@
       "mobileCpuLabel": "CPU：",
       "mobileOsLabel": "系统：",
       "mobileVersionLabel": "版本：",
-      "upgradeAvailable": "有新版本"
+      "upgradeAvailable": "有新版本",
+      "visibilityOrganization": "组织",
+      "visibilityPrivate": "私有"
     },
     "addRunnerModal": {
       "title": "添加 Runner",
@@ -92,7 +94,10 @@
       "activePodsLabel": "活跃 Pod ({count})",
       "cancel": "取消",
       "saving": "保存中...",
-      "save": "保存更改"
+      "save": "保存更改",
+      "visibilityLabel": "可见范围",
+      "visibilityOrganization": "组织内所有成员可见",
+      "visibilityPrivate": "仅自己可见"
     },
     "detail": {
       "notFound": "Runner 未找到",

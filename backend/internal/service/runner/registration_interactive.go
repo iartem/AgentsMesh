@@ -148,7 +148,8 @@ func (s *Service) GetAuthStatus(ctx context.Context, authKey string, pkiService 
 
 // AuthorizeRunner authorizes a pending auth request (called from Web UI).
 // This is step 2 of Tailscale-style interactive registration.
-func (s *Service) AuthorizeRunner(ctx context.Context, authKey string, orgID int64, nodeID string) (*runner.Runner, error) {
+// userID is the ID of the user performing the authorization, recorded as RegisteredByUserID.
+func (s *Service) AuthorizeRunner(ctx context.Context, authKey string, orgID int64, userID int64, nodeID string) (*runner.Runner, error) {
 	var pendingAuth runner.PendingAuth
 	if err := s.db.WithContext(ctx).Where("auth_key = ?", authKey).First(&pendingAuth).Error; err != nil {
 		return nil, fmt.Errorf("auth request not found")
@@ -191,11 +192,12 @@ func (s *Service) AuthorizeRunner(ctx context.Context, authKey string, orgID int
 
 	// Create the runner
 	r := &runner.Runner{
-		OrganizationID:    orgID,
-		NodeID:            finalNodeID,
-		Status:            runner.RunnerStatusOffline,
-		MaxConcurrentPods: 5,
-		// No auth_token_hash - using mTLS certificates instead
+		OrganizationID:     orgID,
+		NodeID:             finalNodeID,
+		Status:             runner.RunnerStatusOffline,
+		MaxConcurrentPods:  5,
+		Visibility:         runner.VisibilityOrganization,
+		RegisteredByUserID: &userID,
 	}
 
 	if err := s.db.WithContext(ctx).Create(r).Error; err != nil {

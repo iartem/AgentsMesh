@@ -35,7 +35,7 @@ func (a *GRPCRunnerAdapter) mcpListAvailablePods(ctx context.Context, tc *middle
 
 // mcpListRunners handles the "list_runners" MCP method.
 func (a *GRPCRunnerAdapter) mcpListRunners(ctx context.Context, tc *middleware.TenantContext) (interface{}, *mcpError) {
-	runners, err := a.runnerMcpService.ListRunners(ctx, tc.OrganizationID)
+	runners, err := a.runnerMcpService.ListRunners(ctx, tc.OrganizationID, tc.UserID)
 	if err != nil {
 		return nil, newMcpError(500, "failed to list runners")
 	}

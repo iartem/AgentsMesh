@@ -82,6 +82,8 @@
       "mobileCpuLabel": "CPU：",
       "mobileVersionLabel": "バージョン：",
       "upgradeAvailable": "アップグレード可能",
+      "visibilityOrganization": "組織",
+      "visibilityPrivate": "プライベート",
       "stats": {
         "online": "オンライン",
         "offline": "オフライン",
@@ -124,7 +126,10 @@
       "activePodsLabel": "アクティブPod ({count})",
       "cancel": "キャンセル",
       "saving": "保存中...",
-      "save": "変更を保存"
+      "save": "変更を保存",
+      "visibilityLabel": "公開範囲",
+      "visibilityOrganization": "組織の全メンバーに表示",
+      "visibilityPrivate": "自分のみに表示"
     },
     "detail": {
       "notFound": "Runner not found",

@@ -11,6 +11,8 @@ export interface RunnerData {
   max_concurrent_pods: number;
   runner_version?: string;
   is_enabled: boolean;
+  visibility?: "organization" | "private";
+  registered_by_user_id?: number;
   host_info?: {
     os?: string;
     arch?: string;
@@ -77,7 +79,7 @@ export const runnerApi = {
   get: (id: number) =>
     request<RunnerDetailResponse>(`${orgPath("/runners")}/${id}`),
 
-  update: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean }) =>
+  update: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean; visibility?: string }) =>
     request<{ runner: RunnerData }>(`${orgPath("/runners")}/${id}`, {
       method: "PUT",
       body: data,

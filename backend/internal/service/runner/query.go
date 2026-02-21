@@ -49,41 +49,46 @@ func (s *Service) GetRunner(ctx context.Context, runnerID int64) (*runner.Runner
 	return &r, nil
 }
 
-// ListRunners returns runners for an organization
-func (s *Service) ListRunners(ctx context.Context, orgID int64) ([]*runner.Runner, error) {
-	var runners []*runner.Runner
-	if err := s.db.WithContext(ctx).Where("organization_id = ?", orgID).Find(&runners).Error; err != nil {
-		return nil, err
-	}
-	return runners, nil
-}
-
-// ListAvailableRunners returns online runners that can accept pods
-func (s *Service) ListAvailableRunners(ctx context.Context, orgID int64) ([]*runner.Runner, error) {
+// ListRunners returns runners for an organization, filtered by visibility.
+// Organization-visible runners are returned for all users; private runners only for the registrant.
+func (s *Service) ListRunners(ctx context.Context, orgID int64, userID int64) ([]*runner.Runner, error) {
 	var runners []*runner.Runner
 	if err := s.db.WithContext(ctx).
-		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods", orgID, runner.RunnerStatusOnline, true).
+		Where("organization_id = ? AND (visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?))", orgID, userID).
 		Find(&runners).Error; err != nil {
 		return nil, err
 	}
 	return runners, nil
 }
 
-// SelectAvailableRunner selects an available runner using least-pods strategy
-// Prioritizes runners from activeRunners cache for better performance
-func (s *Service) SelectAvailableRunner(ctx context.Context, orgID int64) (*runner.Runner, error) {
+// ListAvailableRunners returns online runners that can accept pods, filtered by visibility.
+func (s *Service) ListAvailableRunners(ctx context.Context, orgID int64, userID int64) ([]*runner.Runner, error) {
+	var runners []*runner.Runner
+	if err := s.db.WithContext(ctx).
+		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods AND (visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?))",
+			orgID, runner.RunnerStatusOnline, true, userID).
+		Find(&runners).Error; err != nil {
+		return nil, err
+	}
+	return runners, nil
+}
+
+// SelectAvailableRunner selects an available runner using least-pods strategy, filtered by visibility.
+// Prioritizes runners from activeRunners cache for better performance.
+func (s *Service) SelectAvailableRunner(ctx context.Context, orgID int64, userID int64) (*runner.Runner, error) {
 	// First, try to find available runners from cache
 	// This avoids DB round-trip for most cases when runners are actively connected
 	var cachedRunners []*ActiveRunner
 	s.activeRunners.Range(func(key, value interface{}) bool {
 		if ar, ok := value.(*ActiveRunner); ok && ar.Runner != nil {
 			r := ar.Runner
-			// Check if runner matches criteria
+			// Check if runner matches criteria (including visibility)
 			if r.OrganizationID == orgID &&
 				r.Status == runner.RunnerStatusOnline &&
 				r.IsEnabled &&
 				ar.PodCount < r.MaxConcurrentPods &&
-				time.Since(ar.LastPing) < 90*time.Second { // Still active
+				time.Since(ar.LastPing) < 90*time.Second &&
+				(r.Visibility == runner.VisibilityOrganization || (r.Visibility == runner.VisibilityPrivate && r.RegisteredByUserID != nil && *r.RegisteredByUserID == userID)) {
 				cachedRunners = append(cachedRunners, ar)
 			}
 		}
@@ -101,7 +106,8 @@ func (s *Service) SelectAvailableRunner(ctx context.Context, orgID int64) (*runn
 	// Fall back to database query if cache miss
 	var runners []*runner.Runner
 	if err := s.db.WithContext(ctx).
-		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods", orgID, runner.RunnerStatusOnline, true).
+		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods AND (visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?))",
+			orgID, runner.RunnerStatusOnline, true, userID).
 		Order("current_pods ASC").
 		Find(&runners).Error; err != nil {
 		return nil, err
@@ -115,9 +121,9 @@ func (s *Service) SelectAvailableRunner(ctx context.Context, orgID int64) (*runn
 	return runners[0], nil
 }
 
-// SelectAvailableRunnerForAgent selects an available runner that supports the given agent type.
+// SelectAvailableRunnerForAgent selects an available runner that supports the given agent type, filtered by visibility.
 // Uses the same cache-first, DB-fallback pattern as SelectAvailableRunner with agent compatibility filtering.
-func (s *Service) SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, agentSlug string) (*runner.Runner, error) {
+func (s *Service) SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, userID int64, agentSlug string) (*runner.Runner, error) {
 	// First, try to find available runners from cache
 	var cachedRunners []*ActiveRunner
 	s.activeRunners.Range(func(key, value interface{}) bool {
@@ -128,7 +134,8 @@ func (s *Service) SelectAvailableRunnerForAgent(ctx context.Context, orgID int64
 				r.IsEnabled &&
 				ar.PodCount < r.MaxConcurrentPods &&
 				time.Since(ar.LastPing) < 90*time.Second &&
-				r.SupportsAgent(agentSlug) {
+				r.SupportsAgent(agentSlug) &&
+				(r.Visibility == runner.VisibilityOrganization || (r.Visibility == runner.VisibilityPrivate && r.RegisteredByUserID != nil && *r.RegisteredByUserID == userID)) {
 				cachedRunners = append(cachedRunners, ar)
 			}
 		}
@@ -151,8 +158,8 @@ func (s *Service) SelectAvailableRunnerForAgent(ctx context.Context, orgID int64
 
 	var runners []*runner.Runner
 	if err := s.db.WithContext(ctx).
-		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods AND available_agents @> ?",
-			orgID, runner.RunnerStatusOnline, true, string(agentJSON)).
+		Where("organization_id = ? AND status = ? AND is_enabled = ? AND current_pods < max_concurrent_pods AND available_agents @> ? AND (visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?))",
+			orgID, runner.RunnerStatusOnline, true, string(agentJSON), userID).
 		Order("current_pods ASC").
 		Find(&runners).Error; err != nil {
 		return nil, err
@@ -170,6 +177,7 @@ type RunnerUpdateInput struct {
 	Description       *string `json:"description"`
 	MaxConcurrentPods *int    `json:"max_concurrent_pods"`
 	IsEnabled         *bool   `json:"is_enabled"`
+	Visibility        *string `json:"visibility"`
 }
 
 // UpdateRunner updates a runner's configuration
@@ -188,6 +196,12 @@ func (s *Service) UpdateRunner(ctx context.Context, runnerID int64, input Runner
 	}
 	if input.IsEnabled != nil {
 		updates["is_enabled"] = *input.IsEnabled
+	}
+	if input.Visibility != nil {
+		v := *input.Visibility
+		if v == runner.VisibilityOrganization || v == runner.VisibilityPrivate {
+			updates["visibility"] = v
+		}
 	}
 
 	if len(updates) > 0 {

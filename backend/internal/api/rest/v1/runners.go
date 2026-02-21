@@ -69,6 +69,7 @@ type UpdateRunnerRequest struct {
 	Description       *string `json:"description"`
 	MaxConcurrentPods *int    `json:"max_concurrent_pods"`
 	IsEnabled         *bool   `json:"is_enabled"`
+	Visibility        *string `json:"visibility"`
 }
 
 // ListRunnerPodsRequest represents request for listing runner pods

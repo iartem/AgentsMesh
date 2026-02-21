@@ -81,7 +81,7 @@ func (h *GRPCRunnerHandler) AuthorizeRunner(c *gin.Context) {
 		return
 	}
 
-	r, err := h.runnerService.AuthorizeRunner(c.Request.Context(), req.AuthKey, tenant.OrganizationID, req.NodeID)
+	r, err := h.runnerService.AuthorizeRunner(c.Request.Context(), req.AuthKey, tenant.OrganizationID, tenant.UserID, req.NodeID)
 	if err != nil {
 		switch err {
 		case runner.ErrRunnerAlreadyExists:

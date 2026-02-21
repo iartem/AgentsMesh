@@ -269,7 +269,7 @@ type mockRunnerSelector struct {
 	err    error
 }
 
-func (m *mockRunnerSelector) SelectAvailableRunnerForAgent(_ context.Context, _ int64, _ string) (*runnerDomain.Runner, error) {
+func (m *mockRunnerSelector) SelectAvailableRunnerForAgent(_ context.Context, _ int64, _ int64, _ string) (*runnerDomain.Runner, error) {
 	return m.runner, m.err
 }
 

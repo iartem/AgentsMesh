@@ -184,7 +184,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		require.NoError(t, db.Create(pendingAuth).Error)
 
 		// Authorize (using function signature: authKey string, orgID int64, nodeID string)
-		resp, err := service.AuthorizeRunner(ctx, authKey, org.ID, "my-runner")
+		resp, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "my-runner")
 		require.NoError(t, err)
 		assert.NotZero(t, resp.ID)
 		assert.Equal(t, "my-runner", resp.NodeID)
@@ -200,7 +200,7 @@ func TestAuthorizeRunner(t *testing.T) {
 	t.Run("returns error for non-existent auth key", func(t *testing.T) {
 		org := createTestOrg(t, db, "test-org-auth-2")
 
-		_, err := service.AuthorizeRunner(ctx, "non-existent", org.ID, "")
+		_, err := service.AuthorizeRunner(ctx, "non-existent", org.ID, 1, "")
 		assert.Error(t, err)
 	})
 
@@ -217,7 +217,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		}
 		require.NoError(t, db.Create(pendingAuth).Error)
 
-		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, "")
+		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "expired")
 	})
@@ -235,7 +235,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		}
 		require.NoError(t, db.Create(pendingAuth).Error)
 
-		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, "")
+		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "already authorized")
 	})
@@ -256,7 +256,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		require.NoError(t, db.Create(pendingAuth).Error)
 
 		// Authorize with empty nodeID - should use the one from pendingAuth
-		r, err := service.AuthorizeRunner(ctx, authKey, org.ID, "")
+		r, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "")
 		require.NoError(t, err)
 		assert.Equal(t, "pre-filled-node-id", r.NodeID)
 	})
@@ -276,7 +276,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		require.NoError(t, db.Create(pendingAuth).Error)
 
 		// Authorize with empty nodeID - should generate random one
-		r, err := service.AuthorizeRunner(ctx, authKey, org.ID, "")
+		r, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "")
 		require.NoError(t, err)
 		assert.Contains(t, r.NodeID, "runner-")
 	})
@@ -303,7 +303,7 @@ func TestAuthorizeRunner(t *testing.T) {
 		require.NoError(t, db.Create(pendingAuth).Error)
 
 		// Try to authorize with same nodeID - should fail
-		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, "duplicate-node")
+		_, err := service.AuthorizeRunner(ctx, authKey, org.ID, 1, "duplicate-node")
 		assert.Error(t, err)
 	})
 }

@@ -142,10 +142,12 @@ func (s *Service) RegisterWithToken(ctx context.Context, req *RegisterWithTokenR
 
 		// Create runner
 		r := &runner.Runner{
-			OrganizationID:    regToken.OrganizationID,
-			NodeID:            nodeID,
-			Status:            runner.RunnerStatusOffline,
-			MaxConcurrentPods: 5,
+			OrganizationID:     regToken.OrganizationID,
+			NodeID:             nodeID,
+			Status:             runner.RunnerStatusOffline,
+			MaxConcurrentPods:  5,
+			Visibility:         runner.VisibilityOrganization,
+			RegisteredByUserID: regToken.CreatedBy,
 		}
 
 		if err := tx.Create(r).Error; err != nil {

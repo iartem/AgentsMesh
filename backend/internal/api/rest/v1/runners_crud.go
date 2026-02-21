@@ -14,7 +14,7 @@ import (
 func (h *RunnerHandler) ListRunners(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
-	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID)
+	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
 		return
@@ -46,6 +46,12 @@ func (h *RunnerHandler) GetRunner(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Check visibility: private runners are only visible to the registrant
+	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -108,6 +114,7 @@ func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 		Description:       req.Description,
 		MaxConcurrentPods: req.MaxConcurrentPods,
 		IsEnabled:         req.IsEnabled,
+		Visibility:        req.Visibility,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update runner"})

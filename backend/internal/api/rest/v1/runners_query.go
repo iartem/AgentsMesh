@@ -13,7 +13,7 @@ import (
 func (h *RunnerHandler) ListAvailableRunners(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
-	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID)
+	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
 		return
@@ -52,6 +52,12 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Check visibility: private runners are only visible to the registrant
+	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -106,6 +112,12 @@ func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Check visibility: private runners are only visible to the registrant
+	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}

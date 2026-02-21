@@ -62,6 +62,12 @@ const (
 	RunnerStatusBusy    = "busy"
 )
 
+// Runner visibility constants
+const (
+	VisibilityOrganization = "organization"
+	VisibilityPrivate      = "private"
+)
+
 // Runner represents a self-hosted runner
 type Runner struct {
 	ID             int64  `gorm:"primaryKey" json:"id"`
@@ -81,6 +87,10 @@ type Runner struct {
 	AvailableAgents StringSlice `gorm:"type:jsonb" json:"available_agents,omitempty"`
 
 	HostInfo HostInfo `gorm:"type:jsonb" json:"host_info,omitempty"`
+
+	// Visibility controls who can see/use this runner
+	Visibility         string `gorm:"size:20;not null;default:'organization'" json:"visibility"`
+	RegisteredByUserID *int64 `json:"registered_by_user_id,omitempty"`
 
 	// mTLS certificate fields (added for gRPC migration)
 	CertSerialNumber *string    `gorm:"size:64" json:"cert_serial_number,omitempty"`

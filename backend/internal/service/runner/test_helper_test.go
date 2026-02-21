@@ -202,6 +202,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
 			host_info TEXT,
 			available_agents TEXT DEFAULT '[]',
+			visibility TEXT NOT NULL DEFAULT 'organization',
+			registered_by_user_id INTEGER,
 			cert_serial_number TEXT,
 			cert_fingerprint TEXT,
 			cert_expires_at DATETIME,

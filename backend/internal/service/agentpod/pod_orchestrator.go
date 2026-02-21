@@ -94,7 +94,7 @@ type TicketServiceForOrchestrator interface {
 
 // RunnerSelectorForOrchestrator selects a runner compatible with a given agent.
 type RunnerSelectorForOrchestrator interface {
-	SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, agentSlug string) (*runnerDomain.Runner, error)
+	SelectAvailableRunnerForAgent(ctx context.Context, orgID int64, userID int64, agentSlug string) (*runnerDomain.Runner, error)
 }
 
 // AgentTypeResolverForOrchestrator resolves an agent type by ID.
@@ -177,7 +177,7 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 			if err != nil {
 				return nil, ErrMissingAgentTypeID
 			}
-			selectedRunner, err := o.runnerSelector.SelectAvailableRunnerForAgent(ctx, req.OrganizationID, agentType.Slug)
+			selectedRunner, err := o.runnerSelector.SelectAvailableRunnerForAgent(ctx, req.OrganizationID, req.UserID, agentType.Slug)
 			if err != nil {
 				return nil, ErrNoAvailableRunner
 			}

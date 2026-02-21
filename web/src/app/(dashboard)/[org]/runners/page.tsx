@@ -21,6 +21,8 @@ import {
   Cpu,
   HardDrive,
   Activity,
+  Lock,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useServerUrl } from "@/hooks/useServerUrl";
@@ -185,6 +187,17 @@ export default function RunnersPage() {
                 <div className="flex items-center gap-2">
                   {getStatusIcon(runner.status)}
                   <span className="font-medium truncate">{runner.node_id}</span>
+                  {runner.visibility === "private" ? (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                      <Lock className="w-3 h-3" />
+                      {t("runners.page.visibilityPrivate")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                      <Building2 className="w-3 h-3" />
+                      {t("runners.page.visibilityOrganization")}
+                    </span>
+                  )}
                 </div>
                 <span
                   className={cn(
@@ -294,6 +307,17 @@ export default function RunnersPage() {
                       <code className="text-sm bg-muted px-2 py-1 rounded">
                         {runner.node_id}
                       </code>
+                      {runner.visibility === "private" ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                          <Lock className="w-3 h-3" />
+                          {t("runners.page.visibilityPrivate")}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          <Building2 className="w-3 h-3" />
+                          {t("runners.page.visibilityOrganization")}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3">

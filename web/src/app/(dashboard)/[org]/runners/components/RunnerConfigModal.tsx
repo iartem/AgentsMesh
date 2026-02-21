@@ -19,6 +19,7 @@ interface RunnerConfigModalProps {
 export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfigModalProps) {
   const [description, setDescription] = useState(runner.description || "");
   const [maxPods, setMaxPods] = useState(runner.max_concurrent_pods);
+  const [visibility, setVisibility] = useState<string>(runner.visibility || "organization");
   const [loading, setLoading] = useState(false);
 
   const handleUpdate = async () => {
@@ -27,6 +28,7 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
       await runnerApi.update(runner.id, {
         description: description || undefined,
         max_concurrent_pods: maxPods,
+        visibility,
       });
       onUpdated();
     } catch (error) {
@@ -74,6 +76,21 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
               min={1}
               max={100}
             />
+          </FormField>
+
+          <FormField
+            label={t("runners.configModal.visibilityLabel")}
+            htmlFor="runner-visibility"
+          >
+            <select
+              id="runner-visibility"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value)}
+            >
+              <option value="organization">{t("runners.configModal.visibilityOrganization")}</option>
+              <option value="private">{t("runners.configModal.visibilityPrivate")}</option>
+            </select>
           </FormField>
 
           {runner.active_pods && runner.active_pods.length > 0 && (

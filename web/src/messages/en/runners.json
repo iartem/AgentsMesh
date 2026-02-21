@@ -68,7 +68,9 @@
       "mobileOsLabel": "OS:",
       "mobileCpuLabel": "CPU:",
       "mobileVersionLabel": "Version:",
-      "upgradeAvailable": "Upgrade available"
+      "upgradeAvailable": "Upgrade available",
+      "visibilityOrganization": "Organization",
+      "visibilityPrivate": "Private"
     },
     "addRunnerModal": {
       "title": "Add Runner",
@@ -92,7 +94,10 @@
       "activePodsLabel": "Active Pods ({count})",
       "cancel": "Cancel",
       "saving": "Saving...",
-      "save": "Save Changes"
+      "save": "Save Changes",
+      "visibilityLabel": "Visibility",
+      "visibilityOrganization": "Visible to all organization members",
+      "visibilityPrivate": "Only visible to me"
     },
     "detail": {
       "notFound": "Runner not found",

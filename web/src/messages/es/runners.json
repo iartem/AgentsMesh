@@ -82,6 +82,8 @@
       "mobileCpuLabel": "CPU:",
       "mobileVersionLabel": "Versión:",
       "upgradeAvailable": "Actualización disponible",
+      "visibilityOrganization": "Organización",
+      "visibilityPrivate": "Privado",
       "stats": {
         "online": "En línea",
         "offline": "Desconectado",
@@ -124,7 +126,10 @@
       "activePodsLabel": "Pods Activos ({count})",
       "cancel": "Cancelar",
       "saving": "Guardando...",
-      "save": "Guardar Cambios"
+      "save": "Guardar Cambios",
+      "visibilityLabel": "Visibilidad",
+      "visibilityOrganization": "Visible para todos los miembros de la organización",
+      "visibilityPrivate": "Solo visible para mí"
     },
     "detail": {
       "notFound": "Runner not found",

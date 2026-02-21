@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/runner"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // --- Helper Functions ---
@@ -89,7 +91,7 @@ func TestListRunners(t *testing.T) {
 	}
 
 	// List all runners
-	runners, err := service.ListRunners(ctx, 1)
+	runners, err := service.ListRunners(ctx, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to list runners: %v", err)
 	}
@@ -127,7 +129,7 @@ func TestListAvailableRunners(t *testing.T) {
 	service.Heartbeat(ctx, r1.ID, 0)
 
 	// List available runners
-	runners, err := service.ListAvailableRunners(ctx, 1)
+	runners, err := service.ListAvailableRunners(ctx, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to list available runners: %v", err)
 	}
@@ -167,7 +169,7 @@ func TestSelectAvailableRunner(t *testing.T) {
 	service.Heartbeat(ctx, r2.ID, 1)
 
 	// Should select r2 (least pods)
-	selected, err := service.SelectAvailableRunner(ctx, 1)
+	selected, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to select available runner: %v", err)
 	}
@@ -182,7 +184,7 @@ func TestSelectAvailableRunnerNoneAvailable(t *testing.T) {
 	ctx := context.Background()
 
 	// No runners at all
-	_, err := service.SelectAvailableRunner(ctx, 1)
+	_, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != ErrRunnerOffline {
 		t.Errorf("expected ErrRunnerOffline, got %v", err)
 	}
@@ -234,7 +236,7 @@ func TestSelectAvailableRunnerFromCache(t *testing.T) {
 	})
 
 	// Should select r2 from cache (least pods)
-	selected, err := service.SelectAvailableRunner(ctx, 1)
+	selected, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to select available runner: %v", err)
 	}
@@ -271,7 +273,7 @@ func TestSelectAvailableRunnerSkipsInactiveInCache(t *testing.T) {
 	})
 
 	// Should fall back to DB query
-	selected, err := service.SelectAvailableRunner(ctx, 1)
+	selected, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != nil {
 		t.Fatalf("failed to select available runner: %v", err)
 	}
@@ -311,10 +313,94 @@ func TestSelectAvailableRunnerSkipsDisabledInCache(t *testing.T) {
 	})
 
 	// Should return ErrRunnerOffline because disabled runner is filtered
-	_, err := service.SelectAvailableRunner(ctx, 1)
+	_, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != ErrRunnerOffline {
 		t.Errorf("expected ErrRunnerOffline for disabled runner, got %v", err)
 	}
+}
+
+func TestListRunnersVisibility(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db)
+	ctx := context.Background()
+
+	registrantUserID := int64(10)
+	otherUserID := int64(20)
+
+	// Create an organization-visible runner
+	orgRunner := &runner.Runner{
+		OrganizationID:     1,
+		NodeID:             "runner-org-vis",
+		Status:             runner.RunnerStatusOffline,
+		MaxConcurrentPods:  5,
+		IsEnabled:          true,
+		Visibility:         runner.VisibilityOrganization,
+		RegisteredByUserID: &registrantUserID,
+	}
+	require.NoError(t, db.Create(orgRunner).Error)
+
+	// Create a private runner owned by registrantUserID
+	privateRunner := &runner.Runner{
+		OrganizationID:     1,
+		NodeID:             "runner-private-vis",
+		Status:             runner.RunnerStatusOffline,
+		MaxConcurrentPods:  5,
+		IsEnabled:          true,
+		Visibility:         runner.VisibilityPrivate,
+		RegisteredByUserID: &registrantUserID,
+	}
+	require.NoError(t, db.Create(privateRunner).Error)
+
+	t.Run("registrant sees both org and private runners", func(t *testing.T) {
+		runners, err := service.ListRunners(ctx, 1, registrantUserID)
+		require.NoError(t, err)
+		assert.Len(t, runners, 2)
+	})
+
+	t.Run("other user sees only org runner", func(t *testing.T) {
+		runners, err := service.ListRunners(ctx, 1, otherUserID)
+		require.NoError(t, err)
+		assert.Len(t, runners, 1)
+		assert.Equal(t, runner.VisibilityOrganization, runners[0].Visibility)
+	})
+}
+
+func TestAuthorizeRunnerSetsRegisteredByUserID(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewService(db)
+	ctx := context.Background()
+
+	// Create org
+	org := createTestOrg(t, db, "test-org-regby")
+
+	// Create pending auth
+	authKey := generateTestAuthKey()
+	pendingAuth := &runner.PendingAuth{
+		AuthKey:    authKey,
+		MachineKey: "test-machine",
+		ExpiresAt:  time.Now().Add(15 * time.Minute),
+		Authorized: false,
+	}
+	require.NoError(t, db.Create(pendingAuth).Error)
+
+	userID := int64(42)
+	r, err := service.AuthorizeRunner(ctx, authKey, org.ID, userID, "my-registered-runner")
+	require.NoError(t, err)
+	assert.NotZero(t, r.ID)
+
+	// Verify RegisteredByUserID was set
+	assert.NotNil(t, r.RegisteredByUserID)
+	assert.Equal(t, userID, *r.RegisteredByUserID)
+
+	// Verify Visibility defaults to organization
+	assert.Equal(t, runner.VisibilityOrganization, r.Visibility)
+
+	// Double-check by reading from DB
+	var dbRunner runner.Runner
+	require.NoError(t, db.First(&dbRunner, r.ID).Error)
+	assert.NotNil(t, dbRunner.RegisteredByUserID)
+	assert.Equal(t, userID, *dbRunner.RegisteredByUserID)
+	assert.Equal(t, runner.VisibilityOrganization, dbRunner.Visibility)
 }
 
 func TestSelectAvailableRunnerSkipsFullInCache(t *testing.T) {
@@ -346,7 +432,7 @@ func TestSelectAvailableRunnerSkipsFullInCache(t *testing.T) {
 	})
 
 	// Should return ErrRunnerOffline because runner is at capacity in both cache and DB
-	_, err := service.SelectAvailableRunner(ctx, 1)
+	_, err := service.SelectAvailableRunner(ctx, 1, 1)
 	if err != ErrRunnerOffline {
 		t.Errorf("expected ErrRunnerOffline for full runner, got %v", err)
 	}
