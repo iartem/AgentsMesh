@@ -47,7 +47,7 @@ export interface CreatePodFormState {
 
   // Actions
   reset: () => void;
-  validate: (selectedRunnerId: number | null | undefined) => boolean;
+  validate: () => boolean;
   submit: (
     selectedRunnerId: number | null | undefined,
     pluginConfig: Record<string, unknown>,
@@ -180,7 +180,7 @@ export function useCreatePodForm(
   }, [selectedAgent, validationErrors.agent]);
 
   // Validate form (runner is optional - backend auto-selects when not provided)
-  const validate = useCallback((selectedRunnerId: number | null | undefined): boolean => {
+  const validate = useCallback((): boolean => {
     const errors: FormValidationErrors = {};
 
     if (!selectedAgent) {
@@ -225,7 +225,7 @@ export function useCreatePodForm(
       options?: { ticketId?: number; initialPrompt?: string; cols?: number; rows?: number }
     ): Promise<PodData | null> => {
       // Validate before submission
-      if (!validate(selectedRunnerId)) {
+      if (!validate()) {
         return null;
       }
 

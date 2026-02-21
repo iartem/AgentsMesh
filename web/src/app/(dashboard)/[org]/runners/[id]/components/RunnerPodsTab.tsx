@@ -9,6 +9,7 @@ import {
   GitBranch,
   FolderOpen,
   RotateCcw,
+  Ticket,
 } from "lucide-react";
 import type { RunnerData, RunnerPodData, SandboxStatus } from "@/lib/api";
 import { useTranslations } from "next-intl";
@@ -128,6 +129,9 @@ export function RunnerPodsTab({
                 {t("runners.detail.branch")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("runners.detail.ticket")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t("runners.detail.createdAt")}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -205,6 +209,23 @@ export function RunnerPodsTab({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {pod.ticket ? (
+                      <div className="flex items-start gap-1.5 max-w-[200px]">
+                        <Ticket className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-foreground">
+                            {pod.ticket.identifier}
+                          </span>
+                          <p className="text-xs text-muted-foreground truncate" title={pod.ticket.title}>
+                            {pod.ticket.title}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(pod.created_at), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -227,7 +248,7 @@ export function RunnerPodsTab({
             })}
             {pods.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                   {t("runners.detail.noPods")}
                 </td>
               </tr>

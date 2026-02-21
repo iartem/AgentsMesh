@@ -133,6 +133,11 @@ export interface RunnerPodData {
   custom_agent_type_id?: number;
   repository_id?: number;
   ticket_id?: number;
+  ticket?: {
+    id: number;
+    identifier: string;
+    title: string;
+  };
   status: string;
   agent_status: string;
   claude_status?: string;

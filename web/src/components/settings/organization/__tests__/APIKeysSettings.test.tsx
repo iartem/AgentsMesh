@@ -158,7 +158,7 @@ vi.mock("../apikeys", () => ({
 }));
 
 const mockT = vi.fn(
-  (key: string, _params?: Record<string, string | number>) => key
+  (key: string) => key
 );
 
 // Helper to render the component and wait for initial load (useEffect + fetch)

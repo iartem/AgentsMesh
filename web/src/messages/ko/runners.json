@@ -163,6 +163,7 @@
       "status": "Status",
       "sandbox": "Sandbox",
       "branch": "Branch",
+      "ticket": "티켓",
       "actions": "Actions",
       "canResume": "Can Resume",
       "exists": "Exists",
