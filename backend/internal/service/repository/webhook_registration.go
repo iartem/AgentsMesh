@@ -138,9 +138,9 @@ func (s *WebhookService) DeleteWebhookForRepository(ctx context.Context, repo *g
 }
 
 // buildWebhookURL constructs the webhook URL for a repository
-// Format: {BaseURL}/api/webhooks/{org_slug}/{provider_type}/{repo_id}
+// Format: {BaseURL}/api/v1/webhooks/{org_slug}/{provider_type}/{repo_id}
 func (s *WebhookService) buildWebhookURL(orgSlug string, repo *gitprovider.Repository) string {
-	return fmt.Sprintf("%s/api/webhooks/%s/%s/%d",
+	return fmt.Sprintf("%s/api/v1/webhooks/%s/%s/%d",
 		s.cfg.BaseURL(),
 		orgSlug,
 		repo.ProviderType,

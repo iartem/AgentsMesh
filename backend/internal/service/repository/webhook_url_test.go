@@ -29,7 +29,7 @@ func TestBuildWebhookURL(t *testing.T) {
 
 	url := svc.buildWebhookURL("my-org", repo)
 
-	expected := "https://app.example.com/api/webhooks/my-org/gitlab/123"
+	expected := "https://app.example.com/api/v1/webhooks/my-org/gitlab/123"
 	if url != expected {
 		t.Errorf("expected URL %s, got %s", expected, url)
 	}
@@ -50,7 +50,7 @@ func TestBuildWebhookURL_HTTP(t *testing.T) {
 
 	url := svc.buildWebhookURL("test-org", repo)
 
-	expected := "http://localhost:8080/api/webhooks/test-org/github/456"
+	expected := "http://localhost:8080/api/v1/webhooks/test-org/github/456"
 	if url != expected {
 		t.Errorf("expected URL %s, got %s", expected, url)
 	}
@@ -68,9 +68,9 @@ func TestBuildWebhookURL_DifferentProviders(t *testing.T) {
 		providerType string
 		expectedPath string
 	}{
-		{"gitlab", "/api/webhooks/org/gitlab/1"},
-		{"github", "/api/webhooks/org/github/1"},
-		{"gitee", "/api/webhooks/org/gitee/1"},
+		{"gitlab", "/api/v1/webhooks/org/gitlab/1"},
+		{"github", "/api/v1/webhooks/org/github/1"},
+		{"gitee", "/api/v1/webhooks/org/gitee/1"},
 	}
 
 	for _, tt := range tests {
