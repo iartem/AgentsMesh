@@ -163,6 +163,7 @@
       "status": "Status",
       "sandbox": "Sandbox",
       "branch": "Branch",
+      "ticket": "Ticket",
       "actions": "Actions",
       "canResume": "Can Resume",
       "exists": "Exists",

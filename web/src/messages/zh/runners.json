@@ -131,6 +131,7 @@
       "status": "状态",
       "sandbox": "Sandbox",
       "branch": "分支",
+      "ticket": "工单",
       "actions": "操作",
       "canResume": "可恢复",
       "exists": "存在",

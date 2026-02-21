@@ -4,7 +4,6 @@ import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
   ResponsiveDialogBody,
   ResponsiveDialogFooter,
 } from "../responsive-dialog";

@@ -29,8 +29,6 @@ interface TerminalLoadingStateProps {
 export function TerminalLoadingState({
   podStatus,
   initProgress,
-  isTerminating,
-  onTerminate,
   onClose,
 }: TerminalLoadingStateProps) {
   const isCompleted = podStatus === "completed";
