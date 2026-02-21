@@ -20,16 +20,11 @@ type CreateRelationRequest struct {
 // GET /api/v1/organizations/:slug/tickets/:identifier/relations
 func (h *TicketHandler) ListRelations(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -56,19 +51,14 @@ func (h *TicketHandler) CreateRelation(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
 	// Get source ticket
-	sourceTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	sourceTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Source ticket not found"})
 		return
 	}
 
-	if sourceTicket.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-		return
-	}
-
-	// Get target ticket
-	targetTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), req.TargetIdentifier)
+	// Get target ticket (same org)
+	targetTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, req.TargetIdentifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Target ticket not found"})
 		return
@@ -99,18 +89,15 @@ func (h *TicketHandler) DeleteRelation(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
 	}
 
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-		return
-	}
-
+	_ = t // used for org-scoped lookup
 	if err := h.ticketService.DeleteRelation(c.Request.Context(), relationID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete relation"})
 		return
@@ -124,15 +111,11 @@ func (h *TicketHandler) DeleteRelation(c *gin.Context) {
 func (h *TicketHandler) ListMergeRequests(c *gin.Context) {
 	identifier := c.Param("identifier")
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

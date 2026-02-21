@@ -89,8 +89,8 @@ func (s *MRSyncService) GetPodMRs(ctx context.Context, podID int64) ([]*ticket.M
 	return mrs, nil
 }
 
-// FindTicketByBranch finds a ticket by branch name pattern
-func (s *MRSyncService) FindTicketByBranch(ctx context.Context, branchName string) (*ticket.Ticket, error) {
+// FindTicketByBranch finds a ticket by branch name pattern within an organization
+func (s *MRSyncService) FindTicketByBranch(ctx context.Context, organizationID int64, branchName string) (*ticket.Ticket, error) {
 	match := ticketIdentifierRegex.FindString(branchName)
 	if match == "" {
 		return nil, nil
@@ -98,7 +98,7 @@ func (s *MRSyncService) FindTicketByBranch(ctx context.Context, branchName strin
 
 	var t ticket.Ticket
 	if err := s.db.WithContext(ctx).
-		Where("identifier = ?", match).
+		Where("organization_id = ? AND identifier = ?", organizationID, match).
 		First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

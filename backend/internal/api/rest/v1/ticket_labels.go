@@ -135,15 +135,11 @@ func (h *TicketHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -165,15 +161,11 @@ func (h *TicketHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

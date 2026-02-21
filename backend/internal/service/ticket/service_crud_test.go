@@ -97,7 +97,7 @@ func TestGetTicketByIdentifier(t *testing.T) {
 	created, _ := service.CreateTicket(ctx, req)
 
 	// Get by identifier
-	tkt, err := service.GetTicketByIdentifier(ctx, created.Identifier)
+	tkt, err := service.GetTicketByIdentifier(ctx, int64(1), created.Identifier)
 	if err != nil {
 		t.Fatalf("failed to get ticket by identifier: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestGetTicketByIdentifier_NotFound(t *testing.T) {
 	service := NewService(db)
 	ctx := context.Background()
 
-	_, err := service.GetTicketByIdentifier(ctx, "NONEXISTENT-999")
+	_, err := service.GetTicketByIdentifier(ctx, int64(1), "NONEXISTENT-999")
 	if err != ErrTicketNotFound {
 		t.Errorf("expected ErrTicketNotFound, got %v", err)
 	}

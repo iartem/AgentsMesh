@@ -170,7 +170,7 @@ func TestMRSyncServiceIntegration(t *testing.T) {
 		assert.Len(t, mrs, 1)
 
 		// Test FindTicketByBranch
-		foundTicket, err := service.FindTicketByBranch(ctx, "feature/INT-1")
+		foundTicket, err := service.FindTicketByBranch(ctx, int64(1), "feature/INT-1")
 		require.NoError(t, err)
 		assert.NotNil(t, foundTicket)
 		assert.Equal(t, tkt.ID, foundTicket.ID)
