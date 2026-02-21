@@ -113,27 +113,27 @@ func TestFindTicketByBranch(t *testing.T) {
 	db.Create(tkt)
 
 	t.Run("finds ticket by branch with identifier", func(t *testing.T) {
-		result, err := service.FindTicketByBranch(ctx, "feature/PRJ-123-new-feature")
+		result, err := service.FindTicketByBranch(ctx, int64(1), "feature/PRJ-123-new-feature")
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, tkt.ID, result.ID)
 	})
 
 	t.Run("finds ticket by exact identifier branch", func(t *testing.T) {
-		result, err := service.FindTicketByBranch(ctx, "PRJ-123")
+		result, err := service.FindTicketByBranch(ctx, int64(1), "PRJ-123")
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, tkt.ID, result.ID)
 	})
 
 	t.Run("returns nil for branch without identifier", func(t *testing.T) {
-		result, err := service.FindTicketByBranch(ctx, "feature/some-branch")
+		result, err := service.FindTicketByBranch(ctx, int64(1), "feature/some-branch")
 		require.NoError(t, err)
 		assert.Nil(t, result)
 	})
 
 	t.Run("returns nil for non-existent ticket", func(t *testing.T) {
-		result, err := service.FindTicketByBranch(ctx, "feature/NONEXISTENT-999")
+		result, err := service.FindTicketByBranch(ctx, int64(1), "feature/NONEXISTENT-999")
 		require.NoError(t, err)
 		assert.Nil(t, result)
 	})

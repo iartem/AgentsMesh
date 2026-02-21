@@ -65,7 +65,7 @@ func (r *WebhookRouter) findAssociatedPodAndTicket(ctx *WebhookContext, sourceBr
 
 	// If no Pod found, try to find Ticket by branch name pattern
 	if ticketID == nil && r.mrSyncService != nil {
-		t, err := r.mrSyncService.FindTicketByBranch(ctx.Context, sourceBranch)
+		t, err := r.mrSyncService.FindTicketByBranch(ctx.Context, ctx.OrganizationID, sourceBranch)
 		if err == nil && t != nil {
 			ticketID = &t.ID
 		}

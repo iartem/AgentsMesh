@@ -65,7 +65,7 @@ func (h *MeshHandler) CreatePodForTicket(c *gin.Context) {
 	}
 
 	// Get the ticket
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
@@ -97,9 +97,10 @@ func (h *MeshHandler) CreatePodForTicket(c *gin.Context) {
 // GET /api/v1/organizations/:slug/tickets/:identifier/pods
 func (h *MeshHandler) GetTicketPods(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
 	// Get the ticket
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return

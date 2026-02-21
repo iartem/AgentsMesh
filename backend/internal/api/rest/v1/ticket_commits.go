@@ -23,16 +23,11 @@ type LinkCommitRequest struct {
 // GET /api/v1/organizations/:slug/tickets/:identifier/commits
 func (h *TicketHandler) ListCommits(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -56,15 +51,11 @@ func (h *TicketHandler) LinkCommit(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -115,18 +106,15 @@ func (h *TicketHandler) UnlinkCommit(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
 	}
 
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-		return
-	}
-
+	_ = t // used for org-scoped lookup
 	if err := h.ticketService.UnlinkCommit(c.Request.Context(), commitID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlink commit"})
 		return

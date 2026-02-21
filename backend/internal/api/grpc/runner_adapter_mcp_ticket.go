@@ -68,13 +68,9 @@ func (a *GRPCRunnerAdapter) mcpGetTicket(ctx context.Context, tc *middleware.Ten
 		return nil, newMcpError(400, "ticket_id is required")
 	}
 
-	t, err := a.ticketService.GetTicketByIdentifier(ctx, params.TicketID)
+	t, err := a.ticketService.GetTicketByIdentifier(ctx, tc.OrganizationID, params.TicketID)
 	if err != nil {
 		return nil, newMcpError(404, "ticket not found")
-	}
-
-	if t.OrganizationID != tc.OrganizationID {
-		return nil, newMcpError(403, "access denied")
 	}
 
 	return map[string]interface{}{"ticket": t}, nil
@@ -144,12 +140,9 @@ func (a *GRPCRunnerAdapter) mcpUpdateTicket(ctx context.Context, tc *middleware.
 		return nil, newMcpError(400, "ticket_id is required")
 	}
 
-	t, err := a.ticketService.GetTicketByIdentifier(ctx, params.TicketID)
+	t, err := a.ticketService.GetTicketByIdentifier(ctx, tc.OrganizationID, params.TicketID)
 	if err != nil {
 		return nil, newMcpError(404, "ticket not found")
-	}
-	if t.OrganizationID != tc.OrganizationID {
-		return nil, newMcpError(403, "access denied")
 	}
 
 	updates := make(map[string]interface{})

@@ -20,15 +20,16 @@ func (s *Service) GetTicket(ctx context.Context, ticketID int64) (*ticket.Ticket
 	return &t, nil
 }
 
-// GetTicketByIdentifier returns a ticket by identifier
-func (s *Service) GetTicketByIdentifier(ctx context.Context, identifier string) (*ticket.Ticket, error) {
+// GetTicketByIdentifier returns a ticket by identifier scoped to an organization.
+// Since identifier uniqueness is per-organization, organizationID is required.
+func (s *Service) GetTicketByIdentifier(ctx context.Context, organizationID int64, identifier string) (*ticket.Ticket, error) {
 	var t ticket.Ticket
 	if err := s.db.WithContext(ctx).
 		Preload("Assignees").
 		Preload("Labels").
 		Preload("MergeRequests").
 		Preload("SubTickets").
-		Where("identifier = ?", identifier).
+		Where("organization_id = ? AND identifier = ?", organizationID, identifier).
 		First(&t).Error; err != nil {
 		return nil, ErrTicketNotFound
 	}

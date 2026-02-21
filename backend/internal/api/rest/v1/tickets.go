@@ -156,16 +156,11 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 // GET /api/v1/organizations/:slug/tickets/:identifier
 func (h *TicketHandler) GetTicket(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -176,6 +171,7 @@ func (h *TicketHandler) GetTicket(c *gin.Context) {
 // PUT /api/v1/organizations/:slug/tickets/:identifier
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
 	var req UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -183,15 +179,9 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -238,16 +228,11 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 // DELETE /api/v1/organizations/:slug/tickets/:identifier
 func (h *TicketHandler) DeleteTicket(c *gin.Context) {
 	identifier := c.Param("identifier")
+	tenant := middleware.GetTenant(c)
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -272,15 +257,11 @@ func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 		return
 	}
 
-	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), identifier)
+	tenant := middleware.GetTenant(c)
+
+	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	if t.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
