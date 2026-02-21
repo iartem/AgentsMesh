@@ -150,7 +150,11 @@ func (s *HTTPServer) createGetBindingsTool() *MCPTool {
 				bs := tools.BindingStatus(s)
 				status = &bs
 			}
-			return client.GetBindings(ctx, status)
+			result, err := client.GetBindings(ctx, status)
+			if err != nil {
+				return nil, err
+			}
+			return tools.BindingList(result), nil
 		},
 	}
 }
@@ -164,7 +168,11 @@ func (s *HTTPServer) createGetBoundPodsTool() *MCPTool {
 			"properties": map[string]interface{}{},
 		},
 		Handler: func(ctx context.Context, client tools.CollaborationClient, args map[string]interface{}) (interface{}, error) {
-			return client.GetBoundPods(ctx)
+			result, err := client.GetBoundPods(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return tools.BoundPodList(result), nil
 		},
 	}
 }

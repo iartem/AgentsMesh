@@ -58,7 +58,11 @@ func (s *HTTPServer) createSearchChannelsTool() *MCPTool {
 				limit = 20
 			}
 
-			return client.SearchChannels(ctx, name, repositoryID, ticketID, isArchived, offset, limit)
+			result, err := client.SearchChannels(ctx, name, repositoryID, ticketID, isArchived, offset, limit)
+			if err != nil {
+				return nil, err
+			}
+			return tools.ChannelList(result), nil
 		},
 	}
 }
@@ -232,7 +236,11 @@ func (s *HTTPServer) createGetChannelMessagesTool() *MCPTool {
 				limit = 50
 			}
 
-			return client.GetMessages(ctx, channelID, beforeTime, afterTime, mentionedPod, limit)
+			result, err := client.GetMessages(ctx, channelID, beforeTime, afterTime, mentionedPod, limit)
+			if err != nil {
+				return nil, err
+			}
+			return tools.ChannelMessageList(result), nil
 		},
 	}
 }

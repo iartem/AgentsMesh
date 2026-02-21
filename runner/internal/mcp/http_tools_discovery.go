@@ -17,7 +17,11 @@ func (s *HTTPServer) createListAvailablePodsTool() *MCPTool {
 			"properties": map[string]interface{}{},
 		},
 		Handler: func(ctx context.Context, client tools.CollaborationClient, args map[string]interface{}) (interface{}, error) {
-			return client.ListAvailablePods(ctx)
+			result, err := client.ListAvailablePods(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return tools.AvailablePodList(result), nil
 		},
 	}
 }
@@ -31,7 +35,11 @@ func (s *HTTPServer) createListRunnersTool() *MCPTool {
 			"properties": map[string]interface{}{},
 		},
 		Handler: func(ctx context.Context, client tools.CollaborationClient, args map[string]interface{}) (interface{}, error) {
-			return client.ListRunners(ctx)
+			result, err := client.ListRunners(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return tools.RunnerSummaryList(result), nil
 		},
 	}
 }
@@ -45,7 +53,11 @@ func (s *HTTPServer) createListRepositoriesTool() *MCPTool {
 			"properties": map[string]interface{}{},
 		},
 		Handler: func(ctx context.Context, client tools.CollaborationClient, args map[string]interface{}) (interface{}, error) {
-			return client.ListRepositories(ctx)
+			result, err := client.ListRepositories(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return tools.RepositoryList(result), nil
 		},
 	}
 }

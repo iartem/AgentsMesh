@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
@@ -155,14 +154,6 @@ func (s *HTTPServer) createSendTerminalKeyTool() *MCPTool {
 	}
 }
 
-// PodStatusResult represents the result of get_pod_status tool.
-type PodStatusResult struct {
-	PodKey      string `json:"pod_key"`
-	AgentStatus string `json:"agent_status"` // executing, waiting, idle
-	PodStatus   string `json:"pod_status"`   // running, completed, error, etc.
-	Message     string `json:"message,omitempty"`
-}
-
 func (s *HTTPServer) createGetPodStatusTool() *MCPTool {
 	return &MCPTool{
 		Name:        "get_pod_status",
@@ -185,37 +176,16 @@ func (s *HTTPServer) createGetPodStatusTool() *MCPTool {
 
 			// Check if status provider is available
 			if s.statusProvider == nil {
-				return PodStatusResult{
-					PodKey:      podKey,
-					AgentStatus: "idle",
-					PodStatus:   "unknown",
-					Message:     "Status provider not configured",
-				}, nil
+				return fmt.Sprintf("Pod: %s | Agent: idle | Status: unknown | Status provider not configured", podKey), nil
 			}
 
 			// Get status from provider
 			agentStatus, podStatus, _, found := s.statusProvider.GetPodStatus(podKey)
 			if !found {
-				return PodStatusResult{
-					PodKey:      podKey,
-					AgentStatus: "idle",
-					PodStatus:   "not_found",
-					Message:     "Pod not found",
-				}, nil
+				return fmt.Sprintf("Pod: %s | Agent: idle | Status: not_found | Pod not found", podKey), nil
 			}
 
-			result := PodStatusResult{
-				PodKey:      podKey,
-				AgentStatus: agentStatus,
-				PodStatus:   podStatus,
-			}
-
-			// Return as JSON for structured output
-			jsonBytes, err := json.Marshal(result)
-			if err != nil {
-				return result, nil
-			}
-			return string(jsonBytes), nil
+			return fmt.Sprintf("Pod: %s | Agent: %s | Status: %s", podKey, agentStatus, podStatus), nil
 		},
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
+	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
 )
 
 // MCPRequest represents an MCP JSON-RPC request.
@@ -164,6 +165,8 @@ func (s *HTTPServer) handleToolsCall(w http.ResponseWriter, req *MCPRequest, pod
 	switch v := result.(type) {
 	case string:
 		text = v
+	case tools.TextFormatter:
+		text = v.FormatText()
 	default:
 		data, _ := json.MarshalIndent(result, "", "  ")
 		text = string(data)

@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/anthropics/agentsmesh/runner/internal/mcp/tools"
 )
@@ -126,19 +127,10 @@ func (s *HTTPServer) createCreatePodTool() *MCPTool {
 			binding, err := client.RequestBinding(ctx, resp.PodKey, scopes)
 			if err != nil {
 				// Pod created but binding failed - return both info
-				return map[string]interface{}{
-					"pod_key":       resp.PodKey,
-					"status":        resp.Status,
-					"binding_error": err.Error(),
-				}, nil
+				return fmt.Sprintf("Pod: %s | Status: %s | Binding Error: %s", resp.PodKey, resp.Status, err.Error()), nil
 			}
 
-			return map[string]interface{}{
-				"pod_key":        resp.PodKey,
-				"status":         resp.Status,
-				"binding_id":     binding.ID,
-				"binding_status": binding.Status,
-			}, nil
+			return fmt.Sprintf("Pod: %s | Status: %s | Binding: #%d (%s)", resp.PodKey, resp.Status, binding.ID, binding.Status), nil
 		},
 	}
 }

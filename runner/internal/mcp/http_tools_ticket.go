@@ -91,7 +91,11 @@ func (s *HTTPServer) createSearchTicketsTool() *MCPTool {
 				page = 1
 			}
 
-			return client.SearchTickets(ctx, repositoryID, status, ticketType, priority, assigneeID, parentID, query, limit, page)
+			result, err := client.SearchTickets(ctx, repositoryID, status, ticketType, priority, assigneeID, parentID, query, limit, page)
+			if err != nil {
+				return nil, err
+			}
+			return tools.TicketList(result), nil
 		},
 	}
 }
