@@ -22,7 +22,8 @@ var (
 	ErrOrderExpired          = errors.New("order expired")
 	ErrInvalidOrderStatus    = errors.New("invalid order status")
 	ErrSeatCountExceedsLimit = errors.New("current seat count exceeds target plan limit")
-	ErrSubscriptionFrozen    = errors.New("subscription is frozen, please renew to continue")
+	ErrSubscriptionFrozen        = errors.New("subscription is frozen, please renew to continue")
+	ErrSubscriptionAlreadyExists = errors.New("subscription already exists for this organization")
 )
 
 // Service handles billing operations
