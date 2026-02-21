@@ -32,6 +32,7 @@ func (h *SubscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		subGroup.GET("", h.GetSubscription)
 		subGroup.GET("/plans", h.ListPlans)
+		subGroup.POST("/create", h.AdminCreateSubscription)
 		subGroup.PUT("/plan", h.AdminUpdatePlan)
 		subGroup.PUT("/seats", h.AdminUpdateSeats)
 		subGroup.PUT("/cycle", h.AdminUpdateCycle)
@@ -67,6 +68,47 @@ func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 	h.logAction(c, admin.AuditActionSubView, admin.TargetTypeSubscription, orgID, nil, nil)
 
 	c.JSON(http.StatusOK, subscriptionResponse(sub, seatUsage))
+}
+
+// AdminCreateSubscription creates a new subscription for an organization that doesn't have one
+func (h *SubscriptionHandler) AdminCreateSubscription(c *gin.Context) {
+	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	var req struct {
+		PlanName string `json:"plan_name" binding:"required"`
+		Months   int    `json:"months"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "plan_name is required"})
+		return
+	}
+
+	if req.Months <= 0 {
+		req.Months = 1
+	}
+
+	newSub, err := h.billingService.AdminCreateSubscription(c.Request.Context(), orgID, req.PlanName, req.Months)
+	if err != nil {
+		if err == billingservice.ErrPlanNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+			return
+		}
+		if err == billingservice.ErrSubscriptionAlreadyExists {
+			c.JSON(http.StatusConflict, gin.H{"error": "Subscription already exists for this organization"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create subscription"})
+		return
+	}
+
+	seatUsage, _ := h.billingService.GetSeatUsage(c.Request.Context(), orgID)
+	h.logAction(c, admin.AuditActionSubUpdate, admin.TargetTypeSubscription, orgID, nil, newSub)
+
+	c.JSON(http.StatusOK, subscriptionResponse(newSub, seatUsage))
 }
 
 // ListPlans returns all available subscription plans

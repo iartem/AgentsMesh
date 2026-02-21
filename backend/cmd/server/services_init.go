@@ -72,7 +72,6 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		Issuer:            "agentsmesh",
 	}
 	authSvc := auth.NewServiceWithRedis(authCfg, userSvc, redisClient)
-	orgSvc := organization.NewService(db)
 
 	// Initialize agent sub-services (split by responsibility per SRP)
 	agentTypeSvc := agent.NewAgentTypeService(db)
@@ -84,6 +83,9 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	// Connect webhook service to repository service for automatic registration
 	repoSvc.SetWebhookService(webhookSvc)
 	billingSvc := billing.NewServiceWithConfig(db, cfg)
+	// Organization service must be created after billing service so trial subscriptions
+	// are automatically created when new organizations are created
+	orgSvc := organization.NewServiceWithBilling(db, billingSvc)
 	runnerSvc := runner.NewService(db, billingSvc)
 	podSvc := agentpod.NewPodService(db)
 	autopilotSvc := agentpod.NewAutopilotControllerService(db)

@@ -75,6 +75,53 @@ func (s *Service) CreateTrialSubscription(ctx context.Context, orgID int64, plan
 	return sub, nil
 }
 
+// AdminCreateSubscription creates a new active subscription for an organization that doesn't have one.
+// This is intended for admin operations to fix organizations missing subscription records.
+func (s *Service) AdminCreateSubscription(ctx context.Context, orgID int64, planName string, months int) (*billing.Subscription, error) {
+	// Check if subscription already exists
+	_, err := s.GetSubscription(ctx, orgID)
+	if err == nil {
+		return nil, ErrSubscriptionAlreadyExists
+	}
+
+	plan, err := s.GetPlan(ctx, planName)
+	if err != nil {
+		return nil, err
+	}
+
+	if months <= 0 {
+		months = 1
+	}
+
+	now := time.Now()
+	periodEnd := now.AddDate(0, months, 0)
+
+	sub := &billing.Subscription{
+		OrganizationID:     orgID,
+		PlanID:             plan.ID,
+		Status:             billing.SubscriptionStatusActive,
+		BillingCycle:       billing.BillingCycleMonthly,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   periodEnd,
+		SeatCount:          1,
+	}
+
+	if err := s.db.WithContext(ctx).Create(sub).Error; err != nil {
+		return nil, err
+	}
+
+	// Sync organization table redundant fields
+	s.db.WithContext(ctx).Table("organizations").
+		Where("id = ?", orgID).
+		Updates(map[string]interface{}{
+			"subscription_plan":   plan.Name,
+			"subscription_status": billing.SubscriptionStatusActive,
+		})
+
+	sub.Plan = plan
+	return sub, nil
+}
+
 // AdminUpdatePlan directly changes the subscription plan without payment checks or downgrade delays.
 // This is intended for admin operations where the admin has full authority.
 func (s *Service) AdminUpdatePlan(ctx context.Context, orgID int64, planName string) (*billing.Subscription, error) {

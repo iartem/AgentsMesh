@@ -381,6 +381,10 @@ export async function getSubscriptionPlans(orgId: number): Promise<{ data: Subsc
   return apiClient.get<{ data: SubscriptionPlan[] }>(`/organizations/${orgId}/subscription/plans`);
 }
 
+export async function createSubscription(orgId: number, planName: string, months: number = 1): Promise<Subscription> {
+  return apiClient.post<Subscription>(`/organizations/${orgId}/subscription/create`, { plan_name: planName, months });
+}
+
 export async function updateSubscriptionPlan(orgId: number, planName: string): Promise<Subscription> {
   return apiClient.put<Subscription>(`/organizations/${orgId}/subscription/plan`, { plan_name: planName });
 }
