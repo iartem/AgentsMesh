@@ -136,10 +136,15 @@ func (s *Service) AdminUpdatePlan(ctx context.Context, orgID int64, planName str
 	}
 
 	// Direct update: no payment checks, no downgrade delay
-	if err := s.db.WithContext(ctx).Model(sub).Updates(map[string]interface{}{
-		"plan_id":           newPlan.ID,
-		"downgrade_to_plan": nil, // Clear any pending downgrade
-	}).Error; err != nil {
+	// Use Model(&Subscription{}) + Where instead of Model(sub) to avoid GORM
+	// caching the original sub.PlanID and overriding the map value
+	if err := s.db.WithContext(ctx).
+		Model(&billing.Subscription{}).
+		Where("id = ?", sub.ID).
+		Updates(map[string]interface{}{
+			"plan_id":           newPlan.ID,
+			"downgrade_to_plan": nil, // Clear any pending downgrade
+		}).Error; err != nil {
 		return nil, err
 	}
 
@@ -179,7 +184,10 @@ func (s *Service) AdminRenew(ctx context.Context, orgID int64, months int) (*bil
 		"cancel_at_period_end": false,
 	}
 
-	if err := s.db.WithContext(ctx).Model(sub).Updates(updates).Error; err != nil {
+	if err := s.db.WithContext(ctx).
+		Model(&billing.Subscription{}).
+		Where("id = ?", sub.ID).
+		Updates(updates).Error; err != nil {
 		return nil, err
 	}
 

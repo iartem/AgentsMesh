@@ -27,12 +27,15 @@ func (s *Service) ActivateTrialSubscription(ctx context.Context, orgID int64, bi
 		periodEnd = now.AddDate(0, 1, 0)
 	}
 
-	return s.db.WithContext(ctx).Model(sub).Updates(map[string]interface{}{
-		"status":               billing.SubscriptionStatusActive,
-		"billing_cycle":        billingCycle,
-		"current_period_start": now,
-		"current_period_end":   periodEnd,
-	}).Error
+	return s.db.WithContext(ctx).
+		Model(&billing.Subscription{}).
+		Where("id = ?", sub.ID).
+		Updates(map[string]interface{}{
+			"status":               billing.SubscriptionStatusActive,
+			"billing_cycle":        billingCycle,
+			"current_period_start": now,
+			"current_period_end":   periodEnd,
+		}).Error
 }
 
 // FreezeSubscription freezes a subscription due to non-payment
@@ -62,13 +65,16 @@ func (s *Service) UnfreezeSubscription(ctx context.Context, orgID int64, billing
 		periodEnd = now.AddDate(0, 1, 0)
 	}
 
-	return s.db.WithContext(ctx).Model(sub).Updates(map[string]interface{}{
-		"status":               billing.SubscriptionStatusActive,
-		"billing_cycle":        billingCycle,
-		"current_period_start": now,
-		"current_period_end":   periodEnd,
-		"frozen_at":            nil,
-	}).Error
+	return s.db.WithContext(ctx).
+		Model(&billing.Subscription{}).
+		Where("id = ?", sub.ID).
+		Updates(map[string]interface{}{
+			"status":               billing.SubscriptionStatusActive,
+			"billing_cycle":        billingCycle,
+			"current_period_start": now,
+			"current_period_end":   periodEnd,
+			"frozen_at":            nil,
+		}).Error
 }
 
 // CancelSubscription cancels a subscription
