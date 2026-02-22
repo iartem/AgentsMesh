@@ -135,23 +135,17 @@ func (s *Service) AdminUpdatePlan(ctx context.Context, orgID int64, planName str
 		return nil, err
 	}
 
-	// Direct update: no payment checks, no downgrade delay
-	// Use Model(&Subscription{}) + Where instead of Model(sub) to avoid GORM
-	// caching the original sub.PlanID and overriding the map value
+	// Direct update via raw SQL to avoid any GORM model/session interference
 	if err := s.db.WithContext(ctx).
-		Model(&billing.Subscription{}).
-		Where("id = ?", sub.ID).
-		Updates(map[string]interface{}{
-			"plan_id":           newPlan.ID,
-			"downgrade_to_plan": nil, // Clear any pending downgrade
-		}).Error; err != nil {
+		Exec("UPDATE subscriptions SET plan_id = ?, downgrade_to_plan = NULL, updated_at = NOW() WHERE id = ?",
+			newPlan.ID, sub.ID).Error; err != nil {
 		return nil, err
 	}
 
 	// Sync organization table redundant fields
-	s.db.WithContext(ctx).Table("organizations").
-		Where("id = ?", orgID).
-		Update("subscription_plan", newPlan.Name)
+	s.db.WithContext(ctx).
+		Exec("UPDATE organizations SET subscription_plan = ? WHERE id = ?",
+			newPlan.Name, orgID)
 
 	sub.PlanID = newPlan.ID
 	sub.DowngradeToPlan = nil
@@ -175,26 +169,19 @@ func (s *Service) AdminRenew(ctx context.Context, orgID int64, months int) (*bil
 	}
 	end := start.AddDate(0, months, 0)
 
-	updates := map[string]interface{}{
-		"status":               billing.SubscriptionStatusActive,
-		"current_period_start": start,
-		"current_period_end":   end,
-		"frozen_at":            nil,
-		"canceled_at":          nil,
-		"cancel_at_period_end": false,
-	}
-
+	// Direct update via raw SQL to avoid GORM model/session interference
 	if err := s.db.WithContext(ctx).
-		Model(&billing.Subscription{}).
-		Where("id = ?", sub.ID).
-		Updates(updates).Error; err != nil {
+		Exec(`UPDATE subscriptions SET status = ?, current_period_start = ?, current_period_end = ?,
+			frozen_at = NULL, canceled_at = NULL, cancel_at_period_end = false, updated_at = NOW()
+			WHERE id = ?`,
+			billing.SubscriptionStatusActive, start, end, sub.ID).Error; err != nil {
 		return nil, err
 	}
 
 	// Sync organization table
-	s.db.WithContext(ctx).Table("organizations").
-		Where("id = ?", orgID).
-		Update("subscription_status", billing.SubscriptionStatusActive)
+	s.db.WithContext(ctx).
+		Exec("UPDATE organizations SET subscription_status = ? WHERE id = ?",
+			billing.SubscriptionStatusActive, orgID)
 
 	// Reload to get fresh data
 	return s.GetSubscription(ctx, orgID)
@@ -203,20 +190,18 @@ func (s *Service) AdminRenew(ctx context.Context, orgID int64, months int) (*bil
 // AdminCancelSubscription cancels a subscription without calling external payment APIs (Stripe, etc.).
 func (s *Service) AdminCancelSubscription(ctx context.Context, orgID int64) error {
 	now := time.Now()
-	err := s.db.WithContext(ctx).Model(&billing.Subscription{}).
-		Where("organization_id = ?", orgID).
-		Updates(map[string]interface{}{
-			"status":      billing.SubscriptionStatusCanceled,
-			"canceled_at": now,
-		}).Error
-	if err != nil {
+
+	// Direct update via raw SQL to avoid GORM model/session interference
+	if err := s.db.WithContext(ctx).
+		Exec("UPDATE subscriptions SET status = ?, canceled_at = ?, updated_at = NOW() WHERE organization_id = ?",
+			billing.SubscriptionStatusCanceled, now, orgID).Error; err != nil {
 		return err
 	}
 
 	// Sync organization table
-	s.db.WithContext(ctx).Table("organizations").
-		Where("id = ?", orgID).
-		Update("subscription_status", billing.SubscriptionStatusCanceled)
+	s.db.WithContext(ctx).
+		Exec("UPDATE organizations SET subscription_status = ? WHERE id = ?",
+			billing.SubscriptionStatusCanceled, orgID)
 
 	return nil
 }
