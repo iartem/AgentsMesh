@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,10 +16,7 @@ import (
 // @Router /api/v1/license/status [get]
 func (h *LicenseHandler) GetLicenseStatus(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
@@ -36,16 +34,13 @@ func (h *LicenseHandler) GetLicenseStatus(c *gin.Context) {
 // @Router /api/v1/license/feature [get]
 func (h *LicenseHandler) CheckFeature(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
 	feature := c.Query("feature")
 	if feature == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "feature parameter is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "feature parameter is required")
 		return
 	}
 
@@ -65,16 +60,13 @@ func (h *LicenseHandler) CheckFeature(c *gin.Context) {
 // @Router /api/v1/license/limits [get]
 func (h *LicenseHandler) GetLicenseLimits(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
 	licenseData := h.licenseService.GetCurrentLicense()
 	if licenseData == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active license"})
+		apierr.ResourceNotFound(c, "no active license")
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -59,26 +60,26 @@ type LoginRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: email and password required"})
+		apierr.InvalidInput(c, "Invalid request: email and password required")
 		return
 	}
 
 	// Authenticate user
 	result, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Invalid email or password")
 		return
 	}
 
 	// Verify user is a system admin
 	if !result.User.IsSystemAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Your account does not have system administrator privileges"})
+		apierr.Forbidden(c, apierr.SYSTEM_ADMIN_REQUIRED, "Your account does not have system administrator privileges")
 		return
 	}
 
 	// Verify user is active
 	if !result.User.IsActive {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been disabled"})
+		apierr.ForbiddenDisabled(c)
 		return
 	}
 
@@ -94,7 +95,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) GetMe(c *gin.Context) {
 	u := middleware.GetAdminUser(c)
 	if u == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Not authenticated")
 		return
 	}
 

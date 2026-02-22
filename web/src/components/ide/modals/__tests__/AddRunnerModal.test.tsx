@@ -147,7 +147,6 @@ describe("AddRunnerModal", () => {
     });
 
     it("should handle token generation error", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       vi.mocked(runnerApi.createToken).mockRejectedValue(new Error("Network error"));
 
       render(
@@ -157,10 +156,9 @@ describe("AddRunnerModal", () => {
       fireEvent.click(screen.getByText("runners.addRunnerModal.generate"));
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith("Failed to generate token:", expect.any(Error));
+        // Error is displayed in UI via setError (getLocalizedErrorMessage extracts Error.message)
+        expect(screen.getByText("Network error")).toBeInTheDocument();
       });
-
-      consoleSpy.mockRestore();
     });
   });
 

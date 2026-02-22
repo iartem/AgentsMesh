@@ -3,6 +3,7 @@ package webhooks
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,10 +13,7 @@ func (r *WebhookRouter) handleGitLabWebhook(c *gin.Context) {
 	if r.cfg.Webhook.GitLabSecret != "" {
 		token := c.GetHeader("X-Gitlab-Token")
 		if token != r.cfg.Webhook.GitLabSecret {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook token",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook token")
 			return
 		}
 	}
@@ -29,10 +27,7 @@ func (r *WebhookRouter) handleGitHubWebhook(c *gin.Context) {
 	if r.cfg.Webhook.GitHubSecret != "" {
 		// GitHub uses X-Hub-Signature-256 for HMAC verification
 		if !r.verifyGitHubSignature(c, r.cfg.Webhook.GitHubSecret) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook signature",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook signature")
 			return
 		}
 	}
@@ -45,10 +40,7 @@ func (r *WebhookRouter) handleGiteeWebhook(c *gin.Context) {
 	// Verify webhook secret if configured
 	if r.cfg.Webhook.GiteeSecret != "" {
 		if !r.verifyGiteeSignature(c, r.cfg.Webhook.GiteeSecret) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook signature",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook signature")
 			return
 		}
 	}
@@ -63,10 +55,7 @@ func (r *WebhookRouter) processWebhook(c *gin.Context, provider string) {
 		r.logger.Error("failed to parse webhook payload",
 			"provider", provider,
 			"error", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status": "error",
-			"error":  "invalid JSON payload",
-		})
+		apierr.BadRequest(c, apierr.INVALID_INPUT, "invalid JSON payload")
 		return
 	}
 
@@ -97,10 +86,7 @@ func (r *WebhookRouter) processWebhook(c *gin.Context, provider string) {
 			"provider", provider,
 			"object_kind", objectKind,
 			"error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": "error",
-			"error":  err.Error(),
-		})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

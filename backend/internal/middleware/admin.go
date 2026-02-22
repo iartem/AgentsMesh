@@ -1,10 +1,9 @@
 package middleware
 
 import (
-	"net/http"
-
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,38 +15,26 @@ func AdminMiddleware(db database.DB) gin.HandlerFunc {
 		// Get user ID from context (set by AuthMiddleware)
 		userID, exists := c.Get("user_id")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "Authentication required")
 			return
 		}
 
 		// Fetch user from database to verify is_system_admin flag
 		var u user.User
 		if err := db.First(&u, userID); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User not found",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "User not found")
 			return
 		}
 
 		// Verify user is a system admin
 		if !u.IsSystemAdmin {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Access denied: system administrator privileges required",
-			})
-			c.Abort()
+			apierr.AbortForbidden(c, apierr.SYSTEM_ADMIN_REQUIRED, "Access denied: system administrator privileges required")
 			return
 		}
 
 		// Verify user is active
 		if !u.IsActive {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Access denied: user account is disabled",
-			})
-			c.Abort()
+			apierr.AbortForbidden(c, apierr.ACCOUNT_DISABLED, "Access denied: user account is disabled")
 			return
 		}
 

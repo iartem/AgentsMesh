@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Runner } from "@/stores/runner";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface EditRunnerDialogProps {
@@ -26,9 +27,11 @@ export function EditRunnerDialog({
   const [maxPods, setMaxPods] = useState(runner.max_concurrent_pods.toString());
   const [isEnabled, setIsEnabled] = useState(runner.is_enabled);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
       await onSave(runner.id, {
         description: description || undefined,
@@ -37,6 +40,7 @@ export function EditRunnerDialog({
       });
     } catch (err) {
       console.error("Failed to save runner:", err);
+      setError(getLocalizedErrorMessage(err, t, t("settings.runnersSection.editDialog.saveFailed") || "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -91,6 +95,11 @@ export function EditRunnerDialog({
             </label>
           </div>
         </div>
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3 mt-4">
+            {error}
+          </div>
+        )}
         <div className="flex gap-3 mt-6">
           <Button variant="outline" className="flex-1" onClick={onClose}>
             {t("settings.runnersSection.editDialog.cancel")}

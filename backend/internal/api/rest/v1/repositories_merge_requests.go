@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,7 @@ func (h *RepositoryHandler) ListRepositoryMergeRequests(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -27,7 +28,7 @@ func (h *RepositoryHandler) ListRepositoryMergeRequests(c *gin.Context) {
 	// Fetch merge requests from service
 	mrs, err := h.repositoryService.ListMergeRequests(c.Request.Context(), id, branch, state)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

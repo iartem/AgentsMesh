@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { runnerApi, type RunnerData } from "@/lib/api";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface RunnerConfigModalProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -21,9 +22,11 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
   const [maxPods, setMaxPods] = useState(runner.max_concurrent_pods);
   const [visibility, setVisibility] = useState<string>(runner.visibility || "organization");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleUpdate = async () => {
     setLoading(true);
+    setError(null);
     try {
       await runnerApi.update(runner.id, {
         description: description || undefined,
@@ -31,8 +34,9 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
         visibility,
       });
       onUpdated();
-    } catch (error) {
-      console.error("Failed to update runner:", error);
+    } catch (err) {
+      console.error("Failed to update runner:", err);
+      setError(getLocalizedErrorMessage(err, t, t("runners.configModal.saveFailed") || "Failed to save"));
     } finally {
       setLoading(false);
     }
@@ -109,6 +113,12 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">
+              {error}
             </div>
           )}
 

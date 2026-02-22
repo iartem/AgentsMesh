@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,7 @@ import (
 func (h *GRPCRunnerHandler) RequestAuthURL(c *gin.Context) {
 	var req RequestAuthURLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -29,7 +30,7 @@ func (h *GRPCRunnerHandler) RequestAuthURL(c *gin.Context) {
 		Labels:     req.Labels,
 	}, frontendURL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create auth request"})
+		apierr.InternalError(c, "Failed to create auth request")
 		return
 	}
 
@@ -46,13 +47,13 @@ func (h *GRPCRunnerHandler) RequestAuthURL(c *gin.Context) {
 func (h *GRPCRunnerHandler) GetAuthStatus(c *gin.Context) {
 	authKey := c.Query("key")
 	if authKey == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing auth key"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Missing auth key")
 		return
 	}
 
 	resp, err := h.runnerService.GetAuthStatus(c.Request.Context(), authKey, h.pkiService)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		apierr.ResourceNotFound(c, err.Error())
 		return
 	}
 
@@ -65,19 +66,19 @@ func (h *GRPCRunnerHandler) GetAuthStatus(c *gin.Context) {
 func (h *GRPCRunnerHandler) AuthorizeRunner(c *gin.Context) {
 	var req AuthorizeRunnerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if tenant == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -85,14 +86,11 @@ func (h *GRPCRunnerHandler) AuthorizeRunner(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case runner.ErrRunnerAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Runner with this node_id already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Runner with this node_id already exists")
 		case runner.ErrRunnerQuotaExceeded:
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error": "Runner quota exceeded",
-				"code":  "RUNNER_QUOTA_EXCEEDED",
-			})
+			apierr.PaymentRequired(c, apierr.RUNNER_QUOTA_EXCEEDED, "Runner quota exceeded")
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 		}
 		return
 	}

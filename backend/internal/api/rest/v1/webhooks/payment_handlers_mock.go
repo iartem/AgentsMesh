@@ -5,6 +5,7 @@ import (
 
 	billingdomain "github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,20 +24,20 @@ func (r *WebhookRouter) handleMockCheckoutComplete(c *gin.Context) {
 	// Check if mock is enabled
 	if r.paymentFactory == nil || !r.paymentFactory.IsMockEnabled() {
 		r.logger.Warn("mock checkout complete requested but mock is not enabled")
-		c.JSON(http.StatusForbidden, gin.H{"error": "mock payment not enabled"})
+		apierr.Forbidden(c, apierr.MOCK_PAYMENT_DISABLED, "Mock payment is not enabled")
 		return
 	}
 
 	var req MockCheckoutCompleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Get the mock provider
 	mockProvider := r.paymentFactory.GetMockProvider()
 	if mockProvider == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "mock provider not available"})
+		apierr.InternalError(c, "mock provider not available")
 		return
 	}
 
@@ -44,7 +45,7 @@ func (r *WebhookRouter) handleMockCheckoutComplete(c *gin.Context) {
 	session, err := mockProvider.CompleteSession(req.SessionID)
 	if err != nil {
 		r.logger.Error("failed to complete mock session", "error", err, "session_id", req.SessionID)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -73,7 +74,7 @@ func (r *WebhookRouter) handleMockCheckoutComplete(c *gin.Context) {
 			"error", err,
 			"session_id", req.SessionID,
 		)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process payment"})
+		apierr.InternalError(c, "failed to process payment")
 		return
 	}
 
@@ -90,27 +91,27 @@ func (r *WebhookRouter) handleMockCheckoutComplete(c *gin.Context) {
 func (r *WebhookRouter) getMockSession(c *gin.Context) {
 	// Check if mock is enabled
 	if r.paymentFactory == nil || !r.paymentFactory.IsMockEnabled() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "mock payment not enabled"})
+		apierr.Forbidden(c, apierr.MOCK_PAYMENT_DISABLED, "Mock payment is not enabled")
 		return
 	}
 
 	sessionID := c.Param("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "session_id is required")
 		return
 	}
 
 	// Get the mock provider
 	mockProvider := r.paymentFactory.GetMockProvider()
 	if mockProvider == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "mock provider not available"})
+		apierr.InternalError(c, "mock provider not available")
 		return
 	}
 
 	// Get session info
 	session, err := mockProvider.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		apierr.ResourceNotFound(c, err.Error())
 		return
 	}
 

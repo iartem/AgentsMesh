@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +31,7 @@ func (h *AgentPodHandler) GetSettings(c *gin.Context) {
 
 	settings, err := h.settingsService.GetUserSettings(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get settings"})
+		apierr.InternalError(c, "Failed to get settings")
 		return
 	}
 
@@ -51,7 +52,7 @@ type UpdateSettingsRequest struct {
 func (h *AgentPodHandler) UpdateSettings(c *gin.Context) {
 	var req UpdateSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -67,7 +68,7 @@ func (h *AgentPodHandler) UpdateSettings(c *gin.Context) {
 
 	settings, err := h.settingsService.UpdateUserSettings(c.Request.Context(), userID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+		apierr.InternalError(c, "Failed to update settings")
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *AgentPodHandler) ListProviders(c *gin.Context) {
 
 	providers, err := h.aiProviderService.GetUserProviders(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list providers"})
+		apierr.InternalError(c, "Failed to list providers")
 		return
 	}
 
@@ -106,13 +107,13 @@ type CreateProviderRequest struct {
 func (h *AgentPodHandler) CreateProvider(c *gin.Context) {
 	var req CreateProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Validate credentials
 	if err := h.aiProviderService.ValidateCredentials(req.ProviderType, req.Credentials); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -127,7 +128,7 @@ func (h *AgentPodHandler) CreateProvider(c *gin.Context) {
 		req.IsDefault,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create provider"})
+		apierr.InternalError(c, "Failed to create provider")
 		return
 	}
 
@@ -151,13 +152,13 @@ func (h *AgentPodHandler) UpdateProvider(c *gin.Context) {
 	idStr := c.Param("id")
 	providerID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	var req UpdateProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -181,10 +182,10 @@ func (h *AgentPodHandler) UpdateProvider(c *gin.Context) {
 	)
 	if err != nil {
 		if err == agentpod.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider"})
+		apierr.InternalError(c, "Failed to update provider")
 		return
 	}
 
@@ -200,12 +201,12 @@ func (h *AgentPodHandler) DeleteProvider(c *gin.Context) {
 	idStr := c.Param("id")
 	providerID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	if err := h.aiProviderService.DeleteUserProvider(c.Request.Context(), providerID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete provider"})
+		apierr.InternalError(c, "Failed to delete provider")
 		return
 	}
 
@@ -218,16 +219,16 @@ func (h *AgentPodHandler) SetDefaultProvider(c *gin.Context) {
 	idStr := c.Param("id")
 	providerID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	if err := h.aiProviderService.SetDefaultProvider(c.Request.Context(), providerID); err != nil {
 		if err == agentpod.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default provider"})
+		apierr.InternalError(c, "Failed to set default provider")
 		return
 	}
 

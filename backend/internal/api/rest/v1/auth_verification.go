@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,28 +15,28 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	verifiedUser, err := h.userService.VerifyEmail(c.Request.Context(), req.Token)
 	if err != nil {
 		if err == user.ErrInvalidVerificationToken {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification token"})
+			apierr.InvalidInput(c, "Invalid or expired verification token")
 			return
 		}
 		if err == user.ErrEmailAlreadyVerified {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email already verified"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Email already verified")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify email"})
+		apierr.InternalError(c, "Failed to verify email")
 		return
 	}
 
 	// Generate new tokens for the verified user
 	result, err := h.authService.GenerateTokens(c.Request.Context(), verifiedUser)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		apierr.InternalError(c, "Failed to generate tokens")
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *AuthHandler) ResendVerification(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -75,20 +76,20 @@ func (h *AuthHandler) ResendVerification(c *gin.Context) {
 
 	// Check if already verified
 	if u.IsEmailVerified {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already verified"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Email already verified")
 		return
 	}
 
 	// Generate new verification token
 	token, err := h.userService.SetEmailVerificationToken(c.Request.Context(), u.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate verification token"})
+		apierr.InternalError(c, "Failed to generate verification token")
 		return
 	}
 
 	// Send verification email
 	if err := h.emailService.SendVerificationEmail(c.Request.Context(), u.Email, token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification email"})
+		apierr.InternalError(c, "Failed to send verification email")
 		return
 	}
 
@@ -102,7 +103,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -116,7 +117,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 
 	// Send password reset email
 	if err := h.emailService.SendPasswordResetEmail(c.Request.Context(), u.Email, token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send password reset email"})
+		apierr.InternalError(c, "Failed to send password reset email")
 		return
 	}
 
@@ -131,17 +132,17 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	_, err := h.userService.ResetPassword(c.Request.Context(), req.Token, req.NewPassword)
 	if err != nil {
 		if err == user.ErrInvalidResetToken {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+			apierr.InvalidInput(c, "Invalid or expired reset token")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+		apierr.InternalError(c, "Failed to reset password")
 		return
 	}
 

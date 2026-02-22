@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
@@ -19,7 +20,7 @@ type AutopilotControlRequest struct {
 // sendAutopilotControl sends a control command to the runner
 func (h *AutopilotControllerHandler) sendAutopilotControl(c *gin.Context, autopilotPod *agentpod.AutopilotController, action string, req *AutopilotControlRequest) {
 	if h.commandSender == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "command sender not configured"})
+		apierr.InternalError(c, "command sender not configured")
 		return
 	}
 
@@ -54,12 +55,12 @@ func (h *AutopilotControllerHandler) sendAutopilotControl(c *gin.Context, autopi
 	case "handback":
 		cmd.Action = &runnerv1.AutopilotControlCommand_Handback{Handback: &runnerv1.AutopilotHandbackAction{}}
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid action"})
+		apierr.InvalidInput(c, "invalid action")
 		return
 	}
 
 	if err := h.commandSender.SendAutopilotControl(autopilotPod.RunnerID, cmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send control command"})
+		apierr.InternalError(c, "failed to send control command")
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,28 +15,28 @@ func (h *PodHandler) TerminatePod(c *gin.Context) {
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Only creator or admin can terminate
 	if pod.CreatedByID != tenant.UserID && tenant.UserRole == "member" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only pod creator or admin can terminate"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	if err := h.podService.TerminatePod(c.Request.Context(), podKey); err != nil {
 		if err == ErrPodTerminated {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Pod already terminated"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod already terminated")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to terminate pod"})
+		apierr.InternalError(c, "Failed to terminate pod")
 		return
 	}
 
@@ -54,29 +55,29 @@ func (h *PodHandler) SendPrompt(c *gin.Context) {
 
 	var req SendPromptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if !pod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 		return
 	}
 
 	// TODO: Implement prompt sending via gRPC to runner
 	// For now, return not implemented
 	_ = req.Prompt
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Prompt sending via REST not implemented. Use terminal WebSocket."})
+	apierr.NotImplemented(c, "Prompt sending via REST not implemented. Use terminal WebSocket.")
 }

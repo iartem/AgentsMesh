@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,7 @@ func (h *OrganizationHandler) ListMembers(c *gin.Context) {
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -24,13 +25,13 @@ func (h *OrganizationHandler) ListMembers(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isMember, _ := h.orgService.IsMember(c.Request.Context(), org.ID, userID)
 	if !isMember {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	members, err := h.orgService.ListMembers(c.Request.Context(), org.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list members"})
+		apierr.InternalError(c, "Failed to list members")
 		return
 	}
 
@@ -45,7 +46,7 @@ func (h *OrganizationHandler) InviteMember(c *gin.Context) {
 
 	var req InviteMemberRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -54,20 +55,20 @@ func (h *OrganizationHandler) InviteMember(c *gin.Context) {
 	if req.Email != "" {
 		u, err := h.userService.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found with this email"})
+			apierr.ResourceNotFound(c, "User not found with this email")
 			return
 		}
 		targetUserID = u.ID
 	}
 
 	if targetUserID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Either email or user_id is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "Either email or user_id is required")
 		return
 	}
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -75,19 +76,19 @@ func (h *OrganizationHandler) InviteMember(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isAdmin, _ := h.orgService.IsAdmin(c.Request.Context(), org.ID, userID)
 	if !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Check if already a member
 	isMember, _ := h.orgService.IsMember(c.Request.Context(), org.ID, targetUserID)
 	if isMember {
-		c.JSON(http.StatusConflict, gin.H{"error": "User is already a member of this organization"})
+		apierr.Conflict(c, apierr.ALREADY_EXISTS, "User is already a member of this organization")
 		return
 	}
 
 	if err := h.orgService.AddMember(c.Request.Context(), org.ID, targetUserID, req.Role); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add member"})
+		apierr.InternalError(c, "Failed to add member")
 		return
 	}
 
@@ -100,13 +101,13 @@ func (h *OrganizationHandler) RemoveMember(c *gin.Context) {
 	slug := c.Param("slug")
 	targetUserID, err := strconv.ParseInt(c.Param("user_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -114,16 +115,16 @@ func (h *OrganizationHandler) RemoveMember(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isAdmin, _ := h.orgService.IsAdmin(c.Request.Context(), org.ID, userID)
 	if !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	if err := h.orgService.RemoveMember(c.Request.Context(), org.ID, targetUserID); err != nil {
 		if err == organization.ErrCannotRemoveOwner {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot remove organization owner"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot remove organization owner")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove member"})
+		apierr.InternalError(c, "Failed to remove member")
 		return
 	}
 
@@ -136,19 +137,19 @@ func (h *OrganizationHandler) UpdateMemberRole(c *gin.Context) {
 	slug := c.Param("slug")
 	targetUserID, err := strconv.ParseInt(c.Param("user_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
 	var req UpdateMemberRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -156,12 +157,12 @@ func (h *OrganizationHandler) UpdateMemberRole(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isAdmin, _ := h.orgService.IsAdmin(c.Request.Context(), org.ID, userID)
 	if !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	if err := h.orgService.UpdateMemberRole(c.Request.Context(), org.ID, targetUserID, req.Role); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update role"})
+		apierr.InternalError(c, "Failed to update role")
 		return
 	}
 

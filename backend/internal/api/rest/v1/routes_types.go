@@ -30,39 +30,39 @@ type MessageService = agent.MessageService
 
 // Services holds all service dependencies for API handlers
 type Services struct {
-	Auth              *auth.Service
-	User              *user.Service
-	Org               *organization.Service
+	Auth *auth.Service
+	User *user.Service
+	Org  *organization.Service
 	// Agent services (split by responsibility)
-	AgentType         *agent.AgentTypeService
-	CredentialProfile *agent.CredentialProfileService
-	UserConfig        *agent.UserConfigService
-	Repository        *repository.Service
-	Webhook           *repository.WebhookService // Webhook management for repositories
-	Runner            *runner.Service
-	RunnerConnMgr     *runner.RunnerConnectionManager // Runner gRPC connection manager
-	PodCoordinator    *runner.PodCoordinator          // Pod lifecycle coordinator
-	TerminalRouter    *runner.TerminalRouter          // Terminal data router
-	Pod               *agentpod.PodService
-	PodOrchestrator   *agentpod.PodOrchestrator            // Unified Pod creation orchestrator
-	Autopilot         *agentpod.AutopilotControllerService // AutopilotController automation service
-	Channel           *channel.Service
-	Binding           *binding.Service
-	Ticket            *ticket.Service
-	MRSync            *ticket.MRSyncService // MR sync for webhook events
-	Mesh              *mesh.Service
-	AgentPodSettings   *agentpod.SettingsService    // AgentPod user settings
-	AgentPodAIProvider *agentpod.AIProviderService  // AgentPod AI provider management
+	AgentType          *agent.AgentTypeService
+	CredentialProfile  *agent.CredentialProfileService
+	UserConfig         *agent.UserConfigService
+	Repository         *repository.Service
+	Webhook            *repository.WebhookService // Webhook management for repositories
+	Runner             *runner.Service
+	RunnerConnMgr      *runner.RunnerConnectionManager // Runner gRPC connection manager
+	PodCoordinator     *runner.PodCoordinator          // Pod lifecycle coordinator
+	TerminalRouter     *runner.TerminalRouter          // Terminal data router
+	Pod                *agentpod.PodService
+	PodOrchestrator    *agentpod.PodOrchestrator            // Unified Pod creation orchestrator
+	Autopilot          *agentpod.AutopilotControllerService // AutopilotController automation service
+	Channel            *channel.Service
+	Binding            *binding.Service
+	Ticket             *ticket.Service
+	MRSync             *ticket.MRSyncService // MR sync for webhook events
+	Mesh               *mesh.Service
+	AgentPodSettings   *agentpod.SettingsService   // AgentPod user settings
+	AgentPodAIProvider *agentpod.AIProviderService // AgentPod AI provider management
 	Billing            *billing.Service
-	Message            *MessageService    // Agent-to-agent messaging
-	Hub                *websocket.Hub     // WebSocket hub for real-time communication
-	EventBus           *eventbus.EventBus // Event bus for real-time events
-	Email              email.Service      // Email service
-	Invitation         *invitation.Service  // Organization invitations
-	File               *fileservice.Service // File storage service
-	PromoCode          *promocode.Service   // Promo code management
-	License            *license.Service     // License service for OnPremise
-	APIKey             *apikeyservice.Service // API key management for third-party access
+	Message            *MessageService                  // Agent-to-agent messaging
+	Hub                *websocket.Hub                   // WebSocket hub for real-time communication
+	EventBus           *eventbus.EventBus               // Event bus for real-time events
+	Email              email.Service                    // Email service
+	Invitation         *invitation.Service              // Organization invitations
+	File               *fileservice.Service             // File storage service
+	PromoCode          *promocode.Service               // Promo code management
+	License            *license.Service                 // License service for OnPremise
+	APIKey             *apikeyservice.Service           // API key management for third-party access
 	APIKeyAdapter      *apikeyservice.MiddlewareAdapter // API key middleware adapter
 	// NOTE: GitProvider and SSHKey services have been removed (moved to user-level settings)
 

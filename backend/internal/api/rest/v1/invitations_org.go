@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingSvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	invitationSvc "github.com/anthropics/agentsmesh/backend/internal/service/invitation"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,19 +17,19 @@ import (
 func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 	var req CreateInvitationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	tc := middleware.GetTenant(c)
 	if tc == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant context not found"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Tenant context not found")
 		return
 	}
 
 	// Only admins and owners can invite
 	if tc.UserRole != organization.RoleOwner && tc.UserRole != organization.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only admins and owners can invite members"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -37,20 +38,14 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 	if h.billingService != nil {
 		if err := h.billingService.CheckSeatAvailability(c.Request.Context(), tc.OrganizationID, 1); err != nil {
 			if err == billingSvc.ErrQuotaExceeded {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error": "No available seats. Please purchase more seats to invite members.",
-					"code":  "NO_AVAILABLE_SEATS",
-				})
+				apierr.PaymentRequired(c, apierr.NO_AVAILABLE_SEATS, "No available seats. Please purchase more seats to invite members.")
 				return
 			}
 			if err == billingSvc.ErrSubscriptionFrozen {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error": "Your subscription has expired. Please renew to continue.",
-					"code":  "SUBSCRIPTION_FROZEN",
-				})
+				apierr.PaymentRequired(c, apierr.SUBSCRIPTION_FROZEN, "Your subscription has expired. Please renew to continue.")
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check seat availability"})
+			apierr.InternalError(c, "Failed to check seat availability")
 			return
 		}
 	}
@@ -58,14 +53,14 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 	// Get inviter info
 	inviter, err := h.userService.GetByID(c.Request.Context(), tc.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+		apierr.InternalError(c, "Failed to get user info")
 		return
 	}
 
 	// Get org info
 	org, err := h.orgService.GetByID(c.Request.Context(), tc.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get organization info"})
+		apierr.InternalError(c, "Failed to get organization info")
 		return
 	}
 
@@ -86,13 +81,13 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case invitationSvc.ErrAlreadyMember:
-			c.JSON(http.StatusConflict, gin.H{"error": "User is already a member of this organization"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "User is already a member of this organization")
 		case invitationSvc.ErrPendingInvitation:
-			c.JSON(http.StatusConflict, gin.H{"error": "A pending invitation already exists for this email"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "A pending invitation already exists for this email")
 		case invitationSvc.ErrInvalidRole:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+			apierr.InvalidInput(c, "Invalid role")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create invitation"})
+			apierr.InternalError(c, "Failed to create invitation")
 		}
 		return
 	}
@@ -108,13 +103,13 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 func (h *InvitationHandler) ListOrgInvitations(c *gin.Context) {
 	tc := middleware.GetTenant(c)
 	if tc == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant context not found"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Tenant context not found")
 		return
 	}
 
 	invitations, err := h.invitationService.ListByOrganization(c.Request.Context(), tc.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list invitations"})
+		apierr.InternalError(c, "Failed to list invitations")
 		return
 	}
 
@@ -126,41 +121,41 @@ func (h *InvitationHandler) ListOrgInvitations(c *gin.Context) {
 func (h *InvitationHandler) RevokeInvitation(c *gin.Context) {
 	tc := middleware.GetTenant(c)
 	if tc == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant context not found"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Tenant context not found")
 		return
 	}
 
 	// Only admins and owners can revoke
 	if tc.UserRole != organization.RoleOwner && tc.UserRole != organization.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only admins and owners can revoke invitations"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid invitation ID"})
+		apierr.InvalidInput(c, "Invalid invitation ID")
 		return
 	}
 
 	// Verify invitation belongs to this org
 	inv, err := h.invitationService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found"})
+		apierr.ResourceNotFound(c, "Invitation not found")
 		return
 	}
 
 	if inv.OrganizationID != tc.OrganizationID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found"})
+		apierr.ResourceNotFound(c, "Invitation not found")
 		return
 	}
 
 	if err := h.invitationService.Revoke(c.Request.Context(), id); err != nil {
 		switch err {
 		case invitationSvc.ErrInvitationAccepted:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot revoke an accepted invitation"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot revoke an accepted invitation")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke invitation"})
+			apierr.InternalError(c, "Failed to revoke invitation")
 		}
 		return
 	}
@@ -173,32 +168,32 @@ func (h *InvitationHandler) RevokeInvitation(c *gin.Context) {
 func (h *InvitationHandler) ResendInvitation(c *gin.Context) {
 	tc := middleware.GetTenant(c)
 	if tc == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant context not found"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Tenant context not found")
 		return
 	}
 
 	// Only admins and owners can resend
 	if tc.UserRole != organization.RoleOwner && tc.UserRole != organization.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only admins and owners can resend invitations"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid invitation ID"})
+		apierr.InvalidInput(c, "Invalid invitation ID")
 		return
 	}
 
 	// Verify invitation belongs to this org
 	inv, err := h.invitationService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found"})
+		apierr.ResourceNotFound(c, "Invitation not found")
 		return
 	}
 
 	if inv.OrganizationID != tc.OrganizationID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found"})
+		apierr.ResourceNotFound(c, "Invitation not found")
 		return
 	}
 
@@ -222,9 +217,9 @@ func (h *InvitationHandler) ResendInvitation(c *gin.Context) {
 	if err := h.invitationService.Resend(c.Request.Context(), id, inviterName, orgName); err != nil {
 		switch err {
 		case invitationSvc.ErrInvitationAccepted:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot resend an accepted invitation"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot resend an accepted invitation")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resend invitation"})
+			apierr.InternalError(c, "Failed to resend invitation")
 		}
 		return
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,13 +23,13 @@ func (h *BillingHandler) DowngradeSubscription(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req DowngradeSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -37,14 +38,14 @@ func (h *BillingHandler) DowngradeSubscription(c *gin.Context) {
 	// Get current subscription
 	sub, err := h.billingService.GetSubscription(ctx, tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
 	// Get target plan
 	targetPlan, err := h.billingService.GetPlan(ctx, req.PlanName)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan"})
+		apierr.InvalidInput(c, "invalid plan")
 		return
 	}
 
@@ -56,14 +57,13 @@ func (h *BillingHandler) DowngradeSubscription(c *gin.Context) {
 
 	// Verify this is actually a downgrade
 	if targetPlan.PricePerSeatMonthly >= currentPlan.PricePerSeatMonthly {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "use upgrade endpoint for higher tier plans"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "use upgrade endpoint for higher tier plans")
 		return
 	}
 
 	// Check if current seat count exceeds target plan limit
 	if targetPlan.MaxUsers > 0 && sub.SeatCount > targetPlan.MaxUsers {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":             "current seat count exceeds target plan limit",
+		apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, "current seat count exceeds target plan limit", gin.H{
 			"current_seats":     sub.SeatCount,
 			"target_plan_limit": targetPlan.MaxUsers,
 			"action_required":   "reduce seats before downgrading",
@@ -75,13 +75,12 @@ func (h *BillingHandler) DowngradeSubscription(c *gin.Context) {
 	_, err = h.billingService.UpdateSubscription(ctx, tenant.OrganizationID, req.PlanName)
 	if err != nil {
 		if err == billingsvc.ErrSeatCountExceedsLimit {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":           "current seat count exceeds target plan limit",
+			apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, "current seat count exceeds target plan limit", gin.H{
 				"action_required": "reduce seats before downgrading",
 			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -102,30 +101,30 @@ func (h *BillingHandler) ChangeBillingCycle(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req ChangeBillingCycleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
 	if sub.BillingCycle == req.BillingCycle {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "already on this billing cycle"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "already on this billing cycle")
 		return
 	}
 
 	// Set next billing cycle (takes effect on renewal)
 	if err := h.billingService.SetNextBillingCycle(c.Request.Context(), tenant.OrganizationID, req.BillingCycle); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

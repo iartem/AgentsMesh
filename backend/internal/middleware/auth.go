@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 	"time"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -42,10 +42,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		}
 
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization is required",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "Authorization is required")
 			return
 		}
 
@@ -59,10 +56,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid or expired token",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.INVALID_TOKEN, "Invalid or expired token")
 			return
 		}
 

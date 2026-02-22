@@ -7,6 +7,7 @@ import (
 	domainUser "github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +18,7 @@ func (h *UserRepositoryProviderHandler) ListProviders(c *gin.Context) {
 
 	providers, err := h.userService.ListRepositoryProviders(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list providers"})
+		apierr.InternalError(c, "Failed to list providers")
 		return
 	}
 
@@ -35,7 +36,7 @@ func (h *UserRepositoryProviderHandler) ListProviders(c *gin.Context) {
 func (h *UserRepositoryProviderHandler) CreateProvider(c *gin.Context) {
 	var req CreateRepositoryProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -52,11 +53,11 @@ func (h *UserRepositoryProviderHandler) CreateProvider(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case user.ErrProviderAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Provider already exists with this name"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Provider already exists with this name")
 		case user.ErrInvalidProviderType:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider type"})
+			apierr.InvalidInput(c, "Invalid provider type")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create provider"})
+			apierr.InternalError(c, "Failed to create provider")
 		}
 		return
 	}
@@ -71,17 +72,17 @@ func (h *UserRepositoryProviderHandler) GetProvider(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	provider, err := h.userService.GetRepositoryProvider(c.Request.Context(), userID, providerID)
 	if err != nil {
 		if err == user.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get provider"})
+		apierr.InternalError(c, "Failed to get provider")
 		return
 	}
 
@@ -95,13 +96,13 @@ func (h *UserRepositoryProviderHandler) UpdateProvider(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	var req UpdateRepositoryProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -116,11 +117,11 @@ func (h *UserRepositoryProviderHandler) UpdateProvider(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case user.ErrProviderNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 		case user.ErrProviderAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Provider already exists with this name"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Provider already exists with this name")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider"})
+			apierr.InternalError(c, "Failed to update provider")
 		}
 		return
 	}
@@ -135,17 +136,17 @@ func (h *UserRepositoryProviderHandler) DeleteProvider(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	err = h.userService.DeleteRepositoryProvider(c.Request.Context(), userID, providerID)
 	if err != nil {
 		if err == user.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete provider"})
+		apierr.InternalError(c, "Failed to delete provider")
 		return
 	}
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
-	"github.com/gin-gonic/gin"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 )
 
 // =============================================================================
@@ -73,7 +73,7 @@ func TestObserveTerminal_PodNotFound(t *testing.T) {
 	// Simulate handler logic
 	_, err := mockPodSvc.GetPod(c.Request.Context(), "invalid-key")
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 	}
 
 	if w.Code != http.StatusNotFound {
@@ -94,7 +94,7 @@ func TestObserveTerminal_AccessDenied(t *testing.T) {
 	// Simulate handler logic
 	tenant := middleware.GetTenant(c)
 	if otherOrgPod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 	}
 
 	if w.Code != http.StatusForbidden {
@@ -111,7 +111,7 @@ func TestObserveTerminal_TerminalRouterNil(t *testing.T) {
 
 	// Simulate handler logic
 	if h.terminalRouter == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router not available")
 	}
 
 	if w.Code != http.StatusServiceUnavailable {
@@ -130,7 +130,7 @@ func TestObserveTerminal_TerminalRouterNotImplemented(t *testing.T) {
 	// Simulate handler logic
 	_, ok := h.terminalRouter.(TerminalRouterInterface)
 	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router interface not implemented"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router interface not implemented")
 	}
 
 	if w.Code != http.StatusServiceUnavailable {

@@ -13,6 +13,7 @@ import {
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
 import { billingApi } from "@/lib/api/billing";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface CancelSubscriptionDialogProps {
   open: boolean;
@@ -44,7 +45,7 @@ export function CancelSubscriptionDialog({
       onCancelled?.();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to cancel subscription");
+      setError(getLocalizedErrorMessage(err, t, t("billing.cancel.failed") || "Failed to cancel subscription"));
     } finally {
       setLoading(false);
     }

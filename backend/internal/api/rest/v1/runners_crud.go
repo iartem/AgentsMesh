@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	runner "github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,7 @@ func (h *RunnerHandler) ListRunners(c *gin.Context) {
 
 	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
+		apierr.InternalError(c, "Failed to list runners")
 		return
 	}
 
@@ -34,25 +35,25 @@ func (h *RunnerHandler) ListRunners(c *gin.Context) {
 func (h *RunnerHandler) GetRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Check visibility: private runners are only visible to the registrant
 	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -79,13 +80,13 @@ func (h *RunnerHandler) GetRunner(c *gin.Context) {
 func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	var req UpdateRunnerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -93,19 +94,19 @@ func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Verify runner belongs to organization
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -117,7 +118,7 @@ func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 		Visibility:        req.Visibility,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update runner"})
+		apierr.InternalError(c, "Failed to update runner")
 		return
 	}
 
@@ -129,7 +130,7 @@ func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
@@ -137,23 +138,23 @@ func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.runnerService.DeleteRunner(c.Request.Context(), runnerID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete runner"})
+		apierr.InternalError(c, "Failed to delete runner")
 		return
 	}
 

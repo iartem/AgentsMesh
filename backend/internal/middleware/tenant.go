@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -75,40 +75,28 @@ func TenantMiddleware(orgService OrganizationService) gin.HandlerFunc {
 		// Get org slug from URL path parameter (e.g., /orgs/:slug/...)
 		orgSlug := c.Param("slug")
 		if orgSlug == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Organization slug is required",
-			})
-			c.Abort()
+			apierr.AbortBadRequest(c, apierr.VALIDATION_FAILED, "Organization slug is required")
 			return
 		}
 
 		// Get user ID from auth middleware
 		userID := GetUserID(c)
 		if userID == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User not authenticated",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "User not authenticated")
 			return
 		}
 
 		// Lookup organization
 		org, err := orgService.GetBySlug(c.Request.Context(), orgSlug)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Organization not found",
-			})
-			c.Abort()
+			apierr.AbortNotFound(c, apierr.RESOURCE_NOT_FOUND, "Organization not found")
 			return
 		}
 
 		// Check membership
 		isMember, err := orgService.IsMember(c.Request.Context(), org.GetID(), userID)
 		if err != nil || !isMember {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "You are not a member of this organization",
-			})
-			c.Abort()
+			apierr.AbortForbidden(c, apierr.NOT_ORG_MEMBER, "You are not a member of this organization")
 			return
 		}
 
@@ -140,10 +128,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tc := GetTenant(c)
 		if tc == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Tenant context not found",
-			})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "Tenant context not found")
 			return
 		}
 
@@ -157,10 +142,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 		}
 
 		if !hasRole {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Insufficient permissions",
-			})
-			c.Abort()
+			apierr.AbortForbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "Insufficient permissions")
 			return
 		}
 

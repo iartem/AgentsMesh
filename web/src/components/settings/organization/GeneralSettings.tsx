@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { organizationApi } from "@/lib/api";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 export type TranslationFn = (key: string, params?: Record<string, string | number>) => string;
 
@@ -23,6 +25,7 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
       await organizationApi.update(org!.slug, { name });
     } catch (error) {
       console.error("Failed to save:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("settings.organizationDetails.saveFailed") || "Failed to save"));
     } finally {
       setSaving(false);
     }

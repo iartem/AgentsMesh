@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,7 +15,7 @@ import (
 func (h *RepositoryHandler) RegisterRepositoryWebhook(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -23,33 +24,33 @@ func (h *RepositoryHandler) RegisterRepositoryWebhook(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Get repository
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get webhook service
 	webhookService := h.repositoryService.GetWebhookService()
 	if webhookService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Webhook service not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Webhook service not available")
 		return
 	}
 
 	// Register webhook
 	result, err := webhookService.RegisterWebhookForRepository(c.Request.Context(), repo, tenant.OrganizationSlug, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *RepositoryHandler) RegisterRepositoryWebhook(c *gin.Context) {
 func (h *RepositoryHandler) DeleteRepositoryWebhook(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -70,32 +71,32 @@ func (h *RepositoryHandler) DeleteRepositoryWebhook(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Get repository
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get webhook service
 	webhookService := h.repositoryService.GetWebhookService()
 	if webhookService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Webhook service not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Webhook service not available")
 		return
 	}
 
 	// Delete webhook
 	if err := webhookService.DeleteWebhookForRepository(c.Request.Context(), repo, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -107,7 +108,7 @@ func (h *RepositoryHandler) DeleteRepositoryWebhook(c *gin.Context) {
 func (h *RepositoryHandler) GetRepositoryWebhookStatus(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -116,19 +117,19 @@ func (h *RepositoryHandler) GetRepositoryWebhookStatus(c *gin.Context) {
 	// Get repository
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get webhook service
 	webhookService := h.repositoryService.GetWebhookService()
 	if webhookService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Webhook service not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Webhook service not available")
 		return
 	}
 
@@ -142,7 +143,7 @@ func (h *RepositoryHandler) GetRepositoryWebhookStatus(c *gin.Context) {
 func (h *RepositoryHandler) GetRepositoryWebhookSecret(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -150,36 +151,36 @@ func (h *RepositoryHandler) GetRepositoryWebhookSecret(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Get repository
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get webhook service
 	webhookService := h.repositoryService.GetWebhookService()
 	if webhookService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Webhook service not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Webhook service not available")
 		return
 	}
 
 	secret, err := webhookService.GetWebhookSecret(c.Request.Context(), repo)
 	if err != nil {
 		if err == repository.ErrWebhookNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not configured"})
+			apierr.ResourceNotFound(c, "Webhook not configured")
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -196,7 +197,7 @@ func (h *RepositoryHandler) GetRepositoryWebhookSecret(c *gin.Context) {
 func (h *RepositoryHandler) MarkRepositoryWebhookConfigured(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -204,35 +205,35 @@ func (h *RepositoryHandler) MarkRepositoryWebhookConfigured(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Get repository
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get webhook service
 	webhookService := h.repositoryService.GetWebhookService()
 	if webhookService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Webhook service not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Webhook service not available")
 		return
 	}
 
 	if err := webhookService.MarkWebhookAsConfigured(c.Request.Context(), repo); err != nil {
 		if err == repository.ErrWebhookNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not configured"})
+			apierr.ResourceNotFound(c, "Webhook not configured")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

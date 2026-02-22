@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,25 +22,25 @@ import (
 func (h *BindingHandler) RequestScopes(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	bindingID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid binding ID"})
+		apierr.InvalidInput(c, "invalid binding ID")
 		return
 	}
 
 	var req ScopeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	binding, err := h.bindingSvc.RequestScopes(c.Request.Context(), bindingID, podKey, req.Scopes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -60,25 +61,25 @@ func (h *BindingHandler) RequestScopes(c *gin.Context) {
 func (h *BindingHandler) ApproveScopes(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	bindingID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid binding ID"})
+		apierr.InvalidInput(c, "invalid binding ID")
 		return
 	}
 
 	var req ScopeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	binding, err := h.bindingSvc.ApproveScopes(c.Request.Context(), bindingID, podKey, req.Scopes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -98,24 +99,24 @@ func (h *BindingHandler) ApproveScopes(c *gin.Context) {
 func (h *BindingHandler) Unbind(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	var req UnbindRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	removed, err := h.bindingSvc.Unbind(c.Request.Context(), podKey, req.TargetPod)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
 	if !removed {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active binding found"})
+		apierr.ResourceNotFound(c, "no active binding found")
 		return
 	}
 

@@ -12,6 +12,12 @@ export interface RequestOptions {
   skipAuthRefresh?: boolean; // Skip token refresh for auth endpoints
 }
 
+export interface ApiErrorData {
+  error?: string;
+  code?: string;
+  [key: string]: unknown;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -20,6 +26,20 @@ export class ApiError extends Error {
   ) {
     super(`API Error: ${status} ${statusText}`);
     this.name = "ApiError";
+  }
+
+  get code(): string | undefined {
+    const d = this.data as ApiErrorData | null | undefined;
+    return d?.code;
+  }
+
+  get serverMessage(): string | undefined {
+    const d = this.data as ApiErrorData | null | undefined;
+    return d?.error;
+  }
+
+  hasCode(code: string): boolean {
+    return this.code === code;
   }
 }
 

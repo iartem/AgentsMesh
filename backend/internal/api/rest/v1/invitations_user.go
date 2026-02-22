@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	invitationSvc "github.com/anthropics/agentsmesh/backend/internal/service/invitation"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ func (h *InvitationHandler) GetInvitationByToken(c *gin.Context) {
 
 	info, err := h.invitationService.GetInvitationInfo(c.Request.Context(), token)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found or expired"})
+		apierr.ResourceNotFound(c, "Invitation not found or expired")
 		return
 	}
 
@@ -32,15 +33,15 @@ func (h *InvitationHandler) AcceptInvitation(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case invitationSvc.ErrInvitationNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Invitation not found"})
+			apierr.ResourceNotFound(c, "Invitation not found")
 		case invitationSvc.ErrInvitationExpired:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invitation has expired"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Invitation has expired")
 		case invitationSvc.ErrInvitationAccepted:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invitation already accepted"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Invitation already accepted")
 		case invitationSvc.ErrAlreadyMember:
-			c.JSON(http.StatusConflict, gin.H{"error": "You are already a member of this organization"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "You are already a member of this organization")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to accept invitation"})
+			apierr.InternalError(c, "Failed to accept invitation")
 		}
 		return
 	}
@@ -58,13 +59,13 @@ func (h *InvitationHandler) ListPendingInvitations(c *gin.Context) {
 
 	user, err := h.userService.GetByID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+		apierr.InternalError(c, "Failed to get user info")
 		return
 	}
 
 	invitations, err := h.invitationService.ListPendingByEmail(c.Request.Context(), user.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list invitations"})
+		apierr.InternalError(c, "Failed to list invitations")
 		return
 	}
 

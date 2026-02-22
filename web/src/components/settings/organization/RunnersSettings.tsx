@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRunnerStore, Runner } from "@/stores/runner";
 import { RunnerCard, TokenDialog, EditRunnerDialog } from "./runners";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import type { TranslationFn } from "./GeneralSettings";
 
 interface RunnersSettingsProps {
@@ -12,6 +15,7 @@ interface RunnersSettingsProps {
 }
 
 export function RunnersSettings({ t }: RunnersSettingsProps) {
+  const i18n = useTranslations();
   const {
     runners,
     loading,
@@ -36,6 +40,7 @@ export function RunnersSettings({ t }: RunnersSettingsProps) {
       setGeneratedToken(token);
     } catch (err) {
       console.error("Failed to generate token:", err);
+      toast.error(getLocalizedErrorMessage(err, i18n, i18n("common.error")));
     }
   };
 

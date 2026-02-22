@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { runnerAuthApi, RunnerAuthStatus } from "@/lib/api/runner";
 import { organizationApi, OrganizationData } from "@/lib/api/organization";
+import { ApiError } from "@/lib/api/base";
+import { isApiErrorCode } from "@/lib/api/errors";
 import { useTranslations } from "next-intl";
 
 export default function RunnerAuthorizePage() {
@@ -97,13 +99,10 @@ export default function RunnerAuthorizePage() {
       );
       setAuthorized(true);
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "data" in err) {
-        const apiErr = err as { data?: { error?: string; code?: string } };
-        if (apiErr.data?.code === "RUNNER_QUOTA_EXCEEDED") {
-          setError(t("quotaExceeded"));
-        } else {
-          setError(apiErr.data?.error || t("authorizeFailed"));
-        }
+      if (isApiErrorCode(err, "RUNNER_QUOTA_EXCEEDED")) {
+        setError(t("quotaExceeded"));
+      } else if (err instanceof ApiError && err.serverMessage) {
+        setError(err.serverMessage);
       } else {
         setError(t("authorizeFailed"));
       }

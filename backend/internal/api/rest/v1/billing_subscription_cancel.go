@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +25,7 @@ func (h *BillingHandler) RequestCancelSubscription(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
@@ -36,7 +37,7 @@ func (h *BillingHandler) RequestCancelSubscription(c *gin.Context) {
 
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
@@ -58,7 +59,7 @@ func (h *BillingHandler) RequestCancelSubscription(c *gin.Context) {
 
 		if providerErr == nil && provider != nil && subscriptionID != "" {
 			if err := provider.CancelSubscription(c.Request.Context(), subscriptionID, req.Immediate); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to cancel subscription: %v", err)})
+				apierr.InternalError(c, fmt.Sprintf("failed to cancel subscription: %v", err))
 				return
 			}
 		}
@@ -67,14 +68,14 @@ func (h *BillingHandler) RequestCancelSubscription(c *gin.Context) {
 	// Update local subscription
 	if req.Immediate {
 		if err := h.billingService.CancelSubscription(c.Request.Context(), tenant.OrganizationID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			apierr.InternalError(c, err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "subscription cancelled"})
 	} else {
 		// Mark to cancel at period end and save to database
 		if err := h.billingService.SetCancelAtPeriodEnd(c.Request.Context(), tenant.OrganizationID, true); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			apierr.InternalError(c, err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -89,19 +90,19 @@ func (h *BillingHandler) ReactivateSubscription(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
 	// Check if subscription is set to cancel at period end
 	if !sub.CancelAtPeriodEnd {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "subscription is not pending cancellation"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "subscription is not pending cancellation")
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *BillingHandler) ReactivateSubscription(c *gin.Context) {
 		if providerErr == nil && provider != nil && subscriptionID != "" {
 			// For both Stripe and LemonSqueezy: setting cancel_at_period_end to false reactivates
 			if err := provider.CancelSubscription(c.Request.Context(), subscriptionID, false); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to reactivate subscription: %v", err)})
+				apierr.InternalError(c, fmt.Sprintf("failed to reactivate subscription: %v", err))
 				return
 			}
 		}
@@ -132,7 +133,7 @@ func (h *BillingHandler) ReactivateSubscription(c *gin.Context) {
 
 	// Update local subscription to remove cancel_at_period_end
 	if err := h.billingService.SetCancelAtPeriodEnd(c.Request.Context(), tenant.OrganizationID, false); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

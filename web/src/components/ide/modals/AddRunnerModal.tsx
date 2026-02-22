@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { runnerApi } from "@/lib/api";
+import { isApiErrorCode, getLocalizedErrorMessage } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Check, Copy, Terminal } from "lucide-react";
+import { AlertCircle, Check, Copy, Terminal, ShieldAlert } from "lucide-react";
 import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "next-intl";
 
@@ -24,6 +25,7 @@ export function AddRunnerModal({ open, onClose, onCreated }: AddRunnerModalProps
   const [loading, setLoading] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -31,6 +33,7 @@ export function AddRunnerModal({ open, onClose, onCreated }: AddRunnerModalProps
       setGeneratedToken(null);
       setLoading(false);
       setCopied(false);
+      setError(null);
     }
   }, [open]);
 
@@ -38,11 +41,16 @@ export function AddRunnerModal({ open, onClose, onCreated }: AddRunnerModalProps
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await runnerApi.createToken();
       setGeneratedToken(res.token);
-    } catch (error) {
-      console.error("Failed to generate token:", error);
+    } catch (err) {
+      if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {
+        setError(t("apiErrors.INSUFFICIENT_PERMISSIONS"));
+      } else {
+        setError(getLocalizedErrorMessage(err, t, t("apiErrors.INTERNAL_ERROR")));
+      }
     } finally {
       setLoading(false);
     }
@@ -146,9 +154,16 @@ agentsmesh-runner run`}
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {t("runners.addRunnerModal.generateHint")}
-            </p>
+            {error ? (
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("runners.addRunnerModal.generateHint")}
+              </p>
+            )}
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
               <Button variant="outline" onClick={handleClose}>

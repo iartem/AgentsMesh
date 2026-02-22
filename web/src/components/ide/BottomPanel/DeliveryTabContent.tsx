@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 import { repositoryApi } from "@/lib/api/repository";
 import { useEventSubscription } from "@/hooks/useRealtimeEvents";
 import type { MREventData, PipelineEventData } from "@/lib/realtime";
@@ -71,8 +73,10 @@ export function DeliveryTabContent({
         pod.branch_name // Filter by current branch
       );
       setMergeRequests(response.merge_requests as MergeRequestInfo[]);
-    } catch {
-      setError(t("ide.bottomPanel.deliveryTab.loadError"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("ide.bottomPanel.deliveryTab.loadError"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

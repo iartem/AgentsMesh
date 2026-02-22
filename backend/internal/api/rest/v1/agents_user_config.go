@@ -6,6 +6,7 @@ import (
 
 	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +21,7 @@ func (h *AgentHandler) ListUserAgentConfigs(c *gin.Context) {
 
 	configs, err := h.userConfigSvc.ListUserAgentConfigs(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list user configs"})
+		apierr.InternalError(c, "Failed to list user configs")
 		return
 	}
 
@@ -38,7 +39,7 @@ func (h *AgentHandler) ListUserAgentConfigs(c *gin.Context) {
 func (h *AgentHandler) GetUserAgentConfig(c *gin.Context) {
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		apierr.InvalidInput(c, "Invalid agent type ID")
 		return
 	}
 
@@ -46,7 +47,7 @@ func (h *AgentHandler) GetUserAgentConfig(c *gin.Context) {
 
 	config, err := h.userConfigSvc.GetUserAgentConfig(c.Request.Context(), userID, agentTypeID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user config"})
+		apierr.InternalError(c, "Failed to get user config")
 		return
 	}
 
@@ -58,13 +59,13 @@ func (h *AgentHandler) GetUserAgentConfig(c *gin.Context) {
 func (h *AgentHandler) SetUserAgentConfig(c *gin.Context) {
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		apierr.InvalidInput(c, "Invalid agent type ID")
 		return
 	}
 
 	var req SetUserAgentConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -78,7 +79,7 @@ func (h *AgentHandler) SetUserAgentConfig(c *gin.Context) {
 
 	config, err := h.userConfigSvc.SetUserAgentConfig(c.Request.Context(), userID, agentTypeID, configValues)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set user config"})
+		apierr.InternalError(c, "Failed to set user config")
 		return
 	}
 
@@ -90,14 +91,14 @@ func (h *AgentHandler) SetUserAgentConfig(c *gin.Context) {
 func (h *AgentHandler) DeleteUserAgentConfig(c *gin.Context) {
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		apierr.InvalidInput(c, "Invalid agent type ID")
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 
 	if err := h.userConfigSvc.DeleteUserAgentConfig(c.Request.Context(), userID, agentTypeID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user config"})
+		apierr.InternalError(c, "Failed to delete user config")
 		return
 	}
 

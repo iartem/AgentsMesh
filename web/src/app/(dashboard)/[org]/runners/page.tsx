@@ -25,7 +25,9 @@ import {
   Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useServerUrl } from "@/hooks/useServerUrl";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { StatCard, AddRunnerModal, RunnerConfigModal } from "./components";
 
@@ -102,6 +104,7 @@ export default function RunnersPage() {
       loadData();
     } catch (error) {
       console.error("Failed to update runner:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
   };
 
@@ -113,6 +116,7 @@ export default function RunnersPage() {
       loadData();
     } catch (error) {
       console.error("Failed to delete runner:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
   };
 

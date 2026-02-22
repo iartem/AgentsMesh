@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/pki"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,13 +39,13 @@ func (h *GRPCRunnerHandler) RenewCertificate(c *gin.Context) {
 	oldSerial := c.GetHeader("X-Client-Cert-Serial")
 
 	if nodeID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing client certificate"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Missing client certificate")
 		return
 	}
 
 	resp, err := h.runnerService.RenewCertificate(c.Request.Context(), nodeID, oldSerial, h.pkiService)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -63,37 +64,37 @@ func (h *GRPCRunnerHandler) RenewCertificate(c *gin.Context) {
 func (h *GRPCRunnerHandler) GenerateReactivationToken(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if tenant == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	// Verify runner belongs to organization
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	resp, err := h.runnerService.GenerateReactivationToken(c.Request.Context(), runnerID, tenant.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate reactivation token"})
+		apierr.InternalError(c, "Failed to generate reactivation token")
 		return
 	}
 
@@ -110,7 +111,7 @@ func (h *GRPCRunnerHandler) GenerateReactivationToken(c *gin.Context) {
 func (h *GRPCRunnerHandler) Reactivate(c *gin.Context) {
 	var req ReactivateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -120,7 +121,7 @@ func (h *GRPCRunnerHandler) Reactivate(c *gin.Context) {
 		h.pkiService,
 	)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, err.Error())
 		return
 	}
 

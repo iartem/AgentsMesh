@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,10 +26,10 @@ func (h *BillingHandler) GetSubscription(c *gin.Context) {
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
 		if err == billingsvc.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+			apierr.ResourceNotFound(c, "no active subscription")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -41,17 +42,17 @@ func (h *BillingHandler) CreateSubscription(c *gin.Context) {
 
 	var req CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	sub, err := h.billingService.CreateSubscription(c.Request.Context(), tenant.OrganizationID, req.PlanName)
 	if err != nil {
 		if err == billingsvc.ErrPlanNotFound {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan"})
+			apierr.InvalidInput(c, "invalid plan")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -69,25 +70,25 @@ func (h *BillingHandler) UpdateSubscription(c *gin.Context) {
 
 	var req UpdateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	sub, err := h.billingService.UpdateSubscription(c.Request.Context(), tenant.OrganizationID, req.PlanName)
 	if err != nil {
 		if err == billingsvc.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+			apierr.ResourceNotFound(c, "no active subscription")
 			return
 		}
 		if err == billingsvc.ErrPlanNotFound {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan"})
+			apierr.InvalidInput(c, "invalid plan")
 			return
 		}
 		if err == billingsvc.ErrSeatCountExceedsLimit {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "current seat count exceeds target plan limit, please reduce seats first"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "current seat count exceeds target plan limit, please reduce seats first")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -107,10 +108,10 @@ func (h *BillingHandler) CancelSubscription(c *gin.Context) {
 
 	if err := h.billingService.CancelSubscription(c.Request.Context(), tenant.OrganizationID); err != nil {
 		if err == billingsvc.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+			apierr.ResourceNotFound(c, "no active subscription")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

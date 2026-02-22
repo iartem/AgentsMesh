@@ -6,6 +6,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +31,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 
 	u, err := h.userService.GetByID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		apierr.ResourceNotFound(c, "User not found")
 		return
 	}
 
@@ -51,7 +52,7 @@ type UpdateProfileRequest struct {
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -67,7 +68,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 
 	u, err := h.userService.Update(c.Request.Context(), userID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		apierr.InternalError(c, "Failed to update profile")
 		return
 	}
 
@@ -87,7 +88,7 @@ type ChangePasswordRequest struct {
 func (h *UserHandler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -95,19 +96,19 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 
 	u, err := h.userService.GetByID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		apierr.ResourceNotFound(c, "User not found")
 		return
 	}
 
 	// Verify current password
 	_, err = h.userService.Authenticate(c.Request.Context(), u.Email, req.CurrentPassword)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Current password is incorrect")
 		return
 	}
 
 	if err := h.userService.UpdatePassword(c.Request.Context(), userID, req.NewPassword); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change password"})
+		apierr.InternalError(c, "Failed to change password")
 		return
 	}
 
@@ -121,7 +122,7 @@ func (h *UserHandler) ListUserOrganizations(c *gin.Context) {
 
 	orgs, err := h.orgService.ListByUser(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list organizations"})
+		apierr.InternalError(c, "Failed to list organizations")
 		return
 	}
 
@@ -135,7 +136,7 @@ func (h *UserHandler) ListIdentities(c *gin.Context) {
 
 	identities, err := h.userService.ListIdentities(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list identities"})
+		apierr.InternalError(c, "Failed to list identities")
 		return
 	}
 
@@ -157,24 +158,24 @@ func (h *UserHandler) DeleteIdentity(c *gin.Context) {
 	// Check that user has another way to login
 	u, err := h.userService.GetByID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		apierr.ResourceNotFound(c, "User not found")
 		return
 	}
 
 	identities, err := h.userService.ListIdentities(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check identities"})
+		apierr.InternalError(c, "Failed to check identities")
 		return
 	}
 
 	// Must have password or another identity
 	if u.PasswordHash == nil && len(identities) <= 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot remove last login method"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot remove last login method")
 		return
 	}
 
 	if err := h.userService.DeleteIdentity(c.Request.Context(), userID, provider); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove identity"})
+		apierr.InternalError(c, "Failed to remove identity")
 		return
 	}
 
@@ -192,7 +193,7 @@ type SearchUsersRequest struct {
 func (h *UserHandler) SearchUsers(c *gin.Context) {
 	var req SearchUsersRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -203,7 +204,7 @@ func (h *UserHandler) SearchUsers(c *gin.Context) {
 
 	users, err := h.userService.Search(c.Request.Context(), req.Query, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+		apierr.InternalError(c, "Failed to search users")
 		return
 	}
 

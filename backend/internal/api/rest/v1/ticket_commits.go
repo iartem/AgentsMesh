@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,13 +28,13 @@ func (h *TicketHandler) ListCommits(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	commits, err := h.ticketService.ListCommits(c.Request.Context(), t.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list commits"})
+		apierr.InternalError(c, "Failed to list commits")
 		return
 	}
 
@@ -47,7 +48,7 @@ func (h *TicketHandler) LinkCommit(c *gin.Context) {
 
 	var req LinkCommitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -55,12 +56,12 @@ func (h *TicketHandler) LinkCommit(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if t.RepositoryID == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ticket has no repository"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Ticket has no repository")
 		return
 	}
 
@@ -89,7 +90,7 @@ func (h *TicketHandler) LinkCommit(c *gin.Context) {
 		nil, // committedAt
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to link commit"})
+		apierr.InternalError(c, "Failed to link commit")
 		return
 	}
 
@@ -102,7 +103,7 @@ func (h *TicketHandler) UnlinkCommit(c *gin.Context) {
 	identifier := c.Param("identifier")
 	commitID, err := strconv.ParseInt(c.Param("commit_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid commit ID"})
+		apierr.InvalidInput(c, "Invalid commit ID")
 		return
 	}
 
@@ -110,13 +111,13 @@ func (h *TicketHandler) UnlinkCommit(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	_ = t // used for org-scoped lookup
 	if err := h.ticketService.UnlinkCommit(c.Request.Context(), commitID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlink commit"})
+		apierr.InternalError(c, "Failed to unlink commit")
 		return
 	}
 

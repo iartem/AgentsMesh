@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +34,7 @@ type ListChannelsRequest struct {
 func (h *ChannelHandler) ListChannels(c *gin.Context) {
 	var req ListChannelsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -44,7 +45,7 @@ func (h *ChannelHandler) ListChannels(c *gin.Context) {
 
 	channels, total, err := h.channelService.ListChannels(c.Request.Context(), tenant.OrganizationID, req.IncludeArchived, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list channels"})
+		apierr.InternalError(c, "Failed to list channels")
 		return
 	}
 
@@ -65,7 +66,7 @@ type CreateChannelRequest struct {
 func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	var req CreateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -86,10 +87,10 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	})
 	if err != nil {
 		if err == channel.ErrDuplicateName {
-			c.JSON(http.StatusConflict, gin.H{"error": "Channel name already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Channel name already exists")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create channel"})
+		apierr.InternalError(c, "Failed to create channel")
 		return
 	}
 
@@ -101,19 +102,19 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 func (h *ChannelHandler) GetChannel(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -132,25 +133,25 @@ type UpdateChannelRequest struct {
 func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	var req UpdateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -167,7 +168,7 @@ func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 
 	ch, err = h.channelService.UpdateChannel(c.Request.Context(), channelID, name, description, document)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update channel"})
+		apierr.InternalError(c, "Failed to update channel")
 		return
 	}
 

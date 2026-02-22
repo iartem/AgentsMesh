@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { billingApi, SeatUsage } from "@/lib/api/billing";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface SeatManagementProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -34,7 +35,7 @@ export function SeatManagement({
       const usage = await billingApi.getSeatUsage();
       setSeatUsage(usage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load seat data");
+      setError(getLocalizedErrorMessage(err, t, t("billing.seats.loadFailed") || "Failed to load seat data"));
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export function SeatManagement({
         window.location.href = response.session_url;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to initiate purchase");
+      setError(getLocalizedErrorMessage(err, t, t("billing.seats.purchaseFailed") || "Failed to initiate purchase"));
     } finally {
       setPurchasing(false);
     }

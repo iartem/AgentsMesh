@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
@@ -15,31 +16,31 @@ import (
 func (h *AutopilotControllerHandler) CreateAutopilotController(c *gin.Context) {
 	orgID := getOrgID(c)
 	if orgID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization context required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "organization context required")
 		return
 	}
 
 	var req CreateAutopilotControllerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Get the target pod to verify it exists and get runner info
 	if h.podService == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "pod service not configured"})
+		apierr.InternalError(c, "pod service not configured")
 		return
 	}
 
 	targetPod, err := h.podService.GetPod(c.Request.Context(), req.PodKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "target pod not found"})
+		apierr.ResourceNotFound(c, "target pod not found")
 		return
 	}
 
 	// Verify pod belongs to this organization
 	if targetPod.OrganizationID != orgID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "target pod does not belong to this organization"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -99,7 +100,7 @@ func (h *AutopilotControllerHandler) CreateAutopilotController(c *gin.Context) {
 	// Save to database
 	if h.service != nil {
 		if err := h.service.CreateAutopilotController(autopilotPod); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create autopilot pod"})
+			apierr.InternalError(c, "failed to create autopilot pod")
 			return
 		}
 	}
@@ -122,7 +123,7 @@ func (h *AutopilotControllerHandler) CreateAutopilotController(c *gin.Context) {
 			},
 		}
 		if err := h.commandSender.SendCreateAutopilot(targetPod.RunnerID, cmd); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send create command to runner"})
+			apierr.InternalError(c, "failed to send create command to runner")
 			return
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ func (h *RunnerHandler) ListAvailableRunners(c *gin.Context) {
 
 	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
+		apierr.InternalError(c, "Failed to list runners")
 		return
 	}
 
@@ -26,19 +27,19 @@ func (h *RunnerHandler) ListAvailableRunners(c *gin.Context) {
 // GET /api/v1/organizations/:slug/runners/:id/pods
 func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	if h.podService == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Pod service not configured"})
+		apierr.InternalError(c, "Pod service not configured")
 		return
 	}
 
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	var req ListRunnerPodsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -47,18 +48,18 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	// Verify runner belongs to organization
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Check visibility: private runners are only visible to the registrant
 	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -70,7 +71,7 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 
 	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, limit, req.Offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list pods"})
+		apierr.InternalError(c, "Failed to list pods")
 		return
 	}
 
@@ -86,19 +87,19 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 // POST /api/v1/organizations/:slug/runners/:id/sandboxes/query
 func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 	if h.sandboxQueryService == nil || h.sandboxQuerySender == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sandbox query service not configured"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Sandbox query service not configured")
 		return
 	}
 
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	var req QuerySandboxesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -107,24 +108,24 @@ func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 	// Verify runner belongs to organization
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	if r.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Check visibility: private runners are only visible to the registrant
 	if r.Visibility == "private" && (r.RegisteredByUserID == nil || *r.RegisteredByUserID != tenant.UserID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Check if runner is connected
 	if !h.sandboxQuerySender.IsConnected(runnerID) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Runner is not connected"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Runner is not connected")
 		return
 	}
 
@@ -136,7 +137,7 @@ func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 		h.sandboxQuerySender.SendQuerySandboxes,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

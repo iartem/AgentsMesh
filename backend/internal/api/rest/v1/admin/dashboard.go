@@ -5,6 +5,7 @@ import (
 
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,7 +33,7 @@ func (h *DashboardHandler) RegisterRoutes(rg *gin.RouterGroup) {
 func (h *DashboardHandler) GetStats(c *gin.Context) {
 	stats, err := h.adminService.GetDashboardStats(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dashboard stats"})
+		apierr.InternalError(c, "Failed to get dashboard stats")
 		return
 	}
 

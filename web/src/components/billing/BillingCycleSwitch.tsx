@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { billingApi, BillingCycle } from "@/lib/api/billing";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 export interface BillingCycleSwitchProps {
   currentCycle: BillingCycle;
@@ -33,9 +34,7 @@ export function BillingCycleSwitch({
       setShowConfirm(false);
       setTargetCycle(null);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to change billing cycle";
-      onError?.(errorMessage);
+      onError?.(getLocalizedErrorMessage(err, t, t("billing.cycleSwitch.failed") || "Failed to change billing cycle"));
     } finally {
       setLoading(false);
     }

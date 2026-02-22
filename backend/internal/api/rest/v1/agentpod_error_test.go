@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +31,7 @@ func TestAgentPodHandler_ErrorResponses(t *testing.T) {
 			name: "invalid provider ID",
 			setupRoute: func(r *gin.Engine) {
 				r.DELETE("/providers/:id", func(c *gin.Context) {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+					apierr.InvalidInput(c, "Invalid provider ID")
 				})
 			},
 			method:    http.MethodDelete,
@@ -42,7 +43,7 @@ func TestAgentPodHandler_ErrorResponses(t *testing.T) {
 			name: "provider not found",
 			setupRoute: func(r *gin.Engine) {
 				r.GET("/providers/:id", func(c *gin.Context) {
-					c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+					apierr.ResourceNotFound(c, "Provider not found")
 				})
 			},
 			method:    http.MethodGet,
@@ -56,7 +57,7 @@ func TestAgentPodHandler_ErrorResponses(t *testing.T) {
 				r.POST("/providers", func(c *gin.Context) {
 					var req CreateProviderRequest
 					if err := c.ShouldBindJSON(&req); err != nil {
-						c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+						apierr.ValidationError(c, err.Error())
 						return
 					}
 				})
@@ -99,6 +100,9 @@ func TestAgentPodHandler_ErrorResponses(t *testing.T) {
 				}
 				if resp["error"] != tt.wantError {
 					t.Errorf("expected error '%s', got '%v'", tt.wantError, resp["error"])
+				}
+				if _, ok := resp["code"]; !ok {
+					t.Error("expected 'code' field in error response")
 				}
 			}
 		})

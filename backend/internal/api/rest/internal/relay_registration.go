@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ import (
 func (h *RelayHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -59,9 +60,7 @@ func (h *RelayHandler) Register(c *gin.Context) {
 
 	// Validate that we have a URL (either provided or generated)
 	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "url is required when DNS auto-registration is not available",
-		})
+		apierr.InvalidInput(c, "url is required when DNS auto-registration is not available")
 		return
 	}
 
@@ -83,7 +82,7 @@ func (h *RelayHandler) Register(c *gin.Context) {
 
 	if err := h.relayManager.Register(info); err != nil {
 		h.logger.Error("Failed to register relay", "relay_id", req.RelayID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register relay"})
+		apierr.InternalError(c, "failed to register relay")
 		return
 	}
 
@@ -122,7 +121,7 @@ func (h *RelayHandler) Register(c *gin.Context) {
 func (h *RelayHandler) Unregister(c *gin.Context) {
 	var req UnregisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -155,14 +154,14 @@ func (h *RelayHandler) Unregister(c *gin.Context) {
 func (h *RelayHandler) ForceUnregister(c *gin.Context) {
 	relayID := c.Param("relay_id")
 	if relayID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "relay_id is required"})
+		apierr.InvalidInput(c, "relay_id is required")
 		return
 	}
 
 	// Check if relay exists
 	relayInfo := h.relayManager.GetRelayByID(relayID)
 	if relayInfo == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "relay not found"})
+		apierr.ResourceNotFound(c, "relay not found")
 		return
 	}
 

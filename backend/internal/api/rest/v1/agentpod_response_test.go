@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -98,7 +99,7 @@ func TestAgentPodHandler_CreateProviderResponse(t *testing.T) {
 	router.POST("/providers", func(c *gin.Context) {
 		var req CreateProviderRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 			return
 		}
 

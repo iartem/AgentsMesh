@@ -7,6 +7,7 @@ import (
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,7 +47,7 @@ func (h *RelayHandler) logAction(c *gin.Context, action admin.AuditAction, targe
 // ListRelays returns all registered relays
 func (h *RelayHandler) ListRelays(c *gin.Context) {
 	if h.relayManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Relay manager not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Relay manager not available")
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *RelayHandler) ListRelays(c *gin.Context) {
 // GetStats returns relay statistics
 func (h *RelayHandler) GetStats(c *gin.Context) {
 	if h.relayManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Relay manager not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Relay manager not available")
 		return
 	}
 
@@ -73,19 +74,19 @@ func (h *RelayHandler) GetStats(c *gin.Context) {
 // GetRelay returns a specific relay by ID
 func (h *RelayHandler) GetRelay(c *gin.Context) {
 	if h.relayManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Relay manager not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Relay manager not available")
 		return
 	}
 
 	relayID := c.Param("id")
 	if relayID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Relay ID is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "Relay ID is required")
 		return
 	}
 
 	relayInfo := h.relayManager.GetRelayByID(relayID)
 	if relayInfo == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Relay not found"})
+		apierr.ResourceNotFound(c, "Relay not found")
 		return
 	}
 
@@ -97,20 +98,20 @@ func (h *RelayHandler) GetRelay(c *gin.Context) {
 // ForceUnregister removes a relay
 func (h *RelayHandler) ForceUnregister(c *gin.Context) {
 	if h.relayManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Relay manager not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Relay manager not available")
 		return
 	}
 
 	relayID := c.Param("id")
 	if relayID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Relay ID is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "Relay ID is required")
 		return
 	}
 
 	// Get relay info before deletion for logging
 	relayInfo := h.relayManager.GetRelayByID(relayID)
 	if relayInfo == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Relay not found"})
+		apierr.ResourceNotFound(c, "Relay not found")
 		return
 	}
 

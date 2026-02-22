@@ -28,6 +28,8 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 import { RunnerOverviewTab, RunnerPodsTab, ResumeDialog } from "./components";
 
 export default function RunnerDetailPage() {
@@ -144,6 +146,7 @@ export default function RunnerDetailPage() {
       router.push(`/${params.org}/workspace?pod=${res.pod.pod_key}`);
     } catch (error) {
       console.error("Failed to resume pod:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     } finally {
       setResumeLoading(false);
     }
@@ -156,6 +159,7 @@ export default function RunnerDetailPage() {
       loadRunner();
     } catch (error) {
       console.error("Failed to update runner:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
   };
 
@@ -168,6 +172,7 @@ export default function RunnerDetailPage() {
       router.push("../runners");
     } catch (error) {
       console.error("Failed to delete runner:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
   };
 

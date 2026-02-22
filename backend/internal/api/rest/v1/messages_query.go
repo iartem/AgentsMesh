@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +24,7 @@ import (
 func (h *MessageHandler) GetMessages(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
@@ -46,7 +47,7 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 
 	messages, err := h.msgSvc.GetMessages(c.Request.Context(), podKey, unreadOnly, messageTypes, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -70,13 +71,13 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 func (h *MessageHandler) GetUnreadCount(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	count, err := h.msgSvc.GetUnreadCount(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -96,25 +97,25 @@ func (h *MessageHandler) GetUnreadCount(c *gin.Context) {
 func (h *MessageHandler) GetMessage(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	messageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid message ID"})
+		apierr.InvalidInput(c, "invalid message ID")
 		return
 	}
 
 	message, err := h.msgSvc.GetMessage(c.Request.Context(), messageID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		apierr.ResourceNotFound(c, "message not found")
 		return
 	}
 
 	// Check access
 	if message.SenderPod != podKey && message.ReceiverPod != podKey {
-		c.JSON(http.StatusForbidden, gin.H{"error": "not authorized to view this message"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -134,13 +135,13 @@ func (h *MessageHandler) GetMessage(c *gin.Context) {
 func (h *MessageHandler) GetConversation(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	correlationID := c.Param("correlation_id")
 	if correlationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "correlation_id is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "correlation_id is required")
 		return
 	}
 
@@ -153,7 +154,7 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 
 	messages, err := h.msgSvc.GetConversation(c.Request.Context(), correlationID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -184,7 +185,7 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 func (h *MessageHandler) GetSentMessages(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
@@ -204,7 +205,7 @@ func (h *MessageHandler) GetSentMessages(c *gin.Context) {
 
 	messages, err := h.msgSvc.GetSentMessages(c.Request.Context(), podKey, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

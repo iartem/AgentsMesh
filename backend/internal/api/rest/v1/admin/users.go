@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/admin"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -66,7 +67,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	result, err := h.adminService.ListUsers(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list users"})
+		apierr.InternalError(c, "Failed to list users")
 		return
 	}
 
@@ -89,17 +90,17 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 func (h *UserHandler) GetUser(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
 	user, err := h.adminService.GetUser(c.Request.Context(), userID)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		apierr.InternalError(c, "Failed to get user")
 		return
 	}
 
@@ -120,13 +121,13 @@ type UpdateUserRequest struct {
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -146,17 +147,17 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No updates provided"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "No updates provided")
 		return
 	}
 
 	user, err := h.adminService.UpdateUser(c.Request.Context(), userID, updates)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		apierr.InternalError(c, "Failed to update user")
 		return
 	}
 

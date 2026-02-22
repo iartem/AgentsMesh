@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,13 +25,13 @@ func (h *TicketHandler) ListRelations(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	relations, err := h.ticketService.ListRelations(c.Request.Context(), t.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list relations"})
+		apierr.InternalError(c, "Failed to list relations")
 		return
 	}
 
@@ -44,7 +45,7 @@ func (h *TicketHandler) CreateRelation(c *gin.Context) {
 
 	var req CreateRelationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -53,14 +54,14 @@ func (h *TicketHandler) CreateRelation(c *gin.Context) {
 	// Get source ticket
 	sourceTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Source ticket not found"})
+		apierr.ResourceNotFound(c, "Source ticket not found")
 		return
 	}
 
 	// Get target ticket (same org)
 	targetTicket, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, req.TargetIdentifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Target ticket not found"})
+		apierr.ResourceNotFound(c, "Target ticket not found")
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *TicketHandler) CreateRelation(c *gin.Context) {
 		req.RelationType,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create relation: " + err.Error()})
+		apierr.InternalError(c, "Failed to create relation: "+err.Error())
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *TicketHandler) DeleteRelation(c *gin.Context) {
 	identifier := c.Param("identifier")
 	relationID, err := strconv.ParseInt(c.Param("relation_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid relation ID"})
+		apierr.InvalidInput(c, "Invalid relation ID")
 		return
 	}
 
@@ -93,13 +94,13 @@ func (h *TicketHandler) DeleteRelation(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	_ = t // used for org-scoped lookup
 	if err := h.ticketService.DeleteRelation(c.Request.Context(), relationID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete relation"})
+		apierr.InternalError(c, "Failed to delete relation")
 		return
 	}
 
@@ -115,13 +116,13 @@ func (h *TicketHandler) ListMergeRequests(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	mergeRequests, err := h.ticketService.ListMergeRequests(c.Request.Context(), t.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list merge requests"})
+		apierr.InternalError(c, "Failed to list merge requests")
 		return
 	}
 

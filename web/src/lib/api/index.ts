@@ -1,6 +1,9 @@
 // Base utilities
 export { request, ApiError } from "./base";
-export type { RequestOptions } from "./base";
+export type { RequestOptions, ApiErrorData } from "./base";
+
+// Error utilities
+export { getApiErrorCode, isApiErrorCode, isApiStatus, getLocalizedErrorMessage } from "./errors";
 
 // Auth
 export { authApi } from "./auth";

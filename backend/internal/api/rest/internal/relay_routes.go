@@ -2,10 +2,10 @@ package internal
 
 import (
 	"log/slog"
-	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/acme"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -56,8 +56,7 @@ func InternalAPIAuth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("X-Internal-Secret")
 		if auth != secret {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "unauthorized")
 			return
 		}
 		c.Next()

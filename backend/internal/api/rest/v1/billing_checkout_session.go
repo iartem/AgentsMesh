@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingService "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -62,7 +63,7 @@ func (h *BillingHandler) createCheckoutSession(c *gin.Context, tenant *middlewar
 
 	resp, err := provider.CreateCheckoutSession(c.Request.Context(), checkoutReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to create checkout: %v", err)})
+		apierr.InternalError(c, fmt.Sprintf("failed to create checkout: %v", err))
 		return
 	}
 
@@ -104,13 +105,13 @@ func (h *BillingHandler) GetCheckoutStatus(c *gin.Context) {
 
 	order, err := h.billingService.GetPaymentOrderByNo(c.Request.Context(), orderNo)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		apierr.ResourceNotFound(c, "order not found")
 		return
 	}
 
 	// Verify ownership
 	if order.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 

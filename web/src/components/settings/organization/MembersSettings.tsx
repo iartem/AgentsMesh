@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/form-field";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api";
 import { ApiError } from "@/lib/api/base";
+import { isApiErrorCode } from "@/lib/api/errors";
 import { invitationApi, type Invitation } from "@/lib/api/invitation";
 import type { TranslationFn } from "./GeneralSettings";
 
@@ -110,23 +111,19 @@ export function MembersSettings({ t }: MembersSettingsProps) {
       console.error("Failed to invite member:", err);
       setErrorType("generic");
 
-      if (err instanceof ApiError && err.data) {
-        const data = err.data as { code?: string; error?: string };
-        const code = data.code || "";
-        const errorStr = data.error || "";
-
-        if (code === "NO_AVAILABLE_SEATS") {
-          setError(t("settings.members.noSeats"));
-          setErrorType("no_seats");
-        } else if (code === "SUBSCRIPTION_FROZEN") {
-          setError(t("settings.members.subscriptionFrozen"));
-          setErrorType("subscription_frozen");
-        } else if (errorStr.includes("already a member")) {
-          setError(t("settings.members.alreadyMember"));
-        } else if (errorStr.includes("pending invitation already exists")) {
+      if (isApiErrorCode(err, "NO_AVAILABLE_SEATS")) {
+        setError(t("settings.members.noSeats"));
+        setErrorType("no_seats");
+      } else if (isApiErrorCode(err, "SUBSCRIPTION_FROZEN")) {
+        setError(t("settings.members.subscriptionFrozen"));
+        setErrorType("subscription_frozen");
+      } else if (isApiErrorCode(err, "ALREADY_EXISTS")) {
+        // Backend uses ALREADY_EXISTS for both "already a member" and "pending invitation"
+        const msg = (err as ApiError).serverMessage || "";
+        if (msg.includes("pending invitation")) {
           setError(t("settings.members.pendingExists"));
         } else {
-          setError(t("settings.members.failedToInvite"));
+          setError(t("settings.members.alreadyMember"));
         }
       } else {
         setError(t("settings.members.failedToInvite"));

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,14 +17,14 @@ func (h *AgentHandler) ListAgentTypes(c *gin.Context) {
 	// Get builtin types
 	builtinTypes, err := h.agentTypeSvc.ListBuiltinAgentTypes(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list builtin agent types"})
+		apierr.InternalError(c, "Failed to list builtin agent types")
 		return
 	}
 
 	// Get custom types for organization
 	customTypes, err := h.agentTypeSvc.ListCustomAgentTypes(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list custom agent types"})
+		apierr.InternalError(c, "Failed to list custom agent types")
 		return
 	}
 
@@ -38,13 +39,13 @@ func (h *AgentHandler) ListAgentTypes(c *gin.Context) {
 func (h *AgentHandler) GetAgentType(c *gin.Context) {
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		apierr.InvalidInput(c, "Invalid agent type ID")
 		return
 	}
 
 	agentType, err := h.agentTypeSvc.GetAgentType(c.Request.Context(), agentTypeID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Agent type not found"})
+		apierr.ResourceNotFound(c, "Agent type not found")
 		return
 	}
 
@@ -57,13 +58,13 @@ func (h *AgentHandler) GetAgentType(c *gin.Context) {
 func (h *AgentHandler) GetAgentTypeConfigSchema(c *gin.Context) {
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent type ID"})
+		apierr.InvalidInput(c, "Invalid agent type ID")
 		return
 	}
 
 	schema, err := h.configBuilder.GetConfigSchema(c.Request.Context(), agentTypeID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get config schema"})
+		apierr.InternalError(c, "Failed to get config schema")
 		return
 	}
 

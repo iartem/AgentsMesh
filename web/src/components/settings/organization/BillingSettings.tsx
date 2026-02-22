@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { billingApi, BillingOverview, SubscriptionPlan, DeploymentInfo } from "@/lib/api";
-import { ApiError } from "@/lib/api/base";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { CheckoutFlow, CancelSubscriptionDialog, SeatManagement, BillingCycleSwitch } from "@/components/billing";
 import type { BillingCycle } from "@/lib/api/billing";
 import type { TranslationFn } from "./GeneralSettings";
@@ -65,7 +65,7 @@ export function BillingSettings({ t }: BillingSettingsProps) {
         setDeploymentInfo(deploymentRes);
       }
     } catch (err) {
-      setError("Failed to load billing data");
+      setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.loadFailed") || "Failed to load billing data"));
       console.error("Error loading billing data:", err);
     } finally {
       setLoading(false);
@@ -103,15 +103,7 @@ export function BillingSettings({ t }: BillingSettingsProps) {
       await loadBillingData();
     } catch (err: unknown) {
       console.error("Failed to select plan:", err);
-      // Extract error message from API response
-      let errorMessage = "Failed to select plan";
-      if (err instanceof ApiError && err.data) {
-        // ApiError stores the response body in data property
-        errorMessage = (err.data as { error?: string })?.error || err.message;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.selectPlanFailed") || "Failed to select plan"));
     } finally {
       setUpgrading(false);
     }
@@ -136,7 +128,7 @@ export function BillingSettings({ t }: BillingSettingsProps) {
       setPaymentMessage({ type: "success", text: t("settings.billingPage.reactivateSuccess") });
     } catch (err) {
       console.error("Failed to reactivate subscription:", err);
-      setError("Failed to reactivate subscription");
+      setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.reactivateFailed") || "Failed to reactivate subscription"));
     } finally {
       setReactivating(false);
     }

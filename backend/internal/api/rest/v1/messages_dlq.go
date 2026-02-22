@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +34,7 @@ func (h *MessageHandler) GetDeadLetters(c *gin.Context) {
 
 	entries, err := h.msgSvc.GetDeadLetters(c.Request.Context(), limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -55,13 +56,13 @@ func (h *MessageHandler) GetDeadLetters(c *gin.Context) {
 func (h *MessageHandler) ReplayDeadLetter(c *gin.Context) {
 	entryID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		apierr.InvalidInput(c, "invalid entry ID")
 		return
 	}
 
 	message, err := h.msgSvc.ReplayDeadLetter(c.Request.Context(), entryID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		apierr.ResourceNotFound(c, err.Error())
 		return
 	}
 

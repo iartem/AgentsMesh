@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,13 +21,13 @@ import (
 func (h *MessageHandler) SendMessage(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	var req AgentSendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -40,7 +41,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		req.ReplyToID,
 	)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { runnerApi } from "@/lib/api";
-import { Copy, AlertCircle, Terminal, Check } from "lucide-react";
+import { isApiErrorCode, getLocalizedErrorMessage } from "@/lib/api/errors";
+import { Copy, AlertCircle, Terminal, Check, ShieldAlert } from "lucide-react";
 
 interface AddRunnerModalProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -19,14 +20,20 @@ export function AddRunnerModal({ t, onClose, onCreated, serverUrl }: AddRunnerMo
   const [loading, setLoading] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await runnerApi.createToken();
       setGeneratedToken(res.token);
-    } catch (error) {
-      console.error("Failed to generate token:", error);
+    } catch (err) {
+      if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {
+        setError(t("apiErrors.INSUFFICIENT_PERMISSIONS"));
+      } else {
+        setError(getLocalizedErrorMessage(err, t, t("apiErrors.INTERNAL_ERROR")));
+      }
     } finally {
       setLoading(false);
     }
@@ -115,9 +122,16 @@ agentsmesh-runner run`}
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {t("runners.addRunnerModal.generateHint")}
-            </p>
+            {error ? (
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("runners.addRunnerModal.generateHint")}
+              </p>
+            )}
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
               <Button variant="outline" onClick={onClose}>

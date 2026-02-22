@@ -9,20 +9,21 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	meshService "github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
 // MeshHandler handles Mesh-related requests
 type MeshHandler struct {
-	meshService *meshService.Service
-	ticketService  *ticket.Service
+	meshService   *meshService.Service
+	ticketService *ticket.Service
 }
 
 // NewMeshHandler creates a new Mesh handler
 func NewMeshHandler(ds *meshService.Service, ts *ticket.Service) *MeshHandler {
 	return &MeshHandler{
-		meshService: ds,
-		ticketService:  ts,
+		meshService:   ds,
+		ticketService: ts,
 	}
 }
 
@@ -36,7 +37,7 @@ func (h *MeshHandler) GetTopology(c *gin.Context) {
 	topology, err := h.meshService.GetTopology(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
 		slog.Error("Failed to get topology", "error", err, "org_id", tenant.OrganizationID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get topology: " + err.Error()})
+		apierr.InternalError(c, "Failed to get topology: "+err.Error())
 		return
 	}
 
@@ -59,14 +60,14 @@ func (h *MeshHandler) CreatePodForTicket(c *gin.Context) {
 
 	var req CreatePodForTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Get the ticket
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *MeshHandler) CreatePodForTicket(c *gin.Context) {
 		PermissionMode: req.PermissionMode,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pod: " + err.Error()})
+		apierr.InternalError(c, "Failed to create pod: "+err.Error())
 		return
 	}
 
@@ -100,7 +101,7 @@ func (h *MeshHandler) GetTicketPods(c *gin.Context) {
 	// Get the ticket
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
@@ -114,7 +115,7 @@ func (h *MeshHandler) GetTicketPods(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get pods"})
+		apierr.InternalError(c, "Failed to get pods")
 		return
 	}
 
@@ -131,23 +132,23 @@ type BatchGetTicketPodsRequest struct {
 func (h *MeshHandler) BatchGetTicketPods(c *gin.Context) {
 	var req BatchGetTicketPodsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	if len(req.TicketIDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ticket_ids cannot be empty"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "ticket_ids cannot be empty")
 		return
 	}
 
 	if len(req.TicketIDs) > 100 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot query more than 100 tickets at once"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot query more than 100 tickets at once")
 		return
 	}
 
 	result, err := h.meshService.BatchGetTicketPods(c.Request.Context(), req.TicketIDs)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get pods"})
+		apierr.InternalError(c, "Failed to get pods")
 		return
 	}
 
@@ -165,18 +166,18 @@ func (h *MeshHandler) JoinChannel(c *gin.Context) {
 	channelIDStr := c.Param("id")
 	channelID, err := strconv.ParseInt(channelIDStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	var req JoinChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	if err := h.meshService.JoinChannel(c.Request.Context(), channelID, req.PodKey); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join channel"})
+		apierr.InternalError(c, "Failed to join channel")
 		return
 	}
 
@@ -189,14 +190,14 @@ func (h *MeshHandler) LeaveChannel(c *gin.Context) {
 	channelIDStr := c.Param("id")
 	channelID, err := strconv.ParseInt(channelIDStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	podKey := c.Param("pod_key")
 
 	if err := h.meshService.LeaveChannel(c.Request.Context(), channelID, podKey); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to leave channel"})
+		apierr.InternalError(c, "Failed to leave channel")
 		return
 	}
 

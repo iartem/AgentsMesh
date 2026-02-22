@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,7 +27,7 @@ func (h *BillingHandler) GetOverview(c *gin.Context) {
 
 	overview, err := h.billingService.GetBillingOverview(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -37,7 +38,7 @@ func (h *BillingHandler) GetOverview(c *gin.Context) {
 func (h *BillingHandler) ListPlans(c *gin.Context) {
 	plans, err := h.billingService.ListPlans(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -51,7 +52,7 @@ func (h *BillingHandler) ListPlansWithPrices(c *gin.Context) {
 
 	plans, err := h.billingService.ListPlansWithPrices(c.Request.Context(), currency)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -67,14 +68,14 @@ func (h *BillingHandler) GetPlanPrices(c *gin.Context) {
 	price, err := h.billingService.GetPlanPrice(c.Request.Context(), planName, currency)
 	if err != nil {
 		if err == billingsvc.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "plan not found"})
+			apierr.ResourceNotFound(c, "plan not found")
 			return
 		}
 		if err == billingsvc.ErrPriceNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "price not found for currency"})
+			apierr.ResourceNotFound(c, "price not found for currency")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -89,10 +90,10 @@ func (h *BillingHandler) GetAllPlanPrices(c *gin.Context) {
 	prices, err := h.billingService.GetPlanPrices(c.Request.Context(), planName)
 	if err != nil {
 		if err == billingsvc.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "plan not found"})
+			apierr.ResourceNotFound(c, "plan not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -107,7 +108,7 @@ func (h *BillingHandler) GetUsage(c *gin.Context) {
 	if usageType != "" {
 		usage, err := h.billingService.GetUsage(c.Request.Context(), tenant.OrganizationID, usageType)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			apierr.InternalError(c, err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"usage": usage, "type": usageType})
@@ -117,7 +118,7 @@ func (h *BillingHandler) GetUsage(c *gin.Context) {
 	// Return billing overview with all usage data
 	overview, err := h.billingService.GetBillingOverview(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -137,7 +138,7 @@ func (h *BillingHandler) GetUsageHistory(c *gin.Context) {
 
 	records, err := h.billingService.GetUsageHistory(c.Request.Context(), tenant.OrganizationID, usageType, months)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -156,22 +157,22 @@ func (h *BillingHandler) SetCustomQuota(c *gin.Context) {
 
 	// Only owners and admins can set custom quotas
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req SetCustomQuotaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	if err := h.billingService.SetCustomQuota(c.Request.Context(), tenant.OrganizationID, req.Resource, req.Limit); err != nil {
 		if err == billingsvc.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+			apierr.ResourceNotFound(c, "no active subscription")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -185,7 +186,7 @@ func (h *BillingHandler) CheckQuota(c *gin.Context) {
 	amountStr := c.DefaultQuery("amount", "1")
 
 	if resource == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "resource parameter required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "resource parameter required")
 		return
 	}
 
@@ -196,22 +197,18 @@ func (h *BillingHandler) CheckQuota(c *gin.Context) {
 
 	if err := h.billingService.CheckQuota(c.Request.Context(), tenant.OrganizationID, resource, amount); err != nil {
 		if err == billingsvc.ErrQuotaExceeded {
-			c.JSON(http.StatusPaymentRequired, gin.H{"error": "quota exceeded", "available": false})
+			apierr.PaymentRequiredWithExtra(c, apierr.QUOTA_EXCEEDED, "quota exceeded", gin.H{"available": false})
 			return
 		}
 		if err == billingsvc.ErrSubscriptionFrozen {
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error":     "subscription is frozen, please renew to continue",
-				"code":      "SUBSCRIPTION_FROZEN",
-				"available": false,
-			})
+			apierr.RespondWithExtra(c, http.StatusPaymentRequired, apierr.SUBSCRIPTION_FROZEN, "subscription is frozen, please renew to continue", gin.H{"available": false})
 			return
 		}
 		if err == billingsvc.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+			apierr.ResourceNotFound(c, "no active subscription")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -234,7 +231,7 @@ func (h *BillingHandler) ListInvoices(c *gin.Context) {
 
 	invoices, err := h.billingService.GetInvoicesByOrg(c.Request.Context(), tenant.OrganizationID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -249,21 +246,21 @@ func (h *BillingHandler) GetDeploymentInfo(c *gin.Context) {
 
 // PublicPricingResponse represents pricing data for public display
 type PublicPricingResponse struct {
-	DeploymentType string                     `json:"deployment_type"`
-	Currency       string                     `json:"currency"`
-	Plans          []PublicPlanPricing        `json:"plans"`
+	DeploymentType string              `json:"deployment_type"`
+	Currency       string              `json:"currency"`
+	Plans          []PublicPlanPricing `json:"plans"`
 }
 
 // PublicPlanPricing represents a plan's pricing for public display
 type PublicPlanPricing struct {
-	Name           string  `json:"name"`
-	DisplayName    string  `json:"display_name"`
-	PriceMonthly   float64 `json:"price_monthly"`
-	PriceYearly    float64 `json:"price_yearly"`
-	MaxUsers       int     `json:"max_users"`
-	MaxRunners     int     `json:"max_runners"`
-	MaxRepositories int    `json:"max_repositories"`
-	MaxConcurrentPods int  `json:"max_concurrent_pods"`
+	Name              string  `json:"name"`
+	DisplayName       string  `json:"display_name"`
+	PriceMonthly      float64 `json:"price_monthly"`
+	PriceYearly       float64 `json:"price_yearly"`
+	MaxUsers          int     `json:"max_users"`
+	MaxRunners        int     `json:"max_runners"`
+	MaxRepositories   int     `json:"max_repositories"`
+	MaxConcurrentPods int     `json:"max_concurrent_pods"`
 }
 
 // GetPublicPricing returns pricing information for public display (no auth required)
@@ -282,7 +279,7 @@ func (h *BillingHandler) GetPublicPricing(c *gin.Context) {
 	// Get all plans with prices for the appropriate currency
 	plansWithPrices, err := h.billingService.ListPlansWithPrices(c.Request.Context(), currency)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

@@ -9,19 +9,20 @@ import (
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	billingservice "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
 // SubscriptionHandler handles subscription management requests
 type SubscriptionHandler struct {
-	adminService  *adminservice.Service
+	adminService   *adminservice.Service
 	billingService *billingservice.Service
 }
 
 // NewSubscriptionHandler creates a new subscription handler
 func NewSubscriptionHandler(adminSvc *adminservice.Service, billingSvc *billingservice.Service) *SubscriptionHandler {
 	return &SubscriptionHandler{
-		adminService:  adminSvc,
+		adminService:   adminSvc,
 		billingService: billingSvc,
 	}
 }
@@ -49,17 +50,17 @@ func (h *SubscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), orgID)
 	if err != nil {
 		if err == billingservice.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
+			apierr.ResourceNotFound(c, "Subscription not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get subscription"})
+		apierr.InternalError(c, "Failed to get subscription")
 		return
 	}
 
@@ -74,7 +75,7 @@ func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 func (h *SubscriptionHandler) AdminCreateSubscription(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *SubscriptionHandler) AdminCreateSubscription(c *gin.Context) {
 		Months   int    `json:"months"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "plan_name is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "plan_name is required")
 		return
 	}
 
@@ -94,14 +95,14 @@ func (h *SubscriptionHandler) AdminCreateSubscription(c *gin.Context) {
 	newSub, err := h.billingService.AdminCreateSubscription(c.Request.Context(), orgID, req.PlanName, req.Months)
 	if err != nil {
 		if err == billingservice.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+			apierr.ResourceNotFound(c, "Plan not found")
 			return
 		}
 		if err == billingservice.ErrSubscriptionAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Subscription already exists for this organization"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Subscription already exists for this organization")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create subscription"})
+		apierr.InternalError(c, "Failed to create subscription")
 		return
 	}
 
@@ -115,7 +116,7 @@ func (h *SubscriptionHandler) AdminCreateSubscription(c *gin.Context) {
 func (h *SubscriptionHandler) ListPlans(c *gin.Context) {
 	plans, err := h.billingService.ListPlans(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list plans"})
+		apierr.InternalError(c, "Failed to list plans")
 		return
 	}
 
@@ -131,7 +132,7 @@ func (h *SubscriptionHandler) ListPlans(c *gin.Context) {
 func (h *SubscriptionHandler) AdminUpdatePlan(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -139,7 +140,7 @@ func (h *SubscriptionHandler) AdminUpdatePlan(c *gin.Context) {
 		PlanName string `json:"plan_name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "plan_name is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "plan_name is required")
 		return
 	}
 
@@ -148,14 +149,14 @@ func (h *SubscriptionHandler) AdminUpdatePlan(c *gin.Context) {
 	newSub, err := h.billingService.AdminUpdatePlan(c.Request.Context(), orgID, req.PlanName)
 	if err != nil {
 		if err == billingservice.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+			apierr.ResourceNotFound(c, "Plan not found")
 			return
 		}
 		if err == billingservice.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
+			apierr.ResourceNotFound(c, "Subscription not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update plan"})
+		apierr.InternalError(c, "Failed to update plan")
 		return
 	}
 
@@ -169,7 +170,7 @@ func (h *SubscriptionHandler) AdminUpdatePlan(c *gin.Context) {
 func (h *SubscriptionHandler) AdminUpdateSeats(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -177,14 +178,14 @@ func (h *SubscriptionHandler) AdminUpdateSeats(c *gin.Context) {
 		SeatCount int `json:"seat_count" binding:"required,min=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "seat_count must be a positive integer"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "seat_count must be a positive integer")
 		return
 	}
 
 	oldSub, _ := h.billingService.GetSubscription(c.Request.Context(), orgID)
 
 	if err := h.billingService.AdminSetSeatCount(c.Request.Context(), orgID, req.SeatCount); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seat count"})
+		apierr.InternalError(c, "Failed to update seat count")
 		return
 	}
 
@@ -199,7 +200,7 @@ func (h *SubscriptionHandler) AdminUpdateSeats(c *gin.Context) {
 func (h *SubscriptionHandler) AdminUpdateCycle(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -207,14 +208,14 @@ func (h *SubscriptionHandler) AdminUpdateCycle(c *gin.Context) {
 		BillingCycle string `json:"billing_cycle" binding:"required,oneof=monthly yearly"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "billing_cycle must be 'monthly' or 'yearly'"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "billing_cycle must be 'monthly' or 'yearly'")
 		return
 	}
 
 	oldSub, _ := h.billingService.GetSubscription(c.Request.Context(), orgID)
 
 	if err := h.billingService.SetNextBillingCycle(c.Request.Context(), orgID, req.BillingCycle); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update billing cycle"})
+		apierr.InternalError(c, "Failed to update billing cycle")
 		return
 	}
 
@@ -229,14 +230,14 @@ func (h *SubscriptionHandler) AdminUpdateCycle(c *gin.Context) {
 func (h *SubscriptionHandler) Freeze(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
 	oldSub, _ := h.billingService.GetSubscription(c.Request.Context(), orgID)
 
 	if err := h.billingService.FreezeSubscription(c.Request.Context(), orgID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to freeze subscription"})
+		apierr.InternalError(c, "Failed to freeze subscription")
 		return
 	}
 
@@ -254,7 +255,7 @@ func (h *SubscriptionHandler) Freeze(c *gin.Context) {
 func (h *SubscriptionHandler) Unfreeze(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -267,7 +268,7 @@ func (h *SubscriptionHandler) Unfreeze(c *gin.Context) {
 	}
 
 	if err := h.billingService.UnfreezeSubscription(c.Request.Context(), orgID, cycle); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unfreeze subscription"})
+		apierr.InternalError(c, "Failed to unfreeze subscription")
 		return
 	}
 
@@ -285,14 +286,14 @@ func (h *SubscriptionHandler) Unfreeze(c *gin.Context) {
 func (h *SubscriptionHandler) Cancel(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
 	oldSub, _ := h.billingService.GetSubscription(c.Request.Context(), orgID)
 
 	if err := h.billingService.AdminCancelSubscription(c.Request.Context(), orgID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
+		apierr.InternalError(c, "Failed to cancel subscription")
 		return
 	}
 
@@ -307,7 +308,7 @@ func (h *SubscriptionHandler) Cancel(c *gin.Context) {
 func (h *SubscriptionHandler) AdminRenew(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -315,7 +316,7 @@ func (h *SubscriptionHandler) AdminRenew(c *gin.Context) {
 		Months int `json:"months" binding:"required,min=1,max=120"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "months must be between 1 and 120"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "months must be between 1 and 120")
 		return
 	}
 
@@ -324,10 +325,10 @@ func (h *SubscriptionHandler) AdminRenew(c *gin.Context) {
 	newSub, err := h.billingService.AdminRenew(c.Request.Context(), orgID, req.Months)
 	if err != nil {
 		if err == billingservice.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
+			apierr.ResourceNotFound(c, "Subscription not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to renew subscription"})
+		apierr.InternalError(c, "Failed to renew subscription")
 		return
 	}
 
@@ -341,7 +342,7 @@ func (h *SubscriptionHandler) AdminRenew(c *gin.Context) {
 func (h *SubscriptionHandler) SetAutoRenew(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -349,14 +350,14 @@ func (h *SubscriptionHandler) SetAutoRenew(c *gin.Context) {
 		AutoRenew bool `json:"auto_renew"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "auto_renew is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "auto_renew is required")
 		return
 	}
 
 	oldSub, _ := h.billingService.GetSubscription(c.Request.Context(), orgID)
 
 	if err := h.billingService.SetAutoRenew(c.Request.Context(), orgID, req.AutoRenew); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update auto-renew"})
+		apierr.InternalError(c, "Failed to update auto-renew")
 		return
 	}
 
@@ -371,7 +372,7 @@ func (h *SubscriptionHandler) SetAutoRenew(c *gin.Context) {
 func (h *SubscriptionHandler) SetCustomQuota(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -380,7 +381,7 @@ func (h *SubscriptionHandler) SetCustomQuota(c *gin.Context) {
 		Limit    int    `json:"limit" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "resource and limit are required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "resource and limit are required")
 		return
 	}
 
@@ -388,10 +389,10 @@ func (h *SubscriptionHandler) SetCustomQuota(c *gin.Context) {
 
 	if err := h.billingService.SetCustomQuota(c.Request.Context(), orgID, req.Resource, req.Limit); err != nil {
 		if err == billingservice.ErrSubscriptionNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
+			apierr.ResourceNotFound(c, "Subscription not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set custom quota"})
+		apierr.InternalError(c, "Failed to set custom quota")
 		return
 	}
 
@@ -475,17 +476,17 @@ func subscriptionResponse(sub *billing.Subscription, seatUsage *billingservice.S
 // planResponse creates a plan response
 func planResponse(p *billing.SubscriptionPlan) gin.H {
 	return gin.H{
-		"id":                    p.ID,
-		"name":                  p.Name,
-		"display_name":          p.DisplayName,
+		"id":                     p.ID,
+		"name":                   p.Name,
+		"display_name":           p.DisplayName,
 		"price_per_seat_monthly": p.PricePerSeatMonthly,
 		"price_per_seat_yearly":  p.PricePerSeatYearly,
 		"included_pod_minutes":   p.IncludedPodMinutes,
-		"max_users":             p.MaxUsers,
-		"max_runners":           p.MaxRunners,
-		"max_concurrent_pods":   p.MaxConcurrentPods,
-		"max_repositories":      p.MaxRepositories,
-		"features":              p.Features,
-		"is_active":             p.IsActive,
+		"max_users":              p.MaxUsers,
+		"max_runners":            p.MaxRunners,
+		"max_concurrent_pods":    p.MaxConcurrentPods,
+		"max_repositories":       p.MaxRepositories,
+		"features":               p.Features,
+		"is_active":              p.IsActive,
 	}
 }

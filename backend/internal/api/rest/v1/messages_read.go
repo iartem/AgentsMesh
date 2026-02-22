@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,13 +19,13 @@ import (
 func (h *MessageHandler) MarkRead(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	var req MarkReadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -49,13 +50,13 @@ func (h *MessageHandler) MarkRead(c *gin.Context) {
 func (h *MessageHandler) MarkAllRead(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	count, err := h.msgSvc.MarkAllRead(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

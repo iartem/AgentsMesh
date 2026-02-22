@@ -10,6 +10,8 @@ import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { repositoryApi } from "@/lib/api";
 import type { RepositoryData } from "@/lib/api";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
 import { ImportRepositoryModal } from "@/components/ide/modals/ImportRepositoryModal";
 
@@ -52,6 +54,7 @@ export default function RepositoriesPage() {
         setRepositories((prev) => prev.filter((r) => r.id !== id));
       } catch (error) {
         console.error("Failed to delete repository:", error);
+        toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
       }
     }
   }, [deleteDialog]);

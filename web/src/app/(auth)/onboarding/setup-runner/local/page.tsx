@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { runnerApi, RunnerData } from "@/lib/api/runner";
+import { isApiErrorCode } from "@/lib/api/errors";
 import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "next-intl";
 
@@ -30,8 +31,12 @@ export default function LocalRunnerSetupPage() {
         setLoading(true);
         const { token: newToken } = await runnerApi.createToken();
         setToken(newToken);
-      } catch {
-        setError(t("auth.onboarding.localRunner.tokenGenerationFailed"));
+      } catch (err) {
+        if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {
+          setError(t("apiErrors.INSUFFICIENT_PERMISSIONS"));
+        } else {
+          setError(t("auth.onboarding.localRunner.tokenGenerationFailed"));
+        }
       } finally {
         setLoading(false);
       }

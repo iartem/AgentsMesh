@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api/organization";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
 export default function OnboardingPage() {
@@ -59,8 +61,10 @@ export default function OnboardingPage() {
 
       // Go to runner setup
       router.push("/onboarding/setup-runner");
-    } catch {
-      setError(t("auth.onboarding.createWorkspaceFailed"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("auth.onboarding.createWorkspaceFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -81,8 +85,10 @@ export default function OnboardingPage() {
 
       // For now, show not implemented message
       setError(t("auth.onboarding.inviteCodeComingSoon"));
-    } catch {
-      setError(t("auth.onboarding.invalidInviteCode"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("auth.onboarding.invalidInviteCode"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +18,7 @@ func (h *RepositoryHandler) ListRepositories(c *gin.Context) {
 
 	repos, err := h.repositoryService.ListByOrganization(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list repositories"})
+		apierr.InternalError(c, "Failed to list repositories")
 		return
 	}
 
@@ -29,7 +30,7 @@ func (h *RepositoryHandler) ListRepositories(c *gin.Context) {
 func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 	var req CreateRepositoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -38,7 +39,7 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -46,20 +47,14 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 	if h.billingService != nil {
 		if err := h.billingService.CheckQuota(c.Request.Context(), tenant.OrganizationID, "repositories", 1); err != nil {
 			if err == billing.ErrQuotaExceeded {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error": "Repository quota exceeded. Please upgrade your plan to add more repositories.",
-					"code":  "REPOSITORY_QUOTA_EXCEEDED",
-				})
+				apierr.PaymentRequired(c, apierr.REPOSITORY_QUOTA_EXCEEDED, "Repository quota exceeded. Please upgrade your plan to add more repositories.")
 				return
 			}
 			if err == billing.ErrSubscriptionFrozen {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error": "Your subscription has expired. Please renew to continue.",
-					"code":  "SUBSCRIPTION_FROZEN",
-				})
+				apierr.PaymentRequired(c, apierr.SUBSCRIPTION_FROZEN, "Your subscription has expired. Please renew to continue.")
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check quota"})
+			apierr.InternalError(c, "Failed to check quota")
 			return
 		}
 	}
@@ -94,10 +89,10 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 	})
 	if err != nil {
 		if err == repository.ErrRepositoryExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Repository already configured"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Repository already configured")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repository"})
+		apierr.InternalError(c, "Failed to create repository")
 		return
 	}
 
@@ -109,19 +104,19 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 func (h *RepositoryHandler) GetRepository(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -133,13 +128,13 @@ func (h *RepositoryHandler) GetRepository(c *gin.Context) {
 func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
 	var req UpdateRepositoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -147,18 +142,18 @@ func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -178,7 +173,7 @@ func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 
 	repo, err = h.repositoryService.Update(c.Request.Context(), repoID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update repository"})
+		apierr.InternalError(c, "Failed to update repository")
 		return
 	}
 
@@ -190,7 +185,7 @@ func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -198,23 +193,23 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.repositoryService.Delete(c.Request.Context(), repoID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete repository"})
+		apierr.InternalError(c, "Failed to delete repository")
 		return
 	}
 

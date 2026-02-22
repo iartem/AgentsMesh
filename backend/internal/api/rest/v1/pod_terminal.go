@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,31 +52,31 @@ func (h *PodHandler) ObserveTerminal(c *gin.Context) {
 
 	var req ObserveTerminalRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Get terminal output from router if available
 	if h.terminalRouter == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router not available")
 		return
 	}
 
 	tr, ok := h.terminalRouter.(TerminalRouterInterface)
 	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router interface not implemented"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router interface not implemented")
 		return
 	}
 
@@ -129,40 +130,40 @@ func (h *PodHandler) SendTerminalInput(c *gin.Context) {
 
 	var req TerminalInputRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if !pod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 		return
 	}
 
 	if h.terminalRouter == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router not available")
 		return
 	}
 
 	tr, ok := h.terminalRouter.(TerminalRouterInterface)
 	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router interface not implemented"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router interface not implemented")
 		return
 	}
 
 	if err := tr.RouteInput(podKey, []byte(req.Input)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send input: " + err.Error()})
+		apierr.InternalError(c, "Failed to send input: "+err.Error())
 		return
 	}
 
@@ -176,40 +177,40 @@ func (h *PodHandler) ResizeTerminal(c *gin.Context) {
 
 	var req TerminalResizeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if !pod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 		return
 	}
 
 	if h.terminalRouter == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router not available"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router not available")
 		return
 	}
 
 	tr, ok := h.terminalRouter.(TerminalRouterInterface)
 	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Terminal router interface not implemented"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal router interface not implemented")
 		return
 	}
 
 	if err := tr.RouteResize(podKey, req.Cols, req.Rows); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resize terminal: " + err.Error()})
+		apierr.InternalError(c, "Failed to resize terminal: "+err.Error())
 		return
 	}
 
