@@ -9,6 +9,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,7 +65,7 @@ func (h *RunnerHandler) ListRunners(c *gin.Context) {
 
 	result, err := h.adminService.ListRunners(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list runners"})
+		apierr.InternalError(c, "Failed to list runners")
 		return
 	}
 
@@ -87,17 +88,17 @@ func (h *RunnerHandler) ListRunners(c *gin.Context) {
 func (h *RunnerHandler) GetRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	rwo, err := h.adminService.GetRunnerWithOrg(c.Request.Context(), runnerID)
 	if err != nil {
 		if err == adminservice.ErrRunnerNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+			apierr.ResourceNotFound(c, "Runner not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get runner"})
+		apierr.InternalError(c, "Failed to get runner")
 		return
 	}
 

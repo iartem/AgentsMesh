@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
@@ -78,24 +79,24 @@ func getOrgID(c *gin.Context) int64 {
 func (h *AutopilotControllerHandler) GetAutopilotController(c *gin.Context) {
 	orgID := getOrgID(c)
 	if orgID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization context required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "organization context required")
 		return
 	}
 
 	key := c.Param("key")
 	if key == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "autopilot pod key required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "autopilot pod key required")
 		return
 	}
 
 	if h.service == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "service not configured"})
+		apierr.InternalError(c, "service not configured")
 		return
 	}
 
 	autopilotPod, err := h.service.GetAutopilotController(orgID, key)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "autopilot pod not found"})
+		apierr.ResourceNotFound(c, "autopilot pod not found")
 		return
 	}
 
@@ -106,18 +107,18 @@ func (h *AutopilotControllerHandler) GetAutopilotController(c *gin.Context) {
 func (h *AutopilotControllerHandler) ListAutopilotControllers(c *gin.Context) {
 	orgID := getOrgID(c)
 	if orgID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization context required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "organization context required")
 		return
 	}
 
 	if h.service == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "service not configured"})
+		apierr.InternalError(c, "service not configured")
 		return
 	}
 
 	pods, err := h.service.ListAutopilotControllers(orgID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list autopilot pods"})
+		apierr.InternalError(c, "failed to list autopilot pods")
 		return
 	}
 
@@ -137,13 +138,13 @@ func (h *AutopilotControllerHandler) GetIterations(c *gin.Context) {
 	}
 
 	if h.service == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "service not configured"})
+		apierr.InternalError(c, "service not configured")
 		return
 	}
 
 	iterations, err := h.service.GetIterations(autopilotPod.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get iterations"})
+		apierr.InternalError(c, "failed to get iterations")
 		return
 	}
 
@@ -154,24 +155,24 @@ func (h *AutopilotControllerHandler) GetIterations(c *gin.Context) {
 func (h *AutopilotControllerHandler) getAutopilotControllerFromContext(c *gin.Context) *agentpod.AutopilotController {
 	orgID := getOrgID(c)
 	if orgID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization context required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "organization context required")
 		return nil
 	}
 
 	key := c.Param("key")
 	if key == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "autopilot pod key required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "autopilot pod key required")
 		return nil
 	}
 
 	if h.service == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "service not configured"})
+		apierr.InternalError(c, "service not configured")
 		return nil
 	}
 
 	autopilotPod, err := h.service.GetAutopilotController(orgID, key)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "autopilot pod not found"})
+		apierr.ResourceNotFound(c, "autopilot pod not found")
 		return nil
 	}
 

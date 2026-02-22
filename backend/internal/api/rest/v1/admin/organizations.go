@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/organization"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,7 +52,7 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 
 	result, err := h.adminService.ListOrganizations(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list organizations"})
+		apierr.InternalError(c, "Failed to list organizations")
 		return
 	}
 
@@ -74,17 +75,17 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
 	org, err := h.adminService.GetOrganization(c.Request.Context(), orgID)
 	if err != nil {
 		if err == adminservice.ErrOrganizationNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			apierr.ResourceNotFound(c, "Organization not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get organization"})
+		apierr.InternalError(c, "Failed to get organization")
 		return
 	}
 
@@ -98,17 +99,17 @@ func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 func (h *OrganizationHandler) GetOrganizationMembers(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
 	org, members, err := h.adminService.GetOrganizationWithMembers(c.Request.Context(), orgID)
 	if err != nil {
 		if err == adminservice.ErrOrganizationNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			apierr.ResourceNotFound(c, "Organization not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get organization members"})
+		apierr.InternalError(c, "Failed to get organization members")
 		return
 	}
 
@@ -128,7 +129,7 @@ func (h *OrganizationHandler) GetOrganizationMembers(c *gin.Context) {
 func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
 	orgID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		apierr.InvalidInput(c, "Invalid organization ID")
 		return
 	}
 
@@ -137,14 +138,14 @@ func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
 
 	if err := h.adminService.DeleteOrganization(c.Request.Context(), orgID); err != nil {
 		if err == adminservice.ErrOrganizationNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			apierr.ResourceNotFound(c, "Organization not found")
 			return
 		}
 		if err == adminservice.ErrOrganizationHasActiveRunner {
-			c.JSON(http.StatusConflict, gin.H{"error": "Cannot delete organization with active runners"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Cannot delete organization with active runners")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete organization"})
+		apierr.InternalError(c, "Failed to delete organization")
 		return
 	}
 

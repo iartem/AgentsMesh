@@ -70,6 +70,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.Contains(t, response["error"], "Invalid request")
+		assert.NotEmpty(t, response["code"], "expected 'code' field in error response")
 	})
 
 	t.Run("should return 400 for missing email", func(t *testing.T) {
@@ -142,6 +143,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.Contains(t, response["error"], "Invalid email or password")
+		assert.NotEmpty(t, response["code"], "expected 'code' field in error response")
 	})
 
 	t.Run("should return 403 when user is not system admin", func(t *testing.T) {
@@ -171,6 +173,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.Contains(t, response["error"], "system administrator privileges")
+		assert.NotEmpty(t, response["code"], "expected 'code' field in error response")
 	})
 
 	t.Run("should return 403 when admin user is disabled", func(t *testing.T) {
@@ -200,6 +203,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.Contains(t, response["error"], "disabled")
+		assert.NotEmpty(t, response["code"], "expected 'code' field in error response")
 	})
 
 	t.Run("should return 200 and tokens for successful admin login", func(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/websocket"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 	gorillaWs "github.com/gorilla/websocket"
 )
@@ -54,7 +55,7 @@ func (h *EventsHandler) HandleEvents(c *gin.Context) {
 	// Get user from context
 	claims, exists := c.Get("claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "unauthorized")
 		return
 	}
 	userClaims := claims.(*middleware.Claims)
@@ -62,7 +63,7 @@ func (h *EventsHandler) HandleEvents(c *gin.Context) {
 	// Get tenant context
 	tenant, exists := c.Get("tenant")
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing organization context"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "missing organization context")
 		return
 	}
 	tenantCtx := tenant.(*middleware.TenantContext)

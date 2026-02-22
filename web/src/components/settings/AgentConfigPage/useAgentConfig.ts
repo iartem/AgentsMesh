@@ -9,6 +9,8 @@ import {
   type AgentTypeData,
   type CredentialProfileData,
 } from "@/lib/api";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 import type { AgentConfigState, AgentConfigActions, CredentialFormData } from "./types";
 
 /**
@@ -137,7 +139,9 @@ export function useAgentConfig(
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Failed to save config:", err);
-      setError(t("settings.agentConfig.configSaveFailed"));
+      const msg = getLocalizedErrorMessage(err, t, t("settings.agentConfig.configSaveFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingConfig(false);
     }
@@ -156,7 +160,9 @@ export function useAgentConfig(
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Failed to set RunnerHost as default:", err);
-      setError(t("settings.agentCredentials.failedToSetDefault"));
+      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToSetDefault"));
+      setError(msg);
+      toast.error(msg);
     }
   }, [credentialProfiles, loadData, t]);
 
@@ -170,7 +176,9 @@ export function useAgentConfig(
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Failed to set default:", err);
-      setError(t("settings.agentCredentials.failedToSetDefault"));
+      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToSetDefault"));
+      setError(msg);
+      toast.error(msg);
     }
   }, [loadData, t]);
 
@@ -184,7 +192,9 @@ export function useAgentConfig(
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Failed to delete profile:", err);
-      setError(t("settings.agentCredentials.failedToDelete"));
+      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToDelete"));
+      setError(msg);
+      toast.error(msg);
     }
   }, [loadData, t]);
 

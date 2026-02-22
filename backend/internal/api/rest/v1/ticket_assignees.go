@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +23,7 @@ func (h *TicketHandler) AddAssignee(c *gin.Context) {
 
 	var req AddAssigneeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -30,12 +31,12 @@ func (h *TicketHandler) AddAssignee(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.AddAssignee(c.Request.Context(), t.ID, req.UserID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add assignee"})
+		apierr.InternalError(c, "Failed to add assignee")
 		return
 	}
 
@@ -48,7 +49,7 @@ func (h *TicketHandler) RemoveAssignee(c *gin.Context) {
 	identifier := c.Param("identifier")
 	userID, err := strconv.ParseInt(c.Param("user_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
@@ -56,12 +57,12 @@ func (h *TicketHandler) RemoveAssignee(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.RemoveAssignee(c.Request.Context(), t.ID, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove assignee"})
+		apierr.InternalError(c, "Failed to remove assignee")
 		return
 	}
 

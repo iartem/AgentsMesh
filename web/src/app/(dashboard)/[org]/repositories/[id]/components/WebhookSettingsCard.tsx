@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { repositoryApi, type WebhookStatus, type RepositoryData } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
+import { toast } from "sonner";
 import { RefreshCw, Loader2 } from "lucide-react";
 import {
   WebhookStatusDisplay,
@@ -41,8 +43,10 @@ export function WebhookSettingsCard({
       setError(null);
       const res = await repositoryApi.getWebhookStatus(repository.id);
       setStatus(res.webhook_status);
-    } catch {
-      setError(t("repositories.webhook.retry"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("repositories.webhook.retry"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -72,15 +76,17 @@ export function WebhookSettingsCard({
             events: secretRes.events,
           });
           setShowSecret(true);
-        } catch {
-          // Ignore - will show status anyway
+        } catch (err) {
+          toast.error(getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed")));
         }
         await loadStatus();
       } else if (res.result.error) {
         setError(res.result.error);
       }
-    } catch {
-      setError(t("repositories.detail.webhookFailed"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(null);
     }
@@ -96,8 +102,10 @@ export function WebhookSettingsCard({
       setShowSecret(false);
       await loadStatus();
       onStatusChange?.();
-    } catch {
-      setError(t("repositories.detail.webhookFailed"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(null);
     }
@@ -112,8 +120,10 @@ export function WebhookSettingsCard({
       setShowSecret(false);
       await loadStatus();
       onStatusChange?.();
-    } catch {
-      setError(t("repositories.detail.webhookFailed"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(null);
     }
@@ -132,8 +142,10 @@ export function WebhookSettingsCard({
         events: res.events,
       });
       setShowSecret(true);
-    } catch {
-      setError(t("repositories.detail.webhookFailed"));
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed"));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(null);
     }

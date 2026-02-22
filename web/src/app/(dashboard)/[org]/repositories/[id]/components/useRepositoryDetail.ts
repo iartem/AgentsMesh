@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { repositoryApi, RepositoryData } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 export type RepositoryTab = "info" | "branches";
 
@@ -77,8 +79,9 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
       router.push("../repositories");
     } catch (error) {
       console.error("Failed to delete repository:", error);
+      toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
-  }, [repository, repositoryId, router, deleteDialog]);
+  }, [repository, repositoryId, router, deleteDialog, t]);
 
   useEffect(() => {
     if (activeTab === "branches" && branches.length === 0 && repository) {

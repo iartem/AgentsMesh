@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,10 +22,7 @@ import (
 // @Router /api/v1/license/activate [post]
 func (h *LicenseHandler) ActivateLicense(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
@@ -33,7 +31,7 @@ func (h *LicenseHandler) ActivateLicense(c *gin.Context) {
 	if exists {
 		tc := tenant.(*middleware.TenantContext)
 		if tc.UserRole != "owner" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "only organization owners can activate licenses"})
+			apierr.ForbiddenOwner(c)
 			return
 		}
 	}
@@ -42,7 +40,7 @@ func (h *LicenseHandler) ActivateLicense(c *gin.Context) {
 	var req ActivateLicenseRequest
 	if err := c.ShouldBindJSON(&req); err == nil && req.LicenseData != "" {
 		if err := h.licenseService.ActivateLicense(c.Request.Context(), []byte(req.LicenseData)); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 			return
 		}
 	} else {
@@ -50,17 +48,17 @@ func (h *LicenseHandler) ActivateLicense(c *gin.Context) {
 		c.Request.Body = io.NopCloser(c.Request.Body)
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "failed to read request body")
 			return
 		}
 
 		if len(body) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "license data is required"})
+			apierr.BadRequest(c, apierr.MISSING_REQUIRED, "license data is required")
 			return
 		}
 
 		if err := h.licenseService.ActivateLicense(c.Request.Context(), body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 			return
 		}
 	}
@@ -85,10 +83,7 @@ func (h *LicenseHandler) ActivateLicense(c *gin.Context) {
 // @Router /api/v1/license/upload [post]
 func (h *LicenseHandler) UploadLicense(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
@@ -97,7 +92,7 @@ func (h *LicenseHandler) UploadLicense(c *gin.Context) {
 	if exists {
 		tc := tenant.(*middleware.TenantContext)
 		if tc.UserRole != "owner" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "only organization owners can activate licenses"})
+			apierr.ForbiddenOwner(c)
 			return
 		}
 	}
@@ -105,27 +100,27 @@ func (h *LicenseHandler) UploadLicense(c *gin.Context) {
 	// Get file from form
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "license file is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "license file is required")
 		return
 	}
 
 	// Open and read file
 	f, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to open license file"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "failed to open license file")
 		return
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read license file"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "failed to read license file")
 		return
 	}
 
 	// Activate license
 	if err := h.licenseService.ActivateLicense(c.Request.Context(), data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -146,15 +141,12 @@ func (h *LicenseHandler) UploadLicense(c *gin.Context) {
 // @Router /api/v1/license/refresh [post]
 func (h *LicenseHandler) RefreshLicense(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
 	if err := h.licenseService.RefreshLicense(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -177,26 +169,20 @@ func (h *LicenseHandler) RefreshLicense(c *gin.Context) {
 // @Router /api/v1/license/validate [post]
 func (h *LicenseHandler) ValidateLicense(c *gin.Context) {
 	if h.licenseService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "license service not configured",
-			"message": "This endpoint is only available for OnPremise deployments",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "license service not configured")
 		return
 	}
 
 	var req ValidateLicenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Parse and verify without activating
 	licenseData, err := h.licenseService.ParseAndVerify([]byte(req.LicenseData))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"valid": false,
-			"error": err.Error(),
-		})
+		apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, err.Error(), gin.H{"valid": false})
 		return
 	}
 

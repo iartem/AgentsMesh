@@ -12,6 +12,7 @@ import {
   DeploymentInfo,
 } from "@/lib/api/billing";
 import { useLemonSqueezy } from "@/hooks/useLemonSqueezy";
+import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 export interface CheckoutFlowProps {
   // Plan to checkout (for subscription/upgrade)
@@ -115,8 +116,7 @@ export function CheckoutFlow({
         }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Checkout failed";
-      onError?.(errorMessage);
+      onError?.(getLocalizedErrorMessage(err, t, t("billing.checkout.failed") || "Checkout failed"));
       setLoading(false);
     }
   };

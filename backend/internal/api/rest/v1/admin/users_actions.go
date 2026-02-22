@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,14 +16,14 @@ import (
 func (h *UserHandler) DisableUser(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
 	// Prevent disabling self
 	adminUserID := middleware.GetAdminUserID(c)
 	if userID == adminUserID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot disable your own account"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot disable your own account")
 		return
 	}
 
@@ -32,10 +33,10 @@ func (h *UserHandler) DisableUser(c *gin.Context) {
 	user, err := h.adminService.DisableUser(c.Request.Context(), userID)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to disable user"})
+		apierr.InternalError(c, "Failed to disable user")
 		return
 	}
 
@@ -49,7 +50,7 @@ func (h *UserHandler) DisableUser(c *gin.Context) {
 func (h *UserHandler) EnableUser(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
@@ -59,10 +60,10 @@ func (h *UserHandler) EnableUser(c *gin.Context) {
 	user, err := h.adminService.EnableUser(c.Request.Context(), userID)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enable user"})
+		apierr.InternalError(c, "Failed to enable user")
 		return
 	}
 
@@ -76,7 +77,7 @@ func (h *UserHandler) EnableUser(c *gin.Context) {
 func (h *UserHandler) GrantAdmin(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
@@ -86,10 +87,10 @@ func (h *UserHandler) GrantAdmin(c *gin.Context) {
 	user, err := h.adminService.GrantAdmin(c.Request.Context(), userID)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to grant admin privileges"})
+		apierr.InternalError(c, "Failed to grant admin privileges")
 		return
 	}
 
@@ -103,7 +104,7 @@ func (h *UserHandler) GrantAdmin(c *gin.Context) {
 func (h *UserHandler) RevokeAdmin(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		apierr.InvalidInput(c, "Invalid user ID")
 		return
 	}
 
@@ -115,14 +116,14 @@ func (h *UserHandler) RevokeAdmin(c *gin.Context) {
 	user, err := h.adminService.RevokeAdmin(c.Request.Context(), userID, adminUserID)
 	if err != nil {
 		if err == adminservice.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			apierr.ResourceNotFound(c, "User not found")
 			return
 		}
 		if err == adminservice.ErrCannotRevokeOwnAdmin {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot revoke your own admin privileges"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot revoke your own admin privileges")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke admin privileges"})
+		apierr.InternalError(c, "Failed to revoke admin privileges")
 		return
 	}
 

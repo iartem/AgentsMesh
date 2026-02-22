@@ -37,6 +37,9 @@ func TestRegisterRepositoryWebhook_InvalidID(t *testing.T) {
 	if resp["error"] != "Invalid repository ID" {
 		t.Errorf("unexpected error: %v", resp["error"])
 	}
+	if _, ok := resp["code"]; !ok {
+		t.Error("expected 'code' field in error response")
+	}
 }
 
 func TestRegisterRepositoryWebhook_Forbidden_MemberRole(t *testing.T) {
@@ -59,6 +62,9 @@ func TestRegisterRepositoryWebhook_Forbidden_MemberRole(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp["error"] != "Admin permission required" {
 		t.Errorf("unexpected error: %v", resp["error"])
+	}
+	if _, ok := resp["code"]; !ok {
+		t.Error("expected 'code' field in error response")
 	}
 }
 
@@ -106,6 +112,9 @@ func TestRegisterRepositoryWebhook_OrgMismatch(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp["error"] != "Access denied" {
 		t.Errorf("unexpected error: %v", resp["error"])
+	}
+	if _, ok := resp["code"]; !ok {
+		t.Error("expected 'code' field in error response")
 	}
 }
 

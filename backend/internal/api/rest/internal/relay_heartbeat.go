@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,12 +13,12 @@ import (
 func (h *RelayHandler) Heartbeat(c *gin.Context) {
 	var req HeartbeatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	if err := h.relayManager.HeartbeatWithLatency(req.RelayID, req.Connections, req.CPUUsage, req.MemoryUsage, req.LatencyMs); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		apierr.ResourceNotFound(c, err.Error())
 		return
 	}
 

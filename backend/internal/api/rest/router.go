@@ -12,6 +12,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -32,7 +33,7 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			"method", c.Request.Method,
 			"error", recovered,
 		)
-		c.AbortWithStatusJSON(500, gin.H{"error": "Internal server error"})
+		c.AbortWithStatusJSON(500, apierr.ErrorResponse{Error: "Internal server error", Code: apierr.INTERNAL_ERROR})
 	}))
 
 	// CORS configuration

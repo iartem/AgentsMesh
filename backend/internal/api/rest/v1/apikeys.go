@@ -7,6 +7,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/apikey"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,7 +33,7 @@ func (h *APIKeyHandler) CreateAPIKey(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -68,7 +69,7 @@ func (h *APIKeyHandler) ListAPIKeys(c *gin.Context) {
 		Offset:         offset,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list API keys"})
+		apierr.InternalError(c, "Failed to list API keys")
 		return
 	}
 
@@ -84,7 +85,7 @@ func (h *APIKeyHandler) GetAPIKey(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
+		apierr.InvalidInput(c, "Invalid API key ID")
 		return
 	}
 
@@ -103,13 +104,13 @@ func (h *APIKeyHandler) UpdateAPIKey(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
+		apierr.InvalidInput(c, "Invalid API key ID")
 		return
 	}
 
 	var req apikey.UpdateAPIKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -128,7 +129,7 @@ func (h *APIKeyHandler) DeleteAPIKey(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
+		apierr.InvalidInput(c, "Invalid API key ID")
 		return
 	}
 
@@ -146,7 +147,7 @@ func (h *APIKeyHandler) RevokeAPIKey(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
+		apierr.InvalidInput(c, "Invalid API key ID")
 		return
 	}
 
@@ -162,20 +163,20 @@ func (h *APIKeyHandler) RevokeAPIKey(c *gin.Context) {
 func handleAPIKeyServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, apikey.ErrAPIKeyNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
+		apierr.ResourceNotFound(c, "API key not found")
 	case errors.Is(err, apikey.ErrNameEmpty):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	case errors.Is(err, apikey.ErrNameTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	case errors.Is(err, apikey.ErrScopesRequired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	case errors.Is(err, apikey.ErrInvalidScope):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	case errors.Is(err, apikey.ErrDuplicateKeyName):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		apierr.Conflict(c, apierr.ALREADY_EXISTS, err.Error())
 	case errors.Is(err, apikey.ErrInvalidExpiresIn):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		apierr.InternalError(c, "Internal server error")
 	}
 }

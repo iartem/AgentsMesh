@@ -24,11 +24,11 @@ type WebhookRouter struct {
 	paymentFactory *payment.Factory
 
 	// Services for git webhook handling
-	repoService     *repository.Service
-	webhookService  *repository.WebhookService
-	mrSyncService   *ticket.MRSyncService
-	podService      *agentpod.PodService
-	eventBus        *eventbus.EventBus
+	repoService    *repository.Service
+	webhookService *repository.WebhookService
+	mrSyncService  *ticket.MRSyncService
+	podService     *agentpod.PodService
+	eventBus       *eventbus.EventBus
 }
 
 // WebhookRouterOption configures the WebhookRouter

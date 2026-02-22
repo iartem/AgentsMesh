@@ -7,6 +7,7 @@ import (
 	domainUser "github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,7 +52,7 @@ func (h *UserGitCredentialHandler) ListCredentials(c *gin.Context) {
 
 	credentials, err := h.userService.ListGitCredentials(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list credentials"})
+		apierr.InternalError(c, "Failed to list credentials")
 		return
 	}
 
@@ -90,7 +91,7 @@ type CreateCredentialRequest struct {
 func (h *UserGitCredentialHandler) CreateCredential(c *gin.Context) {
 	var req CreateCredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -107,17 +108,17 @@ func (h *UserGitCredentialHandler) CreateCredential(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case user.ErrCredentialAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Credential already exists with this name"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Credential already exists with this name")
 		case user.ErrInvalidCredentialType:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential type. Valid types: runner_local, oauth, pat, ssh_key"})
+			apierr.InvalidInput(c, "Invalid credential type. Valid types: runner_local, oauth, pat, ssh_key")
 		case user.ErrProviderIDRequired:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "repository_provider_id is required for oauth type"})
+			apierr.BadRequest(c, apierr.MISSING_REQUIRED, "repository_provider_id is required for oauth type")
 		case user.ErrInvalidSSHKey:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid SSH key format"})
+			apierr.InvalidInput(c, "Invalid SSH key format")
 		case user.ErrProviderNotFound:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Repository provider not found"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Repository provider not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create credential: " + err.Error()})
+			apierr.InternalError(c, "Failed to create credential: "+err.Error())
 		}
 		return
 	}
@@ -132,17 +133,17 @@ func (h *UserGitCredentialHandler) GetCredential(c *gin.Context) {
 
 	credentialID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential ID"})
+		apierr.InvalidInput(c, "Invalid credential ID")
 		return
 	}
 
 	credential, err := h.userService.GetGitCredential(c.Request.Context(), userID, credentialID)
 	if err != nil {
 		if err == user.ErrCredentialNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Credential not found"})
+			apierr.ResourceNotFound(c, "Credential not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get credential"})
+		apierr.InternalError(c, "Failed to get credential")
 		return
 	}
 
@@ -164,13 +165,13 @@ func (h *UserGitCredentialHandler) UpdateCredential(c *gin.Context) {
 
 	credentialID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential ID"})
+		apierr.InvalidInput(c, "Invalid credential ID")
 		return
 	}
 
 	var req UpdateCredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -183,13 +184,13 @@ func (h *UserGitCredentialHandler) UpdateCredential(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case user.ErrCredentialNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Credential not found"})
+			apierr.ResourceNotFound(c, "Credential not found")
 		case user.ErrCredentialAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Credential already exists with this name"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Credential already exists with this name")
 		case user.ErrInvalidSSHKey:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid SSH key format"})
+			apierr.InvalidInput(c, "Invalid SSH key format")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update credential"})
+			apierr.InternalError(c, "Failed to update credential")
 		}
 		return
 	}
@@ -204,17 +205,17 @@ func (h *UserGitCredentialHandler) DeleteCredential(c *gin.Context) {
 
 	credentialID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential ID"})
+		apierr.InvalidInput(c, "Invalid credential ID")
 		return
 	}
 
 	err = h.userService.DeleteGitCredential(c.Request.Context(), userID, credentialID)
 	if err != nil {
 		if err == user.ErrCredentialNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Credential not found"})
+			apierr.ResourceNotFound(c, "Credential not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete credential"})
+		apierr.InternalError(c, "Failed to delete credential")
 		return
 	}
 
@@ -228,21 +229,21 @@ func (h *UserGitCredentialHandler) GetDefault(c *gin.Context) {
 
 	credential, err := h.userService.GetDefaultGitCredential(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get default credential"})
+		apierr.InternalError(c, "Failed to get default credential")
 		return
 	}
 
 	if credential == nil {
 		// No default set, return runner_local as default
 		c.JSON(http.StatusOK, gin.H{
-			"credential": domainUser.RunnerLocalCredentialResponse(),
+			"credential":      domainUser.RunnerLocalCredentialResponse(),
 			"is_runner_local": true,
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"credential": toGitCredentialResponse(credential),
+		"credential":      toGitCredentialResponse(credential),
 		"is_runner_local": false,
 	})
 }
@@ -259,7 +260,7 @@ func (h *UserGitCredentialHandler) SetDefault(c *gin.Context) {
 
 	var req SetDefaultRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -267,11 +268,11 @@ func (h *UserGitCredentialHandler) SetDefault(c *gin.Context) {
 		// Set runner_local as default (clear default credential)
 		err := h.userService.ClearDefaultGitCredential(c.Request.Context(), userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default"})
+			apierr.InternalError(c, "Failed to set default")
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Default set to Runner Local",
+			"message":         "Default set to Runner Local",
 			"is_runner_local": true,
 		})
 		return
@@ -280,15 +281,15 @@ func (h *UserGitCredentialHandler) SetDefault(c *gin.Context) {
 	err := h.userService.SetDefaultGitCredential(c.Request.Context(), userID, *req.CredentialID)
 	if err != nil {
 		if err == user.ErrCredentialNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Credential not found"})
+			apierr.ResourceNotFound(c, "Credential not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default"})
+		apierr.InternalError(c, "Failed to set default")
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Default credential set",
+		"message":         "Default credential set",
 		"is_runner_local": false,
 	})
 }
@@ -300,7 +301,7 @@ func (h *UserGitCredentialHandler) ClearDefault(c *gin.Context) {
 
 	err := h.userService.ClearDefaultGitCredential(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear default"})
+		apierr.InternalError(c, "Failed to clear default")
 		return
 	}
 

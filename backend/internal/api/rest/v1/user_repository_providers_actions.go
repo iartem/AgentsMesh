@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/git"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,17 +18,17 @@ func (h *UserRepositoryProviderHandler) SetDefault(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
 	err = h.userService.SetDefaultRepositoryProvider(c.Request.Context(), userID, providerID)
 	if err != nil {
 		if err == user.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default provider"})
+		apierr.InternalError(c, "Failed to set default provider")
 		return
 	}
 
@@ -41,7 +42,7 @@ func (h *UserRepositoryProviderHandler) TestConnection(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
@@ -49,29 +50,29 @@ func (h *UserRepositoryProviderHandler) TestConnection(c *gin.Context) {
 	provider, err := h.userService.GetRepositoryProvider(c.Request.Context(), userID, providerID)
 	if err != nil {
 		if err == user.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get provider"})
+		apierr.InternalError(c, "Failed to get provider")
 		return
 	}
 
 	// Get decrypted token
 	token, err := h.userService.GetDecryptedProviderToken(c.Request.Context(), userID, providerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt token"})
+		apierr.InternalError(c, "Failed to decrypt token")
 		return
 	}
 
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No token configured for this provider"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "No token configured for this provider")
 		return
 	}
 
 	// Create git provider and test connection
 	gitProvider, err := git.NewProvider(provider.ProviderType, provider.BaseURL, token)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create git provider: " + err.Error()})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Failed to create git provider: "+err.Error())
 		return
 	}
 
@@ -79,16 +80,10 @@ func (h *UserRepositoryProviderHandler) TestConnection(c *gin.Context) {
 	_, err = gitProvider.ListProjects(c.Request.Context(), 1, 1)
 	if err != nil {
 		if err == git.ErrUnauthorized {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   "Authentication failed - token may be invalid or expired",
-			})
+			apierr.RespondWithExtra(c, http.StatusUnauthorized, apierr.INVALID_TOKEN, "Authentication failed - token may be invalid or expired", gin.H{"success": false})
 			return
 		}
-		c.JSON(http.StatusBadGateway, gin.H{
-			"success": false,
-			"error":   "Connection failed: " + err.Error(),
-		})
+		apierr.RespondWithExtra(c, http.StatusBadGateway, apierr.INTERNAL_ERROR, "Connection failed: "+err.Error(), gin.H{"success": false})
 		return
 	}
 
@@ -105,7 +100,7 @@ func (h *UserRepositoryProviderHandler) ListRepositories(c *gin.Context) {
 
 	providerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		apierr.InvalidInput(c, "Invalid provider ID")
 		return
 	}
 
@@ -125,29 +120,29 @@ func (h *UserRepositoryProviderHandler) ListRepositories(c *gin.Context) {
 	provider, err := h.userService.GetRepositoryProvider(c.Request.Context(), userID, providerID)
 	if err != nil {
 		if err == user.ErrProviderNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+			apierr.ResourceNotFound(c, "Provider not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get provider"})
+		apierr.InternalError(c, "Failed to get provider")
 		return
 	}
 
 	// Get decrypted token
 	token, err := h.userService.GetDecryptedProviderToken(c.Request.Context(), userID, providerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt token"})
+		apierr.InternalError(c, "Failed to decrypt token")
 		return
 	}
 
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No token configured for this provider"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "No token configured for this provider")
 		return
 	}
 
 	// Create git provider
 	gitProvider, err := git.NewProvider(provider.ProviderType, provider.BaseURL, token)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create git provider: " + err.Error()})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Failed to create git provider: "+err.Error())
 		return
 	}
 
@@ -161,14 +156,14 @@ func (h *UserRepositoryProviderHandler) ListRepositories(c *gin.Context) {
 
 	if err != nil {
 		if err == git.ErrUnauthorized {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Access token is invalid or expired"})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Access token is invalid or expired")
 			return
 		}
 		if err == git.ErrRateLimited {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limited by git provider"})
+			apierr.TooManyRequests(c, "Rate limited by git provider")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch repositories: " + err.Error()})
+		apierr.InternalError(c, "Failed to fetch repositories: "+err.Error())
 		return
 	}
 

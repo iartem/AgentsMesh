@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +19,7 @@ import (
 func (h *BindingHandler) ListBindings(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
@@ -29,7 +30,7 @@ func (h *BindingHandler) ListBindings(c *gin.Context) {
 
 	bindings, err := h.bindingSvc.GetBindingsForPod(c.Request.Context(), podKey, statusFilter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -50,13 +51,13 @@ func (h *BindingHandler) ListBindings(c *gin.Context) {
 func (h *BindingHandler) GetPendingBindings(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	pending, err := h.bindingSvc.GetPendingRequests(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -77,13 +78,13 @@ func (h *BindingHandler) GetPendingBindings(c *gin.Context) {
 func (h *BindingHandler) GetBoundPods(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	pods, err := h.bindingSvc.GetBoundPods(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -105,19 +106,19 @@ func (h *BindingHandler) GetBoundPods(c *gin.Context) {
 func (h *BindingHandler) CheckBinding(c *gin.Context) {
 	podKey := getPodKeyFromHeader(c)
 	if podKey == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Pod-Key header required"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "X-Pod-Key header required")
 		return
 	}
 
 	targetPod := c.Param("target_pod")
 	if targetPod == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "target_pod is required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "target_pod is required")
 		return
 	}
 
 	isBound, err := h.bindingSvc.IsBound(c.Request.Context(), podKey, targetPod)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

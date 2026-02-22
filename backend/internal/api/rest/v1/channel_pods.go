@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +14,7 @@ import (
 func (h *ChannelHandler) JoinPod(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
@@ -21,24 +22,24 @@ func (h *ChannelHandler) JoinPod(c *gin.Context) {
 		PodKey string `json:"pod_key" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.channelService.JoinChannel(c.Request.Context(), channelID, req.PodKey); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join channel"})
+		apierr.InternalError(c, "Failed to join channel")
 		return
 	}
 
@@ -50,7 +51,7 @@ func (h *ChannelHandler) JoinPod(c *gin.Context) {
 func (h *ChannelHandler) LeavePod(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
@@ -58,18 +59,18 @@ func (h *ChannelHandler) LeavePod(c *gin.Context) {
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.channelService.LeaveChannel(c.Request.Context(), channelID, podKey); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to leave channel"})
+		apierr.InternalError(c, "Failed to leave channel")
 		return
 	}
 
@@ -81,25 +82,25 @@ func (h *ChannelHandler) LeavePod(c *gin.Context) {
 func (h *ChannelHandler) ListChannelPods(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	pods, err := h.channelService.GetChannelPods(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list pods"})
+		apierr.InternalError(c, "Failed to list pods")
 		return
 	}
 

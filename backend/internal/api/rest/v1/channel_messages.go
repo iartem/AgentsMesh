@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,19 +14,19 @@ import (
 func (h *ChannelHandler) ListMessages(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -38,7 +39,7 @@ func (h *ChannelHandler) ListMessages(c *gin.Context) {
 
 	messages, err := h.channelService.GetMessages(c.Request.Context(), channelID, nil, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list messages"})
+		apierr.InternalError(c, "Failed to list messages")
 		return
 	}
 
@@ -56,30 +57,30 @@ type SendMessageRequest struct {
 func (h *ChannelHandler) SendMessage(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	var req SendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if ch.IsArchived {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send messages to archived channel"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot send messages to archived channel")
 		return
 	}
 
@@ -91,7 +92,7 @@ func (h *ChannelHandler) SendMessage(c *gin.Context) {
 
 	msg, err := h.channelService.SendMessage(c.Request.Context(), channelID, podKey, &tenant.UserID, "text", req.Content, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send message"})
+		apierr.InternalError(c, "Failed to send message")
 		return
 	}
 

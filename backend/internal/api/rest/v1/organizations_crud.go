@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 
 	orgs, err := h.orgService.ListByUser(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list organizations"})
+		apierr.InternalError(c, "Failed to list organizations")
 		return
 	}
 
@@ -27,13 +28,13 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
 	var req CreateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Validate slug format: lowercase alphanumeric with hyphens
 	if !slugRegex.MatchString(req.Slug) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Slug must contain only lowercase letters, numbers, and hyphens, and must start and end with alphanumeric characters"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Slug must contain only lowercase letters, numbers, and hyphens, and must start and end with alphanumeric characters")
 		return
 	}
 
@@ -47,10 +48,10 @@ func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
 
 	if err != nil {
 		if err == organization.ErrSlugAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Organization slug already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Organization slug already exists")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create organization"})
+		apierr.InternalError(c, "Failed to create organization")
 		return
 	}
 
@@ -64,7 +65,7 @@ func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isMember, _ := h.orgService.IsMember(c.Request.Context(), org.ID, userID)
 	if !isMember {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -86,13 +87,13 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 
 	var req UpdateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -100,7 +101,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isAdmin, _ := h.orgService.IsAdmin(c.Request.Context(), org.ID, userID)
 	if !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -114,7 +115,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 
 	org, err = h.orgService.Update(c.Request.Context(), org.ID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update organization"})
+		apierr.InternalError(c, "Failed to update organization")
 		return
 	}
 
@@ -128,7 +129,7 @@ func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
 
 	org, err := h.orgService.GetOrgBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		apierr.ResourceNotFound(c, "Organization not found")
 		return
 	}
 
@@ -136,12 +137,12 @@ func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	isOwner, _ := h.orgService.IsOwner(c.Request.Context(), org.ID, userID)
 	if !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Owner permission required"})
+		apierr.ForbiddenOwner(c)
 		return
 	}
 
 	if err := h.orgService.Delete(c.Request.Context(), org.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete organization"})
+		apierr.InternalError(c, "Failed to delete organization")
 		return
 	}
 

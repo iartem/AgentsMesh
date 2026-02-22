@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/admin"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,7 +15,7 @@ import (
 func (h *RunnerHandler) DisableRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
@@ -24,10 +25,10 @@ func (h *RunnerHandler) DisableRunner(c *gin.Context) {
 	r, err := h.adminService.DisableRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		if err == adminservice.ErrRunnerNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+			apierr.ResourceNotFound(c, "Runner not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to disable runner"})
+		apierr.InternalError(c, "Failed to disable runner")
 		return
 	}
 
@@ -41,7 +42,7 @@ func (h *RunnerHandler) DisableRunner(c *gin.Context) {
 func (h *RunnerHandler) EnableRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
@@ -51,10 +52,10 @@ func (h *RunnerHandler) EnableRunner(c *gin.Context) {
 	r, err := h.adminService.EnableRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		if err == adminservice.ErrRunnerNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+			apierr.ResourceNotFound(c, "Runner not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enable runner"})
+		apierr.InternalError(c, "Failed to enable runner")
 		return
 	}
 
@@ -68,21 +69,21 @@ func (h *RunnerHandler) EnableRunner(c *gin.Context) {
 func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid runner ID"})
+		apierr.InvalidInput(c, "Invalid runner ID")
 		return
 	}
 
 	deletedRunner, err := h.adminService.DeleteRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		if err == adminservice.ErrRunnerNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Runner not found"})
+			apierr.ResourceNotFound(c, "Runner not found")
 			return
 		}
 		if err == adminservice.ErrRunnerHasActivePods {
-			c.JSON(http.StatusConflict, gin.H{"error": "Cannot delete runner with active pods"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Cannot delete runner with active pods")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete runner"})
+		apierr.InternalError(c, "Failed to delete runner")
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/promocode"
 	"github.com/anthropics/agentsmesh/backend/internal/service/admin"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,7 +65,7 @@ func (h *PromoCodeHandler) List(c *gin.Context) {
 
 	result, err := h.service.ListPromoCodes(c.Request.Context(), filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -92,7 +93,7 @@ func (h *PromoCodeHandler) Create(c *gin.Context) {
 
 	var req CreatePromoCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -103,7 +104,7 @@ func (h *PromoCodeHandler) Create(c *gin.Context) {
 	if req.StartsAt != "" {
 		t, err := time.Parse(time.RFC3339, req.StartsAt)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid starts_at format, use RFC3339"})
+			apierr.InvalidInput(c, "invalid starts_at format, use RFC3339")
 			return
 		}
 		startsAt = t
@@ -114,7 +115,7 @@ func (h *PromoCodeHandler) Create(c *gin.Context) {
 	if req.ExpiresAt != "" {
 		t, err := time.Parse(time.RFC3339, req.ExpiresAt)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expires_at format, use RFC3339"})
+			apierr.InvalidInput(c, "invalid expires_at format, use RFC3339")
 			return
 		}
 		expiresAt = &t
@@ -142,10 +143,10 @@ func (h *PromoCodeHandler) Create(c *gin.Context) {
 
 	if err := h.service.CreatePromoCode(c.Request.Context(), promoCode, adminUserID); err != nil {
 		if err == admin.ErrPromoCodeAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "promo code already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "promo code already exists")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -157,17 +158,17 @@ func (h *PromoCodeHandler) Create(c *gin.Context) {
 func (h *PromoCodeHandler) Get(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	promoCode, err := h.service.GetPromoCode(c.Request.Context(), id)
 	if err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -176,11 +177,11 @@ func (h *PromoCodeHandler) Get(c *gin.Context) {
 
 // UpdatePromoCodeRequest represents update promo code request body
 type UpdatePromoCodeRequest struct {
-	Name           *string `json:"name"`
-	Description    *string `json:"description"`
-	MaxUses        *int    `json:"max_uses"`
-	MaxUsesPerOrg  *int    `json:"max_uses_per_org"`
-	ExpiresAt      *string `json:"expires_at"`
+	Name          *string `json:"name"`
+	Description   *string `json:"description"`
+	MaxUses       *int    `json:"max_uses"`
+	MaxUsesPerOrg *int    `json:"max_uses_per_org"`
+	ExpiresAt     *string `json:"expires_at"`
 }
 
 // Update updates a promo code
@@ -190,13 +191,13 @@ func (h *PromoCodeHandler) Update(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	var req UpdatePromoCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -215,7 +216,7 @@ func (h *PromoCodeHandler) Update(c *gin.Context) {
 		} else {
 			t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expires_at format, use RFC3339"})
+				apierr.InvalidInput(c, "invalid expires_at format, use RFC3339")
 				return
 			}
 			updates.ExpiresAt = &t
@@ -225,10 +226,10 @@ func (h *PromoCodeHandler) Update(c *gin.Context) {
 	promoCode, err := h.service.UpdatePromoCode(c.Request.Context(), id, updates, adminUserID)
 	if err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -242,16 +243,16 @@ func (h *PromoCodeHandler) Activate(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	if err := h.service.ActivatePromoCode(c.Request.Context(), id, adminUserID); err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -265,16 +266,16 @@ func (h *PromoCodeHandler) Deactivate(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	if err := h.service.DeactivatePromoCode(c.Request.Context(), id, adminUserID); err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -288,20 +289,20 @@ func (h *PromoCodeHandler) Delete(c *gin.Context) {
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	if err := h.service.DeletePromoCode(c.Request.Context(), id, adminUserID); err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
 		if err == admin.ErrPromoCodeHasRedemptions {
-			c.JSON(http.StatusConflict, gin.H{"error": "cannot delete promo code with redemptions"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "cannot delete promo code with redemptions")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -313,7 +314,7 @@ func (h *PromoCodeHandler) Delete(c *gin.Context) {
 func (h *PromoCodeHandler) ListRedemptions(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
@@ -323,10 +324,10 @@ func (h *PromoCodeHandler) ListRedemptions(c *gin.Context) {
 	result, err := h.service.ListPromoCodeRedemptions(c.Request.Context(), id, page, pageSize)
 	if err != nil {
 		if err == admin.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

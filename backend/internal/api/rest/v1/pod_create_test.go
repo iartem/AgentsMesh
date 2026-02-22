@@ -93,7 +93,7 @@ func TestMapOrchestratorErrorToHTTP(t *testing.T) {
 			name:     "unknown error -> 500 fallback",
 			err:      assert.AnError,
 			wantCode: http.StatusInternalServerError,
-			wantJSON: map[string]string{"error": "Failed to create pod"},
+			wantJSON: map[string]string{"error": "Failed to create pod", "code": "INTERNAL_ERROR"},
 		},
 	}
 

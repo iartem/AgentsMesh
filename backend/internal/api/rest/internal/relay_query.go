@@ -3,6 +3,7 @@ package internal
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,13 +26,13 @@ func (h *RelayHandler) List(c *gin.Context) {
 func (h *RelayHandler) Get(c *gin.Context) {
 	relayID := c.Param("relay_id")
 	if relayID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "relay_id is required"})
+		apierr.InvalidInput(c, "relay_id is required")
 		return
 	}
 
 	relayInfo := h.relayManager.GetRelayByID(relayID)
 	if relayInfo == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "relay not found"})
+		apierr.ResourceNotFound(c, "relay not found")
 		return
 	}
 

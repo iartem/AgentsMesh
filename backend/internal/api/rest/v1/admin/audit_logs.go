@@ -8,6 +8,7 @@ import (
 	domainadmin "github.com/anthropics/agentsmesh/backend/internal/domain/admin"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -83,7 +84,7 @@ func (h *AuditLogHandler) ListAuditLogs(c *gin.Context) {
 
 	result, err := h.adminService.GetAuditLogs(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get audit logs"})
+		apierr.InternalError(c, "Failed to get audit logs")
 		return
 	}
 

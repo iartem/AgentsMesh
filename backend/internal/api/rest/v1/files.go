@@ -11,6 +11,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/file"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,7 +42,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 
 	if h.fileService == nil {
 		slog.Error("fileService is nil!")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Storage not configured"})
+		apierr.InternalError(c, "Storage not configured")
 		return
 	}
 
@@ -55,7 +56,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		slog.Warn("File upload failed: no file provided", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "No file provided")
 		return
 	}
 	slog.Info("File received",
@@ -67,7 +68,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	// Open the file
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to open file"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Failed to open file")
 		return
 	}
 	defer file.Close()
@@ -90,14 +91,14 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, fileservice.ErrFileTooLarge):
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
+			apierr.PayloadTooLarge(c, err.Error())
 		case errors.Is(err, fileservice.ErrInvalidFileType):
 			slog.Warn("File upload rejected: invalid type",
 				"content_type", contentType,
 				"filename", fileHeader.Filename,
 				"org_id", tenant.OrganizationID,
 			)
-			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": err.Error()})
+			apierr.UnsupportedMediaType(c, err.Error())
 		case errors.Is(err, fileservice.ErrStorageError):
 			slog.Error("File upload failed: storage error",
 				"error", err,
@@ -106,7 +107,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 				"content_type", contentType,
 				"org_id", tenant.OrganizationID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+			apierr.InternalError(c, "Failed to upload file")
 		default:
 			slog.Error("File upload failed",
 				"error", err,
@@ -115,7 +116,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 				"content_type", contentType,
 				"org_id", tenant.OrganizationID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+			apierr.InternalError(c, "Failed to upload file")
 		}
 		return
 	}
@@ -131,16 +132,16 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
+		apierr.InvalidInput(c, "Invalid file ID")
 		return
 	}
 
 	if err := h.fileService.Delete(c.Request.Context(), id, tenant.OrganizationID); err != nil {
 		if err == fileservice.ErrFileNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+			apierr.ResourceNotFound(c, "File not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete file"})
+		apierr.InternalError(c, "Failed to delete file")
 		return
 	}
 

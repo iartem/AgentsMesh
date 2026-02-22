@@ -5,6 +5,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -74,7 +75,7 @@ type UpdateTicketStatusRequest struct {
 func (h *TicketHandler) ListTickets(c *gin.Context) {
 	var req ListTicketsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -96,7 +97,7 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 		Offset:         req.Offset,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tickets"})
+		apierr.InternalError(c, "Failed to list tickets")
 		return
 	}
 
@@ -113,7 +114,7 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 func (h *TicketHandler) CreateTicket(c *gin.Context) {
 	var req CreateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -138,7 +139,7 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		ParentTicketID: req.ParentTicketID,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
+		apierr.InternalError(c, "Failed to create ticket")
 		return
 	}
 
@@ -155,7 +156,7 @@ func (h *TicketHandler) GetTicket(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
@@ -170,13 +171,13 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 
 	var req UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
@@ -207,14 +208,14 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 
 	t, err = h.ticketService.UpdateTicket(c.Request.Context(), t.ID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket"})
+		apierr.InternalError(c, "Failed to update ticket")
 		return
 	}
 
 	// Update assignees if provided
 	if req.AssigneeIDs != nil {
 		if err := h.ticketService.UpdateAssignees(c.Request.Context(), t.ID, req.AssigneeIDs); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update assignees"})
+			apierr.InternalError(c, "Failed to update assignees")
 			return
 		}
 	}
@@ -232,12 +233,12 @@ func (h *TicketHandler) DeleteTicket(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.DeleteTicket(c.Request.Context(), t.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete ticket"})
+		apierr.InternalError(c, "Failed to delete ticket")
 		return
 	}
 
@@ -253,7 +254,7 @@ func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 
 	var req UpdateTicketStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -261,12 +262,12 @@ func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.UpdateStatus(c.Request.Context(), t.ID, req.Status); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		apierr.InternalError(c, "Failed to update status")
 		return
 	}
 

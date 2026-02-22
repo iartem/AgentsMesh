@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,8 +49,7 @@ func APIKeyAuthMiddleware(apiKeyValidator APIKeyValidator, orgService Organizati
 	return func(c *gin.Context) {
 		rawKey := extractAPIKey(c)
 		if rawKey == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "API key is required"})
-			c.Abort()
+			apierr.AbortUnauthorized(c, apierr.AUTH_REQUIRED, "API key is required")
 			return
 		}
 
@@ -65,22 +64,19 @@ func APIKeyAuthMiddleware(apiKeyValidator APIKeyValidator, orgService Organizati
 		// Resolve organization from :slug path parameter
 		orgSlug := c.Param("slug")
 		if orgSlug == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Organization slug is required"})
-			c.Abort()
+			apierr.AbortBadRequest(c, apierr.VALIDATION_FAILED, "Organization slug is required")
 			return
 		}
 
 		org, err := orgService.GetBySlug(c.Request.Context(), orgSlug)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
-			c.Abort()
+			apierr.AbortNotFound(c, apierr.RESOURCE_NOT_FOUND, "Organization not found")
 			return
 		}
 
 		// Verify key belongs to the requested organization
 		if org.GetID() != result.OrganizationID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "API key does not belong to this organization"})
-			c.Abort()
+			apierr.AbortForbidden(c, apierr.API_KEY_ORG_MISMATCH, "API key does not belong to this organization")
 			return
 		}
 
@@ -131,8 +127,10 @@ func RequireScope(scopes ...string) gin.HandlerFunc {
 
 		akCtx, ok := akCtxRaw.(*APIKeyContext)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid API key context"})
-			c.Abort()
+			c.AbortWithStatusJSON(500, apierr.ErrorResponse{
+				Error: "Invalid API key context",
+				Code:  apierr.INTERNAL_ERROR,
+			})
 			return
 		}
 
@@ -145,11 +143,11 @@ func RequireScope(scopes ...string) gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(http.StatusForbidden, gin.H{
+		c.AbortWithStatusJSON(403, gin.H{
 			"error":           "Insufficient scope",
+			"code":            apierr.INSUFFICIENT_SCOPE,
 			"required_scopes": scopes,
 		})
-		c.Abort()
 	}
 }
 
@@ -186,12 +184,12 @@ func extractAPIKey(c *gin.Context) string {
 func handleAPIKeyError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrAPIKeyNotFound):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
+		apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Invalid API key")
 	case errors.Is(err, ErrAPIKeyDisabled):
-		c.JSON(http.StatusForbidden, gin.H{"error": "API key is disabled"})
+		apierr.Forbidden(c, apierr.API_KEY_DISABLED, "API key is disabled")
 	case errors.Is(err, ErrAPIKeyExpired):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "API key has expired"})
+		apierr.Unauthorized(c, apierr.TOKEN_EXPIRED, "API key has expired")
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate API key"})
+		apierr.InternalError(c, "Failed to validate API key")
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -44,7 +45,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		slog.Error("Failed to read webhook body", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "failed to read request body")
 		return
 	}
 
@@ -52,7 +53,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 	signature := c.GetHeader("Stripe-Signature")
 	if signature == "" {
 		slog.Warn("Missing Stripe-Signature header")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing signature"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "missing signature")
 		return
 	}
 
@@ -60,7 +61,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 	event, err := h.provider.HandleWebhook(c.Request.Context(), payload, signature)
 	if err != nil {
 		slog.Error("Failed to validate webhook", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid webhook signature"})
+		apierr.InvalidInput(c, "invalid webhook signature")
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 				"error", err,
 				"event_id", event.EventID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+			apierr.InternalError(c, "failed to process event")
 			return
 		}
 
@@ -87,7 +88,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 				"error", err,
 				"event_id", event.EventID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+			apierr.InternalError(c, "failed to process event")
 			return
 		}
 
@@ -97,7 +98,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 				"error", err,
 				"event_id", event.EventID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+			apierr.InternalError(c, "failed to process event")
 			return
 		}
 
@@ -107,7 +108,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 				"error", err,
 				"event_id", event.EventID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+			apierr.InternalError(c, "failed to process event")
 			return
 		}
 
@@ -117,7 +118,7 @@ func (h *StripeWebhookHandler) Handle(c *gin.Context) {
 				"error", err,
 				"event_id", event.EventID,
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+			apierr.InternalError(c, "failed to process event")
 			return
 		}
 

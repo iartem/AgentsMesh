@@ -9,6 +9,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 )
 
 // TerminalConnectHandler handles terminal connection requests via Relay
@@ -54,37 +55,34 @@ func (h *TerminalConnectHandler) GetTerminalConnection(c *gin.Context) {
 
 	// Check if relay is available
 	if h.relayManager == nil || !h.relayManager.HasHealthyRelays() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "relay_not_available",
-			"message": "Terminal relay service is not available",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Terminal relay service is not available")
 		return
 	}
 
 	// Get pod info
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	// Check organization access
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	// Check pod is active
 	if !pod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 		return
 	}
 
 	// Get user ID
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "User not found")
 		return
 	}
 
@@ -92,10 +90,7 @@ func (h *TerminalConnectHandler) GetTerminalConnection(c *gin.Context) {
 	// The runner region is not used anymore, org affinity provides stable relay selection
 	relayInfo := h.relayManager.SelectRelayForPod(tenant.OrganizationSlug)
 	if relayInfo == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "no_relay_available",
-			"message": "No healthy relay available",
-		})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "No healthy relay available")
 		return
 	}
 
@@ -113,7 +108,7 @@ func (h *TerminalConnectHandler) GetTerminalConnection(c *gin.Context) {
 			time.Hour,
 		)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate runner token"})
+			apierr.InternalError(c, "Failed to generate runner token")
 			return
 		}
 
@@ -142,7 +137,7 @@ func (h *TerminalConnectHandler) GetTerminalConnection(c *gin.Context) {
 		time.Hour,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		apierr.InternalError(c, "Failed to generate token")
 		return
 	}
 

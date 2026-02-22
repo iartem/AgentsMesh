@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	agentService "github.com/anthropics/agentsmesh/backend/internal/service/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,7 +50,7 @@ func (h *UserAgentCredentialHandler) ListProfiles(c *gin.Context) {
 
 	profiles, err := h.credentialSvc.ListCredentialProfiles(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list credential profiles"})
+		apierr.InternalError(c, "Failed to list credential profiles")
 		return
 	}
 
@@ -63,13 +64,13 @@ func (h *UserAgentCredentialHandler) ListProfilesForAgentType(c *gin.Context) {
 
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent_type_id"})
+		apierr.InvalidInput(c, "Invalid agent_type_id")
 		return
 	}
 
 	profiles, err := h.credentialSvc.ListCredentialProfilesForAgentType(c.Request.Context(), userID, agentTypeID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list credential profiles"})
+		apierr.InternalError(c, "Failed to list credential profiles")
 		return
 	}
 
@@ -107,13 +108,13 @@ func (h *UserAgentCredentialHandler) CreateProfile(c *gin.Context) {
 
 	agentTypeID, err := strconv.ParseInt(c.Param("agent_type_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent_type_id"})
+		apierr.InvalidInput(c, "Invalid agent_type_id")
 		return
 	}
 
 	var req CreateCredentialProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -129,11 +130,11 @@ func (h *UserAgentCredentialHandler) CreateProfile(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case agentService.ErrAgentTypeNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Agent type not found"})
+			apierr.ResourceNotFound(c, "Agent type not found")
 		case agentService.ErrCredentialProfileExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Profile with this name already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Profile with this name already exists")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create profile: " + err.Error()})
+			apierr.InternalError(c, "Failed to create profile: "+err.Error())
 		}
 		return
 	}
@@ -148,17 +149,17 @@ func (h *UserAgentCredentialHandler) GetProfile(c *gin.Context) {
 
 	profileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		apierr.InvalidInput(c, "Invalid profile ID")
 		return
 	}
 
 	profile, err := h.credentialSvc.GetCredentialProfile(c.Request.Context(), userID, profileID)
 	if err != nil {
 		if err == agentService.ErrCredentialProfileNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			apierr.ResourceNotFound(c, "Profile not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get profile"})
+		apierr.InternalError(c, "Failed to get profile")
 		return
 	}
 
@@ -182,13 +183,13 @@ func (h *UserAgentCredentialHandler) UpdateProfile(c *gin.Context) {
 
 	profileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		apierr.InvalidInput(c, "Invalid profile ID")
 		return
 	}
 
 	var req UpdateCredentialProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -204,11 +205,11 @@ func (h *UserAgentCredentialHandler) UpdateProfile(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case agentService.ErrCredentialProfileNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			apierr.ResourceNotFound(c, "Profile not found")
 		case agentService.ErrCredentialProfileExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Profile with this name already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Profile with this name already exists")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+			apierr.InternalError(c, "Failed to update profile")
 		}
 		return
 	}
@@ -223,17 +224,17 @@ func (h *UserAgentCredentialHandler) DeleteProfile(c *gin.Context) {
 
 	profileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		apierr.InvalidInput(c, "Invalid profile ID")
 		return
 	}
 
 	err = h.credentialSvc.DeleteCredentialProfile(c.Request.Context(), userID, profileID)
 	if err != nil {
 		if err == agentService.ErrCredentialProfileNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			apierr.ResourceNotFound(c, "Profile not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete profile"})
+		apierr.InternalError(c, "Failed to delete profile")
 		return
 	}
 
@@ -247,17 +248,17 @@ func (h *UserAgentCredentialHandler) SetDefault(c *gin.Context) {
 
 	profileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		apierr.InvalidInput(c, "Invalid profile ID")
 		return
 	}
 
 	profile, err := h.credentialSvc.SetDefaultCredentialProfile(c.Request.Context(), userID, profileID)
 	if err != nil {
 		if err == agentService.ErrCredentialProfileNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			apierr.ResourceNotFound(c, "Profile not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default"})
+		apierr.InternalError(c, "Failed to set default")
 		return
 	}
 

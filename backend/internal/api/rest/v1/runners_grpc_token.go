@@ -7,6 +7,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,13 +23,13 @@ func (h *GRPCRunnerHandler) GenerateGRPCToken(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	if tenant == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -49,7 +50,7 @@ func (h *GRPCRunnerHandler) GenerateGRPCToken(c *gin.Context) {
 		serverURL,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		apierr.InternalError(c, "Failed to generate token")
 		return
 	}
 
@@ -67,19 +68,19 @@ func (h *GRPCRunnerHandler) GenerateGRPCToken(c *gin.Context) {
 func (h *GRPCRunnerHandler) ListGRPCTokens(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 	if tenant == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	tokens, err := h.runnerService.ListGRPCRegistrationTokens(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tokens"})
+		apierr.InternalError(c, "Failed to list tokens")
 		return
 	}
 
@@ -92,28 +93,28 @@ func (h *GRPCRunnerHandler) ListGRPCTokens(c *gin.Context) {
 func (h *GRPCRunnerHandler) DeleteGRPCToken(c *gin.Context) {
 	tokenID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token ID"})
+		apierr.InvalidInput(c, "Invalid token ID")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if tenant == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	if err := h.runnerService.DeleteGRPCRegistrationToken(c.Request.Context(), tokenID); err != nil {
 		if errors.Is(err, runner.ErrGRPCTokenNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+			apierr.ResourceNotFound(c, "Token not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete token"})
+		apierr.InternalError(c, "Failed to delete token")
 		return
 	}
 
@@ -126,7 +127,7 @@ func (h *GRPCRunnerHandler) DeleteGRPCToken(c *gin.Context) {
 func (h *GRPCRunnerHandler) RegisterWithToken(c *gin.Context) {
 	var req RegisterWithTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -141,20 +142,17 @@ func (h *GRPCRunnerHandler) RegisterWithToken(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case runner.ErrInvalidToken:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Invalid token")
 		case runner.ErrTokenExpired:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Token expired")
 		case runner.ErrTokenExhausted:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token usage exhausted"})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Token usage exhausted")
 		case runner.ErrRunnerAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "Runner with this node_id already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Runner with this node_id already exists")
 		case runner.ErrRunnerQuotaExceeded:
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error": "Runner quota exceeded",
-				"code":  "RUNNER_QUOTA_EXCEEDED",
-			})
+			apierr.PaymentRequired(c, apierr.RUNNER_QUOTA_EXCEEDED, "Runner quota exceeded")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register runner"})
+			apierr.InternalError(c, "Failed to register runner")
 		}
 		return
 	}

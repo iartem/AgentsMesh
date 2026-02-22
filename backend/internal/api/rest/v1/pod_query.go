@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +21,7 @@ type ListPodsRequest struct {
 func (h *PodHandler) ListPods(c *gin.Context) {
 	var req ListPodsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -39,7 +40,7 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 		req.Offset,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list pods"})
+		apierr.InternalError(c, "Failed to list pods")
 		return
 	}
 
@@ -58,13 +59,13 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -79,18 +80,18 @@ func (h *PodHandler) GetPodConnection(c *gin.Context) {
 
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
+		apierr.ResourceNotFound(c, "Pod not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if pod.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if !pod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 		return
 	}
 
@@ -107,13 +108,13 @@ func (h *PodHandler) GetPodConnection(c *gin.Context) {
 func (h *PodHandler) ListPodsByTicket(c *gin.Context) {
 	ticketID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		apierr.InvalidInput(c, "Invalid ticket ID")
 		return
 	}
 
 	pods, err := h.podService.GetPodsByTicket(c.Request.Context(), ticketID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list pods"})
+		apierr.InternalError(c, "Failed to list pods")
 		return
 	}
 

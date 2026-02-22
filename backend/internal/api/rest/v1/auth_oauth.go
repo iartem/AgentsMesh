@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,14 +21,14 @@ func (h *AuthHandler) OAuthRedirect(provider string) gin.HandlerFunc {
 		// Get OAuth provider configuration
 		oauthCfg := h.getOAuthConfig(provider)
 		if oauthCfg == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "OAuth provider not configured"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "OAuth provider not configured")
 			return
 		}
 
 		// Generate state with redirect info
 		state, err := h.authService.GenerateOAuthState(c.Request.Context(), provider, redirectTo)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate OAuth state"})
+			apierr.InternalError(c, "Failed to generate OAuth state")
 			return
 		}
 
@@ -46,8 +47,7 @@ func (h *AuthHandler) OAuthCallback(provider string) gin.HandlerFunc {
 		if code == "" {
 			errorMsg := c.Query("error")
 			errorDesc := c.Query("error_description")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":       errorMsg,
+			apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, errorMsg, gin.H{
 				"description": errorDesc,
 			})
 			return
@@ -56,28 +56,28 @@ func (h *AuthHandler) OAuthCallback(provider string) gin.HandlerFunc {
 		// Validate state and get redirect URL
 		redirectTo, err := h.authService.ValidateOAuthState(c.Request.Context(), state)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired state"})
+			apierr.InvalidInput(c, "Invalid or expired state")
 			return
 		}
 
 		// Get OAuth provider configuration
 		oauthCfg := h.getOAuthConfig(provider)
 		if oauthCfg == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "OAuth provider not configured"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "OAuth provider not configured")
 			return
 		}
 
 		// Exchange code for token
 		token, err := oauthCfg.Exchange(c.Request.Context(), code)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange OAuth code"})
+			apierr.InternalError(c, "Failed to exchange OAuth code")
 			return
 		}
 
 		// Get user info from provider
 		userInfo, err := oauthCfg.GetUserInfo(c.Request.Context(), token.AccessToken)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+			apierr.InternalError(c, "Failed to get user info")
 			return
 		}
 
@@ -94,7 +94,7 @@ func (h *AuthHandler) OAuthCallback(provider string) gin.HandlerFunc {
 			ExpiresAt:      &token.ExpiresAt,
 		})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "OAuth authentication failed"})
+			apierr.InternalError(c, "OAuth authentication failed")
 			return
 		}
 

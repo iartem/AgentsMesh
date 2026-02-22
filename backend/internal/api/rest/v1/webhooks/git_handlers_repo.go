@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +14,7 @@ import (
 func (r *WebhookRouter) handleGitLabWebhookWithRepo(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("repo_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 	orgSlug := c.Param("org_slug")
@@ -25,20 +26,14 @@ func (r *WebhookRouter) handleGitLabWebhookWithRepo(c *gin.Context) {
 		if err != nil || !valid {
 			// Fallback to global secret
 			if r.cfg.Webhook.GitLabSecret == "" || token != r.cfg.Webhook.GitLabSecret {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"status": "error",
-					"error":  "invalid webhook token",
-				})
+				apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook token")
 				return
 			}
 		}
 	} else if r.cfg.Webhook.GitLabSecret != "" {
 		token := c.GetHeader("X-Gitlab-Token")
 		if token != r.cfg.Webhook.GitLabSecret {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook token",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook token")
 			return
 		}
 	}
@@ -51,7 +46,7 @@ func (r *WebhookRouter) handleGitLabWebhookWithRepo(c *gin.Context) {
 func (r *WebhookRouter) handleGitHubWebhookWithRepo(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("repo_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 	orgSlug := c.Param("org_slug")
@@ -71,10 +66,7 @@ func (r *WebhookRouter) handleGitHubWebhookWithRepo(c *gin.Context) {
 	// Fallback to global secret if repo-specific verification failed
 	if !verified && r.cfg.Webhook.GitHubSecret != "" {
 		if !r.verifyGitHubSignature(c, r.cfg.Webhook.GitHubSecret) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook signature",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook signature")
 			return
 		}
 	}
@@ -87,7 +79,7 @@ func (r *WebhookRouter) handleGitHubWebhookWithRepo(c *gin.Context) {
 func (r *WebhookRouter) handleGiteeWebhookWithRepo(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("repo_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 	orgSlug := c.Param("org_slug")
@@ -106,10 +98,7 @@ func (r *WebhookRouter) handleGiteeWebhookWithRepo(c *gin.Context) {
 	// Fallback to global secret if repo-specific verification failed
 	if !verified && r.cfg.Webhook.GiteeSecret != "" {
 		if !r.verifyGiteeSignature(c, r.cfg.Webhook.GiteeSecret) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  "invalid webhook signature",
-			})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "invalid webhook signature")
 			return
 		}
 	}
@@ -125,10 +114,7 @@ func (r *WebhookRouter) processWebhookWithRepo(c *gin.Context, provider, orgSlug
 			"provider", provider,
 			"repo_id", repoID,
 			"error", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status": "error",
-			"error":  "invalid JSON payload",
-		})
+		apierr.BadRequest(c, apierr.INVALID_INPUT, "invalid JSON payload")
 		return
 	}
 
@@ -163,10 +149,7 @@ func (r *WebhookRouter) processWebhookWithRepo(c *gin.Context, provider, orgSlug
 			r.logger.Error("repository not found for webhook",
 				"repo_id", repoID,
 				"error", err)
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": "error",
-				"error":  fmt.Sprintf("repository not found: %d", repoID),
-			})
+			apierr.ResourceNotFound(c, fmt.Sprintf("repository not found: %d", repoID))
 			return
 		}
 		ctx.OrganizationID = repo.OrganizationID
@@ -209,10 +192,7 @@ func (r *WebhookRouter) processWebhookWithRepo(c *gin.Context, provider, orgSlug
 			"object_kind", objectKind,
 			"repo_id", repoID,
 			"error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": "error",
-			"error":  err.Error(),
-		})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

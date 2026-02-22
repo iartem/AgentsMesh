@@ -2,21 +2,21 @@ package v1
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingService "github.com/anthropics/agentsmesh/backend/internal/service/billing"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
 // CreateCheckoutRequest represents a checkout request
 type CreateCheckoutRequest struct {
 	OrderType    string `json:"order_type" binding:"required,oneof=subscription seat_purchase plan_upgrade renewal"`
-	PlanName     string `json:"plan_name"`              // Required for subscription/plan_upgrade
-	BillingCycle string `json:"billing_cycle"`          // monthly or yearly
-	Seats        int    `json:"seats"`                  // Required for seat_purchase
-	Provider     string `json:"provider"`               // stripe, alipay, wechat (auto-selected if not provided)
+	PlanName     string `json:"plan_name"`     // Required for subscription/plan_upgrade
+	BillingCycle string `json:"billing_cycle"` // monthly or yearly
+	Seats        int    `json:"seats"`         // Required for seat_purchase
+	Provider     string `json:"provider"`      // stripe, alipay, wechat (auto-selected if not provided)
 	SuccessURL   string `json:"success_url" binding:"required"`
 	CancelURL    string `json:"cancel_url" binding:"required"`
 }
@@ -27,7 +27,7 @@ func (h *BillingHandler) CreateCheckout(c *gin.Context) {
 
 	// Only owners can create checkouts
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
@@ -36,7 +36,7 @@ func (h *BillingHandler) CreateCheckout(c *gin.Context) {
 	if passedReq, exists := c.Get("checkout_request"); exists {
 		req = passedReq.(CreateCheckoutRequest)
 	} else if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -54,11 +54,11 @@ func (h *BillingHandler) CreateCheckout(c *gin.Context) {
 func (h *BillingHandler) validateAndCalculateCheckout(c *gin.Context, tenant *middleware.TenantContext, req *CreateCheckoutRequest) (*billingService.PriceCalculation, string, interface{}, error) {
 	// Validate request based on order type
 	if (req.OrderType == billing.OrderTypeSubscription || req.OrderType == billing.OrderTypePlanUpgrade) && req.PlanName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "plan_name is required for subscription/plan_upgrade"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "plan_name is required for subscription/plan_upgrade")
 		return nil, "", nil, fmt.Errorf("validation failed")
 	}
 	if req.OrderType == billing.OrderTypeSeatPurchase && req.Seats <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "seats must be positive for seat_purchase"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "seats must be positive for seat_purchase")
 		return nil, "", nil, fmt.Errorf("validation failed")
 	}
 
@@ -70,7 +70,7 @@ func (h *BillingHandler) validateAndCalculateCheckout(c *gin.Context, tenant *mi
 	// Get payment factory
 	factory := h.billingService.GetPaymentFactory()
 	if factory == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "payment service not configured"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "payment service not configured")
 		return nil, "", nil, fmt.Errorf("no payment factory")
 	}
 
@@ -92,7 +92,7 @@ func (h *BillingHandler) validateAndCalculateCheckout(c *gin.Context, tenant *mi
 	}
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return nil, "", nil, err
 	}
 
@@ -113,7 +113,7 @@ func (h *BillingHandler) calculateCheckoutPrice(c *gin.Context, tenant *middlewa
 	case billing.OrderTypeSubscription:
 		priceCalc, err := h.billingService.CalculateSubscriptionPrice(ctx, req.PlanName, req.BillingCycle, 1)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan or billing cycle"})
+			apierr.InvalidInput(c, "invalid plan or billing cycle")
 			return nil, err
 		}
 		return priceCalc, nil
@@ -121,7 +121,7 @@ func (h *BillingHandler) calculateCheckoutPrice(c *gin.Context, tenant *middlewa
 	case billing.OrderTypePlanUpgrade:
 		priceCalc, err := h.billingService.CalculateUpgradePrice(ctx, tenant.OrganizationID, req.PlanName)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("upgrade calculation failed: %v", err)})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, fmt.Sprintf("upgrade calculation failed: %v", err))
 			return nil, err
 		}
 		return priceCalc, nil
@@ -135,7 +135,7 @@ func (h *BillingHandler) calculateCheckoutPrice(c *gin.Context, tenant *middlewa
 			} else if err == billingService.ErrQuotaExceeded {
 				errMsg = "exceeds maximum seats for this plan"
 			}
-			c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, errMsg)
 			return nil, err
 		}
 		return priceCalc, nil
@@ -143,13 +143,13 @@ func (h *BillingHandler) calculateCheckoutPrice(c *gin.Context, tenant *middlewa
 	case billing.OrderTypeRenewal:
 		priceCalc, err := h.billingService.CalculateRenewalPrice(ctx, tenant.OrganizationID, req.BillingCycle)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "no subscription to renew"})
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "no subscription to renew")
 			return nil, err
 		}
 		return priceCalc, nil
 
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order type"})
+		apierr.InvalidInput(c, "invalid order type")
 		return nil, fmt.Errorf("invalid order type")
 	}
 }

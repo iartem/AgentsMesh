@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,13 +14,13 @@ import (
 func (h *RepositoryHandler) SyncBranches(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
 	var req SyncBranchesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -27,18 +28,18 @@ func (h *RepositoryHandler) SyncBranches(c *gin.Context) {
 
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	branches, err := h.repositoryService.ListBranches(c.Request.Context(), repoID, req.AccessToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sync branches"})
+		apierr.InternalError(c, "Failed to sync branches")
 		return
 	}
 
@@ -50,7 +51,7 @@ func (h *RepositoryHandler) SyncBranches(c *gin.Context) {
 func (h *RepositoryHandler) ListBranches(c *gin.Context) {
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid repository ID"})
+		apierr.InvalidInput(c, "Invalid repository ID")
 		return
 	}
 
@@ -58,12 +59,12 @@ func (h *RepositoryHandler) ListBranches(c *gin.Context) {
 
 	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Repository not found"})
+		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	if repo.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
@@ -73,13 +74,13 @@ func (h *RepositoryHandler) ListBranches(c *gin.Context) {
 		accessToken = c.GetHeader("X-Git-Access-Token")
 	}
 	if accessToken == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Access token required"})
+		apierr.BadRequest(c, apierr.MISSING_REQUIRED, "Access token required")
 		return
 	}
 
 	branches, err := h.repositoryService.ListBranches(c.Request.Context(), repoID, accessToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list branches"})
+		apierr.InternalError(c, "Failed to list branches")
 		return
 	}
 

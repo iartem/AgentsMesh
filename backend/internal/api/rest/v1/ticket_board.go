@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,7 +33,7 @@ func (h *TicketHandler) GetActiveTickets(c *gin.Context) {
 
 	tickets, err := h.ticketService.GetActiveTickets(c.Request.Context(), tenant.OrganizationID, repoID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get active tickets"})
+		apierr.InternalError(c, "Failed to get active tickets")
 		return
 	}
 
@@ -58,7 +59,7 @@ func (h *TicketHandler) GetBoard(c *gin.Context) {
 		Limit:          50,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get board"})
+		apierr.InternalError(c, "Failed to get board")
 		return
 	}
 
@@ -74,13 +75,13 @@ func (h *TicketHandler) GetSubTickets(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	subTickets, err := h.ticketService.GetChildTickets(c.Request.Context(), t.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get sub-tickets"})
+		apierr.InternalError(c, "Failed to get sub-tickets")
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ import (
 func (h *AgentHandler) CreateCustomAgent(c *gin.Context) {
 	var req CreateCustomAgentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -23,7 +24,7 @@ func (h *AgentHandler) CreateCustomAgent(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
@@ -63,10 +64,10 @@ func (h *AgentHandler) CreateCustomAgent(c *gin.Context) {
 	})
 	if err != nil {
 		if err == agent.ErrAgentSlugExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Agent slug already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Agent slug already exists")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create custom agent"})
+		apierr.InternalError(c, "Failed to create custom agent")
 		return
 	}
 
@@ -78,13 +79,13 @@ func (h *AgentHandler) CreateCustomAgent(c *gin.Context) {
 func (h *AgentHandler) UpdateCustomAgent(c *gin.Context) {
 	customAgentID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid custom agent ID"})
+		apierr.InvalidInput(c, "Invalid custom agent ID")
 		return
 	}
 
 	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -92,13 +93,13 @@ func (h *AgentHandler) UpdateCustomAgent(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	customAgent, err := h.agentTypeSvc.UpdateCustomAgentType(c.Request.Context(), customAgentID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update custom agent"})
+		apierr.InternalError(c, "Failed to update custom agent")
 		return
 	}
 
@@ -110,7 +111,7 @@ func (h *AgentHandler) UpdateCustomAgent(c *gin.Context) {
 func (h *AgentHandler) DeleteCustomAgent(c *gin.Context) {
 	customAgentID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid custom agent ID"})
+		apierr.InvalidInput(c, "Invalid custom agent ID")
 		return
 	}
 
@@ -118,12 +119,12 @@ func (h *AgentHandler) DeleteCustomAgent(c *gin.Context) {
 
 	// Check admin permission
 	if tenant.UserRole != "owner" && tenant.UserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin permission required"})
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
 	if err := h.agentTypeSvc.DeleteCustomAgentType(c.Request.Context(), customAgentID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete custom agent"})
+		apierr.InternalError(c, "Failed to delete custom agent")
 		return
 	}
 

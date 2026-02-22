@@ -6,16 +6,17 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
 // CreatePodRequest represents pod creation request
 type CreatePodRequest struct {
-	RunnerID          int64   `json:"runner_id"`           // Required for new pods, optional when resuming (inherited from source)
-	AgentTypeID       *int64  `json:"agent_type_id"`       // Required unless resuming (then inherited from source pod)
+	RunnerID          int64   `json:"runner_id"`     // Required for new pods, optional when resuming (inherited from source)
+	AgentTypeID       *int64  `json:"agent_type_id"` // Required unless resuming (then inherited from source pod)
 	CustomAgentTypeID *int64  `json:"custom_agent_type_id"`
 	RepositoryID      *int64  `json:"repository_id"`
-	RepositoryURL     *string `json:"repository_url"`    // Direct repository URL (takes precedence over repository_id)
+	RepositoryURL     *string `json:"repository_url"` // Direct repository URL (takes precedence over repository_id)
 	TicketID          *int64  `json:"ticket_id"`
 	TicketIdentifier  *string `json:"ticket_identifier"` // Direct ticket identifier (takes precedence over ticket_id)
 	InitialPrompt     string  `json:"initial_prompt"`
@@ -45,7 +46,7 @@ type CreatePodRequest struct {
 func (h *PodHandler) CreatePod(c *gin.Context) {
 	var req CreatePodRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -96,44 +97,44 @@ func mapOrchestratorErrorToHTTP(c *gin.Context, err error) {
 	switch {
 	// Validation errors → 400
 	case errors.Is(err, agentpod.ErrMissingRunnerID):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "MISSING_RUNNER_ID"})
+		apierr.BadRequest(c, apierr.MISSING_RUNNER_ID, err.Error())
 	case errors.Is(err, agentpod.ErrMissingAgentTypeID):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "MISSING_AGENT_TYPE_ID"})
+		apierr.BadRequest(c, apierr.MISSING_AGENT_TYPE_ID, err.Error())
 	case errors.Is(err, agentpod.ErrSourcePodNotTerminated):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Can only resume from terminated, completed, or orphaned pods", "code": "SOURCE_POD_NOT_TERMINATED"})
+		apierr.BadRequest(c, apierr.SOURCE_POD_NOT_TERMINATED, "Can only resume from terminated, completed, or orphaned pods")
 	case errors.Is(err, agentpod.ErrResumeRunnerMismatch):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Resume requires same runner as source pod (Sandbox is local to runner)", "code": "RESUME_RUNNER_MISMATCH"})
+		apierr.BadRequest(c, apierr.RESUME_RUNNER_MISMATCH, "Resume requires same runner as source pod (Sandbox is local to runner)")
 
 	// Billing errors → 402
 	case errors.Is(err, ErrQuotaExceeded):
-		c.JSON(http.StatusPaymentRequired, gin.H{"error": "Concurrent pod quota exceeded. Please upgrade your plan or terminate existing pods.", "code": "CONCURRENT_POD_QUOTA_EXCEEDED"})
+		apierr.PaymentRequired(c, apierr.CONCURRENT_POD_QUOTA_EXCEEDED, "Concurrent pod quota exceeded. Please upgrade your plan or terminate existing pods.")
 	case errors.Is(err, ErrSubscriptionFrozen):
-		c.JSON(http.StatusPaymentRequired, gin.H{"error": "Your subscription has expired. Please renew to continue.", "code": "SUBSCRIPTION_FROZEN"})
+		apierr.PaymentRequired(c, apierr.SUBSCRIPTION_FROZEN, "Your subscription has expired. Please renew to continue.")
 
 	// Access denied → 403
 	case errors.Is(err, agentpod.ErrSourcePodAccessDenied):
-		c.JSON(http.StatusForbidden, gin.H{"error": "Source pod belongs to different organization", "code": "SOURCE_POD_ACCESS_DENIED"})
+		apierr.Forbidden(c, apierr.SOURCE_POD_ACCESS_DENIED, "Source pod belongs to different organization")
 
 	// Not found → 404
 	case errors.Is(err, agentpod.ErrSourcePodNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "Source pod not found for resume", "code": "SOURCE_POD_NOT_FOUND"})
+		apierr.NotFound(c, apierr.SOURCE_POD_NOT_FOUND, "Source pod not found for resume")
 
 	// Conflict → 409
 	case errors.Is(err, agentpod.ErrSourcePodAlreadyResumed):
-		c.JSON(http.StatusConflict, gin.H{"error": "Source pod has already been resumed by another active pod", "code": "SOURCE_POD_ALREADY_RESUMED"})
+		apierr.Conflict(c, apierr.SOURCE_POD_ALREADY_RESUMED, "Source pod has already been resumed by another active pod")
 	case errors.Is(err, ErrSandboxAlreadyResumed):
-		c.JSON(http.StatusConflict, gin.H{"error": "Sandbox has already been resumed by another active pod", "code": "SANDBOX_ALREADY_RESUMED"})
+		apierr.Conflict(c, apierr.SANDBOX_ALREADY_RESUMED, "Sandbox has already been resumed by another active pod")
 
 	// No available runner → 503
 	case errors.Is(err, agentpod.ErrNoAvailableRunner):
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "No available runner supports the requested agent type", "code": "NO_AVAILABLE_RUNNER"})
+		apierr.ServiceUnavailable(c, apierr.NO_AVAILABLE_RUNNER, "No available runner supports the requested agent type")
 
 	// Config build failure → 500
 	case errors.Is(err, agentpod.ErrConfigBuildFailed):
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build pod configuration", "code": "POD_CONFIG_BUILD_FAILED"})
+		apierr.Respond(c, http.StatusInternalServerError, apierr.POD_CONFIG_BUILD_FAILED, "Failed to build pod configuration")
 
 	// Fallback → 500
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pod"})
+		apierr.InternalError(c, "Failed to create pod")
 	}
 }

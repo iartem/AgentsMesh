@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,13 +13,13 @@ import (
 func (h *ChannelHandler) GetDocument(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
@@ -40,25 +41,25 @@ type UpdateDocumentRequest struct {
 func (h *ChannelHandler) UpdateDocument(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	var req UpdateDocumentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	_, err = h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	_, err = h.channelService.UpdateChannel(c.Request.Context(), channelID, nil, nil, &req.Document)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update document"})
+		apierr.InternalError(c, "Failed to update document")
 		return
 	}
 

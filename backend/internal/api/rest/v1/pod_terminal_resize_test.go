@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -60,7 +61,7 @@ func TestResizeTerminal_PodNotActive(t *testing.T) {
 		`{"cols": 80, "rows": 24}`)
 
 	if !terminatedPod.IsActive() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pod is not active"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Pod is not active")
 	}
 
 	if w.Code != http.StatusBadRequest {
@@ -83,7 +84,7 @@ func TestResizeTerminal_RouteError(t *testing.T) {
 	tr, _ := h.terminalRouter.(TerminalRouterInterface)
 	err := tr.RouteResize("test-pod", 80, 24)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resize terminal: " + err.Error()})
+		apierr.InternalError(c, "Failed to resize terminal: "+err.Error())
 	}
 
 	if w.Code != http.StatusInternalServerError {
@@ -97,7 +98,7 @@ func TestResizeTerminal_InvalidJSON(t *testing.T) {
 
 	var req TerminalResizeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 	}
 
 	if w.Code != http.StatusBadRequest {
@@ -122,7 +123,7 @@ func TestResizeTerminal_InvalidDimensions(t *testing.T) {
 
 			var req TerminalResizeRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				apierr.ValidationError(c, err.Error())
 			}
 
 			if w.Code != http.StatusBadRequest {
@@ -247,7 +248,7 @@ func TestTerminalInputRequest_Validation(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid input", "ls -la", false},
-		{"empty input", "", true}, // required field
+		{"empty input", "", true},          // required field
 		{"special chars", "\x1b[A", false}, // arrow key
 		{"newline", "command\n", false},
 	}

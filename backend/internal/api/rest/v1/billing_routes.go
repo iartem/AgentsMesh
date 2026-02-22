@@ -16,9 +16,9 @@ func RegisterBillingHandlers(rg *gin.RouterGroup, billingService *billingsvc.Ser
 	rg.PUT("/subscription", handler.UpdateSubscription)
 	rg.DELETE("/subscription", handler.CancelSubscription)
 	rg.GET("/plans", handler.ListPlans)
-	rg.GET("/plans/prices", handler.ListPlansWithPrices)           // List all plans with prices for currency
-	rg.GET("/plans/:name/prices", handler.GetPlanPrices)           // Get prices for specific plan
-	rg.GET("/plans/:name/all-prices", handler.GetAllPlanPrices)    // Get all currency prices for specific plan
+	rg.GET("/plans/prices", handler.ListPlansWithPrices)        // List all plans with prices for currency
+	rg.GET("/plans/:name/prices", handler.GetPlanPrices)        // Get prices for specific plan
+	rg.GET("/plans/:name/all-prices", handler.GetAllPlanPrices) // Get all currency prices for specific plan
 	rg.GET("/usage", handler.GetUsage)
 	rg.GET("/usage/history", handler.GetUsageHistory)
 	rg.POST("/quota", handler.SetCustomQuota)

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,24 +14,24 @@ import (
 func (h *ChannelHandler) ArchiveChannel(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.channelService.ArchiveChannel(c.Request.Context(), channelID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to archive channel"})
+		apierr.InternalError(c, "Failed to archive channel")
 		return
 	}
 
@@ -42,24 +43,24 @@ func (h *ChannelHandler) ArchiveChannel(c *gin.Context) {
 func (h *ChannelHandler) UnarchiveChannel(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		apierr.InvalidInput(c, "Invalid channel ID")
 		return
 	}
 
 	ch, err := h.channelService.GetChannel(c.Request.Context(), channelID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		apierr.ResourceNotFound(c, "Channel not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		apierr.ForbiddenAccess(c)
 		return
 	}
 
 	if err := h.channelService.UnarchiveChannel(c.Request.Context(), channelID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unarchive channel"})
+		apierr.InternalError(c, "Failed to unarchive channel")
 		return
 	}
 

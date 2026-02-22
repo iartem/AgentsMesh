@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/promocode"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	promocodeSvc "github.com/anthropics/agentsmesh/backend/internal/service/promocode"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,7 +36,7 @@ func (h *PromoCodeHandler) Validate(c *gin.Context) {
 
 	var req ValidatePromoCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -44,7 +45,7 @@ func (h *PromoCodeHandler) Validate(c *gin.Context) {
 		OrganizationID: tenant.OrganizationID,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -63,7 +64,7 @@ func (h *PromoCodeHandler) Redeem(c *gin.Context) {
 
 	var req RedeemPromoCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -76,12 +77,12 @@ func (h *PromoCodeHandler) Redeem(c *gin.Context) {
 		UserAgent:      c.Request.UserAgent(),
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
 	if !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.MessageCode, "message_code": resp.MessageCode})
+		apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, resp.MessageCode, gin.H{"message_code": resp.MessageCode})
 		return
 	}
 
@@ -95,7 +96,7 @@ func (h *PromoCodeHandler) GetRedemptionHistory(c *gin.Context) {
 
 	history, err := h.service.GetRedemptionHistory(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -125,7 +126,7 @@ func (h *PromoCodeHandler) AdminCreate(c *gin.Context) {
 
 	var req CreatePromoCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -134,7 +135,7 @@ func (h *PromoCodeHandler) AdminCreate(c *gin.Context) {
 	if req.StartsAt != "" {
 		t, err := time.Parse(time.RFC3339, req.StartsAt)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid starts_at format, use RFC3339"})
+			apierr.InvalidInput(c, "invalid starts_at format, use RFC3339")
 			return
 		}
 		startsAt = &t
@@ -142,7 +143,7 @@ func (h *PromoCodeHandler) AdminCreate(c *gin.Context) {
 	if req.ExpiresAt != "" {
 		t, err := time.Parse(time.RFC3339, req.ExpiresAt)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expires_at format, use RFC3339"})
+			apierr.InvalidInput(c, "invalid expires_at format, use RFC3339")
 			return
 		}
 		expiresAt = &t
@@ -163,14 +164,14 @@ func (h *PromoCodeHandler) AdminCreate(c *gin.Context) {
 	})
 	if err != nil {
 		if err == promocodeSvc.ErrPromoCodeAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "promo code already exists"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "promo code already exists")
 			return
 		}
 		if err == promocodeSvc.ErrInvalidPlan {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan name"})
+			apierr.InvalidInput(c, "invalid plan name")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -205,7 +206,7 @@ func (h *PromoCodeHandler) AdminList(c *gin.Context) {
 
 	codes, total, err := h.service.List(c.Request.Context(), filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -222,13 +223,13 @@ func (h *PromoCodeHandler) AdminList(c *gin.Context) {
 func (h *PromoCodeHandler) AdminGet(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	promoCode, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+		apierr.ResourceNotFound(c, "promo code not found")
 		return
 	}
 
@@ -240,16 +241,16 @@ func (h *PromoCodeHandler) AdminGet(c *gin.Context) {
 func (h *PromoCodeHandler) AdminDeactivate(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	if err := h.service.Deactivate(c.Request.Context(), id); err != nil {
 		if err == promocodeSvc.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -261,16 +262,16 @@ func (h *PromoCodeHandler) AdminDeactivate(c *gin.Context) {
 func (h *PromoCodeHandler) AdminActivate(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		apierr.InvalidInput(c, "invalid id")
 		return
 	}
 
 	if err := h.service.Activate(c.Request.Context(), id); err != nil {
 		if err == promocodeSvc.ErrPromoCodeNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "promo code not found"})
+			apierr.ResourceNotFound(c, "promo code not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +34,7 @@ func (h *TicketHandler) ListLabels(c *gin.Context) {
 
 	labels, err := h.ticketService.ListLabels(c.Request.Context(), tenant.OrganizationID, repoID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list labels"})
+		apierr.InternalError(c, "Failed to list labels")
 		return
 	}
 
@@ -45,7 +46,7 @@ func (h *TicketHandler) ListLabels(c *gin.Context) {
 func (h *TicketHandler) CreateLabel(c *gin.Context) {
 	var req CreateLabelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -53,7 +54,7 @@ func (h *TicketHandler) CreateLabel(c *gin.Context) {
 
 	label, err := h.ticketService.CreateLabel(c.Request.Context(), tenant.OrganizationID, req.RepositoryID, req.Name, req.Color)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create label"})
+		apierr.InternalError(c, "Failed to create label")
 		return
 	}
 
@@ -71,13 +72,13 @@ type UpdateLabelRequest struct {
 func (h *TicketHandler) UpdateLabel(c *gin.Context) {
 	labelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		apierr.InvalidInput(c, "Invalid label ID")
 		return
 	}
 
 	var req UpdateLabelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -93,7 +94,7 @@ func (h *TicketHandler) UpdateLabel(c *gin.Context) {
 
 	label, err := h.ticketService.UpdateLabel(c.Request.Context(), tenant.OrganizationID, labelID, updates)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update label"})
+		apierr.InternalError(c, "Failed to update label")
 		return
 	}
 
@@ -105,14 +106,14 @@ func (h *TicketHandler) UpdateLabel(c *gin.Context) {
 func (h *TicketHandler) DeleteLabel(c *gin.Context) {
 	labelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		apierr.InvalidInput(c, "Invalid label ID")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 
 	if err := h.ticketService.DeleteLabel(c.Request.Context(), tenant.OrganizationID, labelID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete label"})
+		apierr.InternalError(c, "Failed to delete label")
 		return
 	}
 
@@ -131,7 +132,7 @@ func (h *TicketHandler) AddLabel(c *gin.Context) {
 
 	var req AddLabelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -139,12 +140,12 @@ func (h *TicketHandler) AddLabel(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.AddLabel(c.Request.Context(), t.ID, req.LabelID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add label"})
+		apierr.InternalError(c, "Failed to add label")
 		return
 	}
 
@@ -157,7 +158,7 @@ func (h *TicketHandler) RemoveLabel(c *gin.Context) {
 	identifier := c.Param("identifier")
 	labelID, err := strconv.ParseInt(c.Param("label_id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		apierr.InvalidInput(c, "Invalid label ID")
 		return
 	}
 
@@ -165,12 +166,12 @@ func (h *TicketHandler) RemoveLabel(c *gin.Context) {
 
 	t, err := h.ticketService.GetTicketByIdentifier(c.Request.Context(), tenant.OrganizationID, identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
 
 	if err := h.ticketService.RemoveLabel(c.Request.Context(), t.ID, labelID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove label"})
+		apierr.InternalError(c, "Failed to remove label")
 		return
 	}
 

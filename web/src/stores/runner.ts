@@ -115,8 +115,7 @@ export const useRunnerStore = create<RunnerState>((set) => ({
       const response = await runnerApi.createToken(data);
       return response.token;
     } catch (error: unknown) {
-      const message = getErrorMessage(error, "Failed to create token");
-      set({ error: message });
+      set({ error: getErrorMessage(error, "Failed to create token") });
       throw error;
     }
   },

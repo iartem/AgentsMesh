@@ -6,6 +6,7 @@ import (
 
 	billingdomain "github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +19,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 	// Check if LemonSqueezy is configured
 	if r.paymentFactory == nil || !r.paymentFactory.IsProviderAvailable(billingdomain.PaymentProviderLemonSqueezy) {
 		r.logger.Warn("LemonSqueezy webhook received but LemonSqueezy is not configured")
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "LemonSqueezy not configured"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "LemonSqueezy not configured")
 		return
 	}
 
@@ -26,7 +27,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		r.logger.Error("failed to read LemonSqueezy webhook body", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "failed to read request body")
 		return
 	}
 
@@ -34,7 +35,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 	signature := c.GetHeader("X-Signature")
 	if signature == "" {
 		r.logger.Warn("missing X-Signature header for LemonSqueezy webhook")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing signature"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "missing signature")
 		return
 	}
 
@@ -42,7 +43,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 	provider, err := r.paymentFactory.GetProvider(billingdomain.PaymentProviderLemonSqueezy)
 	if err != nil {
 		r.logger.Error("failed to get LemonSqueezy provider", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "provider not available"})
+		apierr.InternalError(c, "provider not available")
 		return
 	}
 
@@ -50,7 +51,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 	event, err := provider.HandleWebhook(c.Request.Context(), payload, signature)
 	if err != nil {
 		r.logger.Error("failed to validate LemonSqueezy webhook", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid webhook signature"})
+		apierr.InvalidInput(c, "invalid webhook signature")
 		return
 	}
 
@@ -70,7 +71,7 @@ func (r *WebhookRouter) handleLemonSqueezyWebhook(c *gin.Context) {
 			"event_type", event.EventType,
 			"event_id", event.EventID,
 		)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
+		apierr.InternalError(c, "failed to process event")
 		return
 	}
 

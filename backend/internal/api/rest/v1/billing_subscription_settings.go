@@ -7,6 +7,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,19 +27,19 @@ func (h *BillingHandler) CreateStripeCustomer(c *gin.Context) {
 
 	// Only owners can create Stripe customers
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req CreateStripeCustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	customerID, err := h.billingService.CreateStripeCustomer(c.Request.Context(), tenant.OrganizationID, req.Email, req.Name)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 
@@ -55,25 +56,25 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req CustomerPortalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
 	factory := h.billingService.GetPaymentFactory()
 	if factory == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "payment service not configured"})
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "payment service not configured")
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 	if sub.LemonSqueezyCustomerID != nil {
 		provider, err = factory.GetProvider(billing.PaymentProviderLemonSqueezy)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 			return
 		}
 		customerID = *sub.LemonSqueezyCustomerID
@@ -95,7 +96,7 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 	} else if sub.StripeCustomerID != nil {
 		provider, err = factory.GetProvider(billing.PaymentProviderStripe)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierr.ValidationError(c, err.Error())
 			return
 		}
 		customerID = *sub.StripeCustomerID
@@ -103,14 +104,14 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 			subscriptionID = *sub.StripeSubscriptionID
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no payment provider associated with this subscription"})
+		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "no payment provider associated with this subscription")
 		return
 	}
 
 	// Cast to SubscriptionProvider to access GetCustomerPortalURL
 	subProvider, ok := provider.(payment.SubscriptionProvider)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "provider does not support customer portal"})
+		apierr.InternalError(c, "provider does not support customer portal")
 		return
 	}
 
@@ -122,7 +123,7 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 
 	resp, err := subProvider.GetCustomerPortalURL(c.Request.Context(), portalReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to create portal session: %v", err)})
+		apierr.InternalError(c, fmt.Sprintf("failed to create portal session: %v", err))
 		return
 	}
 
@@ -139,26 +140,26 @@ func (h *BillingHandler) UpdateAutoRenew(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
 	if tenant.UserRole != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
 		return
 	}
 
 	var req UpdateAutoRenewRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	// Get current subscription to verify it exists
 	sub, err := h.billingService.GetSubscription(c.Request.Context(), tenant.OrganizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no active subscription"})
+		apierr.ResourceNotFound(c, "no active subscription")
 		return
 	}
 
 	// Update auto_renew setting
 	if err := h.billingService.SetAutoRenew(c.Request.Context(), tenant.OrganizationID, req.AutoRenew); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierr.InternalError(c, err.Error())
 		return
 	}
 

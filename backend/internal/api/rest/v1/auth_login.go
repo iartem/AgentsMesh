@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
+	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +18,7 @@ type LoginRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -25,14 +26,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	result, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		if err == auth.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+			apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Invalid email or password")
 			return
 		}
 		if err == auth.ErrUserDisabled {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Account is disabled"})
+			apierr.ForbiddenDisabled(c)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+		apierr.InternalError(c, "Authentication failed")
 		return
 	}
 
@@ -62,7 +63,7 @@ type RegisterRequest struct {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
@@ -75,14 +76,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 	if err != nil {
 		if err == auth.ErrEmailExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Email already registered")
 			return
 		}
 		if err == auth.ErrUsernameExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+			apierr.Conflict(c, apierr.ALREADY_EXISTS, "Username already taken")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration failed"})
+		apierr.InternalError(c, "Registration failed")
 		return
 	}
 
@@ -131,17 +132,17 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierr.ValidationError(c, err.Error())
 		return
 	}
 
 	result, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		if err == auth.ErrInvalidToken || err == auth.ErrInvalidRefreshToken {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+			apierr.Unauthorized(c, apierr.INVALID_TOKEN, "Invalid refresh token")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to refresh token"})
+		apierr.InternalError(c, "Failed to refresh token")
 		return
 	}
 

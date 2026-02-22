@@ -38,6 +38,9 @@ func TestProcessWebhookWithRepo_InvalidJSON(t *testing.T) {
 	if response["error"] != "invalid JSON payload" {
 		t.Errorf("unexpected error message: %v", response["error"])
 	}
+	if _, ok := response["code"]; !ok {
+		t.Error("expected 'code' field in error response")
+	}
 }
 
 func TestProcessWebhookWithRepo_RepoNotFound(t *testing.T) {
@@ -60,8 +63,8 @@ func TestProcessWebhookWithRepo_RepoNotFound(t *testing.T) {
 
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
-	if response["status"] != "error" {
-		t.Errorf("unexpected status: %v", response["status"])
+	if response["code"] != "RESOURCE_NOT_FOUND" {
+		t.Errorf("expected code 'RESOURCE_NOT_FOUND', got: %v", response["code"])
 	}
 }
 
