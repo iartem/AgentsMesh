@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -134,6 +135,9 @@ func (s *Service) AdminUpdatePlan(ctx context.Context, orgID int64, planName str
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("[AdminUpdatePlan] orgID=%d, planName=%q, sub.PlanID=%d, newPlan.ID=%d, newPlan.Name=%q",
+		orgID, planName, sub.PlanID, newPlan.ID, newPlan.Name)
 
 	// Direct update via raw SQL to avoid any GORM model/session interference
 	if err := s.db.WithContext(ctx).
