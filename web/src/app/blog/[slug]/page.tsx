@@ -17,6 +17,15 @@ interface BlogPost {
 }
 
 const blogPosts: Record<string, BlogPost> = {
+  "command-center": {
+    slug: "command-center",
+    titleKey: "blog.posts.commandCenter.title",
+    contentKey: "blog.posts.commandCenter.content",
+    date: "2026-02-23",
+    author: "AgentsMesh Team",
+    category: "Insight",
+    readTime: 10,
+  },
   "introducing-agentsmesh": {
     slug: "introducing-agentsmesh",
     titleKey: "blog.posts.introducing.title",

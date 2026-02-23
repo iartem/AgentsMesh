@@ -16,6 +16,15 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    slug: "command-center",
+    titleKey: "blog.posts.commandCenter.title",
+    excerptKey: "blog.posts.commandCenter.excerpt",
+    date: "2026-02-23",
+    author: "AgentsMesh Team",
+    category: "Insight",
+    readTime: 10,
+  },
+  {
     slug: "introducing-agentsmesh",
     titleKey: "blog.posts.introducing.title",
     excerptKey: "blog.posts.introducing.excerpt",
