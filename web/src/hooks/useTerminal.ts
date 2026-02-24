@@ -279,6 +279,42 @@ export function useTerminal(
       disposablesRef.current.push(cursorDisposable, writeDisposable);
     }
 
+    // Image paste support: intercept paste events with image data
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const blob = item.getAsFile();
+          if (!blob) continue;
+
+          if (blob.size > 2 * 1024 * 1024) {
+            console.warn('Image too large for paste (max 2MB)');
+            return;
+          }
+
+          blob.arrayBuffer().then((buffer) => {
+            const imageData = new Uint8Array(buffer);
+            const success = terminalPool.sendImage(podKey, imageData, item.type);
+            if (!success) {
+              console.warn('Failed to send image paste');
+            }
+          });
+          return; // Only handle first image
+        }
+      }
+      // No image found — let xterm.js handle normal text paste
+    };
+
+    // Listen on the terminal container div (captures before xterm's textarea)
+    const containerEl = terminalRef.current;
+    containerEl.addEventListener('paste', handlePaste, true);
+    disposablesRef.current.push({ dispose: () => containerEl.removeEventListener('paste', handlePaste, true) });
+
     // Handle input - save disposable for cleanup
     // Note: xterm.js onData fires after compositionend, so checking isComposing
     // helps filter out any edge cases where data might be sent during composition

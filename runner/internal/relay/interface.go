@@ -22,6 +22,7 @@ type RelayClient interface {
 	SetInputHandler(handler InputHandler)
 	SetResizeHandler(handler ResizeHandler)
 	SetCloseHandler(handler CloseHandler)
+	SetImagePasteHandler(handler ImagePasteHandler)
 	SetReconnectHandler(handler func())
 	SetTokenExpiredHandler(handler func() string)
 

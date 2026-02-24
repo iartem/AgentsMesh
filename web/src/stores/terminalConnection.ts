@@ -14,7 +14,7 @@ import { podApi } from "@/lib/api/pod";
  * Relay message types (binary protocol)
  * Must match relay/internal/protocol/message.go
  */
-const MsgType = {
+export const MsgType = {
   Snapshot: 0x01,           // Complete terminal snapshot
   Output: 0x02,             // Terminal output (raw PTY data)
   Input: 0x03,              // User input to terminal
@@ -24,6 +24,7 @@ const MsgType = {
   Control: 0x07,            // Control messages (JSON)
   RunnerDisconnected: 0x08, // Runner disconnected notification
   RunnerReconnected: 0x09,  // Runner reconnected notification
+  ImagePaste: 0x0a,         // Image paste from browser clipboard
 } as const;
 
 /**
@@ -63,7 +64,7 @@ export interface ConnectionHandle {
 /**
  * Encode a message with type prefix (Relay binary protocol)
  */
-function encodeMessage(msgType: number, payload: Uint8Array | string): Uint8Array {
+export function encodeMessage(msgType: number, payload: Uint8Array | string): Uint8Array {
   const payloadBytes = typeof payload === "string"
     ? new TextEncoder().encode(payload)
     : payload;
@@ -424,6 +425,23 @@ class TerminalConnectionPool {
     const message = encodeMessage(MsgType.Input, data);
     conn.ws.send(message);
     conn.lastActivity = now;
+  }
+
+  sendImage(podKey: string, imageData: Uint8Array, mimeType: string): boolean {
+    const conn = this.connections.get(podKey);
+    if (!conn || conn.ws.readyState !== WebSocket.OPEN) return false;
+    // Reject images larger than 2MB
+    if (imageData.length > 2 * 1024 * 1024) return false;
+    // Encode: [mimeType length (1 byte)][mimeType bytes][image data]
+    const mimeBytes = new TextEncoder().encode(mimeType);
+    const payload = new Uint8Array(1 + mimeBytes.length + imageData.length);
+    payload[0] = mimeBytes.length;
+    payload.set(mimeBytes, 1);
+    payload.set(imageData, 1 + mimeBytes.length);
+    const message = encodeMessage(MsgType.ImagePaste, payload);
+    conn.ws.send(message);
+    conn.lastActivity = Date.now();
+    return true;
   }
 
   sendResize(podKey: string, cols: number, rows: number): void {

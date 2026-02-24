@@ -10,6 +10,7 @@ import (
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/config"
+	"github.com/anthropics/agentsmesh/runner/internal/clipboard"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal"
 	"github.com/anthropics/agentsmesh/runner/internal/terminal/aggregator"
@@ -30,6 +31,10 @@ type PodBuilderDeps struct {
 	// ProgressSender sends pod initialization progress.
 	// Can be nil if progress reporting is not needed.
 	ProgressSender client.ProgressSender
+
+	// Clipboard provides clipboard backend for image paste support.
+	// Can be nil; if nil, clipboard support is disabled.
+	Clipboard clipboard.Backend
 }
 
 // PodBuilder builds pods using the Builder pattern.
@@ -80,6 +85,7 @@ func NewPodBuilderFromRunner(runner *Runner) *PodBuilder {
 	deps := PodBuilderDeps{
 		Config:         runner.cfg,
 		ProgressSender: runner.conn,
+		Clipboard:      runner.clipboard,
 	}
 	// Explicitly set Workspace only if not nil to avoid interface nil comparison issues
 	if runner.workspace != nil {
@@ -160,12 +166,20 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		return nil, err
 	}
 
+	// Setup clipboard backend for image paste support
+	if sandboxRoot != "" && b.deps.Clipboard != nil {
+		if err := b.deps.Clipboard.Setup(sandboxRoot); err != nil {
+			logger.Pod().Warn("Failed to setup clipboard backend", "backend", b.deps.Clipboard.Name(), "error", err)
+			// Non-fatal: image paste won't work but pod still functions
+		}
+	}
+
 	// Resolve template variables in launch args
 	resolvedArgs := b.resolveArgs(b.cmd.LaunchArgs, sandboxRoot, workingDir)
 	logger.Pod().Debug("Resolved launch args", "pod_key", b.cmd.PodKey, "args", resolvedArgs)
 
 	// Merge environment variables
-	envVars := b.mergeEnvVars()
+	envVars := b.mergeEnvVars(sandboxRoot)
 	logger.Pod().Debug("Merged environment variables", "pod_key", b.cmd.PodKey, "count", len(envVars))
 
 	// Report progress: starting PTY
@@ -224,6 +238,7 @@ func (b *PodBuilder) Build(ctx context.Context) (*Pod, error) {
 		AgentType:       "", // Could be extracted from command if needed
 		Branch:          branchName,
 		SandboxPath:     sandboxRoot,
+		Clipboard:       b.deps.Clipboard,
 		Terminal:        term,
 		VirtualTerminal: virtualTerm,
 		Aggregator:      agg,
@@ -278,7 +293,7 @@ func (b *PodBuilder) resolveArgs(args []string, sandboxRoot, workDir string) []s
 }
 
 // mergeEnvVars merges all environment variable sources.
-func (b *PodBuilder) mergeEnvVars() map[string]string {
+func (b *PodBuilder) mergeEnvVars(sandboxRoot string) map[string]string {
 	result := make(map[string]string)
 
 	// Add config env vars first (lowest priority)
@@ -291,6 +306,23 @@ func (b *PodBuilder) mergeEnvVars() map[string]string {
 	// Add command env vars (highest priority)
 	if b.cmd != nil {
 		for k, v := range b.cmd.EnvVars {
+			result[k] = v
+		}
+	}
+
+	// Apply clipboard backend env overrides (e.g., PATH prepend for shim)
+	if sandboxRoot != "" && b.deps.Clipboard != nil {
+		overrides := b.deps.Clipboard.EnvOverrides(sandboxRoot)
+		for k, v := range overrides {
+			if k == "PATH" {
+				// v is a directory to prepend to PATH
+				basePath := os.Getenv("PATH")
+				if existing, ok := result["PATH"]; ok {
+					basePath = existing
+				}
+				result["PATH"] = v + ":" + basePath
+				continue
+			}
 			result[k] = v
 		}
 	}

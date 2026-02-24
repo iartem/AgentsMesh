@@ -32,6 +32,7 @@ type MockClient struct {
 	onInput        InputHandler
 	onResize       ResizeHandler
 	onClose        CloseHandler
+	onImagePaste   ImagePasteHandler
 	onReconnect    func()
 	onTokenExpired func() string
 }
@@ -120,6 +121,13 @@ func (m *MockClient) SetCloseHandler(handler CloseHandler) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.onClose = handler
+}
+
+// SetImagePasteHandler implements RelayClient.
+func (m *MockClient) SetImagePasteHandler(handler ImagePasteHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onImagePaste = handler
 }
 
 // SetReconnectHandler implements RelayClient.

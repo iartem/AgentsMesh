@@ -225,7 +225,7 @@ func TestPodBuilderMergeEnvVarsEmptyBoth(t *testing.T) {
 
 	builder := NewPodBuilderFromRunner(runner).WithCommand(cmd)
 
-	result := builder.mergeEnvVars()
+	result := builder.mergeEnvVars("")
 
 	if len(result) != 0 {
 		t.Errorf("result length = %d, want 0", len(result))
@@ -250,7 +250,7 @@ func TestPodBuilderMergeEnvVarsOnlyConfig(t *testing.T) {
 
 	builder := NewPodBuilderFromRunner(runner).WithCommand(cmd)
 
-	result := builder.mergeEnvVars()
+	result := builder.mergeEnvVars("")
 
 	if result["VAR1"] != "value1" {
 		t.Errorf("VAR1 = %v, want value1", result["VAR1"])
@@ -277,7 +277,7 @@ func TestPodBuilderMergeEnvVarsOnlyCommand(t *testing.T) {
 
 	builder := NewPodBuilderFromRunner(runner).WithCommand(cmd)
 
-	result := builder.mergeEnvVars()
+	result := builder.mergeEnvVars("")
 
 	if result["CMD_VAR"] != "cmd_value" {
 		t.Errorf("CMD_VAR = %v, want cmd_value", result["CMD_VAR"])
