@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
+	"gorm.io/gorm"
 )
 
 // GetSubscription returns subscription for an organization
@@ -44,8 +45,20 @@ func (s *Service) CreateSubscription(ctx context.Context, orgID int64, planName 
 	return sub, nil
 }
 
-// CreateTrialSubscription creates a trial subscription for a new organization
+// CreateTrialSubscription creates a trial subscription for a new organization.
+// NOTE: This uses the service's own DB connection. If the org was created in a
+// transaction that hasn't committed yet, use CreateTrialSubscriptionTx instead.
 func (s *Service) CreateTrialSubscription(ctx context.Context, orgID int64, planName string, trialDays int) (*billing.Subscription, error) {
+	return s.createTrialSubscription(ctx, s.db, orgID, planName, trialDays)
+}
+
+// CreateTrialSubscriptionTx creates a trial subscription using the provided transaction DB.
+// This ensures the subscription insert can see the org record created in the same transaction.
+func (s *Service) CreateTrialSubscriptionTx(ctx context.Context, tx *gorm.DB, orgID int64, planName string, trialDays int) (*billing.Subscription, error) {
+	return s.createTrialSubscription(ctx, tx, orgID, planName, trialDays)
+}
+
+func (s *Service) createTrialSubscription(ctx context.Context, db *gorm.DB, orgID int64, planName string, trialDays int) (*billing.Subscription, error) {
 	plan, err := s.GetPlan(ctx, planName)
 	if err != nil {
 		return nil, err
@@ -68,7 +81,7 @@ func (s *Service) CreateTrialSubscription(ctx context.Context, orgID int64, plan
 		SeatCount:          1,
 	}
 
-	if err := s.db.WithContext(ctx).Create(sub).Error; err != nil {
+	if err := db.WithContext(ctx).Create(sub).Error; err != nil {
 		return nil, err
 	}
 

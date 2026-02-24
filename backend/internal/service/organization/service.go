@@ -20,6 +20,7 @@ var (
 // BillingService interface for creating trial subscriptions
 type BillingService interface {
 	CreateTrialSubscription(ctx context.Context, orgID int64, planName string, trialDays int) (*billing.Subscription, error)
+	CreateTrialSubscriptionTx(ctx context.Context, tx *gorm.DB, orgID int64, planName string, trialDays int) (*billing.Subscription, error)
 }
 
 // Service handles organization operations
@@ -82,8 +83,11 @@ func (s *Service) Create(ctx context.Context, ownerID int64, req *CreateRequest)
 		}
 
 		// Create 30-day trial subscription if billing service is available
+		// Use Tx variant to ensure subscription is created within the same transaction,
+		// otherwise the org record is not yet visible to the billing service's separate DB connection,
+		// causing a foreign key constraint violation on subscriptions.organization_id_fkey.
 		if s.billingService != nil {
-			if _, err := s.billingService.CreateTrialSubscription(ctx, org.ID, billing.PlanBased, billing.DefaultTrialDays); err != nil {
+			if _, err := s.billingService.CreateTrialSubscriptionTx(ctx, tx, org.ID, billing.PlanBased, billing.DefaultTrialDays); err != nil {
 				return err
 			}
 		}
