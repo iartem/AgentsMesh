@@ -131,6 +131,9 @@ func (a *GRPCRunnerAdapter) mcpCreateChannel(ctx context.Context, tc *middleware
 		return nil, newMcpError(500, "failed to create channel")
 	}
 
+	// Auto-join the creating pod to the channel
+	_ = a.channelService.JoinChannel(ctx, ch.ID, podKey)
+
 	return map[string]interface{}{"channel": a.enrichChannelForMCP(ctx, tc.OrganizationID, ch)}, nil
 }
 
