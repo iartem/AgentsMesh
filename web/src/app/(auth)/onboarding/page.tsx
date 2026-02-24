@@ -10,6 +10,7 @@ import { organizationApi } from "@/lib/api/organization";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { Logo } from "@/components/common";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -100,20 +101,8 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-primary-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                />
-              </svg>
+            <div className="w-10 h-10 rounded-lg overflow-hidden">
+              <Logo />
             </div>
             <span className="text-2xl font-bold text-foreground">AgentsMesh</span>
           </Link>
