@@ -70,7 +70,7 @@ export function BillingSettings({ t }: BillingSettingsProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadBillingData();

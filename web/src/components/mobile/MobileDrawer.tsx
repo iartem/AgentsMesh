@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Drawer } from "vaul";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
@@ -39,8 +39,9 @@ export function MobileDrawer({ className }: MobileDrawerProps) {
     useIDEStore();
   const { currentOrg, organizations, setCurrentOrg, user, logout } =
     useAuthStore();
+  const params = useParams();
   const t = useTranslations();
-  const orgSlug = currentOrg?.slug || "";
+  const orgSlug = currentOrg?.slug || (params.org as string) || "";
 
   const getActivityRoute = (activity: ActivityType): string => {
     switch (activity) {

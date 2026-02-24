@@ -57,7 +57,7 @@ export default function RepositoriesPage() {
         toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
       }
     }
-  }, [deleteDialog]);
+  }, [deleteDialog, t]);
 
   const filteredRepositories = repositories.filter((repo) => {
     const matchesSearch =

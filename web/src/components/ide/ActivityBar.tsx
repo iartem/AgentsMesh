@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -40,8 +40,9 @@ interface ActivityBarProps {
 export function ActivityBar({ className }: ActivityBarProps) {
   const { activeActivity, setActiveActivity } = useIDEStore();
   const { currentOrg } = useAuthStore();
+  const params = useParams();
   const pathname = usePathname();
-  const orgSlug = currentOrg?.slug || "";
+  const orgSlug = currentOrg?.slug || (params.org as string) || "";
   const t = useTranslations();
 
   // Map activity to route

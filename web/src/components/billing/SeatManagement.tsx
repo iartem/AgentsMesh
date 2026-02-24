@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { billingApi, SeatUsage } from "@/lib/api/billing";
@@ -24,11 +24,7 @@ export function SeatManagement({
   const [seatsToAdd, setSeatsToAdd] = useState(1);
   const [purchasing, setPurchasing] = useState(false);
 
-  useEffect(() => {
-    loadSeatUsage();
-  }, []);
-
-  const loadSeatUsage = async () => {
+  const loadSeatUsage = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -39,7 +35,11 @@ export function SeatManagement({
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadSeatUsage();
+  }, [loadSeatUsage]);
 
   const handlePurchaseSeats = async () => {
     if (seatsToAdd < 1) return;

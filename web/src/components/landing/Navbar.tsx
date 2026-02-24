@@ -2,16 +2,13 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth";
 import { LanguageSwitcher } from "@/components/i18n";
+import { AuthButtons } from "@/components/common";
 import { useTranslations } from "next-intl";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { token, _hasHydrated } = useAuthStore();
-  const isLoggedIn = _hasHydrated && !!token;
   const t = useTranslations();
 
   const navLinks = [
@@ -74,26 +71,7 @@ export function Navbar() {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
             <LanguageSwitcher variant="icon" />
-            {isLoggedIn ? (
-              <Link href="/mesh">
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  {t("landing.nav.console")}
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">
-                    {t("landing.nav.signIn")}
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                    {t("landing.nav.getStarted")}
-                  </Button>
-                </Link>
-              </>
-            )}
+            <AuthButtons size="sm" showRegister className="flex items-center gap-4" />
           </div>
 
           {/* Mobile Menu Button */}
@@ -145,26 +123,12 @@ export function Navbar() {
                   <span className="text-sm text-muted-foreground">{t("landing.nav.language")}</span>
                   <LanguageSwitcher variant="full" />
                 </div>
-                {isLoggedIn ? (
-                  <Link href="/mesh" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button size="sm" className="w-full bg-primary text-primary-foreground">
-                      {t("landing.nav.console")}
-                    </Button>
-                  </Link>
-                ) : (
-                  <>
-                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="ghost" size="sm" className="w-full">
-                        {t("landing.nav.signIn")}
-                      </Button>
-                    </Link>
-                    <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button size="sm" className="w-full bg-primary text-primary-foreground">
-                        {t("landing.nav.getStarted")}
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <AuthButtons
+                  size="sm"
+                  showRegister
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex flex-col gap-2 [&_button]:w-full"
+                />
               </div>
             </div>
           </div>

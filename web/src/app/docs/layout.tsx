@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { docsNavSections, getBreadcrumbs } from "@/lib/docs-navigation";
+import { AuthButtons } from "@/components/common";
 
 function SidebarNav({
   onNavigate,
@@ -128,9 +129,7 @@ export default function DocsLayout({
             >
               {t("landing.nav.docs")}
             </Link>
-            <Link href="/login">
-              <Button variant="outline">{t("landing.nav.signIn")}</Button>
-            </Link>
+            <AuthButtons consoleVariant="outline" />
           </div>
         </div>
       </header>

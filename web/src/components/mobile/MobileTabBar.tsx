@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   useIDEStore,
@@ -34,8 +35,9 @@ export function MobileTabBar({ className }: MobileTabBarProps) {
   const { activeActivity, setActiveActivity, setMobileMoreMenuOpen } =
     useIDEStore();
   const { currentOrg } = useAuthStore();
+  const params = useParams();
   const t = useTranslations();
-  const orgSlug = currentOrg?.slug || "";
+  const orgSlug = currentOrg?.slug || (params.org as string) || "";
 
   const mobileActivities = getMobileActivities();
 

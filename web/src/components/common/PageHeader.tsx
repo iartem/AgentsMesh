@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth";
-import { useTranslations } from "next-intl";
+import { AuthButtons } from "./AuthButtons";
 
 export function PageHeader() {
-  const { token, _hasHydrated } = useAuthStore();
-  const isLoggedIn = _hasHydrated && !!token;
-  const t = useTranslations();
-
   return (
     <header className="border-b border-border">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -31,17 +25,7 @@ export function PageHeader() {
           </div>
           <span className="text-xl font-bold">AgentsMesh</span>
         </Link>
-        {isLoggedIn ? (
-          <Link href="/mesh">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {t("landing.nav.console")}
-            </Button>
-          </Link>
-        ) : (
-          <Link href="/login">
-            <Button variant="outline">{t("landing.nav.signIn")}</Button>
-          </Link>
-        )}
+        <AuthButtons consoleVariant="primary" />
       </div>
     </header>
   );
