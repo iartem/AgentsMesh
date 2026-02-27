@@ -59,15 +59,29 @@ func (pc *PodCoordinator) handlePodTerminated(runnerID int64, data *runnerv1.Pod
 	ctx := context.Background()
 
 	now := time.Now()
+
+	// Determine status: if the process exited with an error and provided early output,
+	// mark as error so the user can see why the process failed.
+	status := agentpod.StatusCompleted
+	updates := map[string]interface{}{
+		"agent_status": agentpod.AgentStatusIdle,
+		"finished_at":  now,
+		"pty_pid":      nil,
+	}
+
+	if data.ErrorMessage != "" {
+		// Process exited with early output (e.g., invalid CLI arguments).
+		// Store the error message so the frontend can display why the pod failed.
+		status = agentpod.StatusError
+		updates["error_code"] = "process_exit"
+		updates["error_message"] = data.ErrorMessage
+	}
+	updates["status"] = status
+
 	if err := pc.db.WithContext(ctx).
 		Model(&agentpod.Pod{}).
 		Where("pod_key = ?", data.PodKey).
-		Updates(map[string]interface{}{
-			"status":       agentpod.StatusCompleted,
-			"agent_status": agentpod.AgentStatusIdle,
-			"finished_at":  now,
-			"pty_pid":      nil,
-		}).Error; err != nil {
+		Updates(updates).Error; err != nil {
 		pc.logger.Error("failed to update pod on termination",
 			"pod_key", data.PodKey,
 			"error", err)
@@ -86,11 +100,12 @@ func (pc *PodCoordinator) handlePodTerminated(runnerID int64, data *runnerv1.Pod
 	pc.logger.Info("pod terminated",
 		"pod_key", data.PodKey,
 		"runner_id", runnerID,
-		"exit_code", data.ExitCode)
+		"exit_code", data.ExitCode,
+		"has_early_output", data.ErrorMessage != "")
 
 	// Notify status change
 	if pc.onStatusChange != nil {
-		pc.onStatusChange(data.PodKey, agentpod.StatusCompleted, "")
+		pc.onStatusChange(data.PodKey, status, "")
 	}
 }
 
