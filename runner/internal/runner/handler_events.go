@@ -49,7 +49,10 @@ func (h *RunnerMessageHandler) createOSCHandler(podKey string) vt.OSCHandler {
 // createExitHandler creates an exit handler that notifies server when pod exits.
 func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 	return func(exitCode int) {
-		logger.Pod().Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
+		log := logger.Pod()
+		log.Info("Pod exited", "pod_key", podKey, "exit_code", exitCode)
+
+		var earlyOutput string
 
 		pod := h.podStore.Delete(podKey)
 		if pod != nil {
@@ -60,14 +63,29 @@ func (h *RunnerMessageHandler) createExitHandler(podKey string) func(int) {
 			}
 
 			pod.StopStateDetector()
-			pod.DisconnectRelay()
 
+			// Stop aggregator BEFORE disconnecting relay, so the final flush
+			// can still be sent through the relay if it's connected.
 			if pod.Aggregator != nil {
 				pod.Aggregator.Stop()
+
+				// Retrieve any early output that was buffered before the relay connected.
+				// This captures error messages from fast-exiting processes.
+				if buf := pod.Aggregator.DrainEarlyBuffer(); len(buf) > 0 {
+					earlyOutput = string(buf)
+					log.Info("Captured early output from fast-exiting process",
+						"pod_key", podKey, "bytes", len(buf))
+				}
 			}
+
+			pod.DisconnectRelay()
 		}
 
-		h.sendPodTerminated(podKey)
+		// Include early output in the termination event so the backend can display
+		// why the process failed (e.g., invalid CLI arguments).
+		if err := h.conn.SendPodTerminated(podKey, int32(exitCode), earlyOutput); err != nil {
+			log.Error("Failed to send pod terminated event", "error", err)
+		}
 	}
 }
 
