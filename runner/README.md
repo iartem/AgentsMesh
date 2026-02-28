@@ -8,7 +8,7 @@ AgentsMesh Runner is a lightweight agent that connects to the AgentsMesh server 
 
 ## Features
 
-- 🚀 **Multi-mode operation**: CLI, system service, or desktop tray
+- 🚀 **Multi-mode operation**: CLI or system service
 - 🔒 **Secure execution**: Isolated terminal environments for each task
 - 🌐 **Cross-platform**: macOS, Linux, Windows support
 - 📊 **Web console**: Built-in status monitoring and log viewer
@@ -89,12 +89,6 @@ agentsmesh-runner register --server <SERVER_URL> --token YOUR_TOKEN
 agentsmesh-runner run
 ```
 
-**Desktop mode (with system tray):**
-
-```bash
-agentsmesh-runner desktop
-```
-
 **System service:**
 
 ```bash
@@ -119,7 +113,7 @@ Usage:
 Commands:
   register    Register this runner with the AgentsMesh server
   run         Start the runner in CLI mode
-  desktop     Start runner in desktop mode with system tray
+  webconsole  Open the web console in browser
   service     Manage runner as a system service
   version     Show version information
   help        Show this help message
@@ -142,7 +136,7 @@ log_level: info
 
 ## Web Console
 
-When running in desktop mode, a local web console is available at:
+When using the web console command, a local web UI is available at:
 
 ```
 http://127.0.0.1:19080
@@ -161,11 +155,8 @@ Features:
 git clone https://github.com/anthropics/agentsmesh.git
 cd agentsmesh/runner
 
-# Build CLI version (no CGO required)
+# Build (no CGO required)
 make build
-
-# Build with desktop support (requires CGO)
-make build-desktop
 
 # Build for all platforms
 make build-all
@@ -183,9 +174,8 @@ git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
 
-The GitLab CI pipeline will automatically:
+The CI pipeline will automatically:
 - Build CLI binaries for all platforms (via GoReleaser)
-- Build Desktop versions (macOS DMG with system tray support)
 - Publish to GitHub Releases
 - Update Homebrew formula
 

@@ -107,3 +107,13 @@ images/web-admin.tar
 images/web.tar
 runner/agentsmesh-runner
 agentsmesh-onpremise-v1.0.0.tar.gz
+
+# =========================
+# Claude Code
+# =========================
+.claude/worktrees/
+
+# =========================
+# Reports (generated artifacts)
+# =========================
+E2E_TEST_REPORT.md

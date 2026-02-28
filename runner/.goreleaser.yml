@@ -13,8 +13,6 @@ before:
     - go mod tidy
 
 builds:
-  # CLI build (headless mode for servers) - no CGO required
-  # Desktop mode is not available in CLI builds (use Desktop build for system tray)
   - id: runner-cli
     main: ./cmd/runner
     binary: agentsmesh-runner
@@ -31,7 +29,6 @@ builds:
       - -s -w
       - -X main.version={{.Version}}
       - -X main.buildTime={{.Date}}
-    # No tags needed - CLI build uses default stub implementations
 
 archives:
   - id: cli-archive
@@ -160,15 +157,16 @@ changelog:
       order: 999
 
 # Release to AgentsMesh/AgentsMeshRunner repository
-# Note: GitHub release is handled by GitLab CI release:github job
-# GoReleaser only handles Homebrew formula update
+# GitLab CI: GoReleaser builds only (skip_upload: true), then release:github job
+#            uploads artifacts to AgentsMesh/AgentsMeshRunner via github-release.sh
+# GitHub Actions: GoReleaser builds only (--skip=publish), then softprops/action-gh-release
+#                 uploads artifacts to the current repository
 release:
   github:
     owner: AgentsMesh
     name: AgentsMeshRunner
 
-  # Skip GitHub release - handled by release:github job in GitLab CI
-  # This allows GoReleaser to still update Homebrew formula
+  # Skip GitHub release upload - handled by CI-specific release jobs
   skip_upload: true
 
   # Draft release for review before publishing
@@ -270,10 +268,6 @@ release:
     ---
 
     **Documentation**: https://agentsmesh.ai/docs/runner
-
-  # Extra files to upload
-  extra_files:
-    - glob: ./build/darwin/Info.plist
 
 # Homebrew tap - auto-update formula on release
 brews:

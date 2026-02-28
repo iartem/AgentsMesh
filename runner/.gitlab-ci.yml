@@ -1,18 +1,15 @@
 # GitLab CI/CD configuration for AgentsMesh Runner
 #
-# This pipeline builds CLI and Desktop versions, then releases to GitHub.
+# This pipeline builds CLI binaries via GoReleaser, then releases to GitHub.
 #
 # Required CI/CD Variables:
 #   - GITHUB_RELEASE_TOKEN: GitHub PAT with repo access to AgentsMesh/AgentsMeshRunner
 #
 # Required Runners:
-#   - Docker runner with tags: [x86, docker] (for CLI builds and Linux desktop)
-#   - macOS runner with tags: [macos, xcode]
-#   - Windows runner with tag: [windows]
+#   - Docker runner with tags: [x86, docker]
 
 stages:
   - build
-  - package
   - release
 
 variables:
@@ -52,192 +49,6 @@ build:cli:
     - if: $CI_COMMIT_TAG
 
 # =============================================================================
-# Desktop Builds (require native runners with CGO)
-# =============================================================================
-
-# macOS Desktop build (builds both amd64 and arm64 on arm64 runner)
-build:desktop:macos:
-  stage: build
-  tags: [macos, xcode]
-  before_script:
-    # Ensure Go and brew are in PATH for shell executor
-    - export PATH="/opt/homebrew/opt/go@1.25/bin:/opt/homebrew/bin:$PATH"
-    # Explicitly set VERSION for shell executor (CI variables may not auto-expand)
-    - export VERSION="${CI_COMMIT_TAG:-dev}"
-    - echo "VERSION=$VERSION"
-    - go version
-  script:
-    - cd runner
-    - export VERSION="${CI_COMMIT_TAG:-dev}"
-    # Build arm64 (native)
-    - |
-      echo "Building arm64 (VERSION=$VERSION)..."
-      CGO_ENABLED=1 GOARCH=arm64 go build -tags desktop \
-        -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        -o runner-desktop-darwin-arm64 ./cmd/runner
-    # Build amd64 (cross-compile)
-    - |
-      echo "Building amd64 (VERSION=$VERSION)..."
-      CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -tags desktop \
-        -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        -o runner-desktop-darwin-amd64 ./cmd/runner
-    # Create universal binary
-    - |
-      echo "Creating universal binary..."
-      lipo -create -output runner-desktop-darwin-universal \
-        runner-desktop-darwin-amd64 \
-        runner-desktop-darwin-arm64
-      file runner-desktop-darwin-*
-  artifacts:
-    paths:
-      - runner/runner-desktop-darwin-arm64
-      - runner/runner-desktop-darwin-amd64
-      - runner/runner-desktop-darwin-universal
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-build:desktop:linux:
-  stage: build
-  tags: [x86, docker]
-  # Use Docker executor with GTK dependencies pre-installed
-  # If using shell executor, ensure libgtk-3-dev and libappindicator3-dev are installed
-  image: ${REGISTRY}/library/golang:${GO_VERSION}
-  before_script:
-    - apt-get update && apt-get install -y libgtk-3-dev libappindicator3-dev
-  script:
-    - cd runner
-    - |
-      CGO_ENABLED=1 go build -tags desktop \
-        -ldflags "-s -w -X main.version=$VERSION -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        -o runner-desktop-linux-amd64 ./cmd/runner
-  artifacts:
-    paths:
-      - runner/runner-desktop-linux-amd64
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-build:desktop:windows:
-  stage: build
-  tags: [windows]
-  script:
-    - cd runner
-    - |
-      $env:CGO_ENABLED=1
-      go build -tags desktop `
-        -ldflags "-s -w -X main.version=$env:VERSION -X main.buildTime=$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')" `
-        -o runner-desktop-windows-amd64.exe ./cmd/runner
-  artifacts:
-    paths:
-      - runner/runner-desktop-windows-amd64.exe
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-# =============================================================================
-# Package Desktop Applications
-# =============================================================================
-
-package:macos-dmg:
-  stage: package
-  tags: [macos, xcode]
-  needs:
-    - job: build:desktop:macos
-      artifacts: true
-  before_script:
-    - export PATH="/opt/homebrew/bin:$PATH"
-    # Explicitly set VERSION for shell executor (CI variables may not auto-expand)
-    - export VERSION="${CI_COMMIT_TAG:-dev}"
-    - echo "VERSION=$VERSION"
-    - brew install create-dmg || true
-  script:
-    - cd runner
-    - export VERSION="${CI_COMMIT_TAG:-dev}"
-    - echo "Creating DMG with VERSION=$VERSION"
-    - |
-      # Create .app bundle with universal binary
-      APP_NAME="AgentsMesh Runner.app"
-      mkdir -p "$APP_NAME/Contents/MacOS"
-      mkdir -p "$APP_NAME/Contents/Resources"
-
-      cp runner-desktop-darwin-universal "$APP_NAME/Contents/MacOS/runner-desktop"
-      chmod +x "$APP_NAME/Contents/MacOS/runner-desktop"
-
-      # Update Info.plist with version
-      sed "s/1.0.0/${VERSION#v}/g" build/darwin/Info.plist > "$APP_NAME/Contents/Info.plist"
-
-      # Create DMG
-      DMG_NAME="AgentsMesh-Runner-${VERSION}-darwin-universal.dmg"
-      create-dmg \
-        --volname "AgentsMesh Runner" \
-        --window-pos 200 120 \
-        --window-size 600 400 \
-        --icon-size 100 \
-        --icon "AgentsMesh Runner.app" 150 185 \
-        --hide-extension "AgentsMesh Runner.app" \
-        --app-drop-link 450 185 \
-        "$DMG_NAME" \
-        "AgentsMesh Runner.app" || true
-
-      # Handle create-dmg leaving temp file on AppleScript timeout
-      # Temp files have rw.XXXXX. prefix
-      if [ ! -f "$DMG_NAME" ]; then
-        TEMP_DMG=$(ls rw.*.dmg 2>/dev/null | head -1)
-        if [ -n "$TEMP_DMG" ]; then
-          echo "Renaming temp DMG: $TEMP_DMG -> $DMG_NAME"
-          mv "$TEMP_DMG" "$DMG_NAME"
-        fi
-      fi
-    - ls -la *.dmg
-  artifacts:
-    paths:
-      - runner/*.dmg
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-package:linux-archive:
-  stage: package
-  tags: [x86, docker]
-  image: ${REGISTRY}/library/alpine:latest
-  needs:
-    - job: build:desktop:linux
-      artifacts: true
-  script:
-    - cd runner
-    - |
-      tar -czvf "AgentsMesh-Runner-${VERSION}-linux-amd64.tar.gz" \
-        runner-desktop-linux-amd64
-  artifacts:
-    paths:
-      - runner/*.tar.gz
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-package:windows-archive:
-  stage: package
-  tags: [x86, docker]
-  image: ${REGISTRY}/library/alpine:latest
-  needs:
-    - job: build:desktop:windows
-      artifacts: true
-  before_script:
-    - apk add --no-cache zip
-  script:
-    - cd runner
-    - |
-      zip "AgentsMesh-Runner-${VERSION}-windows-amd64.zip" \
-        runner-desktop-windows-amd64.exe
-  artifacts:
-    paths:
-      - runner/*.zip
-    expire_in: 1 day
-  rules:
-    - if: $CI_COMMIT_TAG
-
-# =============================================================================
 # Release to GitHub
 # =============================================================================
 
@@ -247,12 +58,6 @@ release:github:
   image: ${REGISTRY}/library/alpine:latest
   needs:
     - job: build:cli
-      artifacts: true
-    - job: package:macos-dmg
-      artifacts: true
-    - job: package:linux-archive
-      artifacts: true
-    - job: package:windows-archive
       artifacts: true
   before_script:
     - apk add --no-cache curl jq

@@ -1,21 +1,19 @@
 # Dependencies stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS deps
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Configure npm registry and install dependencies
-ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm/
+# NPM registry (override via --build-arg for faster downloads in specific regions)
+ARG NPM_REGISTRY=
 RUN corepack enable pnpm && \
-    pnpm config set registry ${NPM_REGISTRY} && \
+    if [ -n "${NPM_REGISTRY}" ]; then pnpm config set registry ${NPM_REGISTRY}; fi && \
     pnpm i --frozen-lockfile
 
 # Build stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -34,14 +32,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Build the application
-ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm/
+ARG NPM_REGISTRY=
 RUN corepack enable pnpm && \
-    pnpm config set registry ${NPM_REGISTRY} && \
+    if [ -n "${NPM_REGISTRY}" ]; then pnpm config set registry ${NPM_REGISTRY}; fi && \
     pnpm build
 
 # Production stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 

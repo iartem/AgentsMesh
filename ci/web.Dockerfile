@@ -1,6 +1,5 @@
 # Dependencies stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS deps
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
@@ -16,8 +15,7 @@ RUN \
     fi
 
 # Build stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -45,8 +43,7 @@ RUN \
     fi
 
 # Production stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 

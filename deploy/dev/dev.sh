@@ -227,8 +227,8 @@ GITHUB_CLIENT_SECRET=
 # =============================================================================
 # AI CLI - Claude Code
 # =============================================================================
-ANTHROPIC_BASE_URL=https://www.88code.ai/api
-ANTHROPIC_AUTH_TOKEN=88_93e37b41b1d2799cdba75406a10afcdd965e77a96809823b774fea5e87a1c448
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+ANTHROPIC_AUTH_TOKEN=
 EOF
     success "生成 .env 配置 (worktree: $worktree_name, PRIMARY_DOMAIN: localhost:$http_port)"
 }

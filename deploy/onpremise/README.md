@@ -72,11 +72,11 @@ docker compose exec -T postgres psql -U agentsmesh -d agentsmesh < seed/onpremis
 ```bash
 # 下载 Runner
 # Linux
-curl -LO https://github.com/agentsmesh/agentsmesh/releases/latest/download/runner-linux-amd64
+curl -LO https://github.com/AgentsMesh/agentsmesh/releases/latest/download/runner-linux-amd64
 chmod +x runner-linux-amd64
 
 # macOS
-curl -LO https://github.com/agentsmesh/agentsmesh/releases/latest/download/runner-darwin-amd64
+curl -LO https://github.com/AgentsMesh/agentsmesh/releases/latest/download/runner-darwin-amd64
 chmod +x runner-darwin-amd64
 
 # 注册 Runner

@@ -6,8 +6,16 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  GO_VERSION: "1.25"
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
 jobs:
-  # Backend tests
+  # ===========================================================================
+  # Backend (Go)
+  # ===========================================================================
+
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -34,14 +42,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: backend/go.sum
 
       - name: Download dependencies
@@ -56,13 +63,12 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: backend/coverage.out
           flags: backend
           fail_ci_if_error: false
 
-  # Backend lint
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
@@ -72,113 +78,21 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: backend/go.sum
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           working-directory: backend
           version: latest
 
-  # Backend build
-  backend-build:
-    name: Backend Build
-    runs-on: ubuntu-latest
-    needs: [backend-test, backend-lint]
-    steps:
-      - uses: actions/checkout@v4
+  # ===========================================================================
+  # Runner (Go)
+  # ===========================================================================
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: false
-          tags: agentsmesh/backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Web tests
-  web-test:
-    name: Web Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: Run lint
-        working-directory: web
-        run: npm run lint
-
-      - name: Run type check
-        working-directory: web
-        run: npm run type-check
-
-      - name: Run tests
-        working-directory: web
-        run: npm test -- --coverage
-
-  # Web build
-  web-build:
-    name: Web Build
-    runs-on: ubuntu-latest
-    needs: [web-test]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build web image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./web
-          push: false
-          tags: agentsmesh/web:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Mobile tests
-  mobile-test:
-    name: Mobile Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.16.0'
-          channel: 'stable'
-
-      - name: Get dependencies
-        working-directory: mobile
-        run: flutter pub get
-
-      - name: Run analyzer
-        working-directory: mobile
-        run: flutter analyze
-
-      - name: Run tests
-        working-directory: mobile
-        run: flutter test --coverage
-
-  # Runner build
-  runner-build:
-    name: Runner Build
+  runner-test:
+    name: Runner Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -186,9 +100,203 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: runner/go.sum
 
-      - name: Build runner
+      - name: Download dependencies
         working-directory: runner
-        run: CGO_ENABLED=0 go build -o runner ./cmd/runner
+        run: go mod download
+
+      - name: Run tests
+        working-directory: runner
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: runner/coverage.out
+          flags: runner
+          fail_ci_if_error: false
+
+  runner-lint:
+    name: Runner Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: runner/go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: runner
+          version: latest
+
+  # ===========================================================================
+  # Relay (Go)
+  # ===========================================================================
+
+  relay-test:
+    name: Relay Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: relay/go.sum
+
+      - name: Download dependencies
+        working-directory: relay
+        run: go mod download
+
+      - name: Run tests
+        working-directory: relay
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: relay/coverage.out
+          flags: relay
+          fail_ci_if_error: false
+
+  relay-lint:
+    name: Relay Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: relay/go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: relay
+          version: latest
+
+  # ===========================================================================
+  # Web (Next.js)
+  # ===========================================================================
+
+  web-test:
+    name: Web Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        working-directory: web
+        run: pnpm lint
+
+      - name: Run type check
+        working-directory: web
+        run: pnpm type-check
+
+      - name: Run tests
+        working-directory: web
+        run: pnpm test:coverage
+
+  # ===========================================================================
+  # Web-Admin (Next.js)
+  # ===========================================================================
+
+  web-admin-test:
+    name: Web-Admin Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: web-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: web-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        working-directory: web-admin
+        run: pnpm lint
+
+      - name: Run build
+        working-directory: web-admin
+        run: pnpm build
+
+  # ===========================================================================
+  # Docker Build Verification (PR only)
+  # ===========================================================================
+
+  docker-build-verify:
+    name: Docker Build Verify
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            dockerfile: ci/backend.Dockerfile
+            context: .
+          - service: web
+            dockerfile: ci/web.Dockerfile
+            context: ./web
+          - service: web-admin
+            dockerfile: ci/web-admin.Dockerfile
+            context: ./web-admin
+          - service: runner
+            dockerfile: ci/runner.Dockerfile
+            context: .
+          - service: relay
+            dockerfile: ci/relay.Dockerfile
+            context: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          build-args: |
+            GO_VERSION=${{ env.GO_VERSION }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

@@ -5,14 +5,15 @@
 AgentsMesh provides APIs for managing multi-agent AI development workspaces:
 
 - **REST API**: For web/mobile clients (authentication, resources, management)
+- **External API**: For third-party integrations (API key authentication)
 - **gRPC + mTLS**: For Runner connections (bidirectional streaming, certificate-based authentication)
+- **WebSocket**: For real-time terminal streaming and events
 
 The platform supports multi-tenancy, OAuth authentication, and real-time terminal streaming.
 
 ## Base URL
 
-- Production: `https://api.agentsmesh.io/api/v1`
-- Staging: `https://staging-api.agentsmesh.example.com/api/v1`
+- Production: `https://your-domain.com/api/v1`
 - Development: `http://localhost:10000/api/v1` (via Traefik)
 
 ## Authentication
@@ -73,17 +74,29 @@ Content-Type: application/json
 }
 ```
 
+### API Key Authentication (External API)
+
+For external integrations, use API keys:
+
+```
+Authorization: Bearer <api_key>
+```
+
+API keys are scoped to an organization and can have fine-grained permissions.
+
 ## Multi-Tenancy
 
 Organization-scoped endpoints require the organization slug in the URL path:
 
 ```
-/api/v1/organizations/{slug}/...
+/api/v1/orgs/{slug}/...
 ```
 
-## API Endpoints
+---
 
-### Authentication
+## REST API Endpoints
+
+### Authentication (`/api/v1/auth`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -91,10 +104,20 @@ Organization-scoped endpoints require the organization slug in the URL path:
 | POST | `/auth/register` | User registration |
 | POST | `/auth/refresh` | Refresh JWT token |
 | POST | `/auth/logout` | Logout and revoke token |
-| GET | `/auth/oauth/{provider}` | OAuth redirect |
-| GET | `/auth/oauth/{provider}/callback` | OAuth callback |
+| POST | `/auth/verify-email` | Verify email address |
+| POST | `/auth/resend-verification` | Resend verification email |
+| POST | `/auth/forgot-password` | Request password reset |
+| POST | `/auth/reset-password` | Reset password with token |
+| GET | `/auth/oauth/github` | GitHub OAuth redirect |
+| GET | `/auth/oauth/github/callback` | GitHub OAuth callback |
+| GET | `/auth/oauth/google` | Google OAuth redirect |
+| GET | `/auth/oauth/google/callback` | Google OAuth callback |
+| GET | `/auth/oauth/gitlab` | GitLab OAuth redirect |
+| GET | `/auth/oauth/gitlab/callback` | GitLab OAuth callback |
+| GET | `/auth/oauth/gitee` | Gitee OAuth redirect |
+| GET | `/auth/oauth/gitee/callback` | Gitee OAuth callback |
 
-### Users
+### Users (`/api/v1/users`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -104,159 +127,460 @@ Organization-scoped endpoints require the organization slug in the URL path:
 | GET | `/users/me/organizations` | List user's organizations |
 | GET | `/users/me/identities` | List OAuth identities |
 | DELETE | `/users/me/identities/{provider}` | Remove OAuth identity |
+| GET | `/users/me/agent-configs` | List user agent configs |
+| GET | `/users/me/agent-configs/{agent_type_id}` | Get agent config |
+| PUT | `/users/me/agent-configs/{agent_type_id}` | Set agent config |
+| DELETE | `/users/me/agent-configs/{agent_type_id}` | Delete agent config |
+| GET | `/users/me/agentpod/settings` | Get AgentPod settings |
+| PUT | `/users/me/agentpod/settings` | Update AgentPod settings |
+| GET | `/users/me/agentpod/providers` | List AI providers |
+| POST | `/users/me/agentpod/providers` | Create AI provider |
+| PUT | `/users/me/agentpod/providers/{id}` | Update AI provider |
+| DELETE | `/users/me/agentpod/providers/{id}` | Delete AI provider |
+| POST | `/users/me/agentpod/providers/{id}/default` | Set default provider |
 | GET | `/users/search?q=` | Search users |
 
-### Organizations
+### Organizations (`/api/v1/orgs`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations` | List user's organizations |
-| POST | `/organizations` | Create organization |
-| GET | `/organizations/{slug}` | Get organization |
-| PUT | `/organizations/{slug}` | Update organization |
-| DELETE | `/organizations/{slug}` | Delete organization |
-| GET | `/organizations/{slug}/members` | List members |
-| POST | `/organizations/{slug}/members` | Invite member |
-| PUT | `/organizations/{slug}/members/{user_id}` | Update member role |
-| DELETE | `/organizations/{slug}/members/{user_id}` | Remove member |
+| GET | `/orgs` | List user's organizations |
+| POST | `/orgs` | Create organization |
+| GET | `/orgs/{slug}` | Get organization |
+| PUT | `/orgs/{slug}` | Update organization |
+| DELETE | `/orgs/{slug}` | Delete organization |
+| GET | `/orgs/{slug}/members` | List members |
+| POST | `/orgs/{slug}/members` | Invite member |
+| PUT | `/orgs/{slug}/members/{user_id}` | Update member role |
+| DELETE | `/orgs/{slug}/members/{user_id}` | Remove member |
 
-### Teams
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/organizations/{slug}/teams` | List teams |
-| POST | `/organizations/{slug}/teams` | Create team |
-| GET | `/organizations/{slug}/teams/{id}` | Get team |
-| PUT | `/organizations/{slug}/teams/{id}` | Update team |
-| DELETE | `/organizations/{slug}/teams/{id}` | Delete team |
-| GET | `/organizations/{slug}/teams/{id}/members` | List team members |
-| POST | `/organizations/{slug}/teams/{id}/members` | Add team member |
-| DELETE | `/organizations/{slug}/teams/{id}/members/{user_id}` | Remove team member |
-
-### Code Agents
+### Code Agents (`/api/v1/orgs/{slug}/agents`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/agents/types` | List agent types |
-| GET | `/organizations/{slug}/agents/{type_id}/config-schema` | Get agent config schema |
-| POST | `/organizations/{slug}/agents/custom` | Create custom agent |
-| PUT | `/organizations/{slug}/agents/custom/{id}` | Update custom agent |
-| DELETE | `/organizations/{slug}/agents/custom/{id}` | Delete custom agent |
+| GET | `/agents/types` | List agent types |
+| GET | `/agents/types/{agent_type_id}` | Get agent type |
+| POST | `/agents/custom` | Create custom agent |
+| PUT | `/agents/custom/{id}` | Update custom agent |
+| DELETE | `/agents/custom/{id}` | Delete custom agent |
+| GET | `/agents/{agent_type_id}/config-schema` | Get config schema |
 
-### User Agent Configuration (Personal Settings)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/users/me/agents/credentials` | Get user credentials status |
-| PUT | `/users/me/agents/credentials/{type_id}` | Set user credentials |
-| DELETE | `/users/me/agents/credentials/{type_id}` | Delete user credentials |
-| GET | `/users/me/agent-configs` | List user agent configs |
-| GET | `/users/me/agent-configs/{type_id}` | Get user agent config |
-| PUT | `/users/me/agent-configs/{type_id}` | Set user agent config |
-| DELETE | `/users/me/agent-configs/{type_id}` | Delete user agent config |
-
-### Git Providers
+### Repositories (`/api/v1/orgs/{slug}/repositories`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/git-providers` | List providers |
-| POST | `/organizations/{slug}/git-providers` | Create provider |
-| GET | `/organizations/{slug}/git-providers/{id}` | Get provider |
-| PUT | `/organizations/{slug}/git-providers/{id}` | Update provider |
-| DELETE | `/organizations/{slug}/git-providers/{id}` | Delete provider |
-| POST | `/organizations/{slug}/git-providers/{id}/test` | Test connection |
-| POST | `/organizations/{slug}/git-providers/{id}/sync` | Sync projects |
+| GET | `/repositories` | List repositories |
+| POST | `/repositories` | Create repository |
+| GET | `/repositories/{id}` | Get repository |
+| PUT | `/repositories/{id}` | Update repository |
+| DELETE | `/repositories/{id}` | Delete repository |
+| GET | `/repositories/{id}/branches` | List branches |
+| POST | `/repositories/{id}/sync-branches` | Sync branches from remote |
+| POST | `/repositories/{id}/webhook` | Register webhook |
+| DELETE | `/repositories/{id}/webhook` | Delete webhook |
+| GET | `/repositories/{id}/webhook/status` | Get webhook status |
+| GET | `/repositories/{id}/webhook/secret` | Get webhook secret |
+| POST | `/repositories/{id}/webhook/configured` | Mark webhook configured |
+| GET | `/repositories/{id}/merge-requests` | List merge requests |
 
-### Repositories
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/organizations/{slug}/repositories` | List repositories |
-| POST | `/organizations/{slug}/repositories` | Create repository |
-| GET | `/organizations/{slug}/repositories/{id}` | Get repository |
-| PUT | `/organizations/{slug}/repositories/{id}` | Update repository |
-| DELETE | `/organizations/{slug}/repositories/{id}` | Delete repository |
-| GET | `/organizations/{slug}/repositories/{id}/branches` | List branches |
-| POST | `/organizations/{slug}/repositories/{id}/sync-branches` | Sync branches |
-| POST | `/organizations/{slug}/repositories/{id}/webhook` | Setup webhook |
-
-### Runners
+### Extensions - Skills (`/api/v1/orgs/{slug}/repositories/{id}/skills`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/runners` | List runners |
-| GET | `/organizations/{slug}/runners/{id}` | Get runner |
-| DELETE | `/organizations/{slug}/runners/{id}` | Delete runner |
-| GET | `/organizations/{slug}/runners/tokens` | List registration tokens |
-| POST | `/organizations/{slug}/runners/tokens` | Create registration token |
-| DELETE | `/organizations/{slug}/runners/tokens/{id}` | Revoke token |
-| POST | `/runners/register` | Register runner (public) |
-| POST | `/runners/heartbeat` | Runner heartbeat (public) |
+| GET | `/repositories/{id}/skills` | List installed skills |
+| POST | `/repositories/{id}/skills/install-from-market` | Install from market |
+| POST | `/repositories/{id}/skills/install-from-github` | Install from GitHub |
+| POST | `/repositories/{id}/skills/install-from-upload` | Install from upload |
+| PUT | `/repositories/{id}/skills/{installId}` | Update skill |
+| DELETE | `/repositories/{id}/skills/{installId}` | Uninstall skill |
+
+### Extensions - MCP Servers (`/api/v1/orgs/{slug}/repositories/{id}/mcp-servers`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/repositories/{id}/mcp-servers` | List installed MCP servers |
+| POST | `/repositories/{id}/mcp-servers/install-from-market` | Install from market |
+| POST | `/repositories/{id}/mcp-servers/install-custom` | Install custom MCP server |
+| PUT | `/repositories/{id}/mcp-servers/{installId}` | Update MCP server |
+| DELETE | `/repositories/{id}/mcp-servers/{installId}` | Uninstall MCP server |
+
+### Skill Registries (`/api/v1/orgs/{slug}/skill-registries`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/skill-registries` | List skill registries |
+| POST | `/skill-registries` | Create skill registry |
+| POST | `/skill-registries/{id}/sync` | Sync skill registry |
+| DELETE | `/skill-registries/{id}` | Delete skill registry |
+| PUT | `/skill-registries/{id}/toggle` | Toggle platform registry |
+| GET | `/skill-registry-overrides` | List registry overrides |
+| GET | `/market/skills` | List market skills |
+| GET | `/market/mcp-servers` | List market MCP servers |
+
+### Runners (`/api/v1/orgs/{slug}/runners`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/runners` | List runners |
+| GET | `/runners/{id}` | Get runner |
+| GET | `/runners/available` | List available runners |
+| PUT | `/runners/{id}` | Update runner |
+| DELETE | `/runners/{id}` | Delete runner |
+| GET | `/runners/{id}/pods` | List runner's pods |
+| POST | `/runners/{id}/sandboxes/query` | Query sandbox info |
+
+### Pods (`/api/v1/orgs/{slug}/pods`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/pods` | List pods |
+| POST | `/pods` | Create pod |
+| GET | `/pods/{key}` | Get pod |
+| POST | `/pods/{key}/terminate` | Terminate pod |
+| GET | `/pods/{key}/connect` | Get connection info |
+| POST | `/pods/{key}/send-prompt` | Send prompt to agent |
+| GET | `/pods/{key}/terminal/observe` | Observe terminal output |
+| POST | `/pods/{key}/terminal/input` | Send terminal input |
+| POST | `/pods/{key}/terminal/resize` | Resize terminal |
+| GET | `/pods/{key}/terminal/connect` | Get Relay connection info |
+
+### Channels (`/api/v1/orgs/{slug}/channels`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/channels` | List channels |
+| POST | `/channels` | Create channel |
+| GET | `/channels/{id}` | Get channel |
+| PUT | `/channels/{id}` | Update channel |
+| POST | `/channels/{id}/archive` | Archive channel |
+| POST | `/channels/{id}/unarchive` | Unarchive channel |
+| GET | `/channels/{id}/messages` | List messages |
+| POST | `/channels/{id}/messages` | Send message |
+| GET | `/channels/{id}/document` | Get channel document |
+| PUT | `/channels/{id}/document` | Update channel document |
+| GET | `/channels/{id}/pods` | List channel pods |
+| POST | `/channels/{id}/pods` | Join pod to channel |
+| DELETE | `/channels/{id}/pods/{pod_key}` | Remove pod from channel |
+
+### Tickets (`/api/v1/orgs/{slug}/tickets`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/tickets` | List tickets |
+| POST | `/tickets` | Create ticket |
+| GET | `/tickets/active` | Get active tickets |
+| GET | `/tickets/board` | Get kanban board |
+| POST | `/tickets/batch-pods` | Batch get ticket pods |
+| GET | `/tickets/{slug}` | Get ticket |
+| PUT | `/tickets/{slug}` | Update ticket |
+| DELETE | `/tickets/{slug}` | Delete ticket |
+| PATCH | `/tickets/{slug}/status` | Update ticket status |
+| POST | `/tickets/{slug}/assignees` | Add assignee |
+| DELETE | `/tickets/{slug}/assignees/{user_id}` | Remove assignee |
+| POST | `/tickets/{slug}/labels` | Add label |
+| DELETE | `/tickets/{slug}/labels/{label_id}` | Remove label |
+| GET | `/tickets/{slug}/merge-requests` | List merge requests |
+| GET | `/tickets/{slug}/sub-tickets` | Get sub-tickets |
+| GET | `/tickets/{slug}/relations` | List ticket relations |
+| POST | `/tickets/{slug}/relations` | Create ticket relation |
+| DELETE | `/tickets/{slug}/relations/{relation_id}` | Delete relation |
+| GET | `/tickets/{slug}/commits` | List linked commits |
+| POST | `/tickets/{slug}/commits` | Link commit |
+| DELETE | `/tickets/{slug}/commits/{commit_id}` | Unlink commit |
+| GET | `/tickets/{slug}/comments` | List comments |
+| POST | `/tickets/{slug}/comments` | Create comment |
+| PUT | `/tickets/{slug}/comments/{id}` | Update comment |
+| DELETE | `/tickets/{slug}/comments/{id}` | Delete comment |
+| GET | `/tickets/{slug}/pods` | Get ticket pods |
+| POST | `/tickets/{slug}/pods` | Create pod for ticket |
+
+### Labels (`/api/v1/orgs/{slug}/labels`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/labels` | List labels |
+| POST | `/labels` | Create label |
+| PUT | `/labels/{id}` | Update label |
+| DELETE | `/labels/{id}` | Delete label |
+
+### Mesh (`/api/v1/orgs/{slug}/mesh`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/mesh/topology` | Get mesh topology |
+
+### Messages (`/api/v1/orgs/{slug}/messages`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/messages` | Send message |
+| GET | `/messages` | Get messages |
+| GET | `/messages/unread-count` | Get unread count |
+| GET | `/messages/sent` | Get sent messages |
+| POST | `/messages/mark-read` | Mark as read |
+| POST | `/messages/mark-all-read` | Mark all as read |
+| GET | `/messages/conversation/{correlation_id}` | Get conversation |
+| GET | `/messages/dlq` | Get dead letter queue |
+| POST | `/messages/dlq/{id}/replay` | Replay dead letter |
+| GET | `/messages/{id}` | Get message |
+
+### Pod Bindings (`/api/v1/orgs/{slug}/bindings`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/bindings` | Request binding |
+| GET | `/bindings` | List bindings |
+| POST | `/bindings/accept` | Accept binding |
+| POST | `/bindings/reject` | Reject binding |
+| POST | `/bindings/unbind` | Unbind |
+| GET | `/bindings/pending` | Get pending bindings |
+| GET | `/bindings/pods` | Get bound pods |
+| GET | `/bindings/check/{target_pod}` | Check binding |
+| POST | `/bindings/{id}/scopes` | Request scopes |
+| POST | `/bindings/{id}/scopes/approve` | Approve scopes |
+
+### Billing (`/api/v1/orgs/{slug}/billing`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/billing/overview` | Get billing overview |
+| GET | `/billing/subscription` | Get subscription |
+| POST | `/billing/subscription` | Create subscription |
+| PUT | `/billing/subscription` | Update subscription |
+| DELETE | `/billing/subscription` | Cancel subscription |
+| GET | `/billing/plans` | List plans |
+| GET | `/billing/plans/prices` | List plan prices |
+| GET | `/billing/plans/{name}/prices` | Get plan prices |
+| GET | `/billing/plans/{name}/all-prices` | Get all currency prices |
+| GET | `/billing/usage` | Get usage |
+| GET | `/billing/usage/history` | Get usage history |
+| POST | `/billing/quota` | Set custom quota |
+| GET | `/billing/quota/check` | Check quota |
+| POST | `/billing/checkout` | Create checkout |
+| GET | `/billing/checkout/{order_no}` | Get checkout status |
+| POST | `/billing/subscription/cancel` | Request cancellation |
+| POST | `/billing/subscription/reactivate` | Reactivate subscription |
+| POST | `/billing/subscription/change-cycle` | Change billing cycle |
+| POST | `/billing/subscription/downgrade` | Downgrade subscription |
+| PUT | `/billing/subscription/auto-renew` | Update auto-renew |
+| GET | `/billing/seats` | Get seat usage |
+| POST | `/billing/seats/purchase` | Purchase seats |
+| GET | `/billing/invoices` | List invoices |
+| POST | `/billing/customer-portal` | Get customer portal URL |
+| POST | `/billing/stripe/customer` | Create Stripe customer |
+| GET | `/billing/deployment` | Get deployment info |
+| GET | `/billing/promo-codes` | List promo codes |
+
+### Files (`/api/v1/orgs/{slug}/files`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/files/upload` | Upload file |
+| DELETE | `/files/{id}` | Delete file |
+
+### API Keys (`/api/v1/orgs/{slug}/api-keys`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api-keys` | Create API key |
+| GET | `/api-keys` | List API keys |
+| GET | `/api-keys/{id}` | Get API key |
+| PUT | `/api-keys/{id}` | Update API key |
+| DELETE | `/api-keys/{id}` | Delete API key |
+| POST | `/api-keys/{id}/revoke` | Revoke API key |
+
+### Invitations (`/api/v1/invitations`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/invitations/accept` | Accept invitation |
+| POST | `/invitations/reject` | Reject invitation |
+| GET | `/invitations/pending` | Get pending invitations |
+| GET | `/invitations/sent` | Get sent invitations |
+
+### Autopilot (`/api/v1/orgs/{slug}/autopilot`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/autopilot/controllers` | Create controller |
+| GET | `/autopilot/controllers` | List controllers |
+| GET | `/autopilot/controllers/{id}` | Get controller |
+
+### License (`/api/v1/license`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/license/status` | Get license status |
+| POST | `/license/activate` | Activate license |
+
+---
+
+## External API (`/api/v1/ext/orgs/{slug}`)
+
+External API uses API key authentication and is designed for third-party integrations.
 
 ### Pods
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/pods` | List pods |
-| POST | `/organizations/{slug}/pods` | Create pod |
-| GET | `/organizations/{slug}/pods/{key}` | Get pod |
-| POST | `/organizations/{slug}/pods/{key}/terminate` | Terminate pod |
-| GET | `/organizations/{slug}/pods/{key}/connect` | Get connection info |
-| POST | `/organizations/{slug}/pods/{key}/send-prompt` | Send prompt |
-
-### Channels
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/organizations/{slug}/channels` | List channels |
-| POST | `/organizations/{slug}/channels` | Create channel |
-| GET | `/organizations/{slug}/channels/{id}` | Get channel |
-| PUT | `/organizations/{slug}/channels/{id}` | Update channel |
-| POST | `/organizations/{slug}/channels/{id}/archive` | Archive channel |
-| POST | `/organizations/{slug}/channels/{id}/unarchive` | Unarchive channel |
-| GET | `/organizations/{slug}/channels/{id}/messages` | List messages |
-| POST | `/organizations/{slug}/channels/{id}/messages` | Send message |
-| POST | `/organizations/{slug}/channels/{id}/pods` | Join pod |
-| DELETE | `/organizations/{slug}/channels/{id}/pods/{key}` | Leave pod |
+| GET | `/pods` | List pods |
+| GET | `/pods/{key}` | Get pod |
+| POST | `/pods` | Create pod |
+| POST | `/pods/{key}/terminate` | Terminate pod |
 
 ### Tickets
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/tickets` | List tickets |
-| POST | `/organizations/{slug}/tickets` | Create ticket |
-| GET | `/organizations/{slug}/tickets/{slug}` | Get ticket |
-| PUT | `/organizations/{slug}/tickets/{slug}` | Update ticket |
-| DELETE | `/organizations/{slug}/tickets/{slug}` | Delete ticket |
-| POST | `/organizations/{slug}/tickets/{slug}/assignees` | Add assignee |
-| DELETE | `/organizations/{slug}/tickets/{slug}/assignees/{user_id}` | Remove assignee |
-| POST | `/organizations/{slug}/tickets/{slug}/labels` | Add label |
-| DELETE | `/organizations/{slug}/tickets/{slug}/labels/{label_id}` | Remove label |
-| GET | `/organizations/{slug}/tickets/{slug}/merge-requests` | List MRs |
+| GET | `/tickets` | List tickets |
+| GET | `/tickets/board` | Get kanban board |
+| GET | `/tickets/{slug}` | Get ticket |
+| POST | `/tickets` | Create ticket |
+| PUT | `/tickets/{slug}` | Update ticket |
+| PATCH | `/tickets/{slug}/status` | Update status |
+| DELETE | `/tickets/{slug}` | Delete ticket |
 
-### Labels
+### Channels
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/labels` | List labels |
-| POST | `/organizations/{slug}/labels` | Create label |
-| PUT | `/organizations/{slug}/labels/{id}` | Update label |
-| DELETE | `/organizations/{slug}/labels/{id}` | Delete label |
+| GET | `/channels` | List channels |
+| GET | `/channels/{id}` | Get channel |
+| POST | `/channels` | Create channel |
+| PUT | `/channels/{id}` | Update channel |
+| POST | `/channels/{id}/messages` | Send message |
+| GET | `/channels/{id}/messages` | List messages |
 
-### Billing
+### Runners
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/organizations/{slug}/billing/overview` | Get billing overview |
-| GET | `/organizations/{slug}/billing/subscription` | Get subscription |
-| POST | `/organizations/{slug}/billing/subscription` | Create subscription |
-| PUT | `/organizations/{slug}/billing/subscription` | Update subscription |
-| DELETE | `/organizations/{slug}/billing/subscription` | Cancel subscription |
-| GET | `/organizations/{slug}/billing/plans` | List plans |
-| GET | `/organizations/{slug}/billing/usage` | Get usage |
-| GET | `/organizations/{slug}/billing/usage/history` | Get usage history |
-| POST | `/organizations/{slug}/billing/quota` | Set custom quota |
-| GET | `/organizations/{slug}/billing/quota/check` | Check quota |
+| GET | `/runners` | List runners |
+| GET | `/runners/{id}` | Get runner |
+| GET | `/runners/available` | List available runners |
+| GET | `/runners/{id}/pods` | List runner's pods |
+
+### Repositories
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/repositories` | List repositories |
+| GET | `/repositories/{id}` | Get repository |
+| GET | `/repositories/{id}/branches` | List branches |
+| GET | `/repositories/{id}/merge-requests` | List merge requests |
+
+---
+
+## Admin API (`/api/v1/admin`)
+
+Admin API requires system administrator privileges (`is_system_admin = true`).
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/admin/login` | Admin login |
+| GET | `/admin/me` | Get current admin |
+
+### Dashboard
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/dashboard/stats` | Get system statistics |
+
+### User Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/users` | List users |
+| GET | `/admin/users/{id}` | Get user |
+| PUT | `/admin/users/{id}` | Update user |
+| POST | `/admin/users/{id}/disable` | Disable user |
+| POST | `/admin/users/{id}/enable` | Enable user |
+| POST | `/admin/users/{id}/grant-admin` | Grant admin privileges |
+| POST | `/admin/users/{id}/revoke-admin` | Revoke admin privileges |
+
+### Organization Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/organizations` | List organizations |
+| GET | `/admin/organizations/{id}` | Get organization |
+| GET | `/admin/organizations/{id}/members` | Get members |
+| DELETE | `/admin/organizations/{id}` | Delete organization |
+
+### Runner Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/runners` | List runners |
+| GET | `/admin/runners/{id}` | Get runner |
+| POST | `/admin/runners/{id}/disable` | Disable runner |
+| POST | `/admin/runners/{id}/enable` | Enable runner |
+| DELETE | `/admin/runners/{id}` | Delete runner |
+
+### Subscription Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/subscriptions` | List subscriptions |
+| GET | `/admin/subscriptions/{id}` | Get subscription |
+| PUT | `/admin/subscriptions/{id}` | Update subscription |
+
+### Promo Code Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/promo-codes` | List promo codes |
+| POST | `/admin/promo-codes` | Create promo code |
+| PUT | `/admin/promo-codes/{id}` | Update promo code |
+| DELETE | `/admin/promo-codes/{id}` | Delete promo code |
+
+### Relay Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/relays` | List relays |
+| GET | `/admin/relays/{id}` | Get relay |
+| DELETE | `/admin/relays/{id}` | Delete relay |
+
+### Skill Registry Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/skill-registries` | List skill registries |
+| POST | `/admin/skill-registries` | Create skill registry |
+| DELETE | `/admin/skill-registries/{id}` | Delete skill registry |
+
+### Audit Logs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/audit-logs` | List audit logs |
+
+---
+
+## Public Endpoints (No Authentication)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/health/ready` | Readiness check |
+| GET | `/config/deployment` | Get deployment info |
+| GET | `/config/pricing` | Get public pricing info |
+
+## Webhooks
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/webhooks/github` | GitHub webhook |
+| POST | `/webhooks/gitlab` | GitLab webhook |
+| POST | `/webhooks/gitee` | Gitee webhook |
+| POST | `/webhooks/stripe` | Stripe payment webhook |
+| POST | `/webhooks/alipay` | Alipay payment webhook |
+| POST | `/webhooks/wechat` | WeChat Pay webhook |
+
+---
 
 ## gRPC API (Runner Communication)
 
@@ -264,16 +588,16 @@ Runners connect to the backend via gRPC with mTLS (mutual TLS) authentication.
 
 ### Endpoint
 
-- Production: `grpcs://api.agentmesh.io:9443`
+- Production: `grpcs://your-domain.com:9443`
 - Development: `grpcs://localhost:9443`
 
 ### Authentication
 
-Runners authenticate using client certificates issued by the AgentMesh PKI:
+Runners authenticate using client certificates issued by the AgentsMesh PKI:
 
 1. **Registration**: Runner obtains a certificate via `RegisterWithToken` or browser-based authorization
 2. **Connection**: Runner presents certificate during TLS handshake
-3. **Validation**: Nginx validates certificate and passes CN to backend via gRPC metadata
+3. **Validation**: Backend validates certificate and extracts Runner identity from CN
 
 ### Service Definition
 
@@ -304,12 +628,14 @@ service RunnerService {
 - `AgentStatusEvent`: Agent state change
 - `HeartbeatData`: Periodic health check
 
-## WebSocket Endpoints (Web Client)
+---
+
+## WebSocket Endpoints
 
 ### Terminal WebSocket (via Relay)
 
 ```
-ws://localhost:10000/relay/terminal/{pod_key}?token=<jwt>
+ws://{domain}/relay/terminal/{pod_key}?token=<jwt>
 ```
 
 Connect to a pod's terminal for real-time input/output via Relay service.
@@ -317,10 +643,12 @@ Connect to a pod's terminal for real-time input/output via Relay service.
 ### Events WebSocket
 
 ```
-ws://localhost:10000/api/v1/orgs/{slug}/ws/events
+ws://{domain}/api/v1/orgs/{slug}/ws/events
 ```
 
-Subscribe to real-time events. Supports filtering by event type.
+Subscribe to real-time events (pod status changes, channel messages, etc.).
+
+---
 
 ## Error Responses
 
@@ -328,17 +656,25 @@ All errors return JSON with the following structure:
 
 ```json
 {
-  "error": "Error message"
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error description"
+  }
 }
 ```
 
 Common HTTP status codes:
-- `400` - Bad Request (validation error)
-- `401` - Unauthorized (missing or invalid token)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `409` - Conflict (duplicate resource)
-- `500` - Internal Server Error
+
+| Code | Description |
+|------|-------------|
+| `400` | Bad Request - validation error |
+| `401` | Unauthorized - missing or invalid token |
+| `402` | Payment Required - quota exceeded |
+| `403` | Forbidden - insufficient permissions |
+| `404` | Not Found |
+| `409` | Conflict - duplicate resource |
+| `429` | Too Many Requests - rate limited |
+| `500` | Internal Server Error |
 
 ## Rate Limiting
 

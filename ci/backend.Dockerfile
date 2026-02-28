@@ -1,14 +1,13 @@
 # Build stage
 # Build context should be project root (not backend/)
-ARG REGISTRY=registry.corp.agentsmesh.ai
 ARG GO_VERSION=1.25
-FROM ${REGISTRY}/library/golang:${GO_VERSION} AS builder
+FROM golang:${GO_VERSION} AS builder
 
 WORKDIR /app
 
-# Use China Go proxy for faster module downloads
-ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct
-ENV GOSUMDB=sum.golang.google.cn
+# Go module proxy (override via --build-arg for faster downloads in specific regions)
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
 
 # Copy proto module first (required by replace directive in go.mod)
 COPY proto /proto
@@ -24,8 +23,7 @@ COPY backend/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/server ./cmd/server
 
 # Final stage
-ARG REGISTRY=registry.corp.agentsmesh.ai
-FROM ${REGISTRY}/library/alpine:3.19
+FROM alpine:3.19
 
 WORKDIR /app
 

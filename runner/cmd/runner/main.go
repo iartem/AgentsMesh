@@ -24,8 +24,6 @@ func main() {
 		runRunner(os.Args[2:])
 	case "service":
 		runService(os.Args[2:])
-	case "desktop":
-		runDesktop(os.Args[2:])
 	case "webconsole", "console":
 		runWebConsole(os.Args[2:])
 	case "reactivate":
@@ -55,7 +53,6 @@ Commands:
   run         Start the runner in CLI mode (requires prior registration)
   webconsole  Open the web console in browser
   service     Manage runner as a system service (install/start/stop)
-  desktop     Start runner in desktop mode with system tray
   reactivate  Reactivate runner with expired certificate
   update      Check and install updates
   version     Show version information

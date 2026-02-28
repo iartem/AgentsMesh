@@ -5,7 +5,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  allowedDevOrigins: ["192.168.100.189"],
+  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS
+    ? process.env.ALLOWED_DEV_ORIGINS.split(",")
+    : [],
 
   // Required for next-intl plugin to resolve config in Turbopack dev mode
   // See: https://github.com/amannn/next-intl/issues/1779

@@ -64,15 +64,15 @@ AgentsMesh/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/anthropics/agentsmesh.git
+   git clone https://github.com/AgentsMesh/agentsmesh.git
    cd agentsmesh
    ```
 
 2. **Start infrastructure**
    ```bash
-   ./scripts/dev.sh
+   ./deploy/dev/dev.sh
    ```
-   This starts PostgreSQL, Redis, and Adminer.
+   This initializes the local dev stack (infra, backend services, migrations, and seed data).
 
 3. **Start the backend**
    ```bash
@@ -99,17 +99,14 @@ AgentsMesh/
 ### Database Migrations
 
 ```bash
-# Apply all migrations
-./scripts/migrate.sh up
+# Run migrations in dev stack
+docker compose -f deploy/dev/docker-compose.yml exec backend ./migrate up
 
 # Rollback last migration
-./scripts/migrate.sh down 1
-
-# Create new migration
-./scripts/migrate.sh create add_new_table
+docker compose -f deploy/dev/docker-compose.yml exec backend ./migrate down 1
 
 # Check current version
-./scripts/migrate.sh version
+docker compose -f deploy/dev/docker-compose.yml exec backend ./migrate status
 ```
 
 ## API Endpoints
@@ -197,4 +194,9 @@ USE_HTTPS=false
 
 ## License
 
-MIT
+Business Source License 1.1 (`BSL-1.1`).
+
+- Change Date: `2030-02-28`
+- Change License: `GPL-2.0-or-later`
+
+See [LICENSE](./LICENSE) for full terms and additional use grant.

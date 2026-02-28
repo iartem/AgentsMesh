@@ -98,8 +98,7 @@ pnpm dev                         # Start development server
 
 ```bash
 cd runner
-make build                       # Build with desktop support (CGO)
-make build-nocgo                 # Build CLI-only (no CGO)
+make build                       # Build binary (no CGO required)
 make test                        # Run tests
 make lint                        # golangci-lint
 make build-all                   # Cross-platform builds
@@ -250,7 +249,7 @@ web-admin/src/
 
 ```
 runner/
-├── cmd/runner/           # Entry point (register/run/service/desktop)
+├── cmd/runner/           # Entry point (register/run/service)
 ├── internal/
 │   ├── runner/           # Core runner logic
 │   │   ├── runner.go         # Main Runner struct
@@ -268,7 +267,6 @@ runner/
 │   │   └── plugins/      # worktree, tempdir plugins
 │   ├── mcp/              # Model Context Protocol integration
 │   ├── workspace/        # Git worktree management
-│   ├── tray/             # System tray (desktop mode)
 │   └── console/          # Console UI
 ```
 
