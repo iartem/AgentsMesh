@@ -70,7 +70,7 @@ func (s *hubShard) run() {
 func (s *hubShard) closeClientUnsafe(client *Client) {
 	// Use recover to handle potential double-close panic
 	defer func() {
-		recover()
+		_ = recover() //nolint:errcheck // intentional: suppress double-close panic
 	}()
 	close(client.send)
 }
