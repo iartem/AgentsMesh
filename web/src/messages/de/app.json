@@ -86,6 +86,13 @@
       "online": "Online",
       "offline": "Offline",
       "podCount": "{count} Pods"
+    },
+    "channelPodManager": {
+      "title": "Kanal-Pods",
+      "description": "Pods in diesem Kanal verwalten",
+      "joined": "Beigetreten",
+      "available": "Verfügbar",
+      "empty": "Keine aktiven Pods verfügbar"
     }
   },
   "tickets": {

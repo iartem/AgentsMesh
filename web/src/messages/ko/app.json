@@ -86,6 +86,13 @@
       "online": "온라인",
       "offline": "오프라인",
       "podCount": "{count}개 Pod"
+    },
+    "channelPodManager": {
+      "title": "채널 Pod",
+      "description": "이 채널의 Pod 관리",
+      "joined": "참여됨",
+      "available": "사용 가능",
+      "empty": "활성 Pod가 없습니다"
     }
   },
   "tickets": {
