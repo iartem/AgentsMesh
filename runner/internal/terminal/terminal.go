@@ -43,6 +43,11 @@ type Terminal struct {
 	onOutput func([]byte)
 	onExit   func(int)
 
+	// onPTYError is called when readOutput encounters a fatal I/O error
+	// (not timeout, not EOF, not normal close). This allows the runner to
+	// send an error message to the frontend before the process is killed.
+	onPTYError func(error)
+
 	// Terminal size (set at creation, used when starting PTY)
 	rows int
 	cols int
@@ -244,6 +249,15 @@ func (t *Terminal) SetExitHandler(handler func(int)) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.onExit = handler
+}
+
+// SetPTYErrorHandler sets the callback for fatal PTY read errors.
+// When set, this is called when readOutput encounters a non-recoverable I/O error,
+// giving the caller a chance to notify the frontend before the process is killed.
+func (t *Terminal) SetPTYErrorHandler(handler func(error)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.onPTYError = handler
 }
 
 // Write writes data to the terminal

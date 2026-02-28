@@ -94,6 +94,11 @@ func (h *RunnerMessageHandler) OnCreatePod(cmd *runnerv1.CreatePodCommand) error
 	// Set exit handler (callback to MessageHandler for lifecycle events)
 	pod.Terminal.SetExitHandler(h.createExitHandler(cmd.PodKey))
 
+	// Set PTY error handler to notify frontend when terminal I/O fails.
+	// Without this, a PTY read error (e.g., disk full) causes a frozen terminal
+	// because the relay stays connected but no data flows through it.
+	pod.Terminal.SetPTYErrorHandler(h.createPTYErrorHandler(cmd.PodKey, pod))
+
 	// Replace pending placeholder with fully built pod BEFORE starting terminal.
 	// This ensures the exit handler can find the pod if the process exits immediately.
 	h.podStore.Put(cmd.PodKey, pod)
