@@ -25,6 +25,7 @@ interface ChannelDetailViewProps {
   onSendMessage: (content: string, mentionedPods?: MentionedPod[]) => Promise<void>;
   onLoadMore: () => void;
   onRefresh: () => void;
+  onPodsChanged?: () => void;
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
@@ -41,6 +42,7 @@ export function ChannelDetailView({
   onSendMessage,
   onLoadMore,
   onRefresh,
+  onPodsChanged,
   t,
 }: ChannelDetailViewProps) {
   const channelInfo = topology?.channels.find((c: ChannelInfo) => c.id === channelId);
@@ -63,10 +65,12 @@ export function ChannelDetailView({
             name={currentChannel?.name || channelInfo?.name || "Channel"}
             description={currentChannel?.description}
             podCount={podCount}
+            channelId={channelId}
             onClose={onBack}
             onRefresh={onRefresh}
             loading={messagesLoading}
             compact
+            onPodsChanged={onPodsChanged}
           />
         </div>
       </div>

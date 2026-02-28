@@ -31,6 +31,7 @@ export interface ChannelsTabContentProps extends TabContentProps {
   onSendMessage: (content: string, mentionedPods?: MentionedPod[]) => Promise<void>;
   onLoadMore: () => void;
   onRefresh: () => void;
+  onPodsChanged?: () => void;
 }
 
 /**

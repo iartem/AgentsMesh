@@ -28,7 +28,7 @@ export function ChannelChatPanel({ channelId, onClose }: ChannelChatPanelProps) 
     setCurrentChannel,
   } = useChannelStore();
 
-  const { topology } = useMeshStore();
+  const { topology, fetchTopology } = useMeshStore();
 
   // Load channel and messages when channelId changes
   useEffect(() => {
@@ -48,6 +48,12 @@ export function ChannelChatPanel({ channelId, onClose }: ChannelChatPanelProps) 
 
   // Resolve channel name for prompt context (extracted for React Compiler compatibility)
   const channelName = currentChannel?.name || channelInfo?.name || "Channel";
+
+  // Refresh topology and channel data when pod membership changes
+  const handlePodsChanged = useCallback(() => {
+    fetchTopology();
+    fetchChannel(channelId);
+  }, [fetchTopology, fetchChannel, channelId]);
 
   // Handle send message — also forward prompt to @mentioned pods
   const handleSendMessage = useCallback(
@@ -126,12 +132,14 @@ export function ChannelChatPanel({ channelId, onClose }: ChannelChatPanelProps) 
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <ChannelHeader
-        name={currentChannel?.name || channelInfo?.name || "Channel"}
+        name={channelName}
         description={currentChannel?.description}
         podCount={podCount}
+        channelId={channelId}
         onClose={onClose}
         onRefresh={handleRefresh}
         loading={messagesLoading}
+        onPodsChanged={handlePodsChanged}
       />
 
       {/* Document section - collapsible markdown preview */}

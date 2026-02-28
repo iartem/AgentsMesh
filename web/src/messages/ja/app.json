@@ -86,6 +86,13 @@
       "online": "オンライン",
       "offline": "オフライン",
       "podCount": "{count} Pod"
+    },
+    "channelPodManager": {
+      "title": "チャンネル Pod",
+      "description": "このチャンネルの Pod を管理",
+      "joined": "参加済み",
+      "available": "利用可能",
+      "empty": "アクティブな Pod がありません"
     }
   },
   "tickets": {

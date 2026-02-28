@@ -86,6 +86,13 @@
       "online": "在线",
       "offline": "离线",
       "podCount": "{count} 个 Pod"
+    },
+    "channelPodManager": {
+      "title": "频道 Pod",
+      "description": "管理此频道中的 Pod",
+      "joined": "已加入",
+      "available": "可用",
+      "empty": "暂无活跃的 Pod"
     }
   },
   "tickets": {

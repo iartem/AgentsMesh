@@ -218,6 +218,14 @@ export function BottomPanel({ className }: BottomPanelProps) {
     fetchMessages(selectedChannelId);
   }, [selectedChannelId, fetchMessages]);
 
+  // Refresh topology and channel data when pod membership changes
+  const handlePodsChanged = useCallback(() => {
+    fetchTopology();
+    if (selectedChannelId) {
+      fetchChannel(selectedChannelId);
+    }
+  }, [fetchTopology, fetchChannel, selectedChannelId]);
+
   // Tab switch handler
   const handleTabClick = useCallback((tabId: BottomPanelTab, shouldOpen = false) => {
     setBottomPanelTab(tabId);
@@ -335,6 +343,7 @@ export function BottomPanel({ className }: BottomPanelProps) {
             onSendMessage={handleSendMessage}
             onLoadMore={handleLoadMoreMessages}
             onRefresh={handleRefreshMessages}
+            onPodsChanged={handlePodsChanged}
             t={t}
           />
         )}

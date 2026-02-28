@@ -9,7 +9,8 @@ import { MessageInput, extractPromptFromMention, buildChannelPrompt } from "./Me
 import type { MentionedPod } from "./MessageInput";
 import { ChannelDocument } from "./ChannelDocument";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Radio, Users, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowLeft, Radio, RefreshCw, Loader2 } from "lucide-react";
+import { ChannelPodManager } from "./ChannelPodManager";
 import { cn } from "@/lib/utils";
 
 interface MobileChannelChatProps {
@@ -32,7 +33,7 @@ export function MobileChannelChat({ channelId, onClose }: MobileChannelChatProps
     setCurrentChannel,
   } = useChannelStore();
 
-  const { topology } = useMeshStore();
+  const { topology, fetchTopology } = useMeshStore();
 
   // Load channel and messages when channelId changes
   useEffect(() => {
@@ -52,6 +53,12 @@ export function MobileChannelChat({ channelId, onClose }: MobileChannelChatProps
 
   // Resolve channel name for prompt context (extracted for React Compiler compatibility)
   const channelName = currentChannel?.name || channelInfo?.name || "Channel";
+
+  // Refresh topology and channel data when pod membership changes
+  const handlePodsChanged = useCallback(() => {
+    fetchTopology();
+    fetchChannel(channelId);
+  }, [fetchTopology, fetchChannel, channelId]);
 
   // Handle send message — also forward prompt to @mentioned pods
   const handleSendMessage = useCallback(
@@ -152,11 +159,12 @@ export function MobileChannelChat({ channelId, onClose }: MobileChannelChatProps
           </div>
 
           <div className="flex items-center gap-2 mr-2 flex-shrink-0">
-            {/* Pod count badge */}
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md">
-              <Users className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium">{podCount}</span>
-            </div>
+            {/* Pod manager popover */}
+            <ChannelPodManager
+              channelId={channelId}
+              podCount={podCount}
+              onPodsChanged={handlePodsChanged}
+            />
 
             {/* Refresh button */}
             <Button

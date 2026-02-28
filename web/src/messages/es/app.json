@@ -86,6 +86,13 @@
       "online": "En línea",
       "offline": "Desconectado",
       "podCount": "{count} pods"
+    },
+    "channelPodManager": {
+      "title": "Pods del Canal",
+      "description": "Gestionar pods en este canal",
+      "joined": "Unido",
+      "available": "Disponible",
+      "empty": "No hay pods activos disponibles"
     }
   },
   "tickets": {
