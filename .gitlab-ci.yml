@@ -442,6 +442,7 @@ deploy:cn-prod:backend:
       changes:
         - backend/**/*
         - proto/**/*
+        - ci/backend.Dockerfile
       when: manual
 
 # Deploy Web to China Production
@@ -465,6 +466,7 @@ deploy:cn-prod:web:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - web/**/*
+        - ci/web.Dockerfile
       when: manual
 
 # Deploy Web-Admin to China Production
@@ -488,6 +490,7 @@ deploy:cn-prod:web-admin:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - web-admin/**/*
+        - ci/web-admin.Dockerfile
       when: manual
 
 # Deploy Relay: cn-relay-01
@@ -511,6 +514,7 @@ deploy:cn-prod:cn-relay-01:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
+        - ci/relay.Dockerfile
       when: manual
 
 # =============================================================================
@@ -573,6 +577,7 @@ deploy:uswest-prod:backend:
       changes:
         - backend/**/*
         - proto/**/*
+        - ci/backend.Dockerfile
       when: manual
 
 # Deploy Web to US West Production
@@ -596,6 +601,7 @@ deploy:uswest-prod:web:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - web/**/*
+        - ci/web.Dockerfile
       when: manual
 
 # Deploy Web-Admin to US West Production
@@ -619,6 +625,7 @@ deploy:uswest-prod:web-admin:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - web-admin/**/*
+        - ci/web-admin.Dockerfile
       when: manual
 
 # Deploy Relay: uswest-relay-01
@@ -642,6 +649,7 @@ deploy:uswest-prod:uswest-relay-01:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
+        - ci/relay.Dockerfile
       when: manual
 
 # Database Migration for US West Production
