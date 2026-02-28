@@ -43,6 +43,81 @@ Instead of running agents one-at-a-time on your local machine, AgentsMesh lets y
 - **Multi-Tenant** — Organization > Team > User hierarchy with row-level isolation.
 - **Enterprise Ready** — SSO, RBAC, audit logs, air-gapped deployment support.
 
+## Getting Started
+
+The fastest way to use AgentsMesh is through our hosted service at **[agentsmesh.ai](https://agentsmesh.ai)** — sign up, connect your Git provider, and start running agents in minutes.
+
+### 1. Install the Runner
+
+The Runner is a lightweight daemon that runs on your machine and executes AI agents locally. Your code stays on your infrastructure.
+
+**macOS (Homebrew):**
+
+```bash
+brew tap AgentsMesh/homebrew-tap
+brew install agentsmesh-runner
+```
+
+**Linux / macOS (direct download):**
+
+```bash
+# macOS (Apple Silicon / Intel universal binary)
+curl -fsSL https://github.com/AgentsMesh/AgentsMesh/releases/latest/download/agentsmesh-runner_darwin_all.tar.gz | tar xz
+sudo mv agentsmesh-runner /usr/local/bin/
+
+# Linux x86_64
+curl -fsSL https://github.com/AgentsMesh/AgentsMesh/releases/latest/download/agentsmesh-runner_linux_amd64.tar.gz | tar xz
+sudo mv agentsmesh-runner /usr/local/bin/
+
+# Linux ARM64
+curl -fsSL https://github.com/AgentsMesh/AgentsMesh/releases/latest/download/agentsmesh-runner_linux_arm64.tar.gz | tar xz
+sudo mv agentsmesh-runner /usr/local/bin/
+```
+
+**Linux packages:**
+
+```bash
+# Debian / Ubuntu
+wget https://github.com/AgentsMesh/AgentsMesh/releases/latest/download/agentsmesh-runner_linux_amd64.deb
+sudo dpkg -i agentsmesh-runner_linux_amd64.deb
+
+# RHEL / Fedora
+wget https://github.com/AgentsMesh/AgentsMesh/releases/latest/download/agentsmesh-runner_linux_amd64.rpm
+sudo rpm -i agentsmesh-runner_linux_amd64.rpm
+```
+
+### 2. Register
+
+```bash
+# Interactive — opens browser for authentication
+agentsmesh-runner register
+
+# Headless (SSH / remote server) — prints a URL to visit manually
+agentsmesh-runner register --headless
+
+# Token-based (CI / automation)
+agentsmesh-runner register --token <REGISTRATION_TOKEN>
+```
+
+For self-hosted deployments, add `--server`:
+
+```bash
+agentsmesh-runner register --server https://your-server.com
+```
+
+### 3. Run
+
+```bash
+# Start the runner
+agentsmesh-runner run
+
+# Or install as a system service
+agentsmesh-runner service install
+agentsmesh-runner service start
+```
+
+Once the runner is online, create an **AgentPod** from the web console and start coding with your AI agents.
+
 ## Architecture
 
 AgentsMesh separates **control plane** from **data plane** — orchestration commands travel through gRPC with mTLS, while terminal I/O streams through a Relay cluster.
