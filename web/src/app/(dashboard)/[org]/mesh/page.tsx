@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { MeshTopology } from "@/components/mesh";
@@ -163,15 +164,20 @@ export default function MeshPage() {
         /* Resizable layout when chat panel is open on desktop */
         <Group
           orientation="horizontal"
-          className="h-full hidden md:flex"
+          className="h-full hidden md:flex flex-1"
         >
           <Panel defaultSize={65} minSize={40}>
             {topologyContent}
           </Panel>
           <Separator
-            className="group relative flex items-center justify-center w-1 bg-transparent hover:bg-primary transition-colors cursor-col-resize"
+            className="group relative flex items-center justify-center w-1 bg-transparent hover:bg-primary/50 transition-colors cursor-col-resize"
           >
-            <div className="absolute z-10 w-3 h-full -left-1" />
+            {/* Expand hit area for easier grabbing */}
+            <div className="absolute w-3 h-full -left-1 pointer-events-none" />
+            {/* Grip indicator */}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
+              <GripVertical className="h-4 w-4" />
+            </div>
           </Separator>
           <Panel defaultSize={35} minSize={20} maxSize={50}>
             <ChannelChatPanel
