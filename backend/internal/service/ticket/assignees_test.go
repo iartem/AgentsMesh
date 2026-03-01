@@ -14,7 +14,7 @@ func TestUpdateAssignees(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 		AssigneeIDs:    []int64{1, 2},
@@ -53,7 +53,7 @@ func TestAddRemoveAssignee(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -92,7 +92,7 @@ func TestAddRemoveLabel(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -133,7 +133,7 @@ func TestGetAssignees(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 		AssigneeIDs:    []int64{1, 2},
@@ -159,7 +159,7 @@ func TestGetTicketLabels(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 		LabelIDs:       []int64{label1.ID, label2.ID},
@@ -182,7 +182,7 @@ func TestGetChildTickets(t *testing.T) {
 	parent, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "epic",
+
 		Title:          "Parent",
 		Priority:       "high",
 	})
@@ -191,7 +191,7 @@ func TestGetChildTickets(t *testing.T) {
 		service.CreateTicket(ctx, &CreateTicketRequest{
 			OrganizationID: 1,
 			ReporterID:     1,
-			Type:           "task",
+	
 			Title:          "Child",
 			Priority:       "medium",
 			ParentTicketID: &parent.ID,
@@ -219,7 +219,7 @@ func TestGetActiveTickets(t *testing.T) {
 		tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 			OrganizationID: 1,
 			ReporterID:     1,
-			Type:           "task",
+	
 			Title:          "Test",
 			Priority:       "medium",
 		})
@@ -245,7 +245,7 @@ func TestGetTicketStats(t *testing.T) {
 	service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -257,7 +257,7 @@ func TestGetTicketStats(t *testing.T) {
 		t.Fatalf("GetTicketStats() error = %v", err)
 	}
 	// Just verify it returns a map with expected keys
-	expectedStatuses := []string{"backlog", "todo", "in_progress", "in_review", "done", "cancelled"}
+	expectedStatuses := []string{"backlog", "todo", "in_progress", "in_review", "done"}
 	for _, status := range expectedStatuses {
 		if _, ok := stats[status]; !ok {
 			t.Errorf("stats missing key: %s", status)

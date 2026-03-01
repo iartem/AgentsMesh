@@ -9,7 +9,6 @@ import {
   CircleDashed,
   Loader2,
   CheckCircle2,
-  XCircle,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -65,12 +64,6 @@ const statusConfig: Record<TicketStatus, {
     bgColor: "bg-green-100 dark:bg-green-900/30",
     label: "Done",
   },
-  cancelled: {
-    icon: XCircle,
-    color: "text-red-500 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    label: "Cancelled",
-  },
 };
 
 const statusOrder: TicketStatus[] = [
@@ -79,7 +72,6 @@ const statusOrder: TicketStatus[] = [
   "in_progress",
   "in_review",
   "done",
-  "cancelled",
 ];
 
 const sizeClasses = {

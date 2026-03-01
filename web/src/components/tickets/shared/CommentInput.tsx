@@ -3,30 +3,40 @@
 import { useState, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Send, X } from "lucide-react";
+import { Send, X, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/stores/auth";
 import { MentionPopover } from "./MentionPopover";
 
 interface CommentInputProps {
-  /** Called when the comment is submitted */
   onSubmit: (
     content: string,
     mentions: Array<{ user_id: number; username: string }>
   ) => Promise<void>;
-  /** If replying to a comment, show the username being replied to */
   replyTo?: { id: number; username: string };
-  /** Cancel reply mode */
   onCancelReply?: () => void;
-  /** Placeholder text */
   placeholder?: string;
-  /** Initial content for edit mode */
   initialContent?: string;
-  /** Called when cancel is clicked in edit mode */
   onCancel?: () => void;
 }
 
-/**
- * Comment input component with @mention support.
- */
+function UserAvatar({ src, name }: { src?: string; name: string }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        className="w-8 h-8 rounded-full shrink-0 ring-1 ring-border/30"
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0 ring-1 ring-primary/15">
+      {(name || "?")[0].toUpperCase()}
+    </div>
+  );
+}
+
 export function CommentInput({
   onSubmit,
   replyTo,
@@ -36,6 +46,7 @@ export function CommentInput({
   onCancel,
 }: CommentInputProps) {
   const t = useTranslations();
+  const { user } = useAuthStore();
   const isEditMode = initialContent !== undefined;
   const [content, setContent] = useState(initialContent || "");
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +54,6 @@ export function CommentInput({
     Array<{ user_id: number; username: string }>
   >([]);
 
-  // Mention popover state
   const [mentionVisible, setMentionVisible] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
@@ -56,7 +66,6 @@ export function CommentInput({
     const cursorPos = e.target.selectionStart || 0;
     setContent(value);
 
-    // Detect @ trigger
     const textBeforeCursor = value.slice(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf("@");
 
@@ -64,7 +73,6 @@ export function CommentInput({
       const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : " ";
       const textAfterAt = textBeforeCursor.slice(atIndex + 1);
 
-      // Only trigger if @ is at start or preceded by whitespace, and no space after @
       if (
         (charBeforeAt === " " || charBeforeAt === "\n" || atIndex === 0) &&
         !textAfterAt.includes(" ")
@@ -73,7 +81,6 @@ export function CommentInput({
         setMentionStartIndex(atIndex);
         setMentionVisible(true);
 
-        // Position the popover near the textarea
         if (textareaRef.current) {
           const rect = textareaRef.current.getBoundingClientRect();
           setMentionPosition({
@@ -100,17 +107,14 @@ export function CommentInput({
       setContent(newContent);
       setMentionVisible(false);
 
-      // Track mention (avoid duplicates)
       setMentions((prev) => {
         if (prev.some((m) => m.username === username)) return prev;
-        // We don't have user_id here from the popover; it will be resolved by the parent via member list
         return [...prev, { user_id: 0, username }];
       });
 
-      // Refocus textarea
       setTimeout(() => {
         if (textareaRef.current) {
-          const newPos = mentionStartIndex + username.length + 2; // @username + space
+          const newPos = mentionStartIndex + username.length + 2;
           textareaRef.current.focus();
           textareaRef.current.setSelectionRange(newPos, newPos);
         }
@@ -123,7 +127,6 @@ export function CommentInput({
     const trimmed = content.trim();
     if (!trimmed || submitting) return;
 
-    // Extract mentions from content
     const mentionRegex = /@(\w+)/g;
     const extractedMentions: Array<{ user_id: number; username: string }> = [];
     let match;
@@ -149,7 +152,6 @@ export function CommentInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Don't handle Enter if mention popover is visible (popover handles it)
     if (mentionVisible) return;
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -158,45 +160,25 @@ export function CommentInput({
     }
   };
 
-  return (
-    <div className="relative">
-      {/* Reply indicator */}
-      {replyTo && (
-        <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-xs text-muted-foreground bg-muted/30 rounded-t-lg border border-b-0 border-border">
-          <span>
-            {t("tickets.detail.replyTo", { username: replyTo.username })}
-          </span>
-          <button
-            type="button"
-            onClick={onCancelReply}
-            className="ml-auto hover:text-foreground transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
-
-      <div
-        className={`relative flex items-end gap-2 border border-border rounded-lg bg-card p-2 ${
-          replyTo ? "rounded-t-none" : ""
-        }`}
-      >
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder || t("tickets.detail.addComment")}
-          rows={1}
-          className="flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none min-h-[36px] max-h-[120px] py-1.5 px-2"
-          style={{ height: "auto", overflow: "hidden" }}
-          onInput={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            target.style.height = "auto";
-            target.style.height = Math.min(target.scrollHeight, 120) + "px";
-          }}
-        />
-        {isEditMode ? (
+  if (isEditMode) {
+    return (
+      <div className="relative">
+        <div className="relative flex items-end gap-2 border border-border rounded-lg bg-card p-2">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder || t("tickets.detail.addComment")}
+            rows={2}
+            className="flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none min-h-[60px] max-h-[120px] py-1.5 px-2"
+            style={{ overflow: "hidden" }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = "auto";
+              target.style.height = Math.min(target.scrollHeight, 120) + "px";
+            }}
+          />
           <div className="flex gap-1.5 shrink-0">
             <Button
               size="sm"
@@ -212,28 +194,99 @@ export function CommentInput({
               disabled={!content.trim() || submitting}
               className="h-8"
             >
-              {t("tickets.detail.submit")}
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("tickets.detail.submit")
+              )}
             </Button>
           </div>
-        ) : (
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={!content.trim() || submitting}
-            className="shrink-0 h-8 w-8 p-0"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        )}
 
-        {/* Mention Popover */}
-        <MentionPopover
-          visible={mentionVisible}
-          query={mentionQuery}
-          position={mentionPosition}
-          onSelect={handleMentionSelect}
-          onClose={() => setMentionVisible(false)}
+          <MentionPopover
+            visible={mentionVisible}
+            query={mentionQuery}
+            position={mentionPosition}
+            onSelect={handleMentionSelect}
+            onClose={() => setMentionVisible(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Reply indicator */}
+      {replyTo && (
+        <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-xs text-muted-foreground bg-muted/30 rounded-t-xl border border-b-0 border-border/50">
+          <span>
+            {t("tickets.detail.replyTo", { username: replyTo.username })}
+          </span>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="ml-auto hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      <div
+        className={`flex items-start gap-3 rounded-xl border border-border/50 bg-card shadow-sm p-3 ${
+          replyTo ? "rounded-t-none" : ""
+        }`}
+      >
+        <UserAvatar
+          src={user?.avatar_url}
+          name={user?.name || user?.username || "?"}
         />
+
+        <div className="flex-1 min-w-0 relative">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder || t("tickets.detail.addComment")}
+            rows={1}
+            className="w-full resize-none bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
+            style={{ height: "auto", overflow: "hidden" }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = "auto";
+              target.style.height = Math.min(target.scrollHeight, 120) + "px";
+            }}
+          />
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[10px] text-muted-foreground/40">
+              Enter to send &middot; Shift+Enter for new line
+            </span>
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={!content.trim() || submitting}
+              className="shrink-0 h-7 px-3 text-xs gap-1.5"
+            >
+              {submitting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  {t("tickets.detail.submit")}
+                </>
+              )}
+            </Button>
+          </div>
+
+          <MentionPopover
+            visible={mentionVisible}
+            query={mentionQuery}
+            position={mentionPosition}
+            onSelect={handleMentionSelect}
+            onClose={() => setMentionVisible(false)}
+          />
+        </div>
       </div>
     </div>
   );

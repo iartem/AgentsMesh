@@ -138,48 +138,78 @@
     },
     "gettingStarted": {
       "title": "Quick Start",
-      "description": "Get AgentsMesh up and running in just a few minutes. This guide will walk you through the essential setup steps.",
+      "description": "Get AgentsMesh up and running in six steps. This guide walks you through account creation, Runner setup, agent installation, and launching your first AI-powered Pod.",
       "step1": {
         "title": "Create an Account",
-        "description": "Sign up to create your account and organization. You'll receive a verification email to confirm your account.",
-        "whatYouSetUp": "What you'll set up:",
-        "item1": "Personal account with email verification",
-        "item2": "Organization (team workspace)",
-        "item3": "Initial organization settings"
+        "description": "Register at the sign-up page with your email, username, and password. After submitting you will receive a verification email — check your spam folder if it does not arrive within a few minutes.",
+        "whatYouGet": "After verifying your email, the onboarding wizard will guide you to:",
+        "item1": "Create a personal workspace (one click) or a team workspace",
+        "item2": "Optionally join an existing organization via an invitation link"
       },
       "step2": {
-        "title": "Configure AI Providers",
-        "description": "Go to Settings → AgentPod → AI Providers to configure your AI provider API keys. AgentsMesh supports multiple providers:",
-        "anthropic": "Anthropic (Claude)",
-        "anthropicDesc": "For Claude Code agent. Get your API key from",
-        "openai": "OpenAI",
-        "openaiDesc": "For Codex CLI agent. Get your API key from",
-        "google": "Google (Gemini)",
-        "googleDesc": "For Gemini CLI agent. Get your API key from",
-        "custom": "Custom Provider",
-        "customDesc": "For Aider, OpenCode, or custom agents with your own API endpoints."
+        "title": "Setup a Runner",
+        "description": "A Runner is the execution environment where AI agent Pods run. Install the AgentsMesh Runner on your development machine or server.",
+        "methodToken": "Register with a token",
+        "methodLogin": "Register with browser login",
+        "seeSetup": "See {link} for Docker, Homebrew, Linux packages, and Kubernetes deployment options."
       },
       "step3": {
-        "title": "Setup a Runner",
-        "description": "Runners are the execution environments where AI agent Pods run. Download and configure the AgentsMesh Runner on your development machine or server.",
-        "seeSetup": "See {link} for detailed installation instructions and Docker/Kubernetes deployment options."
+        "title": "Install AI Agent CLIs",
+        "description": "Install the CLI tools you want to use on your Runner machine and set the required API key environment variables. The Runner auto-detects installed CLIs via PATH and reports available agents to the platform.",
+        "claudeCode": "Claude Code",
+        "claudeCodeInstall": "npm install -g @anthropic-ai/claude-code",
+        "claudeCodeEnv": "export ANTHROPIC_API_KEY=sk-ant-...",
+        "claudeCodeHint": "Get your API key from",
+        "codexCli": "Codex CLI",
+        "codexCliInstall": "npm install -g @openai/codex",
+        "codexCliEnv": "export OPENAI_API_KEY=sk-...",
+        "codexCliHint": "Get your API key from",
+        "geminiCli": "Gemini CLI",
+        "geminiCliInstall": "npm install -g @google/gemini-cli",
+        "geminiCliEnv": "export GOOGLE_API_KEY=...",
+        "geminiCliHint": "Get your API key from",
+        "tip": "After installing, restart the Runner or wait for the next heartbeat. The newly available agents will appear in the New Pod dialog."
       },
       "step4": {
+        "title": "Connect a Git Provider",
+        "description": "Connecting a Git provider lets your Pods clone repositories and work in isolated Git worktrees. Go to Settings → Personal → Git Settings to add a provider.",
+        "github": "GitHub",
+        "githubDesc": "Add a Personal Access Token with the repo scope.",
+        "githubTokenUrl": "github.com/settings/tokens",
+        "gitlab": "GitLab",
+        "gitlabDesc": "Add a Personal Access Token with api and read_repository scopes. Self-hosted instances are supported.",
+        "seeGuide": "See {link} for full setup instructions including SSH keys and Gitee."
+      },
+      "step5": {
         "title": "Start a Pod",
-        "description": "Create a new AgentPod and start coding with AI assistance!",
-        "item1": "Navigate to AgentPod in the sidebar",
+        "description": "Create your first AgentPod and start coding with AI assistance!",
+        "item1": "Navigate to Workspace in the sidebar",
         "item2": "Click New Pod",
         "item3": "Select an AI agent type (Claude Code, Codex CLI, etc.)",
-        "item4": "Choose a Runner to execute the Pod",
-        "item5": "Optionally link to a repository and ticket",
-        "item6": "Click Create to start your AI-powered development Pod"
+        "item4": "Choose a Runner",
+        "item5": "Optionally select a repository and branch",
+        "item6": "Optionally link to a ticket for context",
+        "item7": "Add an initial prompt describing the task",
+        "item8": "Click Create"
+      },
+      "step6": {
+        "title": "Interact with Your Agent",
+        "description": "After creation the terminal view opens with a live session. Your AI agent begins executing the initial prompt or waits for input if none was provided.",
+        "item1": "Type follow-up prompts or commands directly in the terminal",
+        "item2": "Watch the agent status indicator — idle, executing, or waiting",
+        "item3": "The agent works inside the repository worktree if one was linked",
+        "item4": "Terminate the Pod from the toolbar when your task is complete"
       },
       "nextSteps": {
         "title": "Next Steps",
         "agentpod": "Learn about AgentPod →",
         "agentpodDesc": "Remote AI development workstations",
         "mesh": "Explore Mesh →",
-        "meshDesc": "Multi-agent collaboration features"
+        "meshDesc": "Multi-agent collaboration features",
+        "tickets": "Tickets & Kanban →",
+        "ticketsDesc": "Task management linked to Pods",
+        "multiAgent": "Multi-Agent Workflows →",
+        "multiAgentDesc": "Coordinate multiple AI agents"
       }
     },
     "features": {
@@ -235,12 +265,10 @@
           "descriptionHeader": "Description",
           "idle": "Idle",
           "idleDesc": "Agent is waiting for a task or prompt",
-          "working": "Working",
-          "workingDesc": "Agent is actively executing a task",
+          "executing": "Executing",
+          "executingDesc": "Agent is actively executing a task",
           "waiting": "Waiting",
-          "waitingDesc": "Agent is waiting for user input or approval",
-          "finished": "Finished",
-          "finishedDesc": "Agent has completed its task"
+          "waitingDesc": "Agent is waiting for user input or approval"
         },
         "configuration": {
           "title": "Pod Configuration",
@@ -432,7 +460,7 @@
           "item1": "Pod creation and termination events",
           "item2": "Binding requests and status changes",
           "item3": "Channel message activity",
-          "item4": "Agent status transitions (idle → working → waiting → finished)"
+          "item4": "Agent status transitions (idle → executing → waiting)"
         }
       },
       "tickets": {
@@ -447,17 +475,6 @@
           "item4": "Priority and estimation tracking",
           "item5": "Labels and assignees"
         },
-        "types": {
-          "title": "Ticket Types",
-          "task": "Task",
-          "taskDesc": "General development tasks. The most common ticket type for day-to-day work.",
-          "bug": "Bug",
-          "bugDesc": "Bug reports and fixes. Supports severity levels: critical, major, minor, trivial.",
-          "feature": "Feature",
-          "featureDesc": "New feature requests. Use for enhancements and new capabilities.",
-          "epic": "Epic",
-          "epicDesc": "Large initiatives that contain multiple tasks. Use for tracking major projects."
-        },
         "status": {
           "title": "Ticket Status",
           "description": "Tickets flow through these statuses in the Kanban board:",
@@ -465,8 +482,7 @@
           "todo": "Todo",
           "inProgress": "In Progress",
           "inReview": "In Review",
-          "done": "Done",
-          "cancelled": "Tickets can also be marked as Cancelled if no longer needed."
+          "done": "Done"
         },
         "priority": {
           "title": "Priority Levels",
@@ -635,6 +651,8 @@
           "brewTitle": "macOS (Homebrew)",
           "linuxTitle": "Linux (Package Manager)",
           "afterInstall": "After Installation",
+          "methodToken": "Option A: Register with a token",
+          "methodLogin": "Option B: Register with browser login",
           "tokenHint": "Get your registration token from Settings → Runners → Create Token in the AgentsMesh web interface."
         },
         "docker": {
@@ -807,7 +825,7 @@
         "github": {
           "title": "GitHub (OAuth)",
           "description": "Connect your GitHub account using OAuth for one-click authorization:",
-          "step1": "Go to Settings → Git Providers",
+          "step1": "Go to Settings → Personal → Git Settings",
           "step2": "Click Connect GitHub",
           "step3": "Authorize AgentsMesh in the GitHub popup",
           "step4": "Select which repositories to grant access to",
@@ -818,7 +836,7 @@
           "description": "Connect GitLab using a Personal Access Token:",
           "step1": "In GitLab, go to Settings → Access Tokens",
           "step2": "Create a new token with api and read_repository scopes",
-          "step3": "In AgentsMesh, go to Settings → Git Providers",
+          "step3": "In AgentsMesh, go to Settings → Personal → Git Settings",
           "step4": "Click Add GitLab Provider and paste your token",
           "step5": "Enter your GitLab instance URL (for self-hosted)",
           "selfHosted": "Self-Hosted GitLab: Enter the full URL of your GitLab instance (e.g., https://gitlab.yourcompany.com)."
@@ -828,7 +846,7 @@
           "description": "Connect Gitee using a Personal Access Token:",
           "step1": "In Gitee, go to Settings → Personal Access Tokens",
           "step2": "Create a new token with projects scope",
-          "step3": "In AgentsMesh, go to Settings → Git Providers",
+          "step3": "In AgentsMesh, go to Settings → Personal → Git Settings",
           "step4": "Click Add Gitee Provider and paste your token"
         },
         "sshKeys": {
@@ -1124,11 +1142,10 @@
           "title": "Endpoint Details",
           "listTickets": {
             "title": "GET /tickets",
-            "description": "Retrieve a paginated list of tickets. Supports filtering by repository, status, type, assignee, and labels.",
+            "description": "Retrieve a paginated list of tickets. Supports filtering by repository, status, assignee, and labels.",
             "params": {
               "repository_id": "Filter by repository ID",
-              "status": "Filter by status (open, in_progress, resolved, closed)",
-              "type": "Filter by type (bug, feature, task, improvement)",
+              "status": "Filter by status (backlog, todo, in_progress, in_review, done)",
               "assignee_id": "Filter by assignee user ID",
               "labels": "Filter by labels (comma-separated)",
               "limit": "Maximum number of results to return",
@@ -1151,12 +1168,11 @@
           },
           "createTicket": {
             "title": "POST /tickets",
-            "description": "Create a new ticket. Requires a type and title at minimum.",
+            "description": "Create a new ticket. Requires a title at minimum.",
             "fields": {
-              "type": "Ticket type: bug, feature, task, or improvement",
               "title": "Ticket title (1-500 characters)",
-              "priority": "Priority level: low, medium, high, or critical",
-              "status": "Initial status (defaults to open)",
+              "priority": "Priority level: low, medium, high, or urgent",
+              "status": "Initial status (defaults to backlog)",
               "assignee_id": "User ID to assign the ticket to",
               "repository_id": "Repository to associate with",
               "labels": "Array of label strings",
@@ -1171,7 +1187,6 @@
             },
             "fields": {
               "title": "Updated ticket title",
-              "type": "Updated ticket type",
               "priority": "Updated priority level",
               "status": "Updated status",
               "assignee_id": "Updated assignee user ID",
@@ -1186,7 +1201,7 @@
               "slug": "Ticket slug (e.g., AM-123)"
             },
             "fields": {
-              "status": "New status: open, in_progress, resolved, or closed"
+              "status": "New status: backlog, todo, in_progress, in_review, or done"
             }
           },
           "deleteTicket": {
@@ -1503,7 +1518,7 @@
         },
         "gitCloneFail": {
           "question": "Git clone fails when creating a Pod. What should I check?",
-          "answer": "Verify: 1) The Git provider is connected in Settings → Git Providers. 2) The repository URL is correct. 3) For SSH access, ensure the Runner machine has the correct SSH keys. 4) For HTTPS, ensure the token has repository read access."
+          "answer": "Verify: 1) The Git provider is connected in Settings → Personal → Git Settings. 2) The repository URL is correct. 3) For SSH access, ensure the Runner machine has the correct SSH keys. 4) For HTTPS, ensure the token has repository read access."
         },
         "gitWorktreeConflict": {
           "question": "Can multiple Pods work on the same repository simultaneously?",

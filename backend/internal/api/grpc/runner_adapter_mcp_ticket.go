@@ -93,7 +93,6 @@ func (a *GRPCRunnerAdapter) mcpSearchTickets(ctx context.Context, tc *middleware
 	var params struct {
 		RepositoryID      *int64  `json:"repository_id"`
 		Status            string  `json:"status"`
-		Type              string  `json:"type"`
 		Priority          string  `json:"priority"`
 		AssigneeID        *int64  `json:"assignee_id"`
 		ParentTicketSlug  *string `json:"parent_ticket_slug"`
@@ -129,7 +128,6 @@ func (a *GRPCRunnerAdapter) mcpSearchTickets(ctx context.Context, tc *middleware
 		OrganizationID: tc.OrganizationID,
 		RepositoryID:   params.RepositoryID,
 		Status:         params.Status,
-		Type:           params.Type,
 		Priority:       params.Priority,
 		AssigneeID:     params.AssigneeID,
 		ParentTicketID: parentTicketID,
@@ -188,7 +186,6 @@ func (a *GRPCRunnerAdapter) mcpCreateTicket(ctx context.Context, tc *middleware.
 		RepositoryID     *int64  `json:"repository_id"`
 		Title            string  `json:"title"`
 		Content          string  `json:"content"`
-		Type             string  `json:"type"`
 		Priority         string  `json:"priority"`
 		ParentTicketSlug *string `json:"parent_ticket_slug"`
 	}
@@ -198,9 +195,6 @@ func (a *GRPCRunnerAdapter) mcpCreateTicket(ctx context.Context, tc *middleware.
 
 	if params.Title == "" {
 		return nil, newMcpError(400, "title is required")
-	}
-	if params.Type == "" {
-		params.Type = "task"
 	}
 	if params.Priority == "" {
 		params.Priority = "medium"
@@ -225,7 +219,6 @@ func (a *GRPCRunnerAdapter) mcpCreateTicket(ctx context.Context, tc *middleware.
 		OrganizationID: tc.OrganizationID,
 		RepositoryID:   params.RepositoryID,
 		ReporterID:     tc.UserID,
-		Type:           params.Type,
 		Title:          params.Title,
 		Content:        content,
 		Priority:       params.Priority,
@@ -246,7 +239,6 @@ func (a *GRPCRunnerAdapter) mcpUpdateTicket(ctx context.Context, tc *middleware.
 		Content    *string `json:"content"`
 		Status     *string `json:"status"`
 		Priority   *string `json:"priority"`
-		Type       *string `json:"type"`
 	}
 	if err := unmarshalPayload(payload, &params); err != nil {
 		return nil, err
@@ -273,9 +265,6 @@ func (a *GRPCRunnerAdapter) mcpUpdateTicket(ctx context.Context, tc *middleware.
 	}
 	if params.Priority != nil {
 		updates["priority"] = *params.Priority
-	}
-	if params.Type != nil {
-		updates["type"] = *params.Type
 	}
 
 	t, err = a.ticketService.UpdateTicket(ctx, t.ID, updates)

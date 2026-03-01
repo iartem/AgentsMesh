@@ -15,7 +15,7 @@ func TestGetTicketByIDOrSlug(t *testing.T) {
 	tkt1, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 First",
 		Priority:       "medium",
 	})
@@ -26,7 +26,7 @@ func TestGetTicketByIDOrSlug(t *testing.T) {
 	tkt2, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 Second",
 		Priority:       "medium",
 	})
@@ -38,7 +38,7 @@ func TestGetTicketByIDOrSlug(t *testing.T) {
 	tktOrg2, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 2,
 		ReporterID:     2,
-		Type:           "task",
+
 		Title:          "Org2 First",
 		Priority:       "medium",
 	})

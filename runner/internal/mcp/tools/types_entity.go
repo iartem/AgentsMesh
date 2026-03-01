@@ -100,7 +100,6 @@ type Ticket struct {
 	Slug              string         `json:"slug"`
 	Title             string         `json:"title"`
 	Content           string         `json:"content,omitempty"`
-	Type              TicketType     `json:"type"`
 	Status            TicketStatus   `json:"status"`
 	Priority          TicketPriority `json:"priority"`
 	ProductName       string         `json:"product_name,omitempty"`

@@ -48,7 +48,7 @@ func (s *Service) GetBoard(ctx context.Context, filter *ListTicketsFilter) (*tic
 func (s *Service) GetActiveTickets(ctx context.Context, orgID int64, repoID *int64, limit int) ([]*ticket.Ticket, error) {
 	query := s.db.WithContext(ctx).
 		Where("organization_id = ?", orgID).
-		Where("status NOT IN ?", []string{ticket.TicketStatusDone, ticket.TicketStatusCancelled})
+		Where("status != ?", ticket.TicketStatusDone)
 
 	if repoID != nil {
 		query = query.Where("repository_id = ?", *repoID)
@@ -127,7 +127,6 @@ func (s *Service) GetTicketStats(ctx context.Context, orgID int64, repoID *int64
 		ticket.TicketStatusInProgress,
 		ticket.TicketStatusInReview,
 		ticket.TicketStatusDone,
-		ticket.TicketStatusCancelled,
 	}
 
 	for _, status := range statuses {

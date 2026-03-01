@@ -16,6 +16,7 @@ export function CoreFeatures() {
         t("landing.coreFeatures.agentpod.highlights.1"),
         t("landing.coreFeatures.agentpod.highlights.2"),
         t("landing.coreFeatures.agentpod.highlights.3"),
+        t("landing.coreFeatures.agentpod.highlights.4"),
       ],
       terminal: {
         titleKey: "landing.coreDemo.terminalTitle",
@@ -44,6 +45,7 @@ export function CoreFeatures() {
         t("landing.coreFeatures.agentsmesh.highlights.1"),
         t("landing.coreFeatures.agentsmesh.highlights.2"),
         t("landing.coreFeatures.agentsmesh.highlights.3"),
+        t("landing.coreFeatures.agentsmesh.highlights.4"),
       ],
       diagram: {
         nodes: [
@@ -69,6 +71,7 @@ export function CoreFeatures() {
         t("landing.coreFeatures.tickets.highlights.1"),
         t("landing.coreFeatures.tickets.highlights.2"),
         t("landing.coreFeatures.tickets.highlights.3"),
+        t("landing.coreFeatures.tickets.highlights.4"),
       ],
       kanban: {
         columns: [
@@ -120,175 +123,241 @@ export function CoreFeatures() {
             >
               {/* Content */}
               <div className={feature.align === "right" ? "lg:order-2" : ""}>
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-5xl font-bold text-primary/20">{feature.number}</span>
+                <div className="flex items-center gap-6 mb-6">
+                  <span className="text-6xl font-black bg-gradient-to-br from-primary/20 to-transparent bg-clip-text text-transparent select-none">
+                    {feature.number}
+                  </span>
                   <div>
-                    <h3 className="text-2xl font-bold">{feature.title}</h3>
-                    <p className="text-primary">{feature.subtitle}</p>
+                    <p className="text-primary font-medium tracking-wide uppercase text-sm mb-1">{feature.subtitle}</p>
+                    <h3 className="text-3xl font-bold tracking-tight">{feature.title}</h3>
                   </div>
                 </div>
 
-                <p className="text-muted-foreground mb-6">{feature.description}</p>
+                <p className="text-muted-foreground text-lg leading-relaxed mb-8">{feature.description}</p>
 
-                <ul className="space-y-3">
+                <ul className="space-y-4">
                   {feature.highlights.map((highlight, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <svg
-                        className="w-5 h-5 text-primary flex-shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-sm">{highlight}</span>
+                    <li key={i} className="flex items-start gap-3 group">
+                      <div className="mt-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <svg
+                          className="w-3 h-3 text-primary"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-base text-foreground/80">{highlight}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
               {/* Visual */}
-              <div className={feature.align === "right" ? "lg:order-1" : ""}>
-                {feature.terminal && (
-                  <div className="bg-card rounded-xl border border-border overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-muted border-b border-border">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                        <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                        <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                      </div>
-                      <span className="text-xs text-muted-foreground font-mono ml-2">
-                        {t(feature.terminal.titleKey)}
-                      </span>
-                    </div>
-                    <div className="p-4 font-mono text-sm">
-                      {feature.terminal.lines.map((line, i) => (
-                        <div
-                          key={i}
-                          className={
-                            line.startsWith("$")
-                              ? "text-primary"
-                              : line.startsWith(">")
-                              ? "text-green-500 dark:text-green-400"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {line || "\u00A0"}
+              <div className={`relative group ${feature.align === "right" ? "lg:order-1" : ""}`}>
+                {/* Glow effect */}
+                <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
+                
+                <div className="relative transform transition-all duration-500 hover:scale-[1.02] hover:-rotate-1">
+                  {feature.terminal && (
+                    <div className="bg-card/95 backdrop-blur rounded-xl border border-border shadow-2xl shadow-primary/5 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border">
+                        <div className="flex gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500/80 border border-red-600/20" />
+                          <div className="w-3 h-3 rounded-full bg-yellow-500/80 border border-yellow-600/20" />
+                          <div className="w-3 h-3 rounded-full bg-green-500/80 border border-green-600/20" />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {feature.diagram && (
-                  <div className="bg-card rounded-xl border border-border p-8">
-                    <div className="relative h-64">
-                      {/* Agent nodes */}
-                      <div className="absolute left-[10%] top-[20%] px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
-                        <div className="text-sm font-medium text-primary">Claude Code</div>
-                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.podA")}</div>
+                        <span className="text-xs text-muted-foreground font-mono font-medium opacity-70">
+                          {t(feature.terminal.titleKey)}
+                        </span>
+                        <div className="w-12" /> {/* Spacer for centering */}
                       </div>
-                      <div className="absolute right-[10%] top-[20%] px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
-                        <div className="text-sm font-medium text-primary">Codex CLI</div>
-                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.podB")}</div>
-                      </div>
-                      {/* Channel */}
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-[20%] px-6 py-3 bg-secondary/50 border border-border rounded-lg">
-                        <div className="text-sm font-medium">{t("landing.coreDemo.devChannel")}</div>
-                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.members", { count: 3 })}</div>
-                      </div>
-                      {/* Connection lines */}
-                      <svg className="absolute inset-0 w-full h-full" style={{ zIndex: -1 }}>
-                        <line x1="25%" y1="40%" x2="50%" y2="70%" stroke="currentColor" strokeWidth="2" strokeDasharray="4" opacity="0.5" className="text-primary" />
-                        <line x1="75%" y1="40%" x2="50%" y2="70%" stroke="currentColor" strokeWidth="2" strokeDasharray="4" opacity="0.5" className="text-primary" />
-                        <line x1="30%" y1="30%" x2="70%" y2="30%" stroke="currentColor" strokeWidth="1" strokeDasharray="8" opacity="0.3" className="text-primary" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
-
-                {feature.kanban && (
-                  <div className="bg-card rounded-xl border border-border p-4">
-                    <div className="grid grid-cols-4 gap-3">
-                      {feature.kanban.columns.map((col, i) => (
-                        <div key={i} className="bg-secondary/20 rounded-lg p-3">
-                          <div className="text-xs font-medium text-muted-foreground mb-3">
-                            {t(col.titleKey)}
+                      <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+                        {feature.terminal.lines.map((line, i) => (
+                          <div
+                            key={i}
+                            className={`${
+                              line.startsWith("$")
+                                ? "text-primary font-bold"
+                                : line.startsWith(">")
+                                ? "text-green-500 dark:text-green-400"
+                                : "text-muted-foreground/90"
+                            } whitespace-pre`}
+                          >
+                            {line || "\u00A0"}
                           </div>
-                          <div className="space-y-2">
-                            {col.cards.map((card, j) => (
-                              <div
-                                key={j}
-                                className="bg-muted border border-border rounded p-2 text-xs"
-                              >
-                                <div className="font-mono text-primary">{card}</div>
-                                <div className="text-muted-foreground mt-1">{t("landing.coreDemo.kanban.authFeature")}</div>
-                              </div>
-                            ))}
-                            {col.cards.length === 0 && (
-                              <div className="text-xs text-muted-foreground/50 text-center py-4">
-                                {t("landing.coreDemo.kanban.empty")}
-                              </div>
-                            )}
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {feature.diagram && (
+                    <div className="bg-card/95 backdrop-blur rounded-xl border border-border shadow-2xl shadow-primary/5 p-8 relative overflow-hidden">
+                      {/* Grid background */}
+                      <div className="absolute inset-0 opacity-[0.03]" 
+                           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '20px 20px' }} 
+                      />
+                      
+                      <div className="relative h-64">
+                        {/* Agent nodes */}
+                        <div className="absolute left-[10%] top-[20%] px-5 py-3 bg-card border border-primary/30 rounded-xl shadow-lg shadow-primary/5 z-10">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            <div className="text-sm font-bold text-foreground">Claude Code</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">{t("landing.coreDemo.podA")}</div>
+                        </div>
+                        
+                        <div className="absolute right-[10%] top-[20%] px-5 py-3 bg-card border border-primary/30 rounded-xl shadow-lg shadow-primary/5 z-10">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse delay-75" />
+                            <div className="text-sm font-bold text-foreground">Codex CLI</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">{t("landing.coreDemo.podB")}</div>
+                        </div>
+                        
+                        {/* Channel */}
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-[20%] px-6 py-3 bg-secondary/80 backdrop-blur border border-border rounded-full shadow-lg z-10 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">#</div>
+                          <div>
+                            <div className="text-sm font-bold">{t("landing.coreDemo.devChannel")}</div>
+                            <div className="text-xs text-muted-foreground">{t("landing.coreDemo.members", { count: 3 })}</div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {feature.architecture && (
-                  <div className="bg-card rounded-xl border border-border p-8">
-                    <div className="relative">
-                      {/* Your Infrastructure box */}
-                      <div className="border-2 border-dashed border-primary/30 rounded-xl p-6">
-                        <div className="text-xs text-primary mb-4">{t("landing.coreDemo.architecture.yourInfrastructure")}</div>
-                        <div className="flex items-center justify-center gap-8">
-                          {/* Runner */}
-                          <div className="text-center">
-                            <div className="w-16 h-16 bg-primary/10 border border-primary/30 rounded-lg flex items-center justify-center mx-auto mb-2">
-                              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
-                              </svg>
-                            </div>
-                            <div className="text-sm font-medium">{t("landing.coreDemo.architecture.runner")}</div>
-                          </div>
-                          {/* Arrow */}
-                          <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                          </svg>
-                          {/* Agent */}
-                          <div className="text-center">
-                            <div className="w-16 h-16 bg-secondary/50 border border-border rounded-lg flex items-center justify-center mx-auto mb-2">
-                              <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                            <div className="text-sm font-medium">{t("landing.coreDemo.architecture.agent")}</div>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Cloud connection */}
-                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                        <div className="w-px h-6 bg-border" />
-                        <div className="text-xs text-muted-foreground">{t("landing.coreDemo.architecture.websocket")}</div>
-                      </div>
-                    </div>
-                    <div className="mt-12 text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/30 rounded-lg border border-border">
-                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                        
+                        {/* Connection lines */}
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+                          <path d="M120 80 Q 180 200 250 220" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4" className="text-primary/30" />
+                          <path d="M380 80 Q 320 200 250 220" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4" className="text-primary/30" />
+                          <path d="M140 60 Q 250 20 360 60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="6 4" className="text-primary/20" />
+                          
+                          {/* Animated dots */}
+                          <circle r="3" fill="currentColor" className="text-primary animate-ping" style={{ animationDuration: '3s' }}>
+                            <animateMotion dur="2s" repeatCount="indefinite" path="M120 80 Q 180 200 250 220" />
+                          </circle>
+                          <circle r="3" fill="currentColor" className="text-primary animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }}>
+                            <animateMotion dur="2s" repeatCount="indefinite" path="M380 80 Q 320 200 250 220" />
+                          </circle>
                         </svg>
-                        <span className="text-sm">{t("landing.coreDemo.architecture.agentsmeshCloud")}</span>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {feature.kanban && (
+                    <div className="bg-card/95 backdrop-blur rounded-xl border border-border shadow-2xl shadow-primary/5 p-6 relative overflow-hidden">
+                      <div className="grid grid-cols-4 gap-4">
+                        {feature.kanban.columns.map((col, i) => (
+                          <div key={i} className="bg-secondary/30 rounded-xl p-3 flex flex-col h-48">
+                            <div className="flex items-center justify-between mb-3 px-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                {t(col.titleKey)}
+                              </span>
+                              <span className="text-[10px] bg-background/50 px-1.5 py-0.5 rounded text-muted-foreground">
+                                {col.cards.length}
+                              </span>
+                            </div>
+                            <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar">
+                              {col.cards.map((card, j) => (
+                                <div
+                                  key={j}
+                                  className="bg-card border border-border/50 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-default group/card"
+                                >
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="font-mono text-[10px] text-primary bg-primary/5 px-1 rounded">
+                                      {card}
+                                    </span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                  </div>
+                                  <div className="text-[10px] text-foreground/80 font-medium leading-tight">
+                                    {t("landing.coreDemo.kanban.authFeature")}
+                                  </div>
+                                  <div className="mt-2 flex items-center gap-1 opacity-50 group-hover/card:opacity-100 transition-opacity">
+                                    <div className="w-3 h-3 rounded-full bg-primary/20" />
+                                    <div className="h-1 w-8 bg-border rounded-full" />
+                                  </div>
+                                </div>
+                              ))}
+                              {col.cards.length === 0 && (
+                                <div className="h-full flex items-center justify-center border-2 border-dashed border-border/30 rounded-lg">
+                                  <span className="text-[10px] text-muted-foreground/40 font-medium">
+                                    {t("landing.coreDemo.kanban.empty")}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {feature.architecture && (
+                    <div className="bg-card/95 backdrop-blur rounded-xl border border-border shadow-2xl shadow-primary/5 p-8 relative overflow-hidden">
+                      <div className="relative z-10">
+                        {/* Your Infrastructure box */}
+                        <div className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl p-8 relative">
+                          <div className="absolute -top-3 left-6 px-2 bg-card text-xs font-bold text-primary uppercase tracking-wider border border-primary/20 rounded">
+                            {t("landing.coreDemo.architecture.yourInfrastructure")}
+                          </div>
+                          
+                          <div className="flex items-center justify-center gap-12">
+                            {/* Runner */}
+                            <div className="text-center group/node">
+                              <div className="w-20 h-20 bg-card border-2 border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover/node:border-primary/50 group-hover/node:shadow-primary/20 transition-all">
+                                <svg className="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                                </svg>
+                              </div>
+                              <div className="text-sm font-bold">{t("landing.coreDemo.architecture.runner")}</div>
+                              <div className="text-[10px] text-muted-foreground mt-1 font-mono">Docker/K8s</div>
+                            </div>
+                            
+                            {/* Connection */}
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                              <div className="text-[10px] text-muted-foreground font-mono">gRPC mTLS</div>
+                              <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                            </div>
+
+                            {/* Agent */}
+                            <div className="text-center group/node">
+                              <div className="w-20 h-20 bg-secondary/80 border-2 border-border rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover/node:border-primary/50 transition-all">
+                                <svg className="w-10 h-10 text-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div className="text-sm font-bold">{t("landing.coreDemo.architecture.agent")}</div>
+                              <div className="text-[10px] text-muted-foreground mt-1 font-mono">Isolated Pod</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cloud connection */}
+                        <div className="h-16 w-px bg-gradient-to-b from-primary/20 to-transparent mx-auto my-2 relative">
+                          <div className="absolute top-1/2 left-4 -translate-y-1/2 text-[10px] text-muted-foreground whitespace-nowrap font-mono">
+                            {t("landing.coreDemo.architecture.websocket")} (Encrypted)
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-center relative z-10">
+                        <div className="inline-flex items-center gap-2 px-6 py-2.5 bg-card/80 backdrop-blur rounded-full border border-border shadow-lg">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-sm font-medium">{t("landing.coreDemo.architecture.agentsmeshCloud")}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Background decoration */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent opacity-50 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

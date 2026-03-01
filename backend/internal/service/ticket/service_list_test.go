@@ -17,7 +17,6 @@ func TestListTickets(t *testing.T) {
 		req := &CreateTicketRequest{
 			OrganizationID: 1,
 			ReporterID:     1,
-			Type:           "task",
 			Title:          "Test Ticket",
 			Priority:       "medium",
 		}
@@ -62,7 +61,6 @@ func TestListTicketsWithFilter(t *testing.T) {
 		req := &CreateTicketRequest{
 			OrganizationID: 1,
 			ReporterID:     1,
-			Type:           "task",
 			Title:          "Test Ticket",
 			Priority:       "medium",
 		}
@@ -104,13 +102,12 @@ func TestListTickets_Filters(t *testing.T) {
 
 	ticketData := []struct {
 		repoID     *int64
-		typ        string
 		priority   string
 		reporterID int64
 	}{
-		{&repoID, "bug", "high", 1},
-		{nil, "task", "low", 2},
-		{nil, "feature", "medium", 1},
+		{&repoID, "high", 1},
+		{nil, "low", 2},
+		{nil, "medium", 1},
 	}
 
 	for _, tc := range ticketData {
@@ -118,7 +115,6 @@ func TestListTickets_Filters(t *testing.T) {
 			OrganizationID: 1,
 			ReporterID:     tc.reporterID,
 			RepositoryID:   tc.repoID,
-			Type:           tc.typ,
 			Title:          "Test",
 			Priority:       tc.priority,
 		}
@@ -136,11 +132,6 @@ func TestListTickets_Filters(t *testing.T) {
 			wantCount: 1,
 		},
 		{
-			name:      "filter by type",
-			filter:    &ListTicketsFilter{OrganizationID: 1, Type: "bug", Limit: 10},
-			wantCount: 1,
-		},
-		{
 			name:      "filter by priority",
 			filter:    &ListTicketsFilter{OrganizationID: 1, Priority: "high", Limit: 10},
 			wantCount: 1,
@@ -150,7 +141,6 @@ func TestListTickets_Filters(t *testing.T) {
 			filter:    &ListTicketsFilter{OrganizationID: 1, ReporterID: func() *int64 { v := int64(1); return &v }(), Limit: 10},
 			wantCount: 2,
 		},
-		// Team access control test removed - all organization members can now access all resources
 	}
 
 	for _, tt := range tests {

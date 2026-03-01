@@ -259,6 +259,9 @@ USE_HTTPS=false
 # 前端 API 基础 URL（留空使用相对路径，由 Next.js rewrites 代理）
 NEXT_PUBLIC_API_URL=
 
+# WebSocket URL（直连后端，Next.js rewrites 不支持 WebSocket 代理）
+NEXT_PUBLIC_WS_URL=ws://127.0.0.1:$http_port
+
 # Next.js rewrites 代理目标（仅服务端使用，不暴露给浏览器）
 # 使用 127.0.0.1 而非 localhost，避免 IPv6 解析问题（Docker 端口映射只绑定 IPv4）
 API_PROXY_TARGET=http://127.0.0.1:$http_port

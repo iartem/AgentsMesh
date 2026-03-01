@@ -154,6 +154,14 @@ export function getWsBaseUrl(): string {
     return apiUrl.replace(/^http/, "ws");
   }
 
+  // In local dev proxy mode (NEXT_PUBLIC_API_URL=""), REST uses Next.js rewrites
+  // but WebSocket can't be proxied. Derive from PRIMARY_DOMAIN instead of
+  // window.location which would incorrectly point to the Next.js dev server.
+  if (apiUrl === "") {
+    const derived = deriveWsUrl();
+    if (derived) return derived;
+  }
+
   // 浏览器端：优先从当前页面派生，自动继承正确协议
   if (typeof window !== "undefined") {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";

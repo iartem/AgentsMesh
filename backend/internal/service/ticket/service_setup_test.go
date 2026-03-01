@@ -23,7 +23,6 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			organization_id INTEGER NOT NULL,
 			number INTEGER NOT NULL,
 			slug TEXT NOT NULL,
-			type TEXT NOT NULL DEFAULT 'task',
 			title TEXT NOT NULL,
 			content TEXT,
 			status TEXT NOT NULL DEFAULT 'backlog',

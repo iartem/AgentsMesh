@@ -1,15 +1,13 @@
 import { request, orgPath } from "./base";
 
 // Ticket types
-export type TicketType = "task" | "bug" | "feature" | "improvement" | "epic" | "subtask" | "story";
-export type TicketStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done" | "cancelled";
+export type TicketStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done";
 export type TicketPriority = "none" | "low" | "medium" | "high" | "urgent";
 
 export interface TicketData {
   id: number;
   number: number;
   slug: string;
-  type: TicketType;
   title: string;
   content?: string;
   status: TicketStatus;
@@ -79,7 +77,6 @@ export const ticketApi = {
   list: (filters?: {
     status?: string;
     priority?: string;
-    type?: string;
     assigneeId?: number;
     repositoryId?: number;
     search?: string;
@@ -110,7 +107,6 @@ export const ticketApi = {
 
   create: async (data: {
     repositoryId?: number;
-    type: string;
     title: string;
     content?: string;
     priority?: string;
@@ -124,7 +120,6 @@ export const ticketApi = {
       method: "POST",
       body: {
         repository_id: data.repositoryId,
-        type: data.type,
         title: data.title,
         content: data.content,
         priority: data.priority,
@@ -141,7 +136,6 @@ export const ticketApi = {
   update: async (slug: string, data: {
     title?: string;
     content?: string;
-    type?: string;
     status?: string;
     priority?: string;
     severity?: string;
@@ -154,7 +148,6 @@ export const ticketApi = {
     const body: Record<string, unknown> = {
       title: data.title,
       content: data.content,
-      type: data.type,
       status: data.status,
       priority: data.priority,
       severity: data.severity,

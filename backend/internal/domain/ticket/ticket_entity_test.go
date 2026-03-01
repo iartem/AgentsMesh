@@ -24,7 +24,6 @@ func TestTicketIsActive(t *testing.T) {
 		{"backlog not active", TicketStatusBacklog, false},
 		{"todo not active", TicketStatusTodo, false},
 		{"done not active", TicketStatusDone, false},
-		{"cancelled not active", TicketStatusCancelled, false},
 	}
 
 	for _, tt := range tests {
@@ -45,50 +44,12 @@ func TestTicketIsCompleted(t *testing.T) {
 		{TicketStatusDone, true},
 		{TicketStatusBacklog, false},
 		{TicketStatusInProgress, false},
-		{TicketStatusCancelled, false},
 	}
 
 	for _, tt := range tests {
 		ticket := &Ticket{Status: tt.status}
 		if ticket.IsCompleted() != tt.expected {
 			t.Errorf("status %s: expected IsCompleted() = %v", tt.status, tt.expected)
-		}
-	}
-}
-
-func TestTicketIsCancelled(t *testing.T) {
-	tests := []struct {
-		status   string
-		expected bool
-	}{
-		{TicketStatusCancelled, true},
-		{TicketStatusDone, false},
-		{TicketStatusBacklog, false},
-	}
-
-	for _, tt := range tests {
-		ticket := &Ticket{Status: tt.status}
-		if ticket.IsCancelled() != tt.expected {
-			t.Errorf("status %s: expected IsCancelled() = %v", tt.status, tt.expected)
-		}
-	}
-}
-
-func TestTicketIsBug(t *testing.T) {
-	tests := []struct {
-		ticketType string
-		expected   bool
-	}{
-		{TicketTypeBug, true},
-		{TicketTypeTask, false},
-		{TicketTypeFeature, false},
-		{TicketTypeEpic, false},
-	}
-
-	for _, tt := range tests {
-		ticket := &Ticket{Type: tt.ticketType}
-		if ticket.IsBug() != tt.expected {
-			t.Errorf("type %s: expected IsBug() = %v", tt.ticketType, tt.expected)
 		}
 	}
 }

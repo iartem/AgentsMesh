@@ -1,172 +1,391 @@
 "use client";
 
-import { Ticket, TicketStatus } from "@/stores/ticket";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Ticket, TicketStatus, TicketPriority } from "@/stores/ticket";
 import { Button } from "@/components/ui/button";
-import { PriorityIcon, TypeIcon, getPriorityDisplayInfo, getTypeDisplayInfo } from "./TicketIcons";
-import { RepositorySelect } from "@/components/common/RepositorySelect";
+import { Spinner } from "@/components/ui/spinner";
+import { StatusSelect } from "./StatusSelect";
+import { PrioritySelect } from "./PrioritySelect";
+import { ticketApi } from "@/lib/api";
+import { useWorkspaceStore } from "@/stores/workspace";
+import { useAuthStore } from "@/stores/auth";
+import { CreatePodModal } from "@/components/ide/CreatePodModal";
+import { getPodDisplayName } from "@/lib/pod-utils";
+import { AgentStatusBadge } from "@/components/shared/AgentStatusBadge";
+import {
+  Trash2, Clock, Play, Terminal,
+  ExternalLink,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface TicketPod {
+  pod_key: string;
+  status: string;
+  agent_status: string;
+  model?: string;
+  started_at?: string;
+  runner_id: number;
+  created_by_id: number;
+}
 
 interface TicketDetailSidebarProps {
   ticket: Ticket;
   onDelete: () => void;
   onStatusChange: (status: TicketStatus) => void;
-  onRepositoryChange: (repositoryId: number | null) => void;
+  onPriorityChange?: (priority: TicketPriority) => void;
+  ticketSlug: string;
   t: (key: string, params?: Record<string, string | number>) => string;
+  commentsSlot?: React.ReactNode;
 }
 
-/**
- * Sidebar component for TicketDetail page
- * Contains: Actions, Status, Details, Assignees, Timestamps
- */
+function formatRelativeDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffDay > 30) return date.toLocaleDateString();
+  if (diffDay > 0) return `${diffDay}d ago`;
+  if (diffHr > 0) return `${diffHr}h ago`;
+  if (diffMin > 0) return `${diffMin}m ago`;
+  return "just now";
+}
+
 export function TicketDetailSidebar({
   ticket,
   onDelete,
   onStatusChange,
-  onRepositoryChange,
+  onPriorityChange,
+  ticketSlug,
   t,
+  commentsSlot,
 }: TicketDetailSidebarProps) {
-  const priorityInfo = getPriorityDisplayInfo(ticket.priority);
-  const typeInfo = getTypeDisplayInfo(ticket.type);
+  const handleStatusChange = async (status: TicketStatus) => {
+    onStatusChange(status);
+  };
+
+  const handlePriorityChange = async (priority: TicketPriority) => {
+    onPriorityChange?.(priority);
+  };
 
   return (
-    <div className="lg:w-80 space-y-6">
-      {/* Actions */}
-      <div className="border border-border rounded-lg p-4">
-        <h3 className="font-medium mb-3">{t("tickets.detail.actions")}</h3>
-        <div className="space-y-2">
+    <div className="lg:w-72 shrink-0 space-y-3">
+      {/* Execute / AgentPods */}
+      <SidebarPodSection
+        ticket={ticket}
+        ticketSlug={ticketSlug}
+      />
+
+      {/* Properties panel */}
+      <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        {/* Status */}
+        <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">{t("tickets.filters.status")}</span>
+            <StatusSelect
+              value={ticket.status}
+              onChange={handleStatusChange}
+              showLabel
+              size="sm"
+            />
+          </div>
+        </div>
+
+        <div className="mx-4 border-t border-border/40" />
+
+        {/* Priority */}
+        <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">{t("tickets.filters.priority")}</span>
+            {onPriorityChange ? (
+              <PrioritySelect
+                value={ticket.priority}
+                onChange={handlePriorityChange}
+                showLabel
+                size="sm"
+              />
+            ) : (
+              <span className="text-sm">{t(`tickets.priority.${ticket.priority}`)}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mx-4 border-t border-border/40" />
+
+        {/* Due Date */}
+        {ticket.due_date && (
+          <>
+            <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">{t("tickets.detail.dueDate")}</span>
+                <span className={cn(
+                  "text-sm tabular-nums",
+                  new Date(ticket.due_date) < new Date() && ticket.status !== "done"
+                    ? "text-destructive font-medium"
+                    : "text-foreground"
+                )}>
+                  {new Date(ticket.due_date).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            <div className="mx-4 border-t border-border/40" />
+          </>
+        )}
+
+        {/* Assignees */}
+        <div className="px-4 py-3">
+          <span className="text-xs font-medium text-muted-foreground block mb-2.5">{t("tickets.detail.assignees")}</span>
+          {ticket.assignees && ticket.assignees.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {ticket.assignees.map((assignee) => (
+                <div key={assignee.user_id} className="flex items-center gap-2 group">
+                  {assignee.user?.avatar_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={assignee.user.avatar_url} alt="" className="w-6 h-6 rounded-full ring-1 ring-border/50" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary ring-1 ring-primary/20">
+                      {(assignee.user?.name || assignee.user?.username || "?")[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm text-foreground/90">{assignee.user?.name || assignee.user?.username}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/50 italic">{t("tickets.detail.noAssignees")}</p>
+          )}
+        </div>
+
+        <div className="mx-4 border-t border-border/40" />
+
+        {/* Timestamps */}
+        <div className="px-4 py-3">
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground/70">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3 shrink-0" />
+              <span title={new Date(ticket.created_at).toLocaleString()}>
+                {t("tickets.detail.created")} {formatRelativeDate(ticket.created_at)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-[18px]">
+              <span title={new Date(ticket.updated_at).toLocaleString()}>
+                {t("tickets.detail.updated")} {formatRelativeDate(ticket.updated_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {commentsSlot}
+
+      {/* Delete */}
+      <Button
+        className="w-full"
+        variant="outline"
+        size="sm"
+        onClick={onDelete}
+      >
+        <Trash2 className="h-3.5 w-3.5 mr-1.5 text-destructive" />
+        <span className="text-destructive">{t("common.delete")}</span>
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * AgentPods section for the sidebar — shows active pods and an Execute button.
+ */
+function SidebarPodSection({
+  ticket,
+  ticketSlug,
+}: {
+  ticket: Ticket;
+  ticketSlug: string;
+}) {
+  const t = useTranslations();
+  const router = useRouter();
+  const { currentOrg } = useAuthStore();
+  const { addPane } = useWorkspaceStore();
+
+  const [pods, setPods] = useState<TicketPod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const fetchPods = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await ticketApi.getPods(ticketSlug);
+      setPods(response.pods || []);
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, [ticketSlug]);
+
+  useEffect(() => {
+    fetchPods();
+  }, [fetchPods]);
+
+  const handlePodCreated = () => {
+    setShowCreateModal(false);
+    fetchPods();
+  };
+
+  const handleConnect = (podKey: string) => {
+    addPane(podKey, `${ticketSlug} Pod`);
+    router.push(`/${currentOrg?.slug}/workspace`);
+  };
+
+  const handleOpenInNewTab = (podKey: string) => {
+    window.open(`/${currentOrg?.slug}/workspace?pod=${podKey}`, "_blank");
+  };
+
+  const activePods = pods.filter(
+    (p) => p.status === "running" || p.status === "initializing"
+  );
+  const inactivePods = pods.filter(
+    (p) => p.status !== "running" && p.status !== "initializing"
+  );
+
+  return (
+    <>
+      <CreatePodModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={handlePodCreated}
+        ticketContext={
+          ticket.id
+            ? {
+                id: ticket.id,
+                slug: ticketSlug,
+                title: ticket.title,
+                repositoryId: ticket.repository_id,
+              }
+            : undefined
+        }
+      />
+
+      <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        {/* Execute button */}
+        <div className="p-3">
           <Button
-            className="w-full"
-            variant="destructive"
-            onClick={onDelete}
+            className="w-full gap-1.5 shadow-sm"
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
           >
-            {t("common.delete")}
+            <Play className="h-3.5 w-3.5" />
+            {t("tickets.podPanel.newPod")}
           </Button>
         </div>
-      </div>
 
-      {/* Status */}
-      <div className="border border-border rounded-lg p-4">
-        <h3 className="font-medium mb-3">{t("tickets.filters.status")}</h3>
-        <select
-          className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
-          value={ticket.status}
-          onChange={(e) => onStatusChange(e.target.value as TicketStatus)}
-        >
-          <option value="backlog">{t("tickets.status.backlog")}</option>
-          <option value="todo">{t("tickets.status.todo")}</option>
-          <option value="in_progress">{t("tickets.status.in_progress")}</option>
-          <option value="in_review">{t("tickets.status.in_review")}</option>
-          <option value="done">{t("tickets.status.done")}</option>
-          <option value="cancelled">{t("tickets.status.cancelled")}</option>
-        </select>
-      </div>
+        {/* Pod list */}
+        <div className="border-t border-border/40">
+          {loading ? (
+            <div className="flex items-center justify-center py-5">
+              <Spinner size="sm" />
+            </div>
+          ) : pods.length === 0 ? (
+            <div className="py-5 px-3 text-center">
+              <Terminal className="w-5 h-5 mx-auto mb-2 text-muted-foreground/20" />
+              <p className="text-xs text-muted-foreground/60">{t("tickets.podPanel.noPods")}</p>
+            </div>
+          ) : (
+            <div className="py-1">
+              {activePods.map((pod) => (
+                <SidebarPodItem
+                  key={pod.pod_key}
+                  pod={pod}
+                  onConnect={() => handleConnect(pod.pod_key)}
+                  onOpenInNewTab={() => handleOpenInNewTab(pod.pod_key)}
+                />
+              ))}
 
-      {/* Details */}
-      <div className="border border-border rounded-lg p-4">
-        <h3 className="font-medium mb-3">{t("tickets.detail.details")}</h3>
-        <dl className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t("tickets.filters.type")}</dt>
-            <dd className={`flex items-center gap-1 ${typeInfo.color}`}>
-              <TypeIcon type={ticket.type} size="sm" />
-              {t(`tickets.type.${ticket.type}`)}
-            </dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t("tickets.filters.priority")}</dt>
-            <dd className={`flex items-center gap-1 ${priorityInfo.color}`}>
-              <PriorityIcon priority={ticket.priority} size="sm" />
-              {t(`tickets.priority.${ticket.priority}`)}
-            </dd>
-          </div>
-          {ticket.due_date && (
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t("tickets.detail.dueDate")}</dt>
-              <dd>{new Date(ticket.due_date).toLocaleDateString()}</dd>
+              {inactivePods.length > 0 && (
+                <details className="group">
+                  <summary className="px-3 py-1.5 text-[11px] text-muted-foreground/60 cursor-pointer hover:bg-muted/30 select-none transition-colors">
+                    {t("tickets.podPanel.previousPods", { count: inactivePods.length })}
+                  </summary>
+                  <div className="pb-1">
+                    {inactivePods.map((pod) => (
+                      <SidebarPodItem
+                        key={pod.pod_key}
+                        pod={pod}
+                        onConnect={() => handleConnect(pod.pod_key)}
+                        onOpenInNewTab={() => handleOpenInNewTab(pod.pod_key)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
-          <div>
-            <dt className="text-muted-foreground mb-1">{t("tickets.detail.repository")}</dt>
-            <dd>
-              <RepositorySelect
-                value={ticket.repository_id ?? null}
-                onChange={(value) => onRepositoryChange(value)}
-                placeholder={t("tickets.detail.noRepository")}
-                className="text-sm"
-              />
-            </dd>
-          </div>
-        </dl>
+        </div>
       </div>
-
-      {/* Assignees */}
-      <AssigneesCard assignees={ticket.assignees} t={t} />
-
-      {/* Timestamps */}
-      <TimestampsCard
-        createdAt={ticket.created_at}
-        updatedAt={ticket.updated_at}
-        t={t}
-      />
-    </div>
+    </>
   );
 }
 
-/**
- * Assignees card component
- */
-function AssigneesCard({
-  assignees,
-  t,
+function SidebarPodItem({
+  pod,
+  onConnect,
+  onOpenInNewTab,
 }: {
-  assignees?: Ticket["assignees"];
-  t: (key: string) => string;
+  pod: TicketPod;
+  onConnect: () => void;
+  onOpenInNewTab: () => void;
 }) {
+  const t = useTranslations();
+  const isActive = pod.status === "running" || pod.status === "initializing";
+
   return (
-    <div className="border border-border rounded-lg p-4">
-      <h3 className="font-medium mb-3">{t("tickets.detail.assignees")}</h3>
-      {assignees && assignees.length > 0 ? (
-        <div className="space-y-2">
-          {assignees.map((assignee) => (
-            <div key={assignee.user_id} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                {(assignee.user?.name || assignee.user?.username || "?")[0].toUpperCase()}
-              </div>
-              <span className="text-sm">{assignee.user?.name || assignee.user?.username}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("tickets.detail.noAssignees")}</p>
+    <div
+      className={cn(
+        "mx-1.5 px-2 py-1.5 flex items-center gap-2 group transition-colors rounded-md",
+        isActive ? "hover:bg-green-50/60 dark:hover:bg-green-900/10" : "hover:bg-muted/40"
       )}
-    </div>
-  );
-}
-
-/**
- * Timestamps card component
- */
-function TimestampsCard({
-  createdAt,
-  updatedAt,
-  t,
-}: {
-  createdAt: string;
-  updatedAt: string;
-  t: (key: string) => string;
-}) {
-  return (
-    <div className="border border-border rounded-lg p-4">
-      <h3 className="font-medium mb-3">{t("tickets.detail.timestamps")}</h3>
-      <dl className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">{t("tickets.detail.created")}</dt>
-          <dd>{new Date(createdAt).toLocaleString()}</dd>
+    >
+      <div
+        className={cn(
+          "w-1.5 h-1.5 rounded-full shrink-0",
+          pod.status === "running" && "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.4)] animate-pulse",
+          pod.status === "initializing" && "bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.4)] animate-pulse",
+          pod.status === "failed" && "bg-red-500",
+          pod.status !== "running" && pod.status !== "initializing" && pod.status !== "failed" && "bg-muted-foreground/30"
+        )}
+      />
+      <code className="text-[11px] font-mono text-muted-foreground/80 flex-1 truncate">
+        {getPodDisplayName(pod)}
+      </code>
+      <AgentStatusBadge
+        agentStatus={pod.agent_status}
+        podStatus={pod.status}
+        variant="dot"
+      />
+      {isActive && (
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={onConnect}
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={t("tickets.podPanel.connect")}
+          >
+            <Terminal className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenInNewTab}
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={t("tickets.podPanel.openInNewTab")}
+          >
+            <ExternalLink className="w-3 h-3" />
+          </button>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">{t("tickets.detail.updated")}</dt>
-          <dd>{new Date(updatedAt).toLocaleString()}</dd>
-        </div>
-      </dl>
+      )}
     </div>
   );
 }

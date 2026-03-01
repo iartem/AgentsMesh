@@ -26,7 +26,6 @@ export type { ChannelData, ChannelMessage } from "./channel";
 // Ticket
 export { ticketApi } from "./ticket";
 export type {
-  TicketType,
   TicketStatus,
   TicketPriority,
   TicketData,

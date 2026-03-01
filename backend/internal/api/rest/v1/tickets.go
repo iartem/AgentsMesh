@@ -29,7 +29,6 @@ func NewTicketHandler(ticketService *ticket.Service) *TicketHandler {
 type ListTicketsRequest struct {
 	RepositoryID *int64   `form:"repository_id"`
 	Status       string   `form:"status"`
-	Type         string   `form:"type"`
 	Priority     string   `form:"priority"`
 	AssigneeID   *int64   `form:"assignee_id"`
 	Labels       []string `form:"labels"`
@@ -41,7 +40,6 @@ type ListTicketsRequest struct {
 // CreateTicketRequest represents ticket creation request
 type CreateTicketRequest struct {
 	RepositoryID     *int64   `json:"repository_id"`
-	Type             string   `json:"type" binding:"required,oneof=task bug feature improvement epic subtask story"`
 	Title            string   `json:"title" binding:"required,min=1,max=500"`
 	Content          string   `json:"content"`
 	Status           string   `json:"status"`
@@ -58,7 +56,6 @@ type UpdateTicketRequest struct {
 	Content      string   `json:"content"`
 	Status       string   `json:"status"`
 	Priority     string   `json:"priority"`
-	Type         string   `json:"type"`
 	RepositoryID *int64   `json:"repository_id"`
 	AssigneeIDs  []int64  `json:"assignee_ids"`
 	Labels       []string `json:"labels"`
@@ -92,7 +89,6 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 		OrganizationID: tenant.OrganizationID,
 		RepositoryID:   req.RepositoryID,
 		Status:         req.Status,
-		Type:           req.Type,
 		Priority:       req.Priority,
 		AssigneeID:     req.AssigneeID,
 		Query:          req.Query,
@@ -144,7 +140,6 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		OrganizationID: tenant.OrganizationID,
 		RepositoryID:   req.RepositoryID,
 		ReporterID:     tenant.UserID,
-		Type:           req.Type,
 		Title:          req.Title,
 		Content:        content,
 		Status:         req.Status,
@@ -208,9 +203,6 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	}
 	if req.Priority != "" {
 		updates["priority"] = req.Priority
-	}
-	if req.Type != "" {
-		updates["type"] = req.Type
 	}
 	if req.RepositoryID != nil {
 		if *req.RepositoryID == 0 {

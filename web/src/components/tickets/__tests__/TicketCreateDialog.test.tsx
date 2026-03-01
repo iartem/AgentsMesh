@@ -52,13 +52,6 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
-// Mock RepositorySelect
-vi.mock("@/components/common/RepositorySelect", () => ({
-  RepositorySelect: ({ placeholder }: { placeholder?: string }) => (
-    <div data-testid="repository-select">{placeholder}</div>
-  ),
-}));
-
 // Mock BlockEditor (lazy loaded)
 vi.mock("@/components/ui/block-editor", () => ({
   default: ({
@@ -115,7 +108,6 @@ describe("TicketCreateDialog", () => {
       expect(
         screen.getByPlaceholderText("Enter ticket title")
       ).toBeInTheDocument();
-      expect(screen.getByTestId("repository-select")).toBeInTheDocument();
 
       // BlockEditor is lazy-loaded, so wait for Suspense to resolve
       await waitFor(() => {
@@ -199,7 +191,6 @@ describe("TicketCreateDialog", () => {
         expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "Test Ticket",
-            type: "task",
             priority: "medium",
           })
         );

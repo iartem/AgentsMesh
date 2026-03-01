@@ -347,7 +347,7 @@ func (c *GRPCCollaborationClient) UpdateDocument(ctx context.Context, channelID 
 // ==================== TicketClient ====================
 
 // SearchTickets searches for tickets.
-func (c *GRPCCollaborationClient) SearchTickets(ctx context.Context, repositoryID *int, status *tools.TicketStatus, ticketType *tools.TicketType, priority *tools.TicketPriority, assigneeID *int, parentTicketSlug *string, query string, limit, page int) ([]tools.Ticket, error) {
+func (c *GRPCCollaborationClient) SearchTickets(ctx context.Context, repositoryID *int, status *tools.TicketStatus, priority *tools.TicketPriority, assigneeID *int, parentTicketSlug *string, query string, limit, page int) ([]tools.Ticket, error) {
 	params := map[string]interface{}{
 		"limit": limit,
 		"page":  page,
@@ -357,9 +357,6 @@ func (c *GRPCCollaborationClient) SearchTickets(ctx context.Context, repositoryI
 	}
 	if status != nil {
 		params["status"] = string(*status)
-	}
-	if ticketType != nil {
-		params["type"] = string(*ticketType)
 	}
 	if priority != nil {
 		params["priority"] = string(*priority)
@@ -403,10 +400,9 @@ func (c *GRPCCollaborationClient) GetTicket(ctx context.Context, ticketSlug stri
 }
 
 // CreateTicket creates a new ticket.
-func (c *GRPCCollaborationClient) CreateTicket(ctx context.Context, repositoryID *int64, title, content string, ticketType tools.TicketType, priority tools.TicketPriority, parentTicketSlug *string) (*tools.Ticket, error) {
+func (c *GRPCCollaborationClient) CreateTicket(ctx context.Context, repositoryID *int64, title, content string, priority tools.TicketPriority, parentTicketSlug *string) (*tools.Ticket, error) {
 	params := map[string]interface{}{
 		"title":    title,
-		"type":     ticketType,
 		"priority": priority,
 	}
 	if content != "" {
@@ -428,7 +424,7 @@ func (c *GRPCCollaborationClient) CreateTicket(ctx context.Context, repositoryID
 }
 
 // UpdateTicket updates a ticket.
-func (c *GRPCCollaborationClient) UpdateTicket(ctx context.Context, ticketSlug string, title, content *string, status *tools.TicketStatus, priority *tools.TicketPriority, ticketType *tools.TicketType) (*tools.Ticket, error) {
+func (c *GRPCCollaborationClient) UpdateTicket(ctx context.Context, ticketSlug string, title, content *string, status *tools.TicketStatus, priority *tools.TicketPriority) (*tools.Ticket, error) {
 	params := map[string]interface{}{
 		"ticket_slug": ticketSlug,
 	}
@@ -443,9 +439,6 @@ func (c *GRPCCollaborationClient) UpdateTicket(ctx context.Context, ticketSlug s
 	}
 	if priority != nil {
 		params["priority"] = *priority
-	}
-	if ticketType != nil {
-		params["type"] = *ticketType
 	}
 	var result struct {
 		Ticket tools.Ticket `json:"ticket"`

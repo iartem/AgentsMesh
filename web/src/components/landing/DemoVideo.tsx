@@ -22,14 +22,14 @@ export function DemoVideo() {
             {t("landing.demoVideo.title")}{" "}
             <span className="text-primary">{t("landing.demoVideo.titleHighlight")}</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
-            {t("landing.demoVideo.description")}
-          </p>
         </div>
 
         {/* Video container */}
-        <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-xl overflow-hidden border border-border shadow-2xl shadow-primary/10 bg-black" style={{ aspectRatio: "16/9" }}>
+        <div className="max-w-4xl mx-auto relative group">
+          {/* Glow effect */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-2xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+          
+          <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-2xl shadow-primary/10 bg-black ring-1 ring-white/10" style={{ aspectRatio: "16/9" }}>
             <iframe
               src="https://www.youtube-nocookie.com/embed/FZrUO0tim0U?rel=0&modestbranding=1"
               title={t("landing.demoVideo.iframeTitle")}
@@ -41,7 +41,7 @@ export function DemoVideo() {
           </div>
 
           {/* Highlight tags */}
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
             {[
               t("landing.demoVideo.highlight1"),
               t("landing.demoVideo.highlight2"),
@@ -49,9 +49,9 @@ export function DemoVideo() {
             ].map((label) => (
               <span
                 key={label}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/50 text-foreground border border-border/50 backdrop-blur-sm shadow-sm transition-all hover:bg-primary/10 hover:border-primary/20 hover:text-primary hover:-translate-y-0.5 cursor-default"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {label}

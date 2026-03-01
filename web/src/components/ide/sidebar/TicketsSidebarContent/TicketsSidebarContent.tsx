@@ -9,7 +9,6 @@ import { TicketCreateDialog } from "@/components/tickets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Loader2,
   Plus,
   Search,
   LayoutList,
@@ -19,7 +18,6 @@ import {
 import { useTranslations } from "next-intl";
 import { useTicketFilters } from "./useTicketFilters";
 import { TicketFilterSection } from "./TicketFilterSection";
-import { TicketListItem } from "./TicketListItem";
 import type { TicketsSidebarContentProps } from "./types";
 
 /**
@@ -29,18 +27,15 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
   const t = useTranslations();
   const router = useRouter();
   const { currentOrg } = useAuthStore();
-  const { loading, viewMode, fetchTickets, setViewMode } = useTicketStore();
+  const { viewMode, tickets: allTickets, fetchTickets, setViewMode } = useTicketStore();
 
   // Filter state and actions
   const {
     searchQuery,
     selectedStatuses,
-    selectedTypes,
     selectedPriorities,
-    filteredTickets,
     setSearchQuery,
     toggleStatus,
-    toggleType,
     togglePriority,
     clearAllFilters,
     hasActiveFilters,
@@ -50,7 +45,6 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
   const [refreshing, setRefreshing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(true);
-  const [typeExpanded, setTypeExpanded] = useState(false);
   const [priorityExpanded, setPriorityExpanded] = useState(false);
 
   // Load tickets on mount
@@ -69,10 +63,6 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
       setRefreshing(false);
     }
   }, [fetchTickets]);
-
-  const handleTicketClick = useCallback((slug: string) => {
-    router.push(`/${currentOrg?.slug}/tickets/${slug}`);
-  }, [router, currentOrg]);
 
   // Handle ticket created
   const handleTicketCreated = useCallback((ticketId: number, slug: string) => {
@@ -129,26 +119,30 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
       {/* View Mode Toggle */}
       <div className="flex items-center gap-1 px-2 pb-2">
         <span className="text-xs text-muted-foreground mr-2">{t("tickets.view")}:</span>
-        <div className="flex border border-border rounded-md overflow-hidden">
+        <div className="flex bg-muted rounded-full p-0.5">
           <button
             className={cn(
-              "p-1.5 transition-colors",
-              viewMode === "list" ? "bg-muted" : "hover:bg-muted/50"
+              "flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all",
+              viewMode === "list"
+                ? "bg-background text-foreground shadow-sm font-medium"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => setViewMode("list")}
-            title="List view"
           >
-            <LayoutList className="h-3.5 w-3.5" />
+            <LayoutList className="h-3 w-3" />
+            {viewMode === "list" && <span>{t("tickets.list.ticket") || "List"}</span>}
           </button>
           <button
             className={cn(
-              "p-1.5 transition-colors",
-              viewMode === "board" ? "bg-muted" : "hover:bg-muted/50"
+              "flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all",
+              viewMode === "board"
+                ? "bg-background text-foreground shadow-sm font-medium"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => setViewMode("board")}
-            title="Board view"
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
+            <LayoutGrid className="h-3 w-3" />
+            {viewMode === "board" && <span>{t("tickets.board")}</span>}
           </button>
         </div>
         {hasActiveFilters && (
@@ -166,53 +160,16 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
       {/* Filters */}
       <TicketFilterSection
         statusExpanded={statusExpanded}
-        typeExpanded={typeExpanded}
         priorityExpanded={priorityExpanded}
         onStatusExpandedChange={setStatusExpanded}
-        onTypeExpandedChange={setTypeExpanded}
         onPriorityExpandedChange={setPriorityExpanded}
         selectedStatuses={selectedStatuses}
-        selectedTypes={selectedTypes}
         selectedPriorities={selectedPriorities}
         onToggleStatus={toggleStatus}
-        onToggleType={toggleType}
         onTogglePriority={togglePriority}
+        allTickets={allTickets}
         t={t}
       />
-
-      {/* Ticket list preview */}
-      <div className="flex-1 overflow-y-auto border-t border-border">
-        <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
-          {filteredTickets.length} {t("tickets.ticketCount")}
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredTickets.length === 0 ? (
-          <div className="px-3 py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              {hasActiveFilters ? t("tickets.emptyState.noMatch") : t("tickets.emptyState.title")}
-            </p>
-          </div>
-        ) : (
-          <div className="py-1">
-            {filteredTickets.slice(0, 20).map((ticket) => (
-              <TicketListItem
-                key={ticket.id}
-                ticket={ticket}
-                onClick={handleTicketClick}
-              />
-            ))}
-            {filteredTickets.length > 20 && (
-              <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                {t("tickets.moreTickets", { count: filteredTickets.length - 20 })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

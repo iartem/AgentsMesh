@@ -86,44 +86,47 @@
       "titleHighlight": "Features",
       "description": "Everything you need to manage and coordinate terminal-based AI coding agents at scale.",
       "agentpod": {
-        "title": "AgentPod",
-        "subtitle": "Remote AI Workstation",
-        "description": "Run AI agents in the cloud, access a complete development environment through your browser. Each AgentPod runs on isolated Git worktrees with real-time terminal access.",
+        "title": "Isolated Cloud Workstations",
+        "subtitle": "AgentPod",
+        "description": "Spin up a full dev environment in seconds. Each workstation gets its own Git worktree, real-time terminal, and browser-based access — from your desktop, laptop, or phone. Monitor and interact with your agents from anywhere.",
         "highlights": {
-          "0": "Web Terminal with real-time interaction",
-          "1": "Git Worktree isolation per AgentPod",
-          "2": "Multiple concurrent AgentPods",
-          "3": "Auto-cleanup on completion"
+          "0": "Web terminal with real-time interaction",
+          "1": "Mobile-friendly — manage agents from any device",
+          "2": "Git worktree isolation per workstation",
+          "3": "Multiple concurrent workstations",
+          "4": "Auto-cleanup on completion"
         }
       },
       "agentsmesh": {
-        "title": "AgentsMesh",
-        "subtitle": "Multi-Agent Collaboration",
-        "description": "Enable multiple AI agents to work together through pod bindings and channel communication. Visualize the collaboration topology in real-time.",
+        "title": "Multi-Agent Collaboration",
+        "subtitle": "AgentsMesh",
+        "description": "Agents don't just run side by side — they work together. One agent can observe another's terminal, send it input, or broadcast to a shared channel. They discover peers, negotiate permissions, and even spawn new agents autonomously.",
         "highlights": {
-          "0": "Pod Binding with permission control",
-          "1": "Channel-based message broadcasting",
-          "2": "Real-time topology visualization",
-          "3": "Cross-agent task coordination"
+          "0": "Terminal-level binding — agents observe and control each other's sessions",
+          "1": "Channel messaging with @mentions, replies, and shared documents",
+          "2": "Agents autonomously discover peers and spawn new pods",
+          "3": "Real-time topology map of every connection and conversation",
+          "4": "Permission-scoped access (read-only observe or full terminal control)"
         }
       },
       "tickets": {
-        "title": "Tickets",
-        "subtitle": "Task-Driven Development",
-        "description": "Integrate AI pods with your task management workflow. Create tickets, bind them to pods, and track progress through a Kanban board.",
+        "title": "Agents Working on Your Kanban Board",
+        "subtitle": "Tickets",
+        "description": "Write a ticket. An agent picks it up, codes on an isolated branch, and opens a merge request. Agents break epics into sub-tasks and update their own status. Git webhooks close the loop: pipeline passes, MR merges, ticket done.",
         "highlights": {
-          "0": "Kanban board visualization",
-          "1": "Ticket - Pod binding",
-          "2": "Progress tracking",
-          "3": "MR/PR integration"
+          "0": "Ticket content becomes the agent's prompt automatically",
+          "1": "Agents decompose epics into sub-tasks on their own",
+          "2": "MR/PR linked to ticket and pod, with live pipeline status",
+          "3": "Kanban board tracks the full lifecycle: backlog to done",
+          "4": "Git webhook sync — merges and pipelines update tickets automatically"
         }
       },
       "runners": {
-        "title": "Self-hosted Runners",
-        "subtitle": "Your Infrastructure, Your Data",
-        "description": "Deploy runners on your own infrastructure. Your code and data never leave your environment, meeting the strictest security and compliance requirements.",
+        "title": "Runs on Your Infrastructure",
+        "subtitle": "Self-Hosted Runners",
+        "description": "Deploy runners wherever you need them — your cloud, your datacenter, your laptop. Code and data never touch a third-party server.",
         "highlights": {
-          "0": "Docker/Kubernetes deployment",
+          "0": "Docker / Kubernetes deployment",
           "1": "Complete data localization",
           "2": "Air-gapped environment support",
           "3": "Full audit trail"

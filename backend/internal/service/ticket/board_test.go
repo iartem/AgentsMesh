@@ -32,7 +32,6 @@ func TestGetBoard(t *testing.T) {
 				OrganizationID: 1,
 				Slug:     fmt.Sprintf("BRD-%d", i*10+j+1),
 				Title:          "Ticket " + status,
-				Type:           ticket.TicketTypeTask,
 				Status:         status,
 				Priority:       ticket.TicketPriorityMedium,
 			}
@@ -87,7 +86,6 @@ func TestGetSubTicketCounts(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "CNT-1",
 		Title:          "Parent 1",
-		Type:           ticket.TicketTypeFeature,
 		Status:         ticket.TicketStatusInProgress,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -95,7 +93,6 @@ func TestGetSubTicketCounts(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "CNT-2",
 		Title:          "Parent 2",
-		Type:           ticket.TicketTypeFeature,
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -120,7 +117,6 @@ func TestGetSubTicketCounts(t *testing.T) {
 			ParentTicketID: &c.parentID,
 			Slug:     fmt.Sprintf("CNT-%d", 100+i),
 			Title:          "Child",
-			Type:           ticket.TicketTypeTask,
 			Status:         c.status,
 			Priority:       ticket.TicketPriorityMedium,
 		}

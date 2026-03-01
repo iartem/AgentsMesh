@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Ticket } from "@/stores/ticket";
-import { StatusIcon, PriorityIcon, TypeIcon, getStatusDisplayInfo } from "./TicketIcons";
+import { StatusIcon, PriorityIcon, getStatusDisplayInfo } from "./TicketIcons";
 import { useTicketPrefetch } from "@/hooks/useTicketPrefetch";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +53,7 @@ export function VirtualizedTicketList({
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Header */}
       <div className="bg-muted/50 border-b border-border">
-        <div className="grid grid-cols-[1fr_2fr_120px_100px_100px_100px] gap-2 px-4 py-2.5">
+        <div className="grid grid-cols-[1fr_2fr_120px_100px_100px] gap-2 px-4 py-2.5">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             {t("tickets.listView.id")}
           </div>
@@ -65,9 +65,6 @@ export function VirtualizedTicketList({
           </div>
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             {t("tickets.listView.priority")}
-          </div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            {t("tickets.listView.type")}
           </div>
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             {t("tickets.listView.created")}
@@ -111,10 +108,9 @@ export function VirtualizedTicketList({
                 onMouseEnter={() => prefetchOnHover(ticket.slug)}
                 onMouseLeave={cancelPrefetch}
               >
-                <div className="grid grid-cols-[1fr_2fr_120px_100px_100px_100px] gap-2 px-4 py-2.5 items-center">
-                  {/* ID with Type Icon */}
+                <div className="grid grid-cols-[1fr_2fr_120px_100px_100px] gap-2 px-4 py-2.5 items-center">
+                  {/* ID */}
                   <div className="flex items-center gap-2 min-w-0">
-                    <TypeIcon type={ticket.type} size="sm" />
                     <code
                       className={cn(
                         "text-sm font-mono truncate",
@@ -149,14 +145,6 @@ export function VirtualizedTicketList({
                     <PriorityIcon priority={ticket.priority} size="sm" />
                     <span className="text-sm text-muted-foreground truncate">
                       {t(`tickets.priority.${ticket.priority}`)}
-                    </span>
-                  </div>
-
-                  {/* Type */}
-                  <div className="flex items-center gap-1.5">
-                    <TypeIcon type={ticket.type} size="xs" />
-                    <span className="text-sm text-muted-foreground truncate">
-                      {t(`tickets.type.${ticket.type}`)}
                     </span>
                   </div>
 

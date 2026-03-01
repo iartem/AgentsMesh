@@ -209,26 +209,18 @@ export default function AgentPodPage() {
               </tr>
               <tr>
                 <td className="p-3 border-b border-border font-medium">
-                  {t("docs.features.agentpod.agentStatus.working")}
+                  {t("docs.features.agentpod.agentStatus.executing")}
                 </td>
                 <td className="p-3 border-b border-border">
-                  {t("docs.features.agentpod.agentStatus.workingDesc")}
-                </td>
-              </tr>
-              <tr>
-                <td className="p-3 border-b border-border font-medium">
-                  {t("docs.features.agentpod.agentStatus.waiting")}
-                </td>
-                <td className="p-3 border-b border-border">
-                  {t("docs.features.agentpod.agentStatus.waitingDesc")}
+                  {t("docs.features.agentpod.agentStatus.executingDesc")}
                 </td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">
-                  {t("docs.features.agentpod.agentStatus.finished")}
+                  {t("docs.features.agentpod.agentStatus.waiting")}
                 </td>
                 <td className="p-3">
-                  {t("docs.features.agentpod.agentStatus.finishedDesc")}
+                  {t("docs.features.agentpod.agentStatus.waitingDesc")}
                 </td>
               </tr>
             </tbody>

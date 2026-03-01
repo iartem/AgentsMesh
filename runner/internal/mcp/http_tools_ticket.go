@@ -22,13 +22,8 @@ func (s *HTTPServer) createSearchTicketsTool() *MCPTool {
 				},
 				"status": map[string]interface{}{
 					"type":        "string",
-					"enum":        []string{"backlog", "todo", "in_progress", "in_review", "done", "canceled"},
-					"description": "Filter by ticket status",
-				},
-				"type": map[string]interface{}{
-					"type":        "string",
-					"enum":        []string{"task", "bug", "feature", "improvement", "epic", "subtask", "story"},
-					"description": "Filter by ticket type",
+				"enum":        []string{"backlog", "todo", "in_progress", "in_review", "done"},
+				"description": "Filter by ticket status",
 				},
 				"priority": map[string]interface{}{
 					"type":        "string",
@@ -69,12 +64,6 @@ func (s *HTTPServer) createSearchTicketsTool() *MCPTool {
 				status = &ts
 			}
 
-			var ticketType *tools.TicketType
-			if t := getStringArg(args, "type"); t != "" {
-				tt := tools.TicketType(t)
-				ticketType = &tt
-			}
-
 			var priority *tools.TicketPriority
 			if p := getStringArg(args, "priority"); p != "" {
 				tp := tools.TicketPriority(p)
@@ -91,7 +80,7 @@ func (s *HTTPServer) createSearchTicketsTool() *MCPTool {
 				page = 1
 			}
 
-			result, err := client.SearchTickets(ctx, repositoryID, status, ticketType, priority, assigneeID, parentTicketSlug, query, limit, page)
+			result, err := client.SearchTickets(ctx, repositoryID, status, priority, assigneeID, parentTicketSlug, query, limit, page)
 			if err != nil {
 				return nil, err
 			}
@@ -153,11 +142,6 @@ func (s *HTTPServer) createCreateTicketTool() *MCPTool {
 					"type":        "string",
 					"description": "Content of the ticket (optional)",
 				},
-				"type": map[string]interface{}{
-					"type":        "string",
-					"enum":        []string{"task", "bug", "feature", "improvement", "epic", "subtask", "story"},
-					"description": "Type of ticket (default: task)",
-				},
 				"priority": map[string]interface{}{
 					"type":        "string",
 					"enum":        []string{"urgent", "high", "medium", "low", "none"},
@@ -173,7 +157,6 @@ func (s *HTTPServer) createCreateTicketTool() *MCPTool {
 		Handler: func(ctx context.Context, client tools.CollaborationClient, args map[string]interface{}) (interface{}, error) {
 			repositoryID := getInt64PtrArg(args, "repository_id")
 			title := getStringArg(args, "title")
-			ticketType := getStringArg(args, "type")
 			priority := getStringArg(args, "priority")
 			parentTicketSlug := getStringPtrArg(args, "parent_ticket_slug")
 
@@ -181,15 +164,12 @@ func (s *HTTPServer) createCreateTicketTool() *MCPTool {
 				return nil, fmt.Errorf("title is required")
 			}
 
-			if ticketType == "" {
-				ticketType = "task"
-			}
 			if priority == "" {
 				priority = "medium"
 			}
 
 			content := getStringArg(args, "content")
-			return client.CreateTicket(ctx, repositoryID, title, content, tools.TicketType(ticketType), tools.TicketPriority(priority), parentTicketSlug)
+			return client.CreateTicket(ctx, repositoryID, title, content, tools.TicketPriority(priority), parentTicketSlug)
 		},
 	}
 }
@@ -215,18 +195,13 @@ func (s *HTTPServer) createUpdateTicketTool() *MCPTool {
 				},
 				"status": map[string]interface{}{
 					"type":        "string",
-					"enum":        []string{"backlog", "todo", "in_progress", "in_review", "done", "canceled"},
-					"description": "New status (optional)",
+				"enum":        []string{"backlog", "todo", "in_progress", "in_review", "done"},
+				"description": "New status (optional)",
 				},
 				"priority": map[string]interface{}{
 					"type":        "string",
 					"enum":        []string{"urgent", "high", "medium", "low", "none"},
 					"description": "New priority (optional)",
-				},
-				"type": map[string]interface{}{
-					"type":        "string",
-					"enum":        []string{"task", "bug", "feature", "improvement", "epic", "subtask", "story"},
-					"description": "New type (optional)",
 				},
 			},
 			"required": []string{"ticket_slug"},
@@ -254,18 +229,12 @@ func (s *HTTPServer) createUpdateTicketTool() *MCPTool {
 				priority = &tp
 			}
 
-			var ticketType *tools.TicketType
-			if t := getStringArg(args, "type"); t != "" {
-				tt := tools.TicketType(t)
-				ticketType = &tt
-			}
-
 			var content *string
 			if d := getStringArg(args, "content"); d != "" {
 				content = &d
 			}
 
-			return client.UpdateTicket(ctx, ticketSlug, title, content, status, priority, ticketType)
+			return client.UpdateTicket(ctx, ticketSlug, title, content, status, priority)
 		},
 	}
 }

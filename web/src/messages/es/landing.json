@@ -86,46 +86,49 @@
       "titleHighlight": "Principales",
       "description": "Todo lo que necesitas para gestionar y coordinar agentes de código de IA basados en terminal a escala.",
       "agentpod": {
-        "title": "AgentPod",
-        "subtitle": "Estación de Trabajo de IA Remota",
-        "description": "Ejecuta agentes de IA en la nube, accede a un entorno de desarrollo completo a través de tu navegador. Cada AgentPod se ejecuta en worktrees Git aislados con acceso de terminal en tiempo real.",
+        "title": "Estaciones de trabajo cloud aisladas",
+        "subtitle": "AgentPod",
+        "description": "Levanta un entorno de desarrollo completo en segundos. Cada estación tiene su propio Git worktree, terminal en tiempo real y acceso por navegador — desde escritorio, portátil o móvil. Monitorea e interactúa con tus agentes desde cualquier lugar.",
         "highlights": {
           "0": "Terminal Web con interacción en tiempo real",
-          "1": "Aislamiento de Git Worktree por AgentPod",
-          "2": "Múltiples AgentPods concurrentes",
-          "3": "Limpieza automática al completar"
+          "1": "Compatible con móviles — gestiona agentes desde cualquier dispositivo",
+          "2": "Aislamiento de Git worktree por estación de trabajo",
+          "3": "Múltiples estaciones de trabajo concurrentes",
+          "4": "Limpieza automática al completar"
         }
       },
       "agentsmesh": {
-        "title": "AgentsMesh",
-        "subtitle": "Colaboración Multi-Agente",
-        "description": "Permite que múltiples agentes de IA trabajen juntos a través de enlaces de pods y comunicación por canales. Visualiza la topología de colaboración en tiempo real.",
+        "title": "Colaboración multi-agente",
+        "subtitle": "AgentsMesh",
+        "description": "Los agentes no solo se ejecutan en paralelo — trabajan juntos. Un agente puede observar el terminal de otro, enviarle entrada o difundir a un canal compartido. Descubren pares, negocian permisos e incluso pueden crear nuevos agentes de forma autónoma.",
         "highlights": {
-          "0": "Enlace de Pod con control de permisos",
-          "1": "Difusión de mensajes basada en canales",
-          "2": "Visualización de topología en tiempo real",
-          "3": "Coordinación de tareas entre agentes"
+          "0": "Vinculación a nivel de terminal — los agentes observan y controlan las sesiones de cada uno",
+          "1": "Mensajería de canal con @mentions, respuestas y documentos compartidos",
+          "2": "Los agentes descubren pares y crean nuevos pods de forma autónoma",
+          "3": "Mapa topológico en tiempo real de cada conexión y conversación",
+          "4": "Acceso con alcance de permisos (solo lectura para observar o control total del terminal)"
         }
       },
       "tickets": {
-        "title": "Tickets",
-        "subtitle": "Desarrollo Impulsado por Tareas",
-        "description": "Integra pods de IA con tu flujo de trabajo de gestión de tareas. Crea tickets, vincúlalos a pods y rastrea el progreso a través de un tablero Kanban.",
+        "title": "Agentes trabajando en tu tablero Kanban",
+        "subtitle": "Tickets",
+        "description": "Escribe un ticket. Un agente lo toma, programa en una rama aislada y abre un merge request. Los agentes descomponen épicas en sub-tareas y actualizan su propio estado. Los Git webhooks cierran el círculo: pipeline pasa, MR mergeado, ticket listo.",
         "highlights": {
-          "0": "Visualización de tablero Kanban",
-          "1": "Vinculación Ticket - Pod",
-          "2": "Seguimiento de progreso",
-          "3": "Integración MR/PR"
+          "0": "El contenido del ticket se convierte automáticamente en el prompt del agente",
+          "1": "Los agentes descomponen épicas en sub-tareas por sí mismos",
+          "2": "MR/PR vinculado al ticket y al pod, con estado de pipeline en vivo",
+          "3": "El tablero Kanban rastrea todo el ciclo: de backlog a done",
+          "4": "Sincronización Git webhook — merges y pipelines actualizan tickets automáticamente"
         }
       },
       "runners": {
-        "title": "Runners Auto-alojados",
-        "subtitle": "Tu Infraestructura, Tus Datos",
-        "description": "Despliega runners en tu propia infraestructura. Tu código y datos nunca salen de tu entorno, cumpliendo con los requisitos de seguridad y cumplimiento más estrictos.",
+        "title": "Ejecuta en tu infraestructura",
+        "subtitle": "Self-Hosted Runners",
+        "description": "Despliega runners donde los necesites — tu nube, tu datacenter, tu portátil. El código y los datos nunca tocan un servidor de terceros.",
         "highlights": {
-          "0": "Despliegue Docker/Kubernetes",
+          "0": "Despliegue Docker / Kubernetes",
           "1": "Localización completa de datos",
-          "2": "Soporte para entornos aislados",
+          "2": "Soporte para entornos air-gapped",
           "3": "Pista de auditoría completa"
         }
       }

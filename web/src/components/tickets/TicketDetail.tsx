@@ -6,15 +6,12 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/auth";
-import { useTicketStore, TicketStatus } from "@/stores/ticket";
-import { StatusIcon, TypeIcon, getStatusDisplayInfo } from "./TicketIcons";
-import TicketPodPanel from "./TicketPodPanel";
+import { useTicketStore, TicketStatus, TicketPriority } from "@/stores/ticket";
 import { useTicketExtraData } from "./hooks";
-import { SubTicketsList, RelationsList, CommitsList, LabelsList, CommentsList } from "./shared";
+import { LabelsList, CommentsList, SubTicketsList, RelationsList, CommitsList } from "./shared";
 import { TicketDetailSidebar } from "./TicketDetailSidebar";
 import { InlineEditableText } from "./InlineEditableText";
 
-// Lazy load BlockEditor for inline editing
 const BlockEditor = lazy(() => import("@/components/ui/block-editor"));
 
 interface TicketDetailProps {
@@ -27,16 +24,11 @@ export function TicketDetail({ slug }: TicketDetailProps) {
   const { currentOrg } = useAuthStore();
   const { currentTicket, fetchTicket, updateTicket, updateTicketStatus, deleteTicket, loading, error } = useTicketStore();
 
-  // Confirm dialog for delete
   const { dialogProps, confirm } = useConfirmDialog();
-
-  // Use shared hook for extra data
   const { subTickets, relations, commits, comments, addComment, updateComment, deleteComment } = useTicketExtraData(slug, !!currentTicket);
 
-  // Debounce timer for content auto-save
   const contentSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
       if (contentSaveTimerRef.current) {
@@ -45,12 +37,10 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     };
   }, []);
 
-  // Fetch ticket data
   useEffect(() => {
     fetchTicket(slug);
   }, [slug, fetchTicket]);
 
-  // Handle inline title save
   const handleTitleSave = useCallback(async (newTitle: string) => {
     if (!newTitle.trim()) return;
     try {
@@ -61,7 +51,6 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     }
   }, [slug, updateTicket]);
 
-  // Handle content change with debounced auto-save
   const handleContentChange = useCallback((newContent: string) => {
     if (contentSaveTimerRef.current) {
       clearTimeout(contentSaveTimerRef.current);
@@ -75,7 +64,6 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     }, 800);
   }, [slug, updateTicket]);
 
-  // Handle status change
   const handleStatusChange = async (newStatus: TicketStatus) => {
     try {
       await updateTicketStatus(slug, newStatus);
@@ -84,16 +72,14 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     }
   };
 
-  // Handle repository change
-  const handleRepositoryChange = async (repositoryId: number | null) => {
+  const handlePriorityChange = async (newPriority: TicketPriority) => {
     try {
-      await updateTicket(slug, { repositoryId });
+      await updateTicket(slug, { priority: newPriority });
     } catch (err) {
-      console.error("Failed to update repository:", err);
+      console.error("Failed to update priority:", err);
     }
   };
 
-  // Handle delete with confirmation
   const handleDelete = useCallback(async () => {
     const confirmed = await confirm({
       title: t("tickets.detail.deleteTicket"),
@@ -112,106 +98,83 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     }
   }, [confirm, deleteTicket, slug, router, currentOrg, t]);
 
-  // Handle ticket click for sub-tickets and relations
-  const handleTicketClick = (ticketSlug: string) => {
-    router.push(`/${currentOrg?.slug}/tickets/${ticketSlug}`);
-  };
-
   if (loading && !currentTicket) {
     return <TicketDetailSkeleton />;
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 dark:text-red-400 mb-4">{error}</div>
-        <Button onClick={() => fetchTicket(slug)}>{t("tickets.detail.retry")}</Button>
+      <div className="text-center py-16">
+        <div className="text-destructive mb-4 text-sm">{error}</div>
+        <Button variant="outline" size="sm" onClick={() => fetchTicket(slug)}>
+          {t("tickets.detail.retry")}
+        </Button>
       </div>
     );
   }
 
   if (!currentTicket) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-center py-16 text-muted-foreground text-sm">
         {t("tickets.detail.notFound")}
       </div>
     );
   }
 
-  const statusInfo = getStatusDisplayInfo(currentTicket.status);
-
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 space-y-6">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <TypeIcon type={currentTicket.type} size="md" />
-            <span className="text-muted-foreground font-mono text-sm">
-              {currentTicket.slug}
-            </span>
-            <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
-              <StatusIcon status={currentTicket.status} size="xs" />
-              {statusInfo.label}
-            </span>
-          </div>
-
-          {/* Inline editable title */}
+        <div className="space-y-4">
+          {/* Title */}
           <InlineEditableText
             value={currentTicket.title}
             onSave={handleTitleSave}
             placeholder={t("tickets.createDialog.titlePlaceholder")}
-            className="text-2xl font-semibold leading-tight"
-            inputClassName="text-2xl font-semibold"
+            className="text-xl sm:text-2xl font-bold tracking-tight leading-snug"
+            inputClassName="text-xl sm:text-2xl font-bold tracking-tight"
           />
 
-          {/* Always-editable content */}
-          <div className="mt-4 border border-border rounded-md overflow-hidden bg-card min-h-[120px]">
-            <Suspense fallback={<div className="h-[120px] animate-pulse bg-muted" />}>
-              <BlockEditor
-                key={slug}
-                initialContent={currentTicket.content || ""}
-                onChange={handleContentChange}
-                editable={true}
-              />
-            </Suspense>
-          </div>
+          {/* Labels */}
+          {currentTicket.labels && currentTicket.labels.length > 0 && (
+            <LabelsList labels={currentTicket.labels} compact />
+          )}
         </div>
 
-        {/* Labels (using shared component) */}
-        <LabelsList labels={currentTicket.labels || []} />
+        {/* Content */}
+        <div className="rounded-xl border border-border/60 overflow-hidden bg-card shadow-sm min-h-[200px] max-h-[65vh] overflow-y-auto">
+          <Suspense fallback={<div className="h-[200px] animate-pulse bg-muted/30 rounded-xl" />}>
+            <BlockEditor
+              key={slug}
+              initialContent={currentTicket.content || ""}
+              onChange={handleContentChange}
+              editable={true}
+            />
+          </Suspense>
+        </div>
 
-        {/* Sub-tickets (using shared component) */}
+        {/* Linked items */}
         <SubTicketsList
           subTickets={subTickets}
-          onTicketClick={handleTicketClick}
+          onTicketClick={(ticketSlug) => router.push(`/${currentOrg?.slug}/tickets/${ticketSlug}`)}
         />
-
-        {/* Relations (using shared component) */}
         <RelationsList
           relations={relations}
-          onTicketClick={handleTicketClick}
+          onTicketClick={(ticketSlug) => router.push(`/${currentOrg?.slug}/tickets/${ticketSlug}`)}
         />
-
-        {/* Commits (using shared component) */}
         <CommitsList commits={commits} />
 
-        {/* Comments */}
-        <CommentsList
-          comments={comments}
-          onAddComment={addComment}
-          onUpdateComment={updateComment}
-          onDeleteComment={deleteComment}
-        />
+        {/* Comments (large screens only — on small screens shown above delete in sidebar) */}
+        <div className="hidden lg:block">
+          <CommentsList
+            comments={comments}
+            onAddComment={addComment}
+            onUpdateComment={updateComment}
+            onDeleteComment={deleteComment}
+          />
+        </div>
 
-        {/* AgentPods */}
-        <TicketPodPanel
-          ticketSlug={slug}
-          ticketTitle={currentTicket.title}
-          ticketId={currentTicket.id}
-          repositoryId={currentTicket.repository_id}
-        />
       </div>
 
       {/* Sidebar */}
@@ -219,11 +182,21 @@ export function TicketDetail({ slug }: TicketDetailProps) {
         ticket={currentTicket}
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
-        onRepositoryChange={handleRepositoryChange}
+        onPriorityChange={handlePriorityChange}
+        ticketSlug={slug}
         t={t}
+        commentsSlot={
+          <div className="lg:hidden">
+            <CommentsList
+              comments={comments}
+              onAddComment={addComment}
+              onUpdateComment={updateComment}
+              onDeleteComment={deleteComment}
+            />
+          </div>
+        }
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog {...dialogProps} />
     </div>
   );
@@ -232,17 +205,28 @@ export function TicketDetail({ slug }: TicketDetailProps) {
 function TicketDetailSkeleton() {
   return (
     <div className="animate-pulse" data-testid="ticket-detail-skeleton">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1">
-          <div className="h-6 bg-muted rounded w-48 mb-4" />
-          <div className="h-10 bg-muted rounded w-3/4 mb-4" />
-          <div className="h-24 bg-muted rounded mb-6" />
-          <div className="h-40 bg-muted rounded" />
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <div className="flex-1 space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="h-5 w-20 bg-muted/60 rounded" />
+              <div className="h-5 w-24 bg-muted/60 rounded-full" />
+            </div>
+            <div className="h-8 bg-muted/60 rounded-lg w-3/4" />
+          </div>
+          <div className="h-10 bg-muted/40 rounded-lg w-full" />
+          <div className="h-64 bg-muted/40 rounded-xl" />
         </div>
-        <div className="lg:w-80 space-y-6">
-          <div className="h-32 bg-muted rounded" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-40 bg-muted rounded" />
+        <div className="lg:w-72 shrink-0 space-y-3">
+          <div className="h-[52px] bg-muted/50 rounded-xl" />
+          <div className="rounded-xl border border-border/40 overflow-hidden">
+            <div className="h-12 bg-muted/30" />
+            <div className="h-12 bg-muted/20" />
+            <div className="h-12 bg-muted/30" />
+            <div className="h-16 bg-muted/20" />
+            <div className="h-10 bg-muted/30" />
+          </div>
+          <div className="h-9 bg-muted/30 rounded-lg" />
         </div>
       </div>
     </div>

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { create } from "zustand";
-import { ticketApi, TicketData, TicketType, TicketStatus, TicketPriority } from "@/lib/api";
+import { ticketApi, TicketData, TicketStatus, TicketPriority } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 
 // Re-export types from API for component convenience
-export type { TicketType, TicketStatus, TicketPriority };
+export type { TicketStatus, TicketPriority };
 
 export interface Label {
   id: number;
@@ -20,7 +20,6 @@ export interface Ticket extends TicketData {
 interface TicketFilters {
   status?: TicketStatus;
   priority?: TicketPriority;
-  type?: TicketType;
   assigneeId?: number;
   repositoryId?: number;
   search?: string;
@@ -29,7 +28,6 @@ interface TicketFilters {
 // Local UI filter selections (multi-select checkboxes in sidebar)
 interface TicketUIFilters {
   selectedStatuses: TicketStatus[];
-  selectedTypes: TicketType[];
   selectedPriorities: TicketPriority[];
 }
 
@@ -54,7 +52,6 @@ interface TicketState {
   setSelectedTicketSlug: (slug: string | null) => void;
   createTicket: (data: {
     repositoryId: number;
-    type: TicketType;
     title: string;
     content?: string;
     priority?: TicketPriority;
@@ -67,7 +64,6 @@ interface TicketState {
     data: Partial<{
       title: string;
       content: string;
-      type: TicketType;
       status: TicketStatus;
       priority: TicketPriority;
       repositoryId: number | null;
@@ -83,7 +79,6 @@ interface TicketState {
   setFilters: (filters: TicketFilters) => void;
   setUIFilters: (uiFilters: Partial<TicketUIFilters>) => void;
   toggleStatus: (status: TicketStatus) => void;
-  toggleType: (type: TicketType) => void;
   togglePriority: (priority: TicketPriority) => void;
   clearUIFilters: () => void;
   setViewMode: (mode: TicketViewMode) => void;
@@ -97,7 +92,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   selectedTicketSlug: null,
   labels: [],
   filters: {},
-  uiFilters: { selectedStatuses: [], selectedTypes: [], selectedPriorities: [] },
+  uiFilters: { selectedStatuses: [], selectedPriorities: [] },
   viewMode: "board",
   loading: false,
   error: null,
@@ -190,19 +185,25 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   },
 
   updateTicketStatus: async (slug, status) => {
+    const prevTickets = get().tickets;
+    const prevCurrent = get().currentTicket;
+
+    // Optimistic update
+    set((state) => ({
+      tickets: state.tickets.map((t) =>
+        t.slug === slug ? { ...t, status } : t
+      ),
+      currentTicket:
+        state.currentTicket?.slug === slug
+          ? { ...state.currentTicket, status }
+          : state.currentTicket,
+    }));
+
     try {
       await ticketApi.updateStatus(slug, status);
-      set((state) => ({
-        tickets: state.tickets.map((t) =>
-          t.slug === slug ? { ...t, status } : t
-        ),
-        currentTicket:
-          state.currentTicket?.slug === slug
-            ? { ...state.currentTicket, status }
-            : state.currentTicket,
-      }));
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to update ticket status") });
+      // Rollback on failure
+      set({ tickets: prevTickets, currentTicket: prevCurrent, error: getErrorMessage(error, "Failed to update ticket status") });
       throw error;
     }
   },
@@ -263,20 +264,6 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     });
   },
 
-  toggleType: (type) => {
-    set((state) => {
-      const prev = state.uiFilters.selectedTypes;
-      return {
-        uiFilters: {
-          ...state.uiFilters,
-          selectedTypes: prev.includes(type)
-            ? prev.filter((t) => t !== type)
-            : [...prev, type],
-        },
-      };
-    });
-  },
-
   togglePriority: (priority) => {
     set((state) => {
       const prev = state.uiFilters.selectedPriorities;
@@ -293,7 +280,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
 
   clearUIFilters: () => {
     set({
-      uiFilters: { selectedStatuses: [], selectedTypes: [], selectedPriorities: [] },
+      uiFilters: { selectedStatuses: [], selectedPriorities: [] },
     });
   },
 
@@ -315,7 +302,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
 }));
 
 /**
- * Selector hook: returns tickets filtered by current UI filters (search, status, type, priority).
+ * Selector hook: returns tickets filtered by current UI filters (search, status, priority).
  * Uses Zustand selectors + useMemo for efficient re-renders.
  * Single source of truth for filtered tickets — used by both sidebar and main content.
  */
@@ -323,7 +310,6 @@ export function useFilteredTickets(): Ticket[] {
   const tickets = useTicketStore((s) => s.tickets);
   const search = useTicketStore((s) => s.filters.search);
   const selectedStatuses = useTicketStore((s) => s.uiFilters.selectedStatuses);
-  const selectedTypes = useTicketStore((s) => s.uiFilters.selectedTypes);
   const selectedPriorities = useTicketStore((s) => s.uiFilters.selectedPriorities);
 
   return useMemo(() => {
@@ -335,11 +321,10 @@ export function useFilteredTickets(): Ticket[] {
         }
       }
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(ticket.status)) return false;
-      if (selectedTypes.length > 0 && !selectedTypes.includes(ticket.type)) return false;
       if (selectedPriorities.length > 0 && !selectedPriorities.includes(ticket.priority)) return false;
       return true;
     });
-  }, [tickets, search, selectedStatuses, selectedTypes, selectedPriorities]);
+  }, [tickets, search, selectedStatuses, selectedPriorities]);
 }
 
 // Helper function to get status display info
@@ -353,7 +338,6 @@ export const getStatusInfo = (status: TicketStatus) => {
     in_progress: { label: "In Progress", color: "text-yellow-600 dark:text-yellow-400", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
     in_review: { label: "In Review", color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
     done: { label: "Done", color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/30" },
-    cancelled: { label: "Cancelled", color: "text-red-600 dark:text-red-400", bgColor: "bg-red-100 dark:bg-red-900/30" },
   };
   // Return default if status not found
   return statusMap[status] || { label: status || "Unknown", color: "text-gray-500 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800" };
@@ -375,17 +359,3 @@ export const getPriorityInfo = (priority: TicketPriority) => {
   return priorityMap[priority] || { label: priority || "Unknown", color: "text-gray-400 dark:text-gray-500", icon: "?" };
 };
 
-// Helper function to get type display info
-export const getTypeInfo = (type: TicketType) => {
-  const typeMap: Record<TicketType, { label: string; color: string; icon: string }> = {
-    task: { label: "Task", color: "text-blue-500 dark:text-blue-400", icon: "✓" },
-    bug: { label: "Bug", color: "text-red-500 dark:text-red-400", icon: "🐛" },
-    feature: { label: "Feature", color: "text-green-500 dark:text-green-400", icon: "✨" },
-    improvement: { label: "Improvement", color: "text-cyan-500 dark:text-cyan-400", icon: "📈" },
-    epic: { label: "Epic", color: "text-purple-500 dark:text-purple-400", icon: "⚡" },
-    subtask: { label: "Subtask", color: "text-gray-500 dark:text-gray-400", icon: "◦" },
-    story: { label: "Story", color: "text-teal-500 dark:text-teal-400", icon: "📖" },
-  };
-  // Return default if type not found
-  return typeMap[type] || { label: type || "Unknown", color: "text-gray-500 dark:text-gray-400", icon: "?" };
-};

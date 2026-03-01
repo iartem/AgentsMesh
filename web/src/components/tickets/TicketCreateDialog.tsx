@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FormField, FormRow } from "@/components/ui/form-field";
+import { FormField } from "@/components/ui/form-field";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -20,76 +20,87 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TicketType, TicketPriority } from "@/lib/api/ticket";
+import { TicketPriority } from "@/lib/api/ticket";
 import { ticketApi } from "@/lib/api";
-import { RepositorySelect } from "@/components/common/RepositorySelect";
+import { organizationApi, OrganizationMember } from "@/lib/api/organization";
+import { useAuthStore } from "@/stores/auth";
 import { useBreakpoint } from "@/components/layout/useBreakpoint";
 import { cn } from "@/lib/utils";
+import { ChevronDown, Users, Check } from "lucide-react";
 
-// Lazy load BlockEditor to avoid SSR issues
 const BlockEditor = lazy(() => import("@/components/ui/block-editor"));
 
 export interface TicketCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (ticketId: number, slug: string) => void;
-  defaultRepositoryId?: number;
   parentTicketSlug?: string;
 }
 
-const typeOptions: { value: TicketType; label: string }[] = [
-  { value: "task", label: "Task" },
-  { value: "bug", label: "Bug" },
-  { value: "feature", label: "Feature" },
-  { value: "improvement", label: "Improvement" },
-  { value: "epic", label: "Epic" },
-];
-
-const priorityOptions: { value: TicketPriority; label: string }[] = [
-  { value: "urgent", label: "Urgent" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
-  { value: "none", label: "None" },
+const priorityOptions: { value: TicketPriority }[] = [
+  { value: "urgent" },
+  { value: "high" },
+  { value: "medium" },
+  { value: "low" },
+  { value: "none" },
 ];
 
 interface FormData {
   title: string;
   content: string;
-  type: TicketType;
   priority: TicketPriority;
-  repositoryId: number | null;
+  assigneeIds: number[];
 }
 
 export function TicketCreateDialog({
   open,
   onOpenChange,
   onCreated,
-  defaultRepositoryId,
   parentTicketSlug,
 }: TicketCreateDialogProps) {
   const t = useTranslations();
   const { isMobile } = useBreakpoint();
+  const { currentOrg } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
+  const assigneeDropdownRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState<FormData>({
     title: "",
     content: "",
-    type: "task",
     priority: "medium",
-    repositoryId: defaultRepositoryId || null,
+    assigneeIds: [],
   });
+
+  useEffect(() => {
+    if (open && currentOrg?.slug && members.length === 0) {
+      organizationApi.listMembers(currentOrg.slug)
+        .then((res) => setMembers(res.members || []))
+        .catch(() => {});
+    }
+  }, [open, currentOrg?.slug, members.length]);
+
+  useEffect(() => {
+    if (!assigneeDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (assigneeDropdownRef.current && !assigneeDropdownRef.current.contains(e.target as Node)) {
+        setAssigneeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [assigneeDropdownOpen]);
 
   const resetForm = useCallback(() => {
     setForm({
       title: "",
       content: "",
-      type: "task",
       priority: "medium",
-      repositoryId: defaultRepositoryId || null,
+      assigneeIds: [],
     });
     setError(null);
-  }, [defaultRepositoryId]);
+  }, []);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -99,7 +110,6 @@ export function TicketCreateDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!form.title.trim()) {
       setError(t("tickets.createDialog.titleRequired"));
       return;
@@ -110,12 +120,11 @@ export function TicketCreateDialog({
 
     try {
       const response = await ticketApi.create({
-        repositoryId: form.repositoryId || undefined,
         title: form.title.trim(),
         content: form.content || undefined,
-        type: form.type,
         priority: form.priority,
         parentSlug: parentTicketSlug,
+        assigneeIds: form.assigneeIds.length > 0 ? form.assigneeIds : undefined,
       });
 
       onCreated?.(response.id, response.slug);
@@ -131,6 +140,15 @@ export function TicketCreateDialog({
   const updateField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     if (error) setError(null);
+  };
+
+  const toggleAssignee = (userId: number) => {
+    setForm((prev) => ({
+      ...prev,
+      assigneeIds: prev.assigneeIds.includes(userId)
+        ? prev.assigneeIds.filter((id) => id !== userId)
+        : [...prev.assigneeIds, userId],
+    }));
   };
 
   const dialogTitle = parentTicketSlug
@@ -161,55 +179,83 @@ export function TicketCreateDialog({
               />
             </FormField>
 
-            {/* Type & Priority */}
-            <FormRow>
-              <FormField label={t("tickets.filters.type")} htmlFor="ticket-type">
-                <Select
-                  value={form.type}
-                  onValueChange={(val) => updateField("type", val as TicketType)}
-                >
-                  <SelectTrigger id="ticket-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {t(`tickets.type.${opt.value}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-
-              <FormField label={t("tickets.filters.priority")} htmlFor="ticket-priority">
-                <Select
-                  value={form.priority}
-                  onValueChange={(val) => updateField("priority", val as TicketPriority)}
-                >
-                  <SelectTrigger id="ticket-priority">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priorityOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {t(`tickets.priority.${opt.value}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </FormRow>
-
-            {/* Repository */}
-            <FormField label={t("tickets.createDialog.repository")} htmlFor="ticket-repo">
-              <RepositorySelect
-                value={form.repositoryId}
-                onChange={(value) => updateField("repositoryId", value)}
-                placeholder={t("tickets.createDialog.selectRepository")}
-              />
+            {/* Priority */}
+            <FormField label={t("tickets.filters.priority")} htmlFor="ticket-priority">
+              <Select
+                value={form.priority}
+                onValueChange={(val) => updateField("priority", val as TicketPriority)}
+              >
+                <SelectTrigger id="ticket-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {priorityOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {t(`tickets.priority.${opt.value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
 
-            {/* Content - Rich Text Editor */}
+            {/* Assignees */}
+            <FormField label={t("tickets.detail.assignees")}>
+              <div ref={assigneeDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAssigneeDropdownOpen(!assigneeDropdownOpen)}
+                  className={cn(
+                    "flex items-center justify-between w-full h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs",
+                    "focus:outline-none focus:ring-2 focus:ring-primary/20",
+                    form.assigneeIds.length === 0 && "text-muted-foreground"
+                  )}
+                >
+                  <span className="truncate">
+                    {form.assigneeIds.length === 0
+                      ? t("tickets.detail.noAssignees")
+                      : members
+                          .filter((m) => form.assigneeIds.includes(m.user_id))
+                          .map((m) => m.user?.name || m.user?.username || m.user?.email)
+                          .join(", ")}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", assigneeDropdownOpen && "rotate-180")} />
+                </button>
+                {assigneeDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-h-48 overflow-y-auto">
+                    {members.length > 0 ? (
+                      members.map((member) => {
+                        const isSelected = form.assigneeIds.includes(member.user_id);
+                        return (
+                          <button
+                            key={member.user_id}
+                            type="button"
+                            className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onClick={() => toggleAssignee(member.user_id)}
+                          >
+                            <span className={cn("flex h-4 w-4 items-center justify-center shrink-0", !isSelected && "opacity-0")}>
+                              <Check className="h-3.5 w-3.5" />
+                            </span>
+                            {member.user?.avatar_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={member.user.avatar_url} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                            ) : (
+                              <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                            )}
+                            <span className="truncate">{member.user?.name || member.user?.username || member.user?.email}</span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                        {t("tickets.detail.noAssignees")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </FormField>
+
+            {/* Content */}
             <FormField label={t("tickets.createDialog.content")}>
               <div className={cn(
                 "border border-input rounded-md overflow-hidden bg-card",

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { useTicketStore, Ticket, TicketStatus, TicketPriority } from "@/stores/ticket";
-import { TypeIcon, getTypeDisplayInfo } from "./TicketIcons";
 import { ticketApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -198,46 +197,44 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
     );
   }
 
-  const typeInfo = getTypeDisplayInfo(ticket.type);
-
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Header - Clean minimal style */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 shrink-0 bg-muted/30">
-        <div className="flex items-center gap-2 min-w-0">
-          <code className="text-sm text-muted-foreground font-mono">{ticket.slug}</code>
-        </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 shrink-0 bg-muted/20">
+        <code className="text-xs text-muted-foreground/80 font-mono tracking-wide bg-muted/60 px-2 py-0.5 rounded">
+          {ticket.slug}
+        </code>
         <div className="flex items-center gap-0.5">
           <Link
             href={`/${currentOrg?.slug}/tickets/${ticket.slug}`}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-md hover:bg-muted/80 text-muted-foreground/60 hover:text-foreground transition-colors"
             title={t("tickets.detail.viewFullDetails")}
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-3.5 w-3.5" />
           </Link>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-md hover:bg-muted/80 text-muted-foreground/60 hover:text-foreground transition-colors"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-5">
-          {/* Title - Inline Editable */}
+        <div className="p-4 space-y-4">
+          {/* Title */}
           <InlineEditableText
             value={ticket.title}
             onSave={handleTitleChange}
             placeholder={t("tickets.createDialog.titlePlaceholder")}
-            className="text-lg font-semibold leading-tight"
-            inputClassName="text-lg font-semibold"
+            className="text-lg font-bold leading-tight tracking-tight"
+            inputClassName="text-lg font-bold tracking-tight"
           />
 
-          {/* Status & Priority - Linear Style inline */}
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* Status & Priority */}
+          <div className="flex items-center gap-2 flex-wrap">
             <StatusSelect
               value={ticket.status}
               onChange={handleStatusChange}
@@ -248,20 +245,16 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
               onChange={handlePriorityChange}
               size="sm"
             />
-            <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md text-sm", typeInfo.bgColor, typeInfo.color)}>
-              <TypeIcon type={ticket.type} size="sm" />
-              <span>{t(`tickets.type.${ticket.type}`)}</span>
-            </div>
           </div>
 
-          {/* Content - Rich Text (read-only in panel, edit on full page) */}
+          {/* Content */}
           {ticket.content && (
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
                 {t("tickets.detail.content")}
               </label>
-              <div className="rounded-lg overflow-hidden bg-muted/30">
-                <Suspense fallback={<div className="h-[100px] animate-pulse bg-muted" />}>
+              <div className="rounded-lg overflow-hidden bg-muted/20 ring-1 ring-border/30">
+                <Suspense fallback={<div className="h-[100px] animate-pulse bg-muted/30 rounded-lg" />}>
                   <BlockViewer content={ticket.content} />
                 </Suspense>
               </div>
@@ -271,17 +264,17 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
           {/* Labels */}
           <LabelsList labels={ticket.labels || []} compact />
 
-          {/* Assignees - Compact inline */}
+          {/* Assignees */}
           {ticket.assignees && ticket.assignees.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
                 {t("tickets.detail.assignees")}
               </span>
-              <div className="flex items-center -space-x-1">
+              <div className="flex items-center -space-x-1.5">
                 {ticket.assignees.map((assignee) => (
                   <div
                     key={assignee.user_id}
-                    className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs border-2 border-background"
+                    className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-semibold text-primary border-2 border-background ring-1 ring-primary/10"
                     title={assignee.user?.name || assignee.user?.username}
                   >
                     {(assignee.user?.name || assignee.user?.username || "?")[0].toUpperCase()}
@@ -291,9 +284,9 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
             </div>
           )}
 
-          {/* Repository selector */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+          {/* Repository */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
               {t("tickets.detail.repository")}
             </label>
             <RepositorySelect
@@ -304,34 +297,39 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
             />
           </div>
 
-          {/* Details - Compact metadata row */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
+          {/* Metadata */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
+            <span className="flex items-center gap-1.5">
               <Clock className="h-3 w-3" />
               {formatDate(ticket.created_at)}
             </span>
             {ticket.due_date && (
-              <span className={cn("flex items-center gap-1", new Date(ticket.due_date) < new Date() && "text-destructive")}>
+              <span className={cn(
+                "flex items-center gap-1 font-medium",
+                new Date(ticket.due_date) < new Date() ? "text-destructive" : "text-muted-foreground/70"
+              )}>
                 Due {formatDate(ticket.due_date)}
               </span>
             )}
           </div>
 
-          {/* Sub-tickets (using shared component) */}
+          {/* Divider before linked items */}
+          {(subTickets.length > 0 || relations.length > 0 || commits.length > 0) && (
+            <div className="border-t border-border/30 pt-1" />
+          )}
+
           <SubTicketsList
             subTickets={subTickets}
             onTicketClick={handleTicketClick}
             compact
           />
 
-          {/* Relations (using shared component) */}
           <RelationsList
             relations={relations}
             onTicketClick={handleTicketClick}
             compact
           />
 
-          {/* Commits (using shared component) */}
           <CommitsList
             commits={commits}
             viewAllLink={`/${currentOrg?.slug}/tickets/${ticket.slug}`}
@@ -348,11 +346,11 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="shrink-0 px-4 py-2.5 border-t border-border/50 bg-muted/20">
+      {/* Footer */}
+      <div className="shrink-0 px-4 py-2 border-t border-border/30">
         <Link href={`/${currentOrg?.slug}/tickets/${ticket.slug}`}>
-          <Button variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-foreground">
-            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+          <Button variant="ghost" size="sm" className="w-full text-muted-foreground/70 hover:text-foreground text-xs">
+            <ExternalLink className="h-3 w-3 mr-1.5" />
             {t("tickets.detail.viewFullDetails")}
           </Button>
         </Link>

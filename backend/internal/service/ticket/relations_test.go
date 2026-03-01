@@ -24,7 +24,6 @@ func setupRelationsTestDB(t *testing.T) *gorm.DB {
 			organization_id INTEGER NOT NULL,
 			number INTEGER NOT NULL,
 			slug TEXT NOT NULL,
-			type TEXT NOT NULL DEFAULT 'task',
 			title TEXT NOT NULL,
 			content TEXT,
 			status TEXT NOT NULL DEFAULT 'backlog',
@@ -68,7 +67,6 @@ func TestCreateRelation(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "REL-1",
 		Title:          "Ticket 1",
-		Type:           ticket.TicketTypeTask,
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -76,7 +74,6 @@ func TestCreateRelation(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "REL-2",
 		Title:          "Ticket 2",
-		Type:           ticket.TicketTypeTask,
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -109,7 +106,7 @@ func TestCreateRelation(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "REL-3",
 			Title:          "Ticket 3",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusTodo,
 			Priority:       ticket.TicketPriorityMedium,
 		}
@@ -131,7 +128,7 @@ func TestCreateRelation(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "REL-4",
 			Title:          "Ticket 4",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusTodo,
 			Priority:       ticket.TicketPriorityMedium,
 		}
@@ -153,7 +150,7 @@ func TestCreateRelation(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "REL-5",
 			Title:          "Ticket 5",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusTodo,
 			Priority:       ticket.TicketPriorityMedium,
 		}
@@ -181,7 +178,7 @@ func TestDeleteRelation(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "DEL-1",
 		Title:          "Ticket 1",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -189,7 +186,7 @@ func TestDeleteRelation(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "DEL-2",
 		Title:          "Ticket 2",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -228,7 +225,7 @@ func TestListRelations(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "LST-1",
 		Title:          "Ticket 1",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -236,7 +233,7 @@ func TestListRelations(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "LST-2",
 		Title:          "Ticket 2",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -244,7 +241,7 @@ func TestListRelations(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "LST-3",
 		Title:          "Ticket 3",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -270,7 +267,7 @@ func TestListRelations(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "LST-4",
 			Title:          "Ticket 4",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusTodo,
 			Priority:       ticket.TicketPriorityMedium,
 		}

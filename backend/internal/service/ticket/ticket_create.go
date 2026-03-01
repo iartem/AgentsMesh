@@ -48,7 +48,6 @@ func (s *Service) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*
 			OrganizationID: req.OrganizationID,
 			Number:         number,
 			Slug:            slug,
-			Type:           req.Type,
 			Title:          req.Title,
 			Content:        req.Content,
 			Status:         status,

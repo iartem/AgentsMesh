@@ -50,9 +50,9 @@ export function LabelsList({
       {labels.map((label) => (
         <span
           key={label.id}
-          className="px-2 py-1 rounded text-sm"
+          className="px-2.5 py-1 rounded-md text-sm font-medium"
           style={{
-            backgroundColor: `${label.color}20`,
+            backgroundColor: `${label.color}15`,
             color: label.color,
           }}
         >

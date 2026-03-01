@@ -132,7 +132,6 @@ func TestTicketStruct(t *testing.T) {
 		Slug:             "AM-123",
 		Title:            "Test Ticket",
 		Content:          "Test content",
-		Type:             TicketTypeTask,
 		Status:           TicketStatusTodo,
 		Priority:         TicketPriorityMedium,
 		ProductName:      "Test Product",
@@ -145,9 +144,6 @@ func TestTicketStruct(t *testing.T) {
 
 	if ticket.Slug != "AM-123" {
 		t.Errorf("Slug: got %v, want %v", ticket.Slug, "AM-123")
-	}
-	if ticket.Type != TicketTypeTask {
-		t.Errorf("Type: got %v, want %v", ticket.Type, TicketTypeTask)
 	}
 	if ticket.ParentTicketSlug != "AM-100" {
 		t.Errorf("ParentTicketSlug: got %v, want AM-100", ticket.ParentTicketSlug)

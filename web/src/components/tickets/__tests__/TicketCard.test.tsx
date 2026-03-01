@@ -23,7 +23,6 @@ describe('TicketCard Component', () => {
     id: 1,
     number: 42,
     slug: 'PROJ-42',
-    type: 'task' as const,
     title: 'Implement new feature',
     status: 'todo' as const,
     priority: 'medium' as const,
@@ -46,35 +45,6 @@ describe('TicketCard Component', () => {
       render(<TicketCard ticket={baseTicket} />)
       const link = screen.getByRole('link', { name: 'PROJ-42' })
       expect(link).toHaveAttribute('href', '/test-org/tickets/PROJ-42')
-    })
-  })
-
-  describe('type display', () => {
-    it('should display task type icon (SVG)', () => {
-      const { container } = render(<TicketCard ticket={{ ...baseTicket, type: 'task' }} />)
-      // TypeIcon renders an SVG - Lucide icons have class pattern: lucide lucide-{icon-name}
-      // CheckSquare becomes square-check in newer lucide versions
-      const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      // Should have at least 3 SVGs (TypeIcon, StatusIcon, PriorityIcon)
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
-    })
-
-    it('should display bug type icon (SVG)', () => {
-      const { container } = render(<TicketCard ticket={{ ...baseTicket, type: 'bug' }} />)
-      const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
-    })
-
-    it('should display feature type icon (SVG)', () => {
-      const { container } = render(<TicketCard ticket={{ ...baseTicket, type: 'feature' }} />)
-      const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
-    })
-
-    it('should display epic type icon (SVG)', () => {
-      const { container } = render(<TicketCard ticket={{ ...baseTicket, type: 'epic' }} />)
-      const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
     })
   })
 
@@ -104,10 +74,6 @@ describe('TicketCard Component', () => {
       expect(screen.getByText('Done')).toBeInTheDocument()
     })
 
-    it('should display cancelled status', () => {
-      render(<TicketCard ticket={{ ...baseTicket, status: 'cancelled' }} />)
-      expect(screen.getByText('Cancelled')).toBeInTheDocument()
-    })
   })
 
   describe('priority display', () => {
@@ -298,17 +264,6 @@ describe('TicketCard Component', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle unknown type gracefully', () => {
-      const ticketWithUnknownType = {
-        ...baseTicket,
-        type: 'unknown' as 'task',
-      }
-      const { container } = render(<TicketCard ticket={ticketWithUnknownType} />)
-      // Should render SVG icons (fallback to default icon)
-      const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
-    })
-
     it('should handle unknown status gracefully', () => {
       const ticketWithUnknownStatus = {
         ...baseTicket,
@@ -327,7 +282,7 @@ describe('TicketCard Component', () => {
       const { container } = render(<TicketCard ticket={ticketWithUnknownPriority} />)
       // Should render SVG icons (fallback to default icon)
       const svgs = container.querySelectorAll('svg[class*="lucide"]')
-      expect(svgs.length).toBeGreaterThanOrEqual(3)
+      expect(svgs.length).toBeGreaterThanOrEqual(2)
     })
   })
 })

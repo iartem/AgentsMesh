@@ -111,7 +111,6 @@
     "view": "Ver",
     "filters": {
       "status": "Estado",
-      "type": "Tipo",
       "priority": "Prioridad"
     },
     "emptyState": {
@@ -124,14 +123,14 @@
       "id": "ID",
       "titleColumn": "Título",
       "status": "Estado",
-      "type": "Tipo",
       "priority": "Prioridad",
       "assignee": "Asignado",
       "created": "Creado",
       "noTickets": "No se encontraron tickets. Usa los filtros del panel lateral o crea un nuevo ticket."
     },
     "kanban": {
-      "noTickets": "Sin tickets"
+      "noTickets": "Sin tickets",
+      "dropHere": "Soltar aquí"
     },
     "priority": {
       "none": "Sin Prioridad",
@@ -141,21 +140,12 @@
       "urgent": "Urgente",
       "unknown": "Desconocido"
     },
-    "type": {
-      "task": "Tarea",
-      "bug": "Bug",
-      "feature": "Característica",
-      "improvement": "Improvement",
-      "epic": "Epic",
-      "unknown": "Unknown"
-    },
     "status": {
       "backlog": "Backlog",
       "todo": "Por Hacer",
       "in_progress": "En Progreso",
       "in_review": "En Revisión",
       "done": "Hecho",
-      "cancelled": "Cancelado",
       "unknown": "Desconocido"
     },
     "createDialog": {
@@ -169,7 +159,9 @@
       "repository": "Repository",
       "selectRepository": "Select a repository...",
       "content": "Content",
-      "submit": "Create Ticket"
+      "submit": "Create Ticket",
+      "moreOptions": "Más opciones",
+      "labelsPlaceholder": "Agregar etiquetas..."
     },
     "detail": {
       "retry": "Retry",
@@ -194,11 +186,15 @@
       "timeline": "Timeline",
       "started": "Started",
       "completed": "Completed",
-      "viewFullDetails": "View Full Details"
+      "viewFullDetails": "View Full Details",
+      "dangerZone": "Zona de peligro",
+      "deleteWarning": "Esta acción no se puede deshacer.",
+      "linked": "Vinculados",
+      "noLinkedItems": "Aún no hay elementos vinculados."
     },
     "podPanel": {
       "activeCount": "{count} active",
-      "newPod": "New Pod",
+      "newPod": "Ejecutar",
       "createNewPod": "Create New Pod",
       "runner": "Runner",
       "selectRunner": "Select a runner...",

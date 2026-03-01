@@ -33,47 +33,6 @@ export default function TicketsPage() {
         </ul>
       </section>
 
-      {/* Ticket Types */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold mb-4">
-          {t("docs.features.tickets.types.title")}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border border-border rounded-lg p-4">
-            <h3 className="font-medium mb-2">
-              {t("docs.features.tickets.types.task")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("docs.features.tickets.types.taskDesc")}
-            </p>
-          </div>
-          <div className="border border-border rounded-lg p-4">
-            <h3 className="font-medium mb-2">
-              {t("docs.features.tickets.types.bug")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("docs.features.tickets.types.bugDesc")}
-            </p>
-          </div>
-          <div className="border border-border rounded-lg p-4">
-            <h3 className="font-medium mb-2">
-              {t("docs.features.tickets.types.feature")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("docs.features.tickets.types.featureDesc")}
-            </p>
-          </div>
-          <div className="border border-border rounded-lg p-4">
-            <h3 className="font-medium mb-2">
-              {t("docs.features.tickets.types.epic")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("docs.features.tickets.types.epicDesc")}
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Ticket Status */}
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">
@@ -103,9 +62,6 @@ export default function TicketsPage() {
             {t("docs.features.tickets.status.done")}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground mt-4">
-          {t("docs.features.tickets.status.cancelled")}
-        </p>
       </section>
 
       {/* Priority */}

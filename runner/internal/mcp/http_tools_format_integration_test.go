@@ -71,16 +71,16 @@ func (m *mockFormatClient) GetMessages(_ context.Context, _ int, _, _, _ *string
 	}, nil
 }
 
-func (m *mockFormatClient) SearchTickets(_ context.Context, _ *int, _ *tools.TicketStatus, _ *tools.TicketType, _ *tools.TicketPriority, _ *int, _ *string, _ string, _, _ int) ([]tools.Ticket, error) {
+func (m *mockFormatClient) SearchTickets(_ context.Context, _ *int, _ *tools.TicketStatus, _ *tools.TicketPriority, _ *int, _ *string, _ string, _, _ int) ([]tools.Ticket, error) {
 	return []tools.Ticket{
-		{Slug: "AM-123", Title: "Fix auth bug", Type: tools.TicketTypeBug, Status: tools.TicketStatusInProgress, Priority: tools.TicketPriorityHigh},
+		{Slug: "AM-123", Title: "Fix auth bug", Status: tools.TicketStatusInProgress, Priority: tools.TicketPriorityHigh},
 	}, nil
 }
 
 func (m *mockFormatClient) GetTicket(_ context.Context, _ string, _ *int, _ *int) (*tools.Ticket, error) {
 	return &tools.Ticket{
 		Slug: "AM-123", Title: "Fix auth bug",
-		Type: tools.TicketTypeBug, Status: tools.TicketStatusInProgress, Priority: tools.TicketPriorityHigh,
+		Status: tools.TicketStatusInProgress, Priority: tools.TicketPriorityHigh,
 		ReporterName:      "john",
 		ContentTotalLines: 5,
 		ContentOffset:     0,
@@ -89,18 +89,18 @@ func (m *mockFormatClient) GetTicket(_ context.Context, _ string, _ *int, _ *int
 	}, nil
 }
 
-func (m *mockFormatClient) CreateTicket(_ context.Context, _ *int64, _, _ string, _ tools.TicketType, _ tools.TicketPriority, _ *string) (*tools.Ticket, error) {
+func (m *mockFormatClient) CreateTicket(_ context.Context, _ *int64, _, _ string, _ tools.TicketPriority, _ *string) (*tools.Ticket, error) {
 	return &tools.Ticket{
 		Slug: "AM-200", Title: "New ticket",
-		Type: tools.TicketTypeTask, Status: tools.TicketStatusTodo, Priority: tools.TicketPriorityMedium,
+		Status: tools.TicketStatusTodo, Priority: tools.TicketPriorityMedium,
 		CreatedAt: "2026-02-21T10:00:00Z",
 	}, nil
 }
 
-func (m *mockFormatClient) UpdateTicket(_ context.Context, _ string, _, _ *string, _ *tools.TicketStatus, _ *tools.TicketPriority, _ *tools.TicketType) (*tools.Ticket, error) {
+func (m *mockFormatClient) UpdateTicket(_ context.Context, _ string, _, _ *string, _ *tools.TicketStatus, _ *tools.TicketPriority) (*tools.Ticket, error) {
 	return &tools.Ticket{
 		Slug: "AM-123", Title: "Fix auth bug (updated)",
-		Type: tools.TicketTypeBug, Status: tools.TicketStatusDone, Priority: tools.TicketPriorityHigh,
+		Status: tools.TicketStatusDone, Priority: tools.TicketPriorityHigh,
 		CreatedAt: "2026-02-19T08:00:00Z", UpdatedAt: "2026-02-21T10:00:00Z",
 	}, nil
 }
@@ -315,7 +315,6 @@ func TestFormatIntegration_SearchTickets(t *testing.T) {
 
 	assertContains(t, text, "| Slug |")
 	assertContains(t, text, "| AM-123 |")
-	assertContains(t, text, "| bug |")
 	assertContains(t, text, "| in_progress |")
 	assertNotContains(t, text, `"slug"`)
 }
@@ -327,7 +326,7 @@ func TestFormatIntegration_GetTicket(t *testing.T) {
 	text := callTool(t, server, "get_ticket", `{"ticket_slug":"AM-123"}`)
 
 	assertContains(t, text, "Ticket: AM-123 - Fix auth bug")
-	assertContains(t, text, "Type: bug | Status: in_progress | Priority: high")
+	assertContains(t, text, "Status: in_progress | Priority: high")
 	assertContains(t, text, "Reporter: john")
 	assertNotContains(t, text, "Description:")
 	assertNotContains(t, text, `"identifier"`)
@@ -338,7 +337,7 @@ func TestFormatIntegration_GetTicketWithContentPagination(t *testing.T) {
 	text := callTool(t, server, "get_ticket", `{"ticket_slug":"AM-123","content_offset":0,"content_limit":100}`)
 
 	assertContains(t, text, "Ticket: AM-123 - Fix auth bug")
-	assertContains(t, text, "Type: bug | Status: in_progress | Priority: high")
+	assertContains(t, text, "Status: in_progress | Priority: high")
 	assertContains(t, text, "Reporter: john")
 }
 
@@ -347,7 +346,6 @@ func TestFormatIntegration_CreateTicket(t *testing.T) {
 	text := callTool(t, server, "create_ticket", `{"title":"New ticket"}`)
 
 	assertContains(t, text, "Ticket: AM-200 - New ticket")
-	assertContains(t, text, "Type: task")
 	assertContains(t, text, "Status: todo")
 }
 

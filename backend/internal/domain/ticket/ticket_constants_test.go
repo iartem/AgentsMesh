@@ -6,21 +6,6 @@ import (
 
 // --- Test Constants ---
 
-func TestTicketTypeConstants(t *testing.T) {
-	if TicketTypeTask != "task" {
-		t.Errorf("expected 'task', got %s", TicketTypeTask)
-	}
-	if TicketTypeBug != "bug" {
-		t.Errorf("expected 'bug', got %s", TicketTypeBug)
-	}
-	if TicketTypeFeature != "feature" {
-		t.Errorf("expected 'feature', got %s", TicketTypeFeature)
-	}
-	if TicketTypeEpic != "epic" {
-		t.Errorf("expected 'epic', got %s", TicketTypeEpic)
-	}
-}
-
 func TestTicketStatusConstants(t *testing.T) {
 	if TicketStatusBacklog != "backlog" {
 		t.Errorf("expected 'backlog', got %s", TicketStatusBacklog)
@@ -36,9 +21,6 @@ func TestTicketStatusConstants(t *testing.T) {
 	}
 	if TicketStatusDone != "done" {
 		t.Errorf("expected 'done', got %s", TicketStatusDone)
-	}
-	if TicketStatusCancelled != "cancelled" {
-		t.Errorf("expected 'cancelled', got %s", TicketStatusCancelled)
 	}
 }
 

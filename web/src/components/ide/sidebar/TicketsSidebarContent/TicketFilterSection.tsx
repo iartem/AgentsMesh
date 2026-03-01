@@ -1,15 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusIcon, TypeIcon, PriorityIcon, getStatusDisplayInfo, getTypeDisplayInfo, getPriorityDisplayInfo } from "@/components/tickets";
+import { StatusIcon, PriorityIcon, getStatusDisplayInfo, getPriorityDisplayInfo } from "@/components/tickets";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { TicketStatus, TicketType, TicketPriority } from "@/stores/ticket";
-import { statusOptions, typeOptions, priorityOptions } from "./types";
+import type { Ticket, TicketStatus, TicketPriority } from "@/stores/ticket";
+import { statusOptions, priorityOptions } from "./types";
 
 interface FilterSectionProps {
   title: string;
@@ -61,17 +62,14 @@ function FilterSection({
 
 interface TicketFilterSectionProps {
   statusExpanded: boolean;
-  typeExpanded: boolean;
   priorityExpanded: boolean;
   onStatusExpandedChange: (expanded: boolean) => void;
-  onTypeExpandedChange: (expanded: boolean) => void;
   onPriorityExpandedChange: (expanded: boolean) => void;
   selectedStatuses: TicketStatus[];
-  selectedTypes: TicketType[];
   selectedPriorities: TicketPriority[];
   onToggleStatus: (status: TicketStatus) => void;
-  onToggleType: (type: TicketType) => void;
   onTogglePriority: (priority: TicketPriority) => void;
+  allTickets?: Ticket[];
   t: (key: string) => string;
 }
 
@@ -80,19 +78,34 @@ interface TicketFilterSectionProps {
  */
 export function TicketFilterSection({
   statusExpanded,
-  typeExpanded,
   priorityExpanded,
   onStatusExpandedChange,
-  onTypeExpandedChange,
   onPriorityExpandedChange,
   selectedStatuses,
-  selectedTypes,
   selectedPriorities,
   onToggleStatus,
-  onToggleType,
   onTogglePriority,
+  allTickets,
   t,
 }: TicketFilterSectionProps) {
+  const statusCounts = useMemo(() => {
+    if (!allTickets) return {};
+    const counts: Record<string, number> = {};
+    for (const ticket of allTickets) {
+      counts[ticket.status] = (counts[ticket.status] || 0) + 1;
+    }
+    return counts;
+  }, [allTickets]);
+
+  const priorityCounts = useMemo(() => {
+    if (!allTickets) return {};
+    const counts: Record<string, number> = {};
+    for (const ticket of allTickets) {
+      counts[ticket.priority] = (counts[ticket.priority] || 0) + 1;
+    }
+    return counts;
+  }, [allTickets]);
+
   return (
     <div className="border-t border-border">
       {/* Status Filter */}
@@ -103,7 +116,8 @@ export function TicketFilterSection({
         selectedCount={selectedStatuses.length}
       >
         {statusOptions.map((status) => {
-          const info = getStatusDisplayInfo(status);
+          const info = getStatusDisplayInfo(status, t);
+          const count = statusCounts[status];
           return (
             <label
               key={status}
@@ -115,34 +129,10 @@ export function TicketFilterSection({
                 className="h-3.5 w-3.5"
               />
               <StatusIcon status={status} size="xs" />
-              <span>{info.label}</span>
-            </label>
-          );
-        })}
-      </FilterSection>
-
-      {/* Type Filter */}
-      <FilterSection
-        title={t("tickets.filters.type")}
-        expanded={typeExpanded}
-        onExpandedChange={onTypeExpandedChange}
-        selectedCount={selectedTypes.length}
-        showBorder
-      >
-        {typeOptions.map((type) => {
-          const info = getTypeDisplayInfo(type);
-          return (
-            <label
-              key={type}
-              className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 px-1 py-0.5 rounded"
-            >
-              <Checkbox
-                checked={selectedTypes.includes(type)}
-                onCheckedChange={() => onToggleType(type)}
-                className="h-3.5 w-3.5"
-              />
-              <TypeIcon type={type} size="xs" />
-              <span>{info.label}</span>
+              <span className="flex-1">{info.label}</span>
+              {count !== undefined && (
+                <span className="text-muted-foreground/60 font-mono">{count}</span>
+              )}
             </label>
           );
         })}
@@ -157,7 +147,8 @@ export function TicketFilterSection({
         showBorder
       >
         {priorityOptions.map((priority) => {
-          const info = getPriorityDisplayInfo(priority);
+          const info = getPriorityDisplayInfo(priority, t);
+          const count = priorityCounts[priority];
           return (
             <label
               key={priority}
@@ -169,7 +160,10 @@ export function TicketFilterSection({
                 className="h-3.5 w-3.5"
               />
               <PriorityIcon priority={priority} size="xs" />
-              <span>{info.label}</span>
+              <span className="flex-1">{info.label}</span>
+              {count !== undefined && (
+                <span className="text-muted-foreground/60 font-mono">{count}</span>
+              )}
             </label>
           );
         })}

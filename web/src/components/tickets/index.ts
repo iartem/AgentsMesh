@@ -16,12 +16,10 @@ export { VirtualizedTicketList } from "./VirtualizedTicketList";
 export {
   StatusIcon,
   PriorityIcon,
-  TypeIcon,
   getStatusDisplayInfo,
   getPriorityDisplayInfo,
-  getTypeDisplayInfo,
 } from "./TicketIcons";
-export type { StatusInfo, PriorityInfo, TypeInfo } from "./TicketIcons";
+export type { StatusInfo, PriorityInfo } from "./TicketIcons";
 
 // Shared components for TicketDetail/TicketDetailPane
 export { SubTicketsList, RelationsList, CommitsList, LabelsList } from "./shared";

@@ -11,20 +11,12 @@ interface TicketListProps {
   onTicketClick?: (ticket: Ticket) => void;
 }
 
-const typeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  task: { icon: "✓", color: "text-blue-500 dark:text-blue-400", label: "Task" },
-  bug: { icon: "🐛", color: "text-red-500 dark:text-red-400", label: "Bug" },
-  feature: { icon: "✨", color: "text-green-500 dark:text-green-400", label: "Feature" },
-  epic: { icon: "⚡", color: "text-purple-500 dark:text-purple-400", label: "Epic" },
-};
-
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   backlog: { label: "Backlog", color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
   todo: { label: "To Do", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/30" },
   in_progress: { label: "In Progress", color: "text-yellow-600 dark:text-yellow-400", bg: "bg-yellow-100 dark:bg-yellow-900/30" },
   in_review: { label: "In Review", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30" },
   done: { label: "Done", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" },
-  cancelled: { label: "Cancelled", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/30" },
 };
 
 const priorityConfig: Record<string, { icon: string; color: string; label: string }> = {
@@ -90,7 +82,6 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
         </thead>
         <tbody className="text-sm">
           {tickets.map((ticket) => {
-            const typeStyle = typeConfig[ticket.type] || typeConfig.task;
             const statusStyle = statusConfig[ticket.status] || statusConfig.backlog;
             const priorityStyle = priorityConfig[ticket.priority] || priorityConfig.none;
 
@@ -103,9 +94,6 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                 {/* Ticket Info */}
                 <td className="py-3">
                   <div className="flex items-center gap-3">
-                    <span className={typeStyle.color} title={t(`tickets.type.${ticket.type}`)}>
-                      {typeStyle.icon}
-                    </span>
                     <div>
                       <div className="flex items-center gap-2">
                         <Link
@@ -194,8 +182,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
                     <span
                       className={
                         new Date(ticket.due_date) < new Date() &&
-                        ticket.status !== "done" &&
-                        ticket.status !== "cancelled"
+                        ticket.status !== "done"
                           ? "text-red-600 dark:text-red-400"
                           : "text-muted-foreground"
                       }

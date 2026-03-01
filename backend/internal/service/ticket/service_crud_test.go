@@ -16,7 +16,7 @@ func TestCreateTicket(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 	}
@@ -52,7 +52,7 @@ func TestGetTicket(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 	}
@@ -88,7 +88,7 @@ func TestGetTicketBySlug(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 	}
@@ -124,7 +124,7 @@ func TestUpdateTicket(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 	}
@@ -179,7 +179,7 @@ func TestDeleteTicket(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 	}
@@ -213,7 +213,7 @@ func TestCreateTicket_TableDriven(t *testing.T) {
 			req: &CreateTicketRequest{
 				OrganizationID: 1,
 				ReporterID:     1,
-				Type:           "task",
+		
 				Title:          "Custom Status",
 				Priority:       "medium",
 				Status:         ticket.TicketStatusTodo,
@@ -230,7 +230,7 @@ func TestCreateTicket_TableDriven(t *testing.T) {
 			req: &CreateTicketRequest{
 				OrganizationID: 1,
 				ReporterID:     1,
-				Type:           "task",
+		
 				Title:          "With Prefix",
 				Priority:       "medium",
 				RepositoryID:   func() *int64 { v := int64(1); return &v }(),
@@ -246,7 +246,7 @@ func TestCreateTicket_TableDriven(t *testing.T) {
 			req: &CreateTicketRequest{
 				OrganizationID: 1,
 				ReporterID:     1,
-				Type:           "task",
+		
 				Title:          "With Labels",
 				Priority:       "medium",
 				Labels:         []string{"bug"},

@@ -117,7 +117,6 @@
     "view": "视图",
     "filters": {
       "status": "状态",
-      "type": "类型",
       "priority": "优先级"
     },
     "emptyState": {
@@ -130,14 +129,14 @@
       "id": "ID",
       "titleColumn": "标题",
       "status": "状态",
-      "type": "类型",
       "priority": "优先级",
       "assignee": "负责人",
       "created": "创建时间",
       "noTickets": "未找到 Ticket。使用侧边栏筛选或创建新 Ticket。"
     },
     "kanban": {
-      "noTickets": "暂无 Ticket"
+      "noTickets": "暂无 Ticket",
+      "dropHere": "拖放到这里"
     },
     "priority": {
       "none": "无优先级",
@@ -147,21 +146,12 @@
       "urgent": "紧急",
       "unknown": "未知"
     },
-    "type": {
-      "task": "任务",
-      "bug": "缺陷",
-      "feature": "功能",
-      "improvement": "改进",
-      "epic": "史诗",
-      "unknown": "未知"
-    },
     "status": {
       "backlog": "待办池",
       "todo": "待开始",
       "in_progress": "进行中",
       "in_review": "待审核",
       "done": "已完成",
-      "cancelled": "已取消",
       "unknown": "未知"
     },
     "createDialog": {
@@ -175,7 +165,9 @@
       "repository": "仓库",
       "selectRepository": "选择仓库...",
       "content": "内容",
-      "submit": "创建 Ticket"
+      "submit": "创建 Ticket",
+      "moreOptions": "更多选项",
+      "labelsPlaceholder": "添加标签..."
     },
     "detail": {
       "retry": "重试",
@@ -211,11 +203,15 @@
       "replyTo": "回复 @{username}",
       "cancelReply": "取消",
       "submit": "评论",
-      "edited": "已编辑"
+      "edited": "已编辑",
+      "dangerZone": "危险操作",
+      "deleteWarning": "此操作不可撤销。",
+      "linked": "关联项",
+      "noLinkedItems": "暂无关联项。"
     },
     "podPanel": {
       "activeCount": "{count} 个活跃",
-      "newPod": "新建 Pod",
+      "newPod": "执行",
       "createNewPod": "创建新 Pod",
       "runner": "Runner",
       "selectRunner": "选择 Runner...",

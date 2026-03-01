@@ -163,14 +163,10 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
             onClick={() => toggleSubSection(tab.id)}
           >
             {isSubSectionExpanded ? (
-              <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             ) : (
-              <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             )}
-            <TabIcon className={cn(
-              "w-4 h-4 flex-shrink-0",
-              isChildActive && "text-primary"
-            )} />
             <span className={cn(
               "text-sm truncate",
               isChildActive && "font-medium"

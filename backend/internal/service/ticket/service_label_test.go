@@ -70,7 +70,7 @@ func TestTicketWithAssignees(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 		AssigneeIDs:    []int64{1, 2, 3},
@@ -99,7 +99,7 @@ func TestTicketWithLabels(t *testing.T) {
 	req := &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test Ticket",
 		Priority:       "medium",
 		LabelIDs:       []int64{label1.ID, label2.ID},
@@ -137,7 +137,7 @@ func TestUpdateStatus_Transitions(t *testing.T) {
 			tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 				OrganizationID: 1,
 				ReporterID:     1,
-				Type:           "task",
+		
 				Title:          "Test",
 				Priority:       "medium",
 			})

@@ -35,7 +35,7 @@ func TestLinkCommit(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -86,7 +86,7 @@ func TestGetCommitBySHA(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -117,7 +117,7 @@ func TestListCommits(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})
@@ -142,7 +142,7 @@ func TestUnlinkCommit(t *testing.T) {
 	tkt, _ := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Test",
 		Priority:       "medium",
 	})

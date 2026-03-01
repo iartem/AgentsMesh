@@ -21,7 +21,7 @@ func TestGetTicketMRs(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "TMR-1",
 		Title:          "Test Ticket",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusInProgress,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -106,7 +106,7 @@ func TestFindTicketByBranch(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "PRJ-123",
 		Title:          "Test Ticket",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusTodo,
 		Priority:       ticket.TicketPriorityMedium,
 	}
@@ -183,7 +183,7 @@ func TestSyncMRByURL(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "SYNC-1",
 			Title:          "Test Ticket",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusInProgress,
 			Priority:       ticket.TicketPriorityMedium,
 			RepositoryID:   &repoID,
@@ -218,7 +218,7 @@ func TestSyncMRByURL(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "NOREPO-1",
 			Title:          "Test Ticket",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusInProgress,
 			Priority:       ticket.TicketPriorityMedium,
 		}

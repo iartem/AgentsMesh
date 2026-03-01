@@ -117,7 +117,6 @@
     "view": "View",
     "filters": {
       "status": "Status",
-      "type": "Type",
       "priority": "Priority"
     },
     "emptyState": {
@@ -130,14 +129,14 @@
       "id": "ID",
       "titleColumn": "Title",
       "status": "Status",
-      "type": "Type",
       "priority": "Priority",
       "assignee": "Assignee",
       "created": "Created",
       "noTickets": "No tickets found. Use sidebar filters or create a new ticket."
     },
     "kanban": {
-      "noTickets": "No tickets"
+      "noTickets": "No tickets",
+      "dropHere": "Drop here"
     },
     "priority": {
       "none": "No Priority",
@@ -147,21 +146,12 @@
       "urgent": "Urgent",
       "unknown": "Unknown"
     },
-    "type": {
-      "task": "Task",
-      "bug": "Bug",
-      "feature": "Feature",
-      "improvement": "Improvement",
-      "epic": "Epic",
-      "unknown": "Unknown"
-    },
     "status": {
       "backlog": "Backlog",
       "todo": "To Do",
       "in_progress": "In Progress",
       "in_review": "In Review",
       "done": "Done",
-      "cancelled": "Cancelled",
       "unknown": "Unknown"
     },
     "createDialog": {
@@ -175,7 +165,9 @@
       "repository": "Repository",
       "selectRepository": "Select a repository...",
       "content": "Content",
-      "submit": "Create Ticket"
+      "submit": "Create Ticket",
+      "moreOptions": "More options",
+      "labelsPlaceholder": "Add labels..."
     },
     "detail": {
       "retry": "Retry",
@@ -211,11 +203,15 @@
       "replyTo": "Replying to @{username}",
       "cancelReply": "Cancel",
       "submit": "Comment",
-      "edited": "edited"
+      "edited": "edited",
+      "dangerZone": "Danger Zone",
+      "deleteWarning": "This action cannot be undone.",
+      "linked": "Linked",
+      "noLinkedItems": "No linked items yet."
     },
     "podPanel": {
       "activeCount": "{count} active",
-      "newPod": "New Pod",
+      "newPod": "Execute",
       "createNewPod": "Create New Pod",
       "runner": "Runner",
       "selectRunner": "Select a runner...",

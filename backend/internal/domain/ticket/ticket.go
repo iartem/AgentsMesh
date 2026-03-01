@@ -4,15 +4,6 @@ import (
 	"time"
 )
 
-// Ticket type constants
-const (
-	TicketTypeTask        = "task"
-	TicketTypeBug         = "bug"
-	TicketTypeFeature     = "feature"
-	TicketTypeImprovement = "improvement"
-	TicketTypeEpic        = "epic"
-)
-
 // Ticket status constants
 const (
 	TicketStatusBacklog    = "backlog"
@@ -20,7 +11,6 @@ const (
 	TicketStatusInProgress = "in_progress"
 	TicketStatusInReview   = "in_review"
 	TicketStatusDone       = "done"
-	TicketStatusCancelled  = "cancelled"
 )
 
 // Ticket priority constants
@@ -51,7 +41,6 @@ type Ticket struct {
 	Number     int    `gorm:"not null" json:"number"`
 	Slug string `gorm:"size:50;not null;uniqueIndex:idx_tickets_org_slug" json:"slug"` // e.g., "AM-123"
 
-	Type    string  `gorm:"size:50;not null;default:'task'" json:"type"`
 	Title   string  `gorm:"size:500;not null" json:"title"`
 	Content *string `gorm:"type:text" json:"content,omitempty"` // Rich content (BlockNote JSON)
 
@@ -90,16 +79,6 @@ func (t *Ticket) IsActive() bool {
 // IsCompleted returns true if the ticket is completed
 func (t *Ticket) IsCompleted() bool {
 	return t.Status == TicketStatusDone
-}
-
-// IsCancelled returns true if the ticket is cancelled
-func (t *Ticket) IsCancelled() bool {
-	return t.Status == TicketStatusCancelled
-}
-
-// IsBug returns true if the ticket is a bug type
-func (t *Ticket) IsBug() bool {
-	return t.Type == TicketTypeBug
 }
 
 // HasSubTickets returns true if the ticket has sub-tickets

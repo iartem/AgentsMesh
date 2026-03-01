@@ -18,7 +18,7 @@ func TestCreateTicket_SlugScopedToOrg(t *testing.T) {
 	tkt1, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 Ticket",
 		Priority:       "medium",
 	})
@@ -33,7 +33,7 @@ func TestCreateTicket_SlugScopedToOrg(t *testing.T) {
 	tkt2, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 2,
 		ReporterID:     2,
-		Type:           "task",
+
 		Title:          "Org2 Ticket",
 		Priority:       "medium",
 	})
@@ -48,7 +48,7 @@ func TestCreateTicket_SlugScopedToOrg(t *testing.T) {
 	tkt3, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 Second Ticket",
 		Priority:       "medium",
 	})
@@ -82,7 +82,7 @@ func TestCreateTicket_PrefixScopedToOrg(t *testing.T) {
 	tkt1, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 Repo1",
 		Priority:       "medium",
 		RepositoryID:   &repoID1,
@@ -98,7 +98,7 @@ func TestCreateTicket_PrefixScopedToOrg(t *testing.T) {
 	tkt2, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 2,
 		ReporterID:     2,
-		Type:           "task",
+
 		Title:          "Org2 Repo2",
 		Priority:       "medium",
 		RepositoryID:   &repoID2,
@@ -114,7 +114,7 @@ func TestCreateTicket_PrefixScopedToOrg(t *testing.T) {
 	tkt3, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Org1 Repo1 Second",
 		Priority:       "medium",
 		RepositoryID:   &repoID1,
@@ -145,7 +145,7 @@ func TestCreateTicket_MixedPrefixesInSameOrg(t *testing.T) {
 	tkt1, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Project Task",
 		Priority:       "medium",
 		RepositoryID:   &repoID1,
@@ -161,7 +161,7 @@ func TestCreateTicket_MixedPrefixesInSameOrg(t *testing.T) {
 	tkt2, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "bug",
+
 		Title:          "Bug Report",
 		Priority:       "high",
 		RepositoryID:   &repoID2,
@@ -177,7 +177,7 @@ func TestCreateTicket_MixedPrefixesInSameOrg(t *testing.T) {
 	tkt3, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "No Repo Task",
 		Priority:       "medium",
 	})
@@ -192,7 +192,7 @@ func TestCreateTicket_MixedPrefixesInSameOrg(t *testing.T) {
 	tkt4, err := service.CreateTicket(ctx, &CreateTicketRequest{
 		OrganizationID: 1,
 		ReporterID:     1,
-		Type:           "task",
+
 		Title:          "Project Task 2",
 		Priority:       "medium",
 		RepositoryID:   &repoID1,

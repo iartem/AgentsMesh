@@ -119,7 +119,7 @@ func (m *ChannelMessage) FormatText() string {
 func (t *Ticket) FormatText() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Ticket: %s - %s\n", t.Slug, t.Title)
-	fmt.Fprintf(&b, "Type: %s | Status: %s | Priority: %s\n", t.Type, t.Status, t.Priority)
+	fmt.Fprintf(&b, "Status: %s | Priority: %s\n", t.Status, t.Priority)
 	if t.ParentTicketSlug != "" {
 		fmt.Fprintf(&b, "Parent: %s\n", t.ParentTicketSlug)
 	}
@@ -300,13 +300,12 @@ func (l TicketList) FormatText() string {
 		return "No tickets found."
 	}
 	var b strings.Builder
-	b.WriteString("| Slug | Title | Type | Status | Priority |\n")
-	b.WriteString("|------|-------|------|--------|----------|\n")
+	b.WriteString("| Slug | Title | Status | Priority |\n")
+	b.WriteString("|------|-------|--------|----------|\n")
 	for _, t := range l {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n",
+		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
 			escapeTableCell(t.Slug),
 			escapeTableCell(truncate(t.Title, 60)),
-			t.Type,
 			t.Status,
 			t.Priority,
 		))

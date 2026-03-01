@@ -73,9 +73,6 @@ func (s *Service) ListTickets(ctx context.Context, filter *ListTicketsFilter) ([
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
-	if filter.Type != "" {
-		query = query.Where("type = ?", filter.Type)
-	}
 	if filter.Priority != "" {
 		query = query.Where("priority = ?", filter.Priority)
 	}

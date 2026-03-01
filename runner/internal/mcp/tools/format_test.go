@@ -176,7 +176,6 @@ func TestTicket_FormatText(t *testing.T) {
 		tk := &Ticket{
 			Slug:         "AM-123",
 			Title:        "Fix authentication bug",
-			Type:         TicketTypeBug,
 			Status:       TicketStatusInProgress,
 			Priority:     TicketPriorityHigh,
 			ReporterName: "john",
@@ -184,7 +183,7 @@ func TestTicket_FormatText(t *testing.T) {
 			UpdatedAt:    "2026-02-20T15:00:00Z",
 		}
 		result := tk.FormatText()
-		for _, s := range []string{"AM-123 - Fix authentication bug", "Type: bug", "Status: in_progress", "Priority: high", "Reporter: john"} {
+		for _, s := range []string{"AM-123 - Fix authentication bug", "Status: in_progress", "Priority: high", "Reporter: john"} {
 			if !strings.Contains(result, s) {
 				t.Errorf("expected %q in:\n%s", s, result)
 			}
@@ -195,7 +194,6 @@ func TestTicket_FormatText(t *testing.T) {
 		tk := &Ticket{
 			Slug:             "AM-125",
 			Title:            "Sub-task",
-			Type:             TicketTypeTask,
 			Status:           TicketStatusTodo,
 			Priority:         TicketPriorityMedium,
 			ParentTicketSlug: "AM-100",
@@ -211,7 +209,6 @@ func TestTicket_FormatText(t *testing.T) {
 			Slug:              "AM-124",
 			Title:             "Test",
 			Content:           "Line one\nLine two\nLine three",
-			Type:              TicketTypeTask,
 			Status:            TicketStatusTodo,
 			Priority:          TicketPriorityMedium,
 			ContentTotalLines: 50,
@@ -232,7 +229,6 @@ func TestTicket_FormatText(t *testing.T) {
 			Slug:              "AM-126",
 			Title:             "Paginated",
 			Content:           "Line 201\nLine 202",
-			Type:              TicketTypeTask,
 			Status:            TicketStatusTodo,
 			Priority:          TicketPriorityMedium,
 			ContentTotalLines: 500,
@@ -250,7 +246,6 @@ func TestTicket_FormatText(t *testing.T) {
 			Slug:     "AM-127",
 			Title:    "Simple",
 			Content:  "Just plain text",
-			Type:     TicketTypeTask,
 			Status:   TicketStatusTodo,
 			Priority: TicketPriorityMedium,
 		}
@@ -502,8 +497,8 @@ func TestTicketList_FormatText(t *testing.T) {
 
 	t.Run("with tickets", func(t *testing.T) {
 		tickets := TicketList{
-			{Slug: "AM-123", Title: "Fix authentication bug", Type: TicketTypeBug, Status: TicketStatusInProgress, Priority: TicketPriorityHigh},
-			{Slug: "AM-124", Title: "Add dark mode support", Type: TicketTypeFeature, Status: TicketStatusTodo, Priority: TicketPriorityMedium},
+			{Slug: "AM-123", Title: "Fix authentication bug", Status: TicketStatusInProgress, Priority: TicketPriorityHigh},
+			{Slug: "AM-124", Title: "Add dark mode support", Status: TicketStatusTodo, Priority: TicketPriorityMedium},
 		}
 		result := tickets.FormatText()
 		if !strings.Contains(result, "| AM-123 |") {
@@ -511,9 +506,6 @@ func TestTicketList_FormatText(t *testing.T) {
 		}
 		if !strings.Contains(result, "| AM-124 |") {
 			t.Errorf("expected AM-124:\n%s", result)
-		}
-		if !strings.Contains(result, "| bug |") {
-			t.Errorf("expected bug type:\n%s", result)
 		}
 	})
 }

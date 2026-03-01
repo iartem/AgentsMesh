@@ -142,7 +142,7 @@ func TestMRSyncServiceIntegration(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "INT-1",
 			Title:          "Integration Test Ticket",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusInProgress,
 			Priority:       ticket.TicketPriorityMedium,
 			RepositoryID:   &repo.ID,
@@ -199,7 +199,7 @@ func TestMRSyncServiceIntegration(t *testing.T) {
 			OrganizationID: 1,
 			Slug:     "ERR-1",
 			Title:          "Error Test Ticket",
-			Type:           ticket.TicketTypeTask,
+	
 			Status:         ticket.TicketStatusInProgress,
 			Priority:       ticket.TicketPriorityMedium,
 			RepositoryID:   &repo.ID,

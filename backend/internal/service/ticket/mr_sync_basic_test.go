@@ -29,7 +29,7 @@ func TestFindOrCreateMR(t *testing.T) {
 		OrganizationID: 1,
 		Slug:     "MR-1",
 		Title:          "Test Ticket",
-		Type:           ticket.TicketTypeTask,
+
 		Status:         ticket.TicketStatusInProgress,
 		Priority:       ticket.TicketPriorityMedium,
 	}

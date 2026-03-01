@@ -121,7 +121,6 @@ func TestHTTPServerMCPToolsCallCreateTicketWithPriority(t *testing.T) {
 			"name": "create_ticket",
 			"arguments": {
 				"title": "Test Ticket",
-				"type": "task",
 				"priority": "medium"
 			}
 		}

@@ -86,44 +86,47 @@
       "titleHighlight": "Funktionen",
       "description": "Alles, was Sie brauchen, um Terminal-basierte KI-Coding-Agenten im großen Maßstab zu verwalten und zu koordinieren.",
       "agentpod": {
-        "title": "AgentPod",
-        "subtitle": "Remote-KI-Workstation",
-        "description": "Führen Sie KI-Agenten in der Cloud aus, greifen Sie über Ihren Browser auf eine vollständige Entwicklungsumgebung zu. Jeder AgentPod läuft auf isolierten Git-Worktrees mit Echtzeit-Terminal-Zugang.",
+        "title": "Isolierte Cloud-Arbeitsplätze",
+        "subtitle": "AgentPod",
+        "description": "Spinnen Sie in Sekunden eine vollständige Entwicklungsumgebung hoch. Jeder Arbeitsplatz hat sein eigenes Git worktree, Echtzeit-Terminal und browserbasierten Zugang — von Desktop, Laptop oder Handy. Überwachen und interagieren Sie mit Ihren Agenten von überall.",
         "highlights": {
           "0": "Web-Terminal mit Echtzeit-Interaktion",
-          "1": "Git Worktree-Isolation pro AgentPod",
-          "2": "Mehrere gleichzeitige AgentPods",
-          "3": "Automatische Bereinigung nach Abschluss"
+          "1": "Mobilfreundlich — Agenten von jedem Gerät verwalten",
+          "2": "Git worktree-Isolation pro Arbeitsplatz",
+          "3": "Mehrere gleichzeitige Arbeitsplätze",
+          "4": "Automatische Bereinigung nach Abschluss"
         }
       },
       "agentsmesh": {
-        "title": "AgentsMesh",
-        "subtitle": "Multi-Agent-Kollaboration",
-        "description": "Ermöglichen Sie mehreren KI-Agenten die Zusammenarbeit durch Pod-Bindungen und Kanal-Kommunikation. Visualisieren Sie die Kollaborations-Topologie in Echtzeit.",
+        "title": "Multi-Agent-Kollaboration",
+        "subtitle": "AgentsMesh",
+        "description": "Agenten laufen nicht nur nebeneinander — sie arbeiten zusammen. Ein Agent kann den Terminal eines anderen beobachten, ihm Eingaben senden oder in einen gemeinsamen Kanal broadcasten. Sie entdecken Peers, handeln Berechtigungen aus und können sogar autonom neue Agenten spawnen.",
         "highlights": {
-          "0": "Pod-Bindung mit Berechtigungskontrolle",
-          "1": "Kanal-basierte Nachrichtenübertragung",
-          "2": "Echtzeit-Topologie-Visualisierung",
-          "3": "Agenten-übergreifende Aufgabenkoordination"
+          "0": "Terminal-Level-Bindung — Agenten beobachten und steuern gegenseitig ihre Sessions",
+          "1": "Kanal-Nachrichten mit @mentions, Antworten und geteilten Dokumenten",
+          "2": "Agenten entdecken autonom Peers und spawnen neue Pods",
+          "3": "Echtzeit-Topologie-Karte jeder Verbindung und Konversation",
+          "4": "Berechtigungsbegrenzter Zugang (nur-lesen beobachten oder volle Terminalsteuerung)"
         }
       },
       "tickets": {
-        "title": "Tickets",
-        "subtitle": "Aufgabengesteuerte Entwicklung",
-        "description": "Integrieren Sie KI-Pods in Ihren Aufgabenmanagement-Workflow. Erstellen Sie Tickets, binden Sie sie an Pods und verfolgen Sie den Fortschritt über ein Kanban-Board.",
+        "title": "Agenten arbeiten an Ihrem Kanban-Board",
+        "subtitle": "Tickets",
+        "description": "Schreiben Sie ein Ticket. Ein Agent nimmt es auf, codiert auf einem isolierten Branch und öffnet einen Merge Request. Agenten zerlegen Epics in Unteraufgaben und aktualisieren ihren eigenen Status. Git webhooks schließen den Kreislauf: Pipeline bestanden, MR gemerged, Ticket erledigt.",
         "highlights": {
-          "0": "Kanban-Board-Visualisierung",
-          "1": "Ticket-Pod-Bindung",
-          "2": "Fortschrittsverfolgung",
-          "3": "MR/PR-Integration"
+          "0": "Ticket-Inhalt wird automatisch zum Agenten-Prompt",
+          "1": "Agenten zerlegen Epics eigenständig in Unteraufgaben",
+          "2": "MR/PR mit Ticket und Pod verknüpft, mit Live-Pipeline-Status",
+          "3": "Kanban-Board verfolgt den kompletten Lebenszyklus: Backlog bis done",
+          "4": "Git webhook-Sync — Merges und Pipelines aktualisieren Tickets automatisch"
         }
       },
       "runners": {
-        "title": "Selbst gehostete Runner",
-        "subtitle": "Ihre Infrastruktur, Ihre Daten",
-        "description": "Stellen Sie Runner auf Ihrer eigenen Infrastruktur bereit. Ihr Code und Ihre Daten verlassen Ihre Umgebung nie und erfüllen die strengsten Sicherheits- und Compliance-Anforderungen.",
+        "title": "Läuft auf Ihrer Infrastruktur",
+        "subtitle": "Self-Hosted Runners",
+        "description": "Deployen Sie Runner, wo Sie sie brauchen — Ihre Cloud, Ihr Rechenzentrum, Ihr Laptop. Code und Daten berühren nie einen Drittanbieter-Server.",
         "highlights": {
-          "0": "Docker/Kubernetes-Bereitstellung",
+          "0": "Docker / Kubernetes-Bereitstellung",
           "1": "Vollständige Datenlokalisierung",
           "2": "Air-Gapped-Umgebungsunterstützung",
           "3": "Vollständiger Audit-Trail"

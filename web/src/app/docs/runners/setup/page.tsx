@@ -78,12 +78,27 @@ sudo rpm -i agentsmesh-runner_\${VERSION}_linux_amd64.rpm`}</pre>
         <h3 className="text-lg font-medium mb-2 mt-6">
           {t("docs.runners.setup.quickInstall.afterInstall")}
         </h3>
-        <div className="bg-muted rounded-lg p-4 font-mono text-sm overflow-x-auto">
-          <pre className="text-green-500 dark:text-green-400">{`# Register with your server
-agentsmesh-runner register --server ${serverUrl} --token <YOUR_TOKEN>
-
-# Start the runner
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-muted rounded-lg p-4">
+            <h4 className="font-medium mb-2 text-sm">
+              {t("docs.runners.setup.quickInstall.methodToken")}
+            </h4>
+            <div className="font-mono text-sm overflow-x-auto">
+              <pre className="text-green-500 dark:text-green-400">{`agentsmesh-runner register \\
+  --server ${serverUrl} \\
+  --token <YOUR_TOKEN>
 agentsmesh-runner run`}</pre>
+            </div>
+          </div>
+          <div className="bg-muted rounded-lg p-4">
+            <h4 className="font-medium mb-2 text-sm">
+              {t("docs.runners.setup.quickInstall.methodLogin")}
+            </h4>
+            <div className="font-mono text-sm overflow-x-auto">
+              <pre className="text-green-500 dark:text-green-400">{`agentsmesh-runner login
+agentsmesh-runner run`}</pre>
+            </div>
+          </div>
         </div>
 
         <p className="text-sm text-muted-foreground mt-4">
