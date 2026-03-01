@@ -1,7 +1,10 @@
 # Build stage
 # Build context should be project root (not runner/)
+# REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)
+#                  Leave empty for Docker Hub (GitHub Actions)
+ARG REGISTRY_PREFIX=
 ARG GO_VERSION=1.25
-FROM golang:${GO_VERSION} AS builder
+FROM ${REGISTRY_PREFIX}golang:${GO_VERSION} AS builder
 
 WORKDIR /app
 
@@ -23,7 +26,8 @@ COPY runner/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -tags nocgo -ldflags="-w -s" -o /app/runner ./cmd/runner
 
 # Final stage
-FROM alpine:3.19
+ARG REGISTRY_PREFIX=
+FROM ${REGISTRY_PREFIX}alpine:3.19
 
 WORKDIR /app
 

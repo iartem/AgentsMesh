@@ -17,6 +17,8 @@ variables:
   GOPROXY: "https://goproxy.cn,https://goproxy.io,direct"
   # China NPM registry (injected into Dockerfile via --build-arg)
   NPM_REGISTRY: "https://repo.huaweicloud.com/repository/npm/"
+  # Registry prefix for Dockerfile base images (internal mirror avoids Docker Hub timeouts)
+  REGISTRY_PREFIX: "${REGISTRY}/library/"
 
 stages:
   - test
@@ -212,7 +214,7 @@ verify-build-backend:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t backend-verify:${CI_COMMIT_SHORT_SHA} .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t backend-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -232,7 +234,7 @@ verify-build-web:
       alias: docker
   script:
     - cd web
-    - docker build -f ../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -251,7 +253,7 @@ verify-build-web-admin:
       alias: docker
   script:
     - cd web-admin
-    - docker build --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -269,7 +271,7 @@ verify-build-runner:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t runner-verify:${CI_COMMIT_SHORT_SHA} .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t runner-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -288,7 +290,7 @@ verify-build-relay:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t relay-verify:${CI_COMMIT_SHORT_SHA} .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t relay-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -311,7 +313,7 @@ build-backend:
       alias: docker
   script:
     # Build from project root to include proto/ directory
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
     - docker push ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${BACKEND_IMAGE}:latest
   rules:
@@ -334,7 +336,7 @@ build-web:
       alias: docker
   script:
     - cd web
-    - docker build -f ../ci/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../ci/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
     - docker push ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${WEB_IMAGE}:latest
   rules:
@@ -356,7 +358,7 @@ build-web-admin:
       alias: docker
   script:
     - cd web-admin
-    - docker build --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_ADMIN_IMAGE}:latest .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_ADMIN_IMAGE}:latest .
     - docker push ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${WEB_ADMIN_IMAGE}:latest
   rules:
@@ -378,7 +380,7 @@ build-runner:
       alias: docker
   script:
     # Build from project root to include proto/ directory
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
     - docker push ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${RUNNER_IMAGE}:latest
   rules:
@@ -400,7 +402,7 @@ build-relay:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - docker build --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t ${RELAY_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RELAY_IMAGE}:latest .
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t ${RELAY_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RELAY_IMAGE}:latest .
     - docker push ${RELAY_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${RELAY_IMAGE}:latest
   rules:

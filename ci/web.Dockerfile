@@ -1,5 +1,9 @@
+# REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)
+#                  Leave empty for Docker Hub (GitHub Actions)
+ARG REGISTRY_PREFIX=
+
 # Dependencies stage
-FROM node:20-alpine AS deps
+FROM ${REGISTRY_PREFIX}node:20-alpine AS deps
 
 WORKDIR /app
 
@@ -15,7 +19,8 @@ RUN \
     fi
 
 # Build stage
-FROM node:20-alpine AS builder
+ARG REGISTRY_PREFIX=
+FROM ${REGISTRY_PREFIX}node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -43,7 +48,8 @@ RUN \
     fi
 
 # Production stage
-FROM node:20-alpine AS runner
+ARG REGISTRY_PREFIX=
+FROM ${REGISTRY_PREFIX}node:20-alpine AS runner
 
 WORKDIR /app
 
