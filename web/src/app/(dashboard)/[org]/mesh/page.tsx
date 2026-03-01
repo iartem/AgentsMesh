@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { Group, Panel, Separator } from "react-resizable-panels";
-import { GripVertical } from "lucide-react";
+import { useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { MeshTopology } from "@/components/mesh";
@@ -10,6 +8,7 @@ import { ChannelChatPanel, MobileChannelChat } from "@/components/mesh";
 import { useMeshStore } from "@/stores/mesh";
 import { useBreakpoint } from "@/components/layout/useBreakpoint";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 export default function MeshPage() {
   const t = useTranslations();
@@ -36,11 +35,19 @@ export default function MeshPage() {
   const activeChannelCount = topology?.channels.filter((c) => !c.is_archived).length || 0;
 
   // Handle closing the chat panel
-  const handleCloseChat = () => {
+  const handleCloseChat = useCallback(() => {
     selectChannel(null);
-  };
+  }, [selectChannel]);
 
-  const showDesktopChat = selectedChannel && !isMobile;
+  // Close chat panel on Escape key (desktop only)
+  useEffect(() => {
+    if (!selectedChannel || isMobile) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCloseChat();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [selectedChannel, isMobile, handleCloseChat]);
 
   // Topology content shared between resizable and non-resizable layouts
   const topologyContent = (
@@ -159,36 +166,27 @@ export default function MeshPage() {
   );
 
   return (
-    <div className="flex h-full">
-      {showDesktopChat ? (
-        /* Resizable layout when chat panel is open on desktop */
-        <Group
-          orientation="horizontal"
-          className="h-full hidden md:flex flex-1"
+    <div className="flex h-full w-full relative overflow-hidden">
+      {/* Topology always full-width */}
+      {topologyContent}
+
+      {/* Desktop: slide-out chat overlay */}
+      {!isMobile && (
+        <div
+          className={cn(
+            "absolute top-0 right-0 h-full w-[520px] max-w-full",
+            "bg-background border-l border-border shadow-xl z-20",
+            "transition-transform duration-300 ease-in-out",
+            selectedChannel ? "translate-x-0" : "translate-x-full"
+          )}
         >
-          <Panel defaultSize={65} minSize={40}>
-            {topologyContent}
-          </Panel>
-          <Separator
-            className="group relative flex items-center justify-center w-1 bg-transparent hover:bg-primary/50 transition-colors cursor-col-resize"
-          >
-            {/* Expand hit area for easier grabbing */}
-            <div className="absolute w-3 h-full -left-1 pointer-events-none" />
-            {/* Grip indicator */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
-              <GripVertical className="h-4 w-4" />
-            </div>
-          </Separator>
-          <Panel defaultSize={35} minSize={20} maxSize={50}>
+          {selectedChannel && (
             <ChannelChatPanel
               channelId={selectedChannel}
               onClose={handleCloseChat}
             />
-          </Panel>
-        </Group>
-      ) : (
-        /* Full-width topology when no chat panel */
-        topologyContent
+          )}
+        </div>
       )}
 
       {/* Mobile: Full-screen chat overlay */}
