@@ -373,7 +373,8 @@
         "agentsmesh": "AgentsMesh",
         "tickets": "Tickets",
         "runners": "Runner",
-        "pricing": "Preise"
+        "pricing": "Preise",
+        "enterprise": "Unternehmen"
       },
       "resources": {
         "title": "Ressourcen",

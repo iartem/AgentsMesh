@@ -112,5 +112,17 @@
         "content": "When adopting AI development tools, enterprises face a critical question: where does the code go?\n\nWith AgentsMesh's self-hosted runners, the answer is simple: your code stays in your infrastructure. Here's why this matters:\n\n• Data Sovereignty: Code never leaves your network\n• Compliance: Meet regulatory requirements for data handling\n• Security: Full control over access and audit logs\n• Performance: Optimized for your specific environment\n\nDeploying a runner is straightforward:\n\n1. Generate a registration token in your AgentsMesh dashboard\n2. Run the runner binary on your infrastructure\n3. Start creating pods that execute in your environment\n\nWhether you're running on bare metal, VMs, or Kubernetes, AgentsMesh runners adapt to your infrastructure.\n\nContact us to learn more about enterprise deployment options."
       }
     }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "",
+      "titleHighlight": "엔터프라이즈",
+      "subtitle": "AI 에이전트 인프라에 대한 완전한 제어를 요구하는 조직을 위한 보안, 규정 준수 및 셀프 호스팅 배포."
+    },
+    "onpremise": {
+      "title": "프라이빗",
+      "titleHighlight": "배포",
+      "description": "자체 인프라 내에 AgentsMesh를 완전히 배포하세요. 코드와 데이터가 네트워크를 벗어나지 않습니다."
+    }
   }
 }

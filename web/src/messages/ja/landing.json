@@ -373,7 +373,8 @@
         "agentsmesh": "AgentsMesh",
         "tickets": "チケット",
         "runners": "ランナー",
-        "pricing": "料金"
+        "pricing": "料金",
+        "enterprise": "エンタープライズ"
       },
       "resources": {
         "title": "リソース",

@@ -11,9 +11,7 @@ import {
   AgentLogos,
   CoreFeatures,
   HowItWorks,
-  EnterpriseFeatures,
   PricingSection,
-  SelfHostedCTA,
   FinalCTA,
   Footer,
 } from "@/components/landing";
@@ -62,9 +60,7 @@ export default function Home() {
         <AgentLogos />
         <CoreFeatures />
         <HowItWorks />
-        <EnterpriseFeatures />
         <PricingSection />
-        <SelfHostedCTA />
         <FinalCTA />
       </main>
       <Footer />

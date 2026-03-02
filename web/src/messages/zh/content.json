@@ -112,5 +112,17 @@
         "content": "在采用 AI 开发工具时，企业面临一个关键问题：代码去哪里了？\n\n使用 AgentsMesh 的自托管 Runner，答案很简单：你的代码留在你的基础设施中。这很重要的原因是：\n\n• 数据主权：代码永远不会离开你的网络\n• 合规性：满足数据处理的监管要求\n• 安全性：完全控制访问和审计日志\n• 性能：针对你的特定环境进行优化\n\n部署 Runner 非常简单：\n\n1. 在 AgentsMesh 控制台生成注册令牌\n2. 在你的基础设施上运行 Runner 二进制文件\n3. 开始创建在你环境中执行的 Pod\n\n无论你是在裸机、虚拟机还是 Kubernetes 上运行，AgentsMesh Runner 都能适应你的基础设施。\n\n联系我们了解更多关于企业部署选项的信息。"
       }
     }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "专为",
+      "titleHighlight": "企业",
+      "subtitle": "安全、合规和自托管部署，为需要完全掌控 AI 智能体基础设施的组织而设计。"
+    },
+    "onpremise": {
+      "title": "私有",
+      "titleHighlight": "部署",
+      "description": "在您自己的基础设施中完整部署 AgentsMesh。代码和数据永远不会离开您的网络。"
+    }
   }
 }

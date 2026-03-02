@@ -46,6 +46,7 @@ export function Footer() {
         { label: t("landing.footer.product.tickets"), href: "/docs/features/tickets" },
         { label: t("landing.footer.product.runners"), href: "/docs/runners/setup" },
         { label: t("landing.footer.product.pricing"), href: "/#pricing" },
+        { label: t("landing.footer.product.enterprise"), href: "/enterprise" },
       ],
     },
     resources: {

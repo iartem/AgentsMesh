@@ -333,9 +333,11 @@ run_migrations() {
         up 2>&1) || true
 
     # 检查迁移结果
+    # 注意: 使用 "^error" 匹配行首，避免误匹配迁移文件名中包含 "error" 的条目
+    # (如 000046_add_pod_error_fields)
     if echo "$migrate_result" | grep -q "no change"; then
         info "数据库已是最新版本"
-    elif echo "$migrate_result" | grep -q "error"; then
+    elif echo "$migrate_result" | grep -q "^error"; then
         # 如果迁移失败，可能是部分迁移已手动完成，尝试逐个跳过
         warn "迁移遇到错误，尝试继续..."
         local current_version

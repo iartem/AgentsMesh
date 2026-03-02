@@ -354,7 +354,8 @@
         "agentsmesh": "AgentsMesh",
         "tickets": "任务管理",
         "runners": "运行节点",
-        "pricing": "定价"
+        "pricing": "定价",
+        "enterprise": "企业版"
       },
       "resources": {
         "title": "资源",

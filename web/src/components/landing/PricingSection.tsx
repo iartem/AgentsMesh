@@ -243,13 +243,6 @@ export function PricingSection() {
                 </div>
               ))}
             </div>
-
-            <p className="mt-8 text-center text-muted-foreground">
-              {t("landing.pricing.onpremise.name")}:{" "}
-              <Link href="/contact" className="text-primary hover:underline">
-                {t("landing.pricing.contactUs")}
-              </Link>
-            </p>
           </>
         )}
 

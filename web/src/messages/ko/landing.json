@@ -373,7 +373,8 @@
         "agentsmesh": "AgentsMesh",
         "tickets": "티켓",
         "runners": "러너",
-        "pricing": "요금제"
+        "pricing": "요금제",
+        "enterprise": "엔터프라이즈"
       },
       "resources": {
         "title": "리소스",
