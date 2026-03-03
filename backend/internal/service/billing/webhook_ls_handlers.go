@@ -2,7 +2,6 @@ package billing
 
 import (
 	"errors"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -86,11 +85,18 @@ func (s *Service) HandleSubscriptionPaused(c *gin.Context, event *payment.Webhoo
 	}
 
 	// Pause the subscription
-	now := time.Now()
+	// NOTE: Paused is user-initiated, different from Frozen (payment failure).
+	// Do NOT set FrozenAt here — FrozenAt is reserved for payment failure freezes.
 	sub.Status = billing.SubscriptionStatusPaused
-	sub.FrozenAt = &now
 
-	return s.db.WithContext(ctx).Save(&sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusPaused
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, nil, &status)
+	return nil
 }
 
 // HandleSubscriptionResumed handles subscription resume webhook event
@@ -118,7 +124,14 @@ func (s *Service) HandleSubscriptionResumed(c *gin.Context, event *payment.Webho
 	sub.Status = billing.SubscriptionStatusActive
 	sub.FrozenAt = nil
 
-	return s.db.WithContext(ctx).Save(&sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusActive
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, nil, &status)
+	return nil
 }
 
 // HandleSubscriptionExpired handles subscription expiration webhook event
@@ -143,9 +156,16 @@ func (s *Service) HandleSubscriptionExpired(c *gin.Context, event *payment.Webho
 	}
 
 	// Mark subscription as expired
-	now := time.Now()
+	// NOTE: Expired is distinct from Canceled. We do NOT set CanceledAt here
+	// because this is a natural expiration, not a user-initiated cancellation.
 	sub.Status = billing.SubscriptionStatusExpired
-	sub.CanceledAt = &now
 
-	return s.db.WithContext(ctx).Save(&sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusExpired
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, nil, &status)
+	return nil
 }

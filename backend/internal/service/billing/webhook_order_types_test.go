@@ -19,7 +19,9 @@ func TestHandlePaymentSucceededSeatPurchase(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlan(t, db)
-	service.CreateSubscription(ctx, 1, "based")
+	seedProPlan(t, db)
+	// Use pro plan (MaxUsers=50) instead of based (MaxUsers=1) so seat purchase is allowed
+	service.CreateSubscription(ctx, 1, "pro")
 
 	order := &billing.PaymentOrder{
 		OrganizationID:  1,

@@ -111,7 +111,11 @@ func (h *BillingHandler) calculateCheckoutPrice(c *gin.Context, tenant *middlewa
 
 	switch req.OrderType {
 	case billing.OrderTypeSubscription:
-		priceCalc, err := h.billingService.CalculateSubscriptionPrice(ctx, req.PlanName, req.BillingCycle, 1)
+		seats := req.Seats
+		if seats <= 0 {
+			seats = 1 // Default to 1 seat
+		}
+		priceCalc, err := h.billingService.CalculateSubscriptionPrice(ctx, req.PlanName, req.BillingCycle, seats)
 		if err != nil {
 			apierr.InvalidInput(c, "invalid plan or billing cycle")
 			return nil, err

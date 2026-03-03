@@ -43,8 +43,12 @@ func (s *Service) HandlePaymentSucceeded(c *gin.Context, event *payment.WebhookE
 		return s.handleRecurringPaymentSuccess(ctx, event)
 	}
 
-	if err != nil {
-		return fmt.Errorf("order not found: %w", err)
+	if order == nil {
+		// No order found and not a recurring payment — nothing to process
+		if err != nil {
+			return fmt.Errorf("order not found: %w", err)
+		}
+		return nil
 	}
 
 	// Update order status
@@ -145,5 +149,12 @@ func (s *Service) HandleSubscriptionCanceled(c *gin.Context, event *payment.Webh
 	sub.Status = billing.SubscriptionStatusCanceled
 	sub.CanceledAt = &now
 
-	return s.db.WithContext(ctx).Save(sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusCanceled
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, nil, &status)
+	return nil
 }

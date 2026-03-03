@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -107,9 +108,9 @@ func TestContains(t *testing.T) {
 			name = "empty_strings"
 		}
 		t.Run(name, func(t *testing.T) {
-			result := contains(tt.s, tt.substr)
+			result := strings.Contains(tt.s, tt.substr)
 			if result != tt.expected {
-				t.Errorf("contains(%q, %q) = %v, want %v", tt.s, tt.substr, result, tt.expected)
+				t.Errorf("strings.Contains(%q, %q) = %v, want %v", tt.s, tt.substr, result, tt.expected)
 			}
 		})
 	}

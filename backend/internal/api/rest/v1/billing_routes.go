@@ -33,6 +33,7 @@ func RegisterBillingHandlers(rg *gin.RouterGroup, billingService *billingsvc.Ser
 	rg.POST("/subscription/cancel", handler.RequestCancelSubscription)
 	rg.POST("/subscription/reactivate", handler.ReactivateSubscription)
 	rg.POST("/subscription/change-cycle", handler.ChangeBillingCycle)
+	rg.POST("/subscription/upgrade", handler.UpgradeSubscription)
 	rg.POST("/subscription/downgrade", handler.DowngradeSubscription)
 	rg.PUT("/subscription/auto-renew", handler.UpdateAutoRenew)
 

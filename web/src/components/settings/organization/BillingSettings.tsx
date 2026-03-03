@@ -76,19 +76,44 @@ export function BillingSettings({ t }: BillingSettingsProps) {
     loadBillingData();
   }, [loadBillingData]);
 
-  const handleSelectPlan = (planName: string) => {
+  const handleSelectPlan = async (planName: string) => {
     const plan = plans.find((p) => p.name === planName);
-    if (plan) {
-      setSelectedPlan(plan);
-      setShowPlansDialog(false);
+    if (!plan) return;
 
-      // For free plan, no payment needed
-      if (plan.price_per_seat_monthly === 0) {
-        handleFreePlanSelect(planName);
-      } else {
-        setShowCheckout(true);
+    setSelectedPlan(plan);
+    setShowPlansDialog(false);
+
+    // For free plan, no payment needed
+    if (plan.price_per_seat_monthly === 0) {
+      handleFreePlanSelect(planName);
+      return;
+    }
+
+    // If there's an existing subscription, determine if this is an upgrade or new subscription
+    if (overview) {
+      const currentPrice = overview.plan?.price_per_seat_monthly || 0;
+      const isUpgrade = plan.price_per_seat_monthly > currentPrice;
+
+      if (isUpgrade) {
+        // Upgrade: use direct provider API (no checkout redirect needed)
+        setUpgrading(true);
+        setError(null);
+        try {
+          await billingApi.upgradeSubscription(planName);
+          setPaymentMessage({ type: "success", text: t("settings.billingPage.upgradeSuccess") || "Plan upgraded successfully" });
+          await loadBillingData();
+        } catch (err) {
+          setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.upgradeFailed") || "Failed to upgrade plan"));
+        } finally {
+          setUpgrading(false);
+          setSelectedPlan(null);
+        }
+        return;
       }
     }
+
+    // New subscription: show checkout flow
+    setShowCheckout(true);
   };
 
   const handleFreePlanSelect = async (planName: string) => {

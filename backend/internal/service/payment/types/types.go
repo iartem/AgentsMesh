@@ -68,6 +68,10 @@ type WebhookEvent struct {
 	SubscriptionID string
 	CustomerID     string
 
+	// Seat and plan info (synced from provider on subscription updates)
+	Seats     int    // Seat quantity from subscription item
+	VariantID string // Provider variant/price ID (used to reverse-lookup plan)
+
 	// Raw data
 	RawPayload map[string]interface{}
 }

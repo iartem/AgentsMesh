@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -46,22 +47,8 @@ func isDuplicateKeyError(err error) bool {
 		return false
 	}
 	errStr := err.Error()
-	// PostgreSQL duplicate key error
-	return contains(errStr, "duplicate key") ||
-		contains(errStr, "UNIQUE constraint failed") || // SQLite
-		contains(errStr, "Duplicate entry") // MySQL
-}
-
-// contains is a simple string contains check
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsImpl(s, substr))
-}
-
-func containsImpl(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	// PostgreSQL / SQLite / MySQL duplicate key patterns
+	return strings.Contains(errStr, "duplicate key") ||
+		strings.Contains(errStr, "UNIQUE constraint failed") ||
+		strings.Contains(errStr, "Duplicate entry")
 }

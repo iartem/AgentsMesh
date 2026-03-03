@@ -221,6 +221,11 @@ func (p *Provider) UpdateSubscriptionSeats(ctx context.Context, subscriptionID s
 	return nil
 }
 
+// UpdateSubscriptionPlan simulates changing subscription plan variant
+func (p *Provider) UpdateSubscriptionPlan(ctx context.Context, subscriptionID string, newVariantID string) error {
+	return nil
+}
+
 // GetSubscription returns mock subscription details
 func (p *Provider) GetSubscription(ctx context.Context, subscriptionID string) (*types.SubscriptionDetails, error) {
 	return &types.SubscriptionDetails{

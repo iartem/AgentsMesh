@@ -6,7 +6,10 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 )
 
-// CalculateUpgradePrice calculates the prorated price for upgrading to a new plan
+// CalculateUpgradePrice calculates the prorated price for upgrading to a new plan.
+// NOTE: This is an estimate for display purposes. When using LemonSqueezy's direct
+// subscription update API (UpgradePlan), LemonSqueezy handles proration internally
+// and the actual charge may differ slightly from this estimate.
 func (s *Service) CalculateUpgradePrice(ctx context.Context, orgID int64, newPlanName string) (*PriceCalculation, error) {
 	// Get current subscription
 	sub, err := s.GetSubscription(ctx, orgID)
@@ -82,7 +85,10 @@ func (s *Service) CalculateUpgradePrice(ctx context.Context, orgID int64, newPla
 	}, nil
 }
 
-// CalculateSeatPurchasePrice calculates the prorated price for purchasing additional seats
+// CalculateSeatPurchasePrice calculates the prorated price for purchasing additional seats.
+// NOTE: This is an estimate for display purposes. When using LemonSqueezy's direct
+// subscription update API (UpdateSeats), LemonSqueezy handles proration internally
+// and the actual charge may differ slightly from this estimate.
 func (s *Service) CalculateSeatPurchasePrice(ctx context.Context, orgID int64, additionalSeats int) (*PriceCalculation, error) {
 	if additionalSeats <= 0 {
 		return nil, ErrInvalidPlan
@@ -106,7 +112,7 @@ func (s *Service) CalculateSeatPurchasePrice(ctx context.Context, orgID int64, a
 	}
 
 	// Check max seats
-	if plan.MaxUsers != -1 && sub.SeatCount+additionalSeats > plan.MaxUsers {
+	if plan.MaxUsers > 0 && sub.SeatCount+additionalSeats > plan.MaxUsers {
 		return nil, ErrQuotaExceeded
 	}
 

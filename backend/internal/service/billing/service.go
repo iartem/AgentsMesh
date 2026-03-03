@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/stripe/stripe-go/v76"
 	"gorm.io/gorm"
@@ -22,6 +23,7 @@ var (
 	ErrOrderExpired          = errors.New("order expired")
 	ErrInvalidOrderStatus    = errors.New("invalid order status")
 	ErrSeatCountExceedsLimit = errors.New("current seat count exceeds target plan limit")
+	ErrSubscriptionNotActive     = errors.New("subscription is not active")
 	ErrSubscriptionFrozen        = errors.New("subscription is frozen, please renew to continue")
 	ErrSubscriptionAlreadyExists = errors.New("subscription already exists for this organization")
 )
@@ -107,7 +109,7 @@ func (s *Service) CreateStripeCustomer(ctx context.Context, orgID int64, email, 
 		Email: stripe.String(email),
 		Name:  stripe.String(name),
 		Metadata: map[string]string{
-			"organization_id": string(rune(orgID)),
+			"organization_id": strconv.FormatInt(orgID, 10),
 		},
 	}
 

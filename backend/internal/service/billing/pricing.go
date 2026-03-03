@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -51,6 +52,10 @@ func (s *Service) CalculateSubscriptionPriceWithCurrency(ctx context.Context, pl
 		if price.LemonSqueezyVariantIDMonthly != nil {
 			lsVariantID = *price.LemonSqueezyVariantIDMonthly
 		}
+	}
+
+	if price.Plan == nil {
+		return nil, fmt.Errorf("plan not found for price: plan_id=%d", price.PlanID)
 	}
 
 	return &PriceCalculation{

@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
@@ -36,28 +35,54 @@ func (h *BillingHandler) GetSeatUsage(c *gin.Context) {
 
 // PurchaseSeatsRequest represents a seat purchase request
 type PurchaseSeatsRequest struct {
-	Seats      int    `json:"seats" binding:"required,min=1"`
-	SuccessURL string `json:"success_url" binding:"required"`
-	CancelURL  string `json:"cancel_url" binding:"required"`
+	Seats int `json:"seats" binding:"required,min=1"`
 }
 
-// PurchaseSeats initiates a seat purchase checkout
+// PurchaseSeats updates the subscription seat count via the payment provider.
+// LemonSqueezy automatically handles proration for the billing difference.
 func (h *BillingHandler) PurchaseSeats(c *gin.Context) {
+	tenant := c.MustGet("tenant").(*middleware.TenantContext)
+
+	// Only owners can purchase seats
+	if tenant.UserRole != "owner" {
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
+		return
+	}
+
 	var req PurchaseSeatsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())
 		return
 	}
 
-	// Redirect to CreateCheckout with seat_purchase type
-	checkoutReq := CreateCheckoutRequest{
-		OrderType:  billing.OrderTypeSeatPurchase,
-		Seats:      req.Seats,
-		SuccessURL: req.SuccessURL,
-		CancelURL:  req.CancelURL,
+	if err := h.billingService.UpdateSeats(c.Request.Context(), tenant.OrganizationID, req.Seats); err != nil {
+		switch err {
+		case billingsvc.ErrSubscriptionNotFound:
+			apierr.ResourceNotFound(c, "no active subscription")
+		case billingsvc.ErrSubscriptionNotActive:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "subscription is not active")
+		case billingsvc.ErrSubscriptionFrozen:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "subscription is frozen, please renew first")
+		case billingsvc.ErrInvalidPlan:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "cannot add seats to based plan, please upgrade first")
+		case billingsvc.ErrQuotaExceeded:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "exceeds maximum seats for this plan")
+		default:
+			apierr.InternalError(c, err.Error())
+		}
+		return
 	}
 
-	// Marshal and re-bind
-	c.Set("checkout_request", checkoutReq)
-	h.CreateCheckout(c)
+	// Return updated seat usage
+	usage, err := h.billingService.GetSeatUsage(c.Request.Context(), tenant.OrganizationID)
+	if err != nil {
+		// Seats were updated successfully, just return success without usage data
+		c.JSON(http.StatusOK, gin.H{"message": "seats updated successfully"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "seats updated successfully",
+		"seats":   usage,
+	})
 }

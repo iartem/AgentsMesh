@@ -273,6 +273,16 @@ export const billingApi = {
       }
     ),
 
+  // Upgrade subscription plan (direct provider update, no checkout redirect)
+  upgradeSubscription: (planName: string) =>
+    request<{ message: string; subscription: Subscription }>(
+      orgPath("/billing/subscription/upgrade"),
+      {
+        method: "POST",
+        body: { plan_name: planName },
+      }
+    ),
+
   // Change billing cycle (takes effect on next renewal)
   changeBillingCycle: (billingCycle: BillingCycle) =>
     request<{
@@ -303,15 +313,11 @@ export const billingApi = {
   getSeatUsage: () =>
     request<SeatUsage>(orgPath("/billing/seats")),
 
-  // Purchase additional seats
-  purchaseSeats: (seats: number, successUrl: string, cancelUrl: string) =>
-    request<CheckoutResponse>(orgPath("/billing/seats/purchase"), {
+  // Purchase additional seats (updates subscription directly, no checkout redirect)
+  purchaseSeats: (seats: number) =>
+    request<{ message: string; seats?: SeatUsage }>(orgPath("/billing/seats/purchase"), {
       method: "POST",
-      body: {
-        seats,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      },
+      body: { seats },
     }),
 
   // ===========================================

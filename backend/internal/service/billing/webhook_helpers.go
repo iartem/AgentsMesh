@@ -2,6 +2,8 @@ package billing
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -13,6 +15,27 @@ import (
 // ===========================================
 // Webhook Internal Helper Methods
 // ===========================================
+
+// syncOrganizationSubscription syncs the redundant subscription fields on the organizations table.
+// The organizations table maintains subscription_plan and subscription_status for fast access.
+// This method MUST be called whenever subscription status or plan changes to keep them in sync.
+func (s *Service) syncOrganizationSubscription(ctx context.Context, orgID int64, planName *string, status *string) {
+	updates := map[string]interface{}{}
+	if planName != nil {
+		updates["subscription_plan"] = *planName
+	}
+	if status != nil {
+		updates["subscription_status"] = *status
+	}
+	if len(updates) == 0 {
+		return
+	}
+	if err := s.db.WithContext(ctx).Table("organizations").
+		Where("id = ?", orgID).
+		Updates(updates).Error; err != nil {
+		log.Printf("[WARN] syncOrganizationSubscription: failed to sync org=%d: %v", orgID, err)
+	}
+}
 
 // findSubscriptionByProviderID finds a subscription by provider-specific ID
 func (s *Service) findSubscriptionByProviderID(ctx context.Context, provider string, subscriptionID string) (*billing.Subscription, error) {
@@ -40,7 +63,25 @@ func (s *Service) handleRecurringPaymentSuccess(ctx context.Context, event *paym
 		return nil // Subscription not found, ignore
 	}
 
-	// Renew the subscription period
+	// Apply pending changes BEFORE period calculation so the new period uses the updated cycle/plan
+	var downgradedPlanName *string
+	if sub.DowngradeToPlan != nil {
+		plan, err := s.GetPlan(ctx, *sub.DowngradeToPlan)
+		if err == nil {
+			sub.PlanID = plan.ID
+			downgradedPlanName = &plan.Name
+		} else {
+			log.Printf("[WARN] handleRecurringPaymentSuccess: pending downgrade to plan %q not found for org=%d, downgrade dropped: %v",
+				*sub.DowngradeToPlan, sub.OrganizationID, err)
+		}
+		sub.DowngradeToPlan = nil
+	}
+	if sub.NextBillingCycle != nil {
+		sub.BillingCycle = *sub.NextBillingCycle
+		sub.NextBillingCycle = nil
+	}
+
+	// Renew the subscription period using the (possibly updated) billing cycle
 	sub.CurrentPeriodStart = sub.CurrentPeriodEnd
 	if sub.BillingCycle == billing.BillingCycleYearly {
 		sub.CurrentPeriodEnd = sub.CurrentPeriodStart.AddDate(1, 0, 0)
@@ -52,20 +93,14 @@ func (s *Service) handleRecurringPaymentSuccess(ctx context.Context, event *paym
 	sub.Status = billing.SubscriptionStatusActive
 	sub.FrozenAt = nil
 
-	// Apply pending changes if any
-	if sub.DowngradeToPlan != nil {
-		plan, err := s.GetPlan(ctx, *sub.DowngradeToPlan)
-		if err == nil {
-			sub.PlanID = plan.ID
-		}
-		sub.DowngradeToPlan = nil
-	}
-	if sub.NextBillingCycle != nil {
-		sub.BillingCycle = *sub.NextBillingCycle
-		sub.NextBillingCycle = nil
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
 	}
 
-	return s.db.WithContext(ctx).Save(sub).Error
+	// Sync organization table: status always changes to active; plan may have changed via downgrade
+	status := billing.SubscriptionStatusActive
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, downgradedPlanName, &status)
+	return nil
 }
 
 // handleRecurringPaymentFailure handles failed recurring payments
@@ -80,11 +115,39 @@ func (s *Service) handleRecurringPaymentFailure(ctx context.Context, event *paym
 	sub.Status = billing.SubscriptionStatusFrozen
 	sub.FrozenAt = &now
 
-	return s.db.WithContext(ctx).Save(sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusFrozen
+	s.syncOrganizationSubscription(ctx, sub.OrganizationID, nil, &status)
+	return nil
 }
 
 // activateSubscription activates a new subscription after payment
 func (s *Service) activateSubscription(ctx context.Context, order *billing.PaymentOrder, event *payment.WebhookEvent) error {
+	// PlanID is required to activate a subscription
+	if order.PlanID == nil {
+		return fmt.Errorf("activateSubscription: order %s has nil PlanID, cannot activate subscription", order.OrderNo)
+	}
+
+	// Ensure at least 1 seat
+	seats := order.Seats
+	if seats <= 0 {
+		seats = 1
+	}
+
+	// Resolve plan name for org sync
+	var planName string
+	if order.Plan != nil {
+		planName = order.Plan.Name
+	} else if order.PlanID != nil {
+		if p, err := s.GetPlanByID(ctx, *order.PlanID); err == nil {
+			planName = p.Name
+		}
+	}
+
 	sub, err := s.GetSubscription(ctx, order.OrganizationID)
 	if err != nil {
 		// Create new subscription
@@ -107,21 +170,42 @@ func (s *Service) activateSubscription(ctx context.Context, order *billing.Payme
 			PaymentProvider:    &provider,
 			PaymentMethod:      order.PaymentMethod,
 			AutoRenew:          true,
-			SeatCount:          order.Seats,
+			SeatCount:          seats,
 		}
 
 		// Set provider-specific IDs based on provider
 		setProviderIDs(sub, event)
 
-		return s.db.WithContext(ctx).Create(sub).Error
+		if err := s.db.WithContext(ctx).Create(sub).Error; err != nil {
+			return err
+		}
+
+		// Sync organization table
+		status := billing.SubscriptionStatusActive
+		s.syncOrganizationSubscription(ctx, order.OrganizationID, strPtr(planName), &status)
+		return nil
 	}
 
 	// Update existing subscription
+	now := time.Now()
+	var periodEnd time.Time
+	if order.BillingCycle == billing.BillingCycleYearly {
+		periodEnd = now.AddDate(1, 0, 0)
+	} else {
+		periodEnd = now.AddDate(0, 1, 0)
+	}
+
 	sub.PlanID = *order.PlanID
 	sub.Status = billing.SubscriptionStatusActive
 	sub.BillingCycle = order.BillingCycle
-	sub.SeatCount = order.Seats
+	sub.CurrentPeriodStart = now
+	sub.CurrentPeriodEnd = periodEnd
+	sub.SeatCount = seats
 	sub.FrozenAt = nil
+	sub.CanceledAt = nil
+	sub.CancelAtPeriodEnd = false
+	sub.DowngradeToPlan = nil
+	sub.NextBillingCycle = nil
 	provider := order.PaymentProvider
 	sub.PaymentProvider = &provider
 	sub.PaymentMethod = order.PaymentMethod
@@ -129,7 +213,14 @@ func (s *Service) activateSubscription(ctx context.Context, order *billing.Payme
 	// Set provider-specific IDs based on provider
 	setProviderIDs(sub, event)
 
-	return s.db.WithContext(ctx).Save(sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusActive
+	s.syncOrganizationSubscription(ctx, order.OrganizationID, strPtr(planName), &status)
+	return nil
 }
 
 // setProviderIDs sets provider-specific IDs on a subscription
@@ -153,8 +244,31 @@ func setProviderIDs(sub *billing.Subscription, event *payment.WebhookEvent) {
 	}
 }
 
+// findPlanByVariantID looks up a plan by LemonSqueezy variant ID from plan_prices table
+func (s *Service) findPlanByVariantID(ctx context.Context, variantID string) (*billing.SubscriptionPlan, error) {
+	var price billing.PlanPrice
+	err := s.db.WithContext(ctx).
+		Preload("Plan").
+		Where("lemonsqueezy_variant_id_monthly = ? OR lemonsqueezy_variant_id_yearly = ?", variantID, variantID).
+		First(&price).Error
+	if err != nil {
+		return nil, err
+	}
+	return price.Plan, nil
+}
+
 // addSeats adds seats to a subscription after payment
 func (s *Service) addSeats(ctx context.Context, order *billing.PaymentOrder) error {
+	// Validate against plan max_users limit
+	sub, err := s.GetSubscription(ctx, order.OrganizationID)
+	if err == nil && sub.Plan != nil && sub.Plan.MaxUsers > 0 {
+		if sub.SeatCount+order.Seats > sub.Plan.MaxUsers {
+			log.Printf("[WARN] addSeats: seat count %d + %d would exceed plan max_users %d for org=%d",
+				sub.SeatCount, order.Seats, sub.Plan.MaxUsers, order.OrganizationID)
+			return ErrQuotaExceeded
+		}
+	}
+
 	return s.db.WithContext(ctx).Model(&billing.Subscription{}).
 		Where("organization_id = ?", order.OrganizationID).
 		Update("seat_count", gorm.Expr("seat_count + ?", order.Seats)).Error
@@ -165,12 +279,29 @@ func (s *Service) upgradePlan(ctx context.Context, order *billing.PaymentOrder) 
 	if order.PlanID == nil {
 		return ErrInvalidPlan
 	}
-	return s.db.WithContext(ctx).Model(&billing.Subscription{}).
+	if err := s.db.WithContext(ctx).Model(&billing.Subscription{}).
 		Where("organization_id = ?", order.OrganizationID).
 		Updates(map[string]interface{}{
-			"plan_id":    *order.PlanID,
-			"updated_at": time.Now(),
-		}).Error
+			"plan_id":           *order.PlanID,
+			"downgrade_to_plan": nil,
+			"updated_at":        time.Now(),
+		}).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table with new plan name
+	var planName string
+	if order.Plan != nil {
+		planName = order.Plan.Name
+	} else {
+		if p, err := s.GetPlanByID(ctx, *order.PlanID); err == nil {
+			planName = p.Name
+		}
+	}
+	if planName != "" {
+		s.syncOrganizationSubscription(ctx, order.OrganizationID, &planName, nil)
+	}
+	return nil
 }
 
 // renewSubscriptionFromOrder renews a subscription from an order
@@ -180,7 +311,25 @@ func (s *Service) renewSubscriptionFromOrder(ctx context.Context, order *billing
 		return err
 	}
 
-	// Set new period
+	// Apply pending changes BEFORE period calculation (consistent with handleRecurringPaymentSuccess)
+	var downgradedPlanName *string
+	if sub.DowngradeToPlan != nil {
+		plan, err := s.GetPlan(ctx, *sub.DowngradeToPlan)
+		if err == nil {
+			sub.PlanID = plan.ID
+			downgradedPlanName = &plan.Name
+		} else {
+			log.Printf("[WARN] renewSubscriptionFromOrder: pending downgrade to plan %q not found for org=%d, downgrade dropped: %v",
+				*sub.DowngradeToPlan, sub.OrganizationID, err)
+		}
+		sub.DowngradeToPlan = nil
+	}
+	if sub.NextBillingCycle != nil {
+		sub.BillingCycle = *sub.NextBillingCycle
+		sub.NextBillingCycle = nil
+	}
+
+	// Set new period using the (possibly updated) billing cycle
 	sub.CurrentPeriodStart = sub.CurrentPeriodEnd
 	if sub.BillingCycle == billing.BillingCycleYearly {
 		sub.CurrentPeriodEnd = sub.CurrentPeriodStart.AddDate(1, 0, 0)
@@ -190,5 +339,20 @@ func (s *Service) renewSubscriptionFromOrder(ctx context.Context, order *billing
 	sub.Status = billing.SubscriptionStatusActive
 	sub.FrozenAt = nil
 
-	return s.db.WithContext(ctx).Save(sub).Error
+	if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
+		return err
+	}
+
+	// Sync organization table
+	status := billing.SubscriptionStatusActive
+	s.syncOrganizationSubscription(ctx, order.OrganizationID, downgradedPlanName, &status)
+	return nil
+}
+
+// strPtr returns a pointer to the string, or nil if empty
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

@@ -50,8 +50,9 @@ func TestHandleSubscriptionExpired(t *testing.T) {
 	if sub.Status != billing.SubscriptionStatusExpired {
 		t.Errorf("expected status expired, got %s", sub.Status)
 	}
-	if sub.CanceledAt == nil {
-		t.Error("expected CanceledAt to be set")
+	// Expired is a natural end, not a user cancellation; CanceledAt should NOT be set
+	if sub.CanceledAt != nil {
+		t.Error("expected CanceledAt to be nil for expired subscription (not canceled)")
 	}
 }
 

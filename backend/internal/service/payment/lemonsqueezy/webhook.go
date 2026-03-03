@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment/types"
@@ -30,12 +29,19 @@ func (p *Provider) HandleWebhook(ctx context.Context, payload []byte, signature 
 		return nil, fmt.Errorf("failed to parse webhook payload: %w", err)
 	}
 
-	// Use Data.ID as the unique event identifier for idempotency
-	// This ensures each webhook event has a truly unique ID
+	// Build a unique event identifier for idempotency.
+	// data.id alone is the resource ID (e.g., subscription ID), which is the same
+	// across different event types and repeated updates. We combine it with event_name
+	// and updated_at to ensure each webhook delivery has a unique idempotency key.
 	eventID := webhookPayload.Data.ID
 	if eventID == "" {
-		// Fallback to event name + timestamp if ID is missing (shouldn't happen)
-		eventID = webhookPayload.Meta.EventName + "_" + time.Now().Format("20060102150405.000000")
+		eventID = "unknown"
+	}
+	eventID = eventID + "_" + webhookPayload.Meta.EventName
+	if webhookPayload.Data.Attributes.UpdatedAt != nil {
+		eventID = eventID + "_" + webhookPayload.Data.Attributes.UpdatedAt.Format("20060102150405.000000000")
+	} else if webhookPayload.Data.Attributes.CreatedAt != nil {
+		eventID = eventID + "_" + webhookPayload.Data.Attributes.CreatedAt.Format("20060102150405.000000000")
 	}
 
 	result := &types.WebhookEvent{
@@ -132,6 +138,16 @@ func (p *Provider) parseSubscriptionCreatedEvent(payload *WebhookPayload, result
 	if payload.Data.Attributes.CustomerID != 0 {
 		result.CustomerID = strconv.Itoa(payload.Data.Attributes.CustomerID)
 	}
+
+	// Extract seat quantity from first_subscription_item
+	if payload.Data.Attributes.FirstSubscriptionItem != nil {
+		result.Seats = payload.Data.Attributes.FirstSubscriptionItem.Quantity
+	}
+
+	// Extract variant_id for plan identification
+	if payload.Data.Attributes.VariantID != 0 {
+		result.VariantID = strconv.Itoa(payload.Data.Attributes.VariantID)
+	}
 }
 
 // parseSubscriptionUpdatedEvent parses a subscription_updated event
@@ -141,6 +157,16 @@ func (p *Provider) parseSubscriptionUpdatedEvent(payload *WebhookPayload, result
 
 	if payload.Data.Attributes.CustomerID != 0 {
 		result.CustomerID = strconv.Itoa(payload.Data.Attributes.CustomerID)
+	}
+
+	// Extract seat quantity from first_subscription_item
+	if payload.Data.Attributes.FirstSubscriptionItem != nil {
+		result.Seats = payload.Data.Attributes.FirstSubscriptionItem.Quantity
+	}
+
+	// Extract variant_id for plan change detection
+	if payload.Data.Attributes.VariantID != 0 {
+		result.VariantID = strconv.Itoa(payload.Data.Attributes.VariantID)
 	}
 }
 

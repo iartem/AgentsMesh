@@ -59,6 +59,9 @@ type SubscriptionProvider interface {
 	// UpdateSubscriptionSeats updates the seat count for a subscription
 	UpdateSubscriptionSeats(ctx context.Context, subscriptionID string, seats int) error
 
+	// UpdateSubscriptionPlan changes the subscription to a new plan variant
+	UpdateSubscriptionPlan(ctx context.Context, subscriptionID string, newVariantID string) error
+
 	// GetSubscription retrieves subscription details
 	GetSubscription(ctx context.Context, subscriptionID string) (*SubscriptionDetails, error)
 }

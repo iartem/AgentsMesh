@@ -10,8 +10,52 @@ import (
 )
 
 // ===========================================
-// Subscription Plan Changes (Downgrade, Billing Cycle)
+// Subscription Plan Changes (Upgrade, Downgrade, Billing Cycle)
 // ===========================================
+
+// UpgradeSubscriptionRequest represents an upgrade request
+type UpgradeSubscriptionRequest struct {
+	PlanName string `json:"plan_name" binding:"required"`
+}
+
+// UpgradeSubscription upgrades the subscription plan via the payment provider.
+// LemonSqueezy automatically handles proration for the billing difference.
+func (h *BillingHandler) UpgradeSubscription(c *gin.Context) {
+	tenant := c.MustGet("tenant").(*middleware.TenantContext)
+
+	if tenant.UserRole != "owner" {
+		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
+		return
+	}
+
+	var req UpgradeSubscriptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apierr.ValidationError(c, err.Error())
+		return
+	}
+
+	sub, err := h.billingService.UpgradePlan(c.Request.Context(), tenant.OrganizationID, req.PlanName)
+	if err != nil {
+		switch err {
+		case billingsvc.ErrSubscriptionNotFound:
+			apierr.ResourceNotFound(c, "no active subscription")
+		case billingsvc.ErrSubscriptionNotActive:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "subscription is not active")
+		case billingsvc.ErrSubscriptionFrozen:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "subscription is frozen, please renew first")
+		case billingsvc.ErrPlanNotFound:
+			apierr.InvalidInput(c, "invalid plan")
+		default:
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "plan upgraded successfully",
+		"subscription": sub,
+	})
+}
 
 // DowngradeSubscriptionRequest represents a downgrade request
 type DowngradeSubscriptionRequest struct {

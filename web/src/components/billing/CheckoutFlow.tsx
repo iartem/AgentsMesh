@@ -52,6 +52,7 @@ export function CheckoutFlow({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedCycle, setSelectedCycle] = useState<BillingCycle>(billingCycle);
+  const [selectedSeats, setSelectedSeats] = useState(seats);
   const [checkoutResponse, setCheckoutResponse] = useState<CheckoutResponse | null>(null);
 
   // LemonSqueezy overlay checkout hook
@@ -75,16 +76,16 @@ export function CheckoutFlow({
       selectedCycle === "yearly"
         ? plan.price_per_seat_yearly
         : plan.price_per_seat_monthly;
-    return basePrice * seats;
-  }, [plan, selectedCycle, seats]);
+    return basePrice * selectedSeats;
+  }, [plan, selectedCycle, selectedSeats]);
 
   // Calculate annual savings
   const getAnnualSavings = useCallback(() => {
     if (!plan) return 0;
-    const monthlyTotal = plan.price_per_seat_monthly * 12 * seats;
-    const yearlyTotal = plan.price_per_seat_yearly * seats;
+    const monthlyTotal = plan.price_per_seat_monthly * 12 * selectedSeats;
+    const yearlyTotal = plan.price_per_seat_yearly * selectedSeats;
     return monthlyTotal - yearlyTotal;
-  }, [plan, seats]);
+  }, [plan, selectedSeats]);
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -96,7 +97,7 @@ export function CheckoutFlow({
         order_type: orderType,
         plan_name: plan?.name,
         billing_cycle: selectedCycle,
-        seats: orderType === "seat_purchase" ? seats : undefined,
+        seats: orderType === "seat_purchase" ? selectedSeats : (orderType === "subscription" ? selectedSeats : undefined),
         success_url: successUrl,
         cancel_url: cancelUrl,
       });
@@ -200,10 +201,42 @@ export function CheckoutFlow({
               </div>
             )}
 
-            <div className="flex justify-between">
-              <span>{t("billing.checkout.seats")}</span>
-              <span className="font-medium">{seats}</span>
-            </div>
+            {/* Seat Selector for new subscriptions */}
+            {orderType === "subscription" ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>{t("billing.checkout.seats")}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="w-8 h-8 flex items-center justify-center border border-border rounded hover:bg-muted disabled:opacity-50"
+                      onClick={() => setSelectedSeats(Math.max(1, selectedSeats - 1))}
+                      disabled={selectedSeats <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="font-medium w-8 text-center">{selectedSeats}</span>
+                    <button
+                      type="button"
+                      className="w-8 h-8 flex items-center justify-center border border-border rounded hover:bg-muted"
+                      onClick={() => setSelectedSeats(selectedSeats + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {selectedSeats > 1 && (
+                  <div className="text-xs text-muted-foreground">
+                    ${selectedCycle === "yearly" ? plan.price_per_seat_yearly : plan.price_per_seat_monthly}/{t("billing.checkout.perSeat")}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <span>{t("billing.checkout.seats")}</span>
+                <span className="font-medium">{selectedSeats}</span>
+              </div>
+            )}
 
             <div className="border-t border-border pt-4 flex justify-between text-lg font-semibold">
               <span>{t("billing.checkout.total")}</span>
@@ -219,7 +252,7 @@ export function CheckoutFlow({
           <div className="space-y-4">
             <div className="flex justify-between">
               <span>{t("billing.checkout.additionalSeats")}</span>
-              <span className="font-medium">{seats}</span>
+              <span className="font-medium">{selectedSeats}</span>
             </div>
             <div className="text-sm text-muted-foreground">
               {t("billing.checkout.seatPurchaseNote")}

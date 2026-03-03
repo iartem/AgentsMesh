@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	billingdomain "github.com/anthropics/agentsmesh/backend/internal/domain/billing"
@@ -40,11 +41,15 @@ func (h *BillingHandler) createCheckoutSession(c *gin.Context, tenant *middlewar
 		metadata["stripe_price_id"] = priceCalc.StripePrice
 	}
 
+	// Get user email from JWT claims (set by auth middleware)
+	userEmail, _ := c.Get("email")
+	userEmailStr, _ := userEmail.(string)
+
 	// Create checkout session
 	checkoutReq := &payment.CheckoutRequest{
 		OrganizationID: tenant.OrganizationID,
 		UserID:         tenant.UserID,
-		UserEmail:      "",
+		UserEmail:      userEmailStr,
 		OrderType:      req.OrderType,
 		PlanID:         0,
 		BillingCycle:   req.BillingCycle,
@@ -85,7 +90,11 @@ func (h *BillingHandler) createCheckoutSession(c *gin.Context, tenant *middlewar
 		CreatedByID:     tenant.UserID,
 	}
 	if err := h.billingService.CreatePaymentOrder(c.Request.Context(), order); err != nil {
-		fmt.Printf("Warning: failed to save order: %v\n", err)
+		// Order must be persisted before returning the checkout URL to the user.
+		// Without a local order record, webhook reconciliation will be unreliable.
+		log.Printf("[ERROR] createCheckoutSession: failed to save order %s: %v", orderNo, err)
+		apierr.InternalError(c, "failed to create payment order")
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -8,13 +8,12 @@ import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface SeatManagementProps {
   t: (key: string, params?: Record<string, string | number>) => string;
-  currentUrl: string;
+  currentUrl?: string; // Deprecated: no longer needed since seats are updated via API
   onPurchaseInitiated?: () => void;
 }
 
 export function SeatManagement({
   t,
-  currentUrl,
   onPurchaseInitiated,
 }: SeatManagementProps) {
   const [loading, setLoading] = useState(true);
@@ -45,20 +44,23 @@ export function SeatManagement({
     if (seatsToAdd < 1) return;
 
     setPurchasing(true);
+    setError(null);
     try {
-      const response = await billingApi.purchaseSeats(
-        seatsToAdd,
-        `${currentUrl}?payment=success`,
-        `${currentUrl}?payment=cancelled`
-      );
+      const result = await billingApi.purchaseSeats(seatsToAdd);
+
+      // Update local state with new seat data
+      if (result.seats) {
+        setSeatUsage(result.seats);
+      } else {
+        // Reload seat usage if not returned inline
+        await loadSeatUsage();
+      }
 
       onPurchaseInitiated?.();
-
-      if (response.session_url) {
-        window.location.href = response.session_url;
-      }
+      setShowPurchase(false);
+      setSeatsToAdd(1);
     } catch (err) {
-      setError(getLocalizedErrorMessage(err, t, t("billing.seats.purchaseFailed") || "Failed to initiate purchase"));
+      setError(getLocalizedErrorMessage(err, t, t("billing.seats.purchaseFailed") || "Failed to update seats"));
     } finally {
       setPurchasing(false);
     }

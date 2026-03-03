@@ -49,8 +49,9 @@ func TestHandleSubscriptionPaused(t *testing.T) {
 	if sub.Status != billing.SubscriptionStatusPaused {
 		t.Errorf("expected status paused, got %s", sub.Status)
 	}
-	if sub.FrozenAt == nil {
-		t.Error("expected FrozenAt to be set")
+	// Paused is user-initiated; FrozenAt should NOT be set (reserved for payment failure)
+	if sub.FrozenAt != nil {
+		t.Error("expected FrozenAt to be nil for paused subscription (not frozen)")
 	}
 }
 

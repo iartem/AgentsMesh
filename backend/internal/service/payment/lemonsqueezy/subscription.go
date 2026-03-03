@@ -93,6 +93,26 @@ func (p *Provider) UpdateSubscriptionSeats(ctx context.Context, subscriptionID s
 	return nil
 }
 
+// UpdateSubscriptionPlan changes the subscription to a new plan variant
+func (p *Provider) UpdateSubscriptionPlan(ctx context.Context, subscriptionID string, newVariantID string) error {
+	variantID, err := strconv.Atoi(newVariantID)
+	if err != nil {
+		return fmt.Errorf("invalid variant ID: %w", err)
+	}
+
+	_, _, err = p.client.Subscriptions.Update(ctx, &lemonsqueezy.SubscriptionUpdateParams{
+		ID: subscriptionID,
+		Attributes: lemonsqueezy.SubscriptionUpdateParamsAttributes{
+			VariantID: variantID,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update subscription plan: %w", err)
+	}
+
+	return nil
+}
+
 // GetSubscription retrieves subscription details
 func (p *Provider) GetSubscription(ctx context.Context, subscriptionID string) (*types.SubscriptionDetails, error) {
 	sub, _, err := p.client.Subscriptions.Get(ctx, subscriptionID)
@@ -109,27 +129,26 @@ func (p *Provider) GetSubscription(ctx context.Context, subscriptionID string) (
 		CancelAtPeriodEnd: sub.Data.Attributes.Cancelled,
 	}
 
-	// Calculate CurrentPeriodStart based on billing interval
-	// LemonSqueezy doesn't provide period_start directly, so we calculate it from RenewsAt
-	if !renewsAt.IsZero() {
-		billingInterval := sub.Data.Attributes.BillingAnchor
-		// Default to monthly if billing anchor not specified
-		if billingInterval == 0 {
-			// Check variant interval from subscription item
-			if sub.Data.Attributes.FirstSubscriptionItem != nil {
-				// Assume monthly if we can't determine
-				result.CurrentPeriodStart = renewsAt.AddDate(0, -1, 0)
-			}
-		} else if billingInterval == 12 {
-			// Yearly
+	// Calculate CurrentPeriodStart based on billing interval.
+	// LemonSqueezy doesn't provide period_start directly, so we infer it from
+	// the gap between created_at and renews_at. A gap > 6 months indicates yearly billing.
+	// NOTE: BillingAnchor is the day-of-month for billing (1-31), NOT the interval.
+	createdAt := sub.Data.Attributes.CreatedAt
+	if !renewsAt.IsZero() && !createdAt.IsZero() {
+		monthsGap := (renewsAt.Year()-createdAt.Year())*12 + int(renewsAt.Month()-createdAt.Month())
+		if monthsGap > 6 {
+			// Yearly billing: period start is 1 year before renews_at
 			result.CurrentPeriodStart = renewsAt.AddDate(-1, 0, 0)
 		} else {
-			// Monthly (most common)
+			// Monthly billing (most common)
 			result.CurrentPeriodStart = renewsAt.AddDate(0, -1, 0)
 		}
-	} else {
+	} else if !renewsAt.IsZero() {
+		// No created_at available, default to monthly
+		result.CurrentPeriodStart = renewsAt.AddDate(0, -1, 0)
+	} else if !createdAt.IsZero() {
 		// Fallback to created_at if renews_at is zero value
-		result.CurrentPeriodStart = sub.Data.Attributes.CreatedAt
+		result.CurrentPeriodStart = createdAt
 	}
 
 	// Get seats from first subscription item

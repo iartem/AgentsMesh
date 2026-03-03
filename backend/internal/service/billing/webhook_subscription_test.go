@@ -122,8 +122,9 @@ func TestHandleSubscriptionPaused_Success(t *testing.T) {
 	if sub.Status != billing.SubscriptionStatusPaused {
 		t.Errorf("expected paused status, got %s", sub.Status)
 	}
-	if sub.FrozenAt == nil {
-		t.Error("expected FrozenAt to be set")
+	// Paused is user-initiated; FrozenAt should NOT be set (reserved for payment failure)
+	if sub.FrozenAt != nil {
+		t.Error("expected FrozenAt to be nil for paused subscription (not frozen)")
 	}
 }
 
@@ -201,8 +202,9 @@ func TestHandleSubscriptionExpired_Success(t *testing.T) {
 	if sub.Status != billing.SubscriptionStatusExpired {
 		t.Errorf("expected expired status, got %s", sub.Status)
 	}
-	if sub.CanceledAt == nil {
-		t.Error("expected CanceledAt to be set")
+	// Expired is a natural end, not a user cancellation; CanceledAt should NOT be set
+	if sub.CanceledAt != nil {
+		t.Error("expected CanceledAt to be nil for expired subscription (not canceled)")
 	}
 }
 

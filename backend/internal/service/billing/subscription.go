@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -234,6 +235,104 @@ func (s *Service) AdminCancelSubscription(ctx context.Context, orgID int64) erro
 	return nil
 }
 
+// UpgradePlan upgrades the subscription plan via the payment provider API.
+// LemonSqueezy automatically handles proration for the billing difference.
+func (s *Service) UpgradePlan(ctx context.Context, orgID int64, planName string) (*billing.Subscription, error) {
+	sub, err := s.GetSubscription(ctx, orgID)
+	if err != nil {
+		return nil, ErrSubscriptionNotFound
+	}
+
+	// Only active or trialing subscriptions can be upgraded
+	if !sub.IsActive() && !sub.IsTrialing() {
+		if sub.IsFrozen() {
+			return nil, ErrSubscriptionFrozen
+		}
+		return nil, ErrSubscriptionNotActive
+	}
+
+	newPlan, err := s.GetPlan(ctx, planName)
+	if err != nil {
+		return nil, ErrPlanNotFound
+	}
+
+	// Reuse preloaded plan from GetSubscription if available
+	currentPlan := sub.Plan
+	if currentPlan == nil {
+		currentPlan, err = s.GetPlanByID(ctx, sub.PlanID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Only allow upgrades (higher price), not downgrades
+	if newPlan.PricePerSeatMonthly <= currentPlan.PricePerSeatMonthly {
+		return nil, fmt.Errorf("can only upgrade to a higher plan; use downgrade for lower plans")
+	}
+
+	// Find the variant ID for the target plan matching the current billing cycle
+	// Default to USD; for CN deployment we'd use CNY
+	currency := billing.CurrencyUSD
+	if s.paymentConfig != nil && s.paymentConfig.DeploymentType == "cn" {
+		currency = billing.CurrencyCNY
+	}
+	price, err := s.GetPlanPriceByID(ctx, newPlan.ID, currency)
+	if err != nil {
+		return nil, fmt.Errorf("price not found for target plan: %w", err)
+	}
+
+	// Get the appropriate variant ID based on billing cycle
+	var variantID string
+	if sub.BillingCycle == billing.BillingCycleYearly {
+		if price.LemonSqueezyVariantIDYearly != nil {
+			variantID = *price.LemonSqueezyVariantIDYearly
+		}
+	} else {
+		if price.LemonSqueezyVariantIDMonthly != nil {
+			variantID = *price.LemonSqueezyVariantIDMonthly
+		}
+	}
+
+	// Call provider API if subscription has a provider subscription ID
+	if sub.LemonSqueezySubscriptionID != nil && *sub.LemonSqueezySubscriptionID != "" {
+		if variantID == "" {
+			return nil, fmt.Errorf("no variant ID configured for plan %q with billing cycle %q and currency %q", planName, sub.BillingCycle, currency)
+		}
+		provider, err := s.getSubscriptionProvider()
+		if err != nil {
+			return nil, fmt.Errorf("payment provider not available: %w", err)
+		}
+		if err := provider.UpdateSubscriptionPlan(ctx, *sub.LemonSqueezySubscriptionID, variantID); err != nil {
+			return nil, fmt.Errorf("failed to update plan with provider: %w", err)
+		}
+	}
+
+	// Update local DB
+	// NOTE: If this fails after provider API succeeded, the webhook sync (Phase 1)
+	// will reconcile the data on the next subscription_updated event.
+	if err := s.db.WithContext(ctx).Model(&billing.Subscription{}).
+		Where("id = ?", sub.ID).
+		Updates(map[string]interface{}{
+			"plan_id":           newPlan.ID,
+			"downgrade_to_plan": nil,
+		}).Error; err != nil {
+		log.Printf("[WARN] UpgradePlan: provider API succeeded but DB update failed for org=%d, plan=%s: %v", orgID, planName, err)
+		return nil, fmt.Errorf("failed to sync plan locally: %w", err)
+	}
+
+	// Sync organization table redundant fields
+	if err := s.db.WithContext(ctx).Table("organizations").
+		Where("id = ?", orgID).
+		Update("subscription_plan", newPlan.Name).Error; err != nil {
+		log.Printf("[WARN] UpgradePlan: failed to sync organization table for org=%d: %v", orgID, err)
+	}
+
+	sub.PlanID = newPlan.ID
+	sub.DowngradeToPlan = nil
+	sub.Plan = newPlan
+	return sub, nil
+}
+
 // UpdateSubscription updates subscription plan (handles upgrade/downgrade)
 func (s *Service) UpdateSubscription(ctx context.Context, orgID int64, planName string) (*billing.Subscription, error) {
 	sub, err := s.GetSubscription(ctx, orgID)
@@ -287,6 +386,9 @@ func (s *Service) UpdateSubscription(ctx context.Context, orgID int64, planName 
 		if err := s.db.WithContext(ctx).Save(sub).Error; err != nil {
 			return nil, err
 		}
+
+		// Sync organization table with new plan name
+		s.syncOrganizationSubscription(ctx, orgID, &newPlan.Name, nil)
 
 		sub.Plan = newPlan
 		return sub, nil
