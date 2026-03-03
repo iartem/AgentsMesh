@@ -4,6 +4,7 @@ import (
 	"context"
 
 	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 )
 
@@ -11,7 +12,7 @@ import (
 
 // mcpListAvailablePods handles the "list_available_pods" MCP method.
 func (a *GRPCRunnerAdapter) mcpListAvailablePods(ctx context.Context, tc *middleware.TenantContext) (interface{}, *mcpError) {
-	pods, _, err := a.mcpPodService.ListPods(ctx, tc.OrganizationID, "active", 100, 0)
+	pods, _, err := a.mcpPodService.ListPods(ctx, tc.OrganizationID, agentpod.ActiveStatuses(), 100, 0)
 	if err != nil {
 		return nil, newMcpError(500, "failed to list pods")
 	}

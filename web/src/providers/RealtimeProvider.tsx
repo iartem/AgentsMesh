@@ -74,8 +74,8 @@ export function RealtimeProvider({
         // Pod events
         case "pod:created": {
           const data = event.data as PodCreatedData;
-          // Refresh pods list to include the new pod
-          podStore.fetchPods?.();
+          // Fetch the individual pod to avoid resetting pagination state
+          podStore.fetchPod?.(data.pod_key);
           // Also refresh Mesh topology since a new pod affects the mesh
           meshStore.fetchTopology?.();
           console.log("[Realtime] Pod created:", data.pod_key);
@@ -84,12 +84,12 @@ export function RealtimeProvider({
 
         case "pod:status_changed": {
           const data = event.data as PodStatusChangedData;
-          // Check if pod exists in store - if not, refresh the list
+          // Check if pod exists in store - if not, fetch the individual pod
           const existingPod = podStore.pods.find(p => p.pod_key === data.pod_key);
           if (!existingPod) {
-            // Pod not in list, might be newly created - refresh to get it
-            podStore.fetchPods?.();
-            console.log("[Realtime] Pod not found, refreshing list:", data.pod_key);
+            // Pod not in list, might be newly created - fetch individual pod
+            podStore.fetchPod?.(data.pod_key);
+            console.log("[Realtime] Pod not found, fetching:", data.pod_key);
           } else if (podStore.updatePodStatus) {
             // Update existing pod status (including error details if present)
             podStore.updatePodStatus(
@@ -357,7 +357,7 @@ export function RealtimeProvider({
   useEffect(() => {
     if (connectionState === "connected") {
       // Refresh all stores after reconnection
-      podStore.fetchPods?.();
+      podStore.fetchSidebarPods?.(usePodStore.getState().currentSidebarFilter);
       runnerStore.fetchRunners?.();
       ticketStore.fetchTickets?.();
       meshStore.fetchTopology?.();
@@ -365,8 +365,7 @@ export function RealtimeProvider({
       loopStore.fetchLoops?.();
     }
     // Store objects are stable, only connectionState changes trigger refresh
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionState]);
+  }, [connectionState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value: RealtimeContextValue = {
     connectionState,

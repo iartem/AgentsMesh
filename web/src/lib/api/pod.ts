@@ -46,12 +46,14 @@ export interface PodData {
 
 // Pods API
 export const podApi = {
-  list: (filters?: { status?: string; runnerId?: number }) => {
+  list: (filters?: { status?: string; runnerId?: number; limit?: number; offset?: number }) => {
     const params = new URLSearchParams();
     if (filters?.status) params.append("status", filters.status);
     if (filters?.runnerId) params.append("runner_id", String(filters.runnerId));
+    if (filters?.limit) params.append("limit", String(filters.limit));
+    if (filters?.offset) params.append("offset", String(filters.offset));
     const query = params.toString() ? `?${params.toString()}` : "";
-    return request<{ pods: PodData[]; total: number }>(`${orgPath("/pods")}${query}`);
+    return request<{ pods: PodData[]; total: number; limit: number; offset: number }>(`${orgPath("/pods")}${query}`);
   },
 
   get: (key: string) =>

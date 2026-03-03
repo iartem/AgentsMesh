@@ -15,6 +15,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ChevronDown,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { PodListItem } from "./PodListItem";
@@ -30,7 +31,7 @@ interface WorkspaceSidebarContentProps {
 export function WorkspaceSidebarContent({ className, onCreatePod, onTerminatePod }: WorkspaceSidebarContentProps) {
   const t = useTranslations();
   const { currentOrg } = useAuthStore();
-  const { pods, loading, fetchPods, terminatePod } = usePodStore();
+  const { pods, loading, fetchSidebarPods, loadMorePods, terminatePod, podHasMore, loadingMore } = usePodStore();
   const { runners, loading: runnersLoading, fetchRunners } = useRunnerStore();
   const { addPane, panes } = useWorkspaceStore();
 
@@ -45,32 +46,30 @@ export function WorkspaceSidebarContent({ className, onCreatePod, onTerminatePod
   // Load pods and runners on mount
   useEffect(() => {
     if (currentOrg) {
-      fetchPods();
+      fetchSidebarPods(filter);
       fetchRunners();
     }
-  }, [currentOrg, fetchPods, fetchRunners]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrg, fetchSidebarPods, fetchRunners]);
+
+  // Filter change handler
+  const handleFilterChange = useCallback((f: FilterType) => {
+    setFilter(f);
+    fetchSidebarPods(f);
+  }, [fetchSidebarPods]);
 
   // Refresh handler
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([fetchPods(), fetchRunners()]);
+      await Promise.all([fetchSidebarPods(filter), fetchRunners()]);
     } finally {
       setRefreshing(false);
     }
-  }, [fetchPods, fetchRunners]);
+  }, [fetchSidebarPods, filter, fetchRunners]);
 
-  // Filter and search pods
+  // Search filter (status filtering is now server-side)
   const filteredPods = pods.filter((pod) => {
-    // Status filter
-    if (filter === "running" && pod.status !== "running" && pod.status !== "initializing") {
-      return false;
-    }
-    if (filter === "completed" && pod.status !== "terminated" && pod.status !== "failed" && pod.status !== "paused") {
-      return false;
-    }
-
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesPodKey = pod.pod_key.toLowerCase().includes(query);
@@ -172,7 +171,7 @@ export function WorkspaceSidebarContent({ className, onCreatePod, onTerminatePod
       </div>
 
       {/* Filter tabs */}
-      <WorkspaceFilters filter={filter} onFilterChange={setFilter} t={t} />
+      <WorkspaceFilters filter={filter} onFilterChange={handleFilterChange} t={t} />
 
       {/* Pod list */}
       <div className="flex-1 overflow-y-auto">
@@ -212,6 +211,24 @@ export function WorkspaceSidebarContent({ className, onCreatePod, onTerminatePod
                 onTerminate={(e) => handleTerminateClick(pod.pod_key, e)}
               />
             ))}
+            {podHasMore && (
+              <div className="px-3 py-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full h-8 text-xs text-muted-foreground"
+                  onClick={loadMorePods}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 mr-1" />
+                  )}
+                  {t("workspace.loadMore")}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -5,6 +5,14 @@ import { getErrorMessage } from "@/lib/utils";
 // Re-export PodData as Pod for cleaner component API
 export type Pod = PodData;
 
+// Sidebar status filter → API status query parameter mapping
+export const SIDEBAR_STATUS_MAP: Record<string, string> = {
+  running: "running,initializing",
+  completed: "terminated,failed,paused,completed,error,orphaned",
+  all: "",
+};
+const SIDEBAR_PAGE_SIZE = 20;
+
 // Pod initialization progress state
 interface PodInitProgress {
   phase: string;
@@ -20,6 +28,11 @@ interface PodState {
   error: string | null;
   // Pod initialization progress (keyed by pod_key)
   initProgress: Record<string, PodInitProgress>;
+  // Sidebar pagination state
+  podTotal: number;
+  podHasMore: boolean;
+  loadingMore: boolean;
+  currentSidebarFilter: string;
 
   // Actions
   fetchPods: (filters?: {
@@ -27,6 +40,8 @@ interface PodState {
     runnerId?: number;
   }) => Promise<void>;
   fetchPod: (podKey: string) => Promise<void>;
+  fetchSidebarPods: (statusFilter: string) => Promise<void>;
+  loadMorePods: () => Promise<void>;
   createPod: (data: {
     runnerId: number;
     agentTypeId?: number;
@@ -45,12 +60,16 @@ interface PodState {
   clearError: () => void;
 }
 
-export const usePodStore = create<PodState>((set) => ({
+export const usePodStore = create<PodState>((set, get) => ({
   pods: [],
   currentPod: null,
   loading: false,
   error: null,
   initProgress: {},
+  podTotal: 0,
+  podHasMore: false,
+  loadingMore: false,
+  currentSidebarFilter: "running",
 
   fetchPods: async (filters) => {
     set({ loading: true, error: null });
@@ -88,6 +107,59 @@ export const usePodStore = create<PodState>((set) => ({
         loading: false,
       });
       throw error;
+    }
+  },
+
+  fetchSidebarPods: async (statusFilter) => {
+    set({ loading: true, error: null, currentSidebarFilter: statusFilter });
+    try {
+      const statusParam = SIDEBAR_STATUS_MAP[statusFilter] ?? "";
+      const response = await podApi.list({
+        status: statusParam || undefined,
+        limit: SIDEBAR_PAGE_SIZE,
+        offset: 0,
+      });
+      const pods = response.pods || [];
+      set({
+        pods,
+        podTotal: response.total,
+        podHasMore: pods.length < response.total,
+        loading: false,
+      });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to fetch pods"),
+        loading: false,
+      });
+    }
+  },
+
+  loadMorePods: async () => {
+    const { pods, podHasMore, loadingMore, currentSidebarFilter } = get();
+    if (!podHasMore || loadingMore) return;
+    set({ loadingMore: true });
+    try {
+      const statusParam = SIDEBAR_STATUS_MAP[currentSidebarFilter] ?? "";
+      const response = await podApi.list({
+        status: statusParam || undefined,
+        limit: SIDEBAR_PAGE_SIZE,
+        offset: pods.length,
+      });
+      const newPods = response.pods || [];
+      set((state) => {
+        const merged = [...state.pods, ...newPods];
+        return {
+          pods: merged,
+          podTotal: response.total,
+          podHasMore: merged.length < response.total,
+          loadingMore: false,
+        };
+      });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to load more pods"),
+        loadingMore: false,
+      });
     }
   },
 

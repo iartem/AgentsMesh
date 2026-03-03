@@ -63,6 +63,10 @@ describe("Pod Store", () => {
       currentPod: null,
       loading: false,
       error: null,
+      podTotal: 0,
+      podHasMore: false,
+      loadingMore: false,
+      currentSidebarFilter: "running",
     });
   });
 
@@ -525,6 +529,164 @@ describe("Pod Store", () => {
 
       const state = usePodStore.getState();
       expect(state.error).toBeNull();
+    });
+  });
+
+  describe("fetchSidebarPods", () => {
+    it("should fetch running pods with correct status param", async () => {
+      vi.mocked(podApi.list).mockResolvedValue({
+        pods: [mockPod],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().fetchSidebarPods("running");
+      });
+
+      expect(podApi.list).toHaveBeenCalledWith({
+        status: "running,initializing",
+        limit: 20,
+        offset: 0,
+      });
+      const state = usePodStore.getState();
+      expect(state.pods).toHaveLength(1);
+      expect(state.podTotal).toBe(1);
+      expect(state.podHasMore).toBe(false);
+      expect(state.currentSidebarFilter).toBe("running");
+    });
+
+    it("should fetch all pods without status param", async () => {
+      vi.mocked(podApi.list).mockResolvedValue({
+        pods: [mockPod, mockPod2],
+        total: 2,
+        limit: 20,
+        offset: 0,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().fetchSidebarPods("all");
+      });
+
+      expect(podApi.list).toHaveBeenCalledWith({
+        status: undefined,
+        limit: 20,
+        offset: 0,
+      });
+      const state = usePodStore.getState();
+      expect(state.pods).toHaveLength(2);
+      expect(state.currentSidebarFilter).toBe("all");
+    });
+
+    it("should set podHasMore when total exceeds loaded", async () => {
+      vi.mocked(podApi.list).mockResolvedValue({
+        pods: Array(20).fill(mockPod),
+        total: 50,
+        limit: 20,
+        offset: 0,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().fetchSidebarPods("running");
+      });
+
+      const state = usePodStore.getState();
+      expect(state.podHasMore).toBe(true);
+      expect(state.podTotal).toBe(50);
+    });
+
+    it("should handle fetch error", async () => {
+      vi.mocked(podApi.list).mockRejectedValue({ message: "Network error" });
+
+      await act(async () => {
+        await usePodStore.getState().fetchSidebarPods("running");
+      });
+
+      const state = usePodStore.getState();
+      expect(state.error).toBe("Network error");
+      expect(state.loading).toBe(false);
+    });
+  });
+
+  describe("loadMorePods", () => {
+    it("should append pods to existing list", async () => {
+      // Set initial state with existing pods and hasMore = true
+      usePodStore.setState({
+        pods: [mockPod],
+        podTotal: 2,
+        podHasMore: true,
+        currentSidebarFilter: "running",
+      });
+
+      vi.mocked(podApi.list).mockResolvedValue({
+        pods: [mockPod2],
+        total: 2,
+        limit: 20,
+        offset: 1,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().loadMorePods();
+      });
+
+      expect(podApi.list).toHaveBeenCalledWith({
+        status: "running,initializing",
+        limit: 20,
+        offset: 1,
+      });
+      const state = usePodStore.getState();
+      expect(state.pods).toHaveLength(2);
+      expect(state.pods[0].pod_key).toBe("pod-abc-123");
+      expect(state.pods[1].pod_key).toBe("pod-def-456");
+      expect(state.podHasMore).toBe(false);
+      expect(state.loadingMore).toBe(false);
+    });
+
+    it("should not load when podHasMore is false", async () => {
+      usePodStore.setState({
+        pods: [mockPod],
+        podHasMore: false,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().loadMorePods();
+      });
+
+      expect(podApi.list).not.toHaveBeenCalled();
+    });
+
+    it("should not load when already loading more", async () => {
+      usePodStore.setState({
+        pods: [mockPod],
+        podHasMore: true,
+        loadingMore: true,
+      });
+
+      await act(async () => {
+        await usePodStore.getState().loadMorePods();
+      });
+
+      expect(podApi.list).not.toHaveBeenCalled();
+    });
+
+    it("should handle load more error", async () => {
+      usePodStore.setState({
+        pods: [mockPod],
+        podTotal: 2,
+        podHasMore: true,
+        currentSidebarFilter: "running",
+      });
+
+      vi.mocked(podApi.list).mockRejectedValue({ message: "Load failed" });
+
+      await act(async () => {
+        await usePodStore.getState().loadMorePods();
+      });
+
+      const state = usePodStore.getState();
+      expect(state.error).toBe("Load failed");
+      expect(state.loadingMore).toBe(false);
     });
   });
 });

@@ -23,7 +23,7 @@ func TestListPods(t *testing.T) {
 	}
 
 	t.Run("list all", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, "", 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -36,7 +36,7 @@ func TestListPods(t *testing.T) {
 	})
 
 	t.Run("list with pagination", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, "", 2, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 2, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -48,13 +48,47 @@ func TestListPods(t *testing.T) {
 		}
 	})
 
-	t.Run("list with status filter", func(t *testing.T) {
-		pods, _, err := svc.ListPods(ctx, 1, agentpod.StatusInitializing, 10, 0)
+	t.Run("list with single status filter", func(t *testing.T) {
+		pods, _, err := svc.ListPods(ctx, 1, []string{agentpod.StatusInitializing}, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
 		if len(pods) != 5 {
 			t.Errorf("Pods count = %d, want 5", len(pods))
+		}
+	})
+
+	// Update some pods to different statuses for multi-status test
+	allPods, _, _ := svc.ListPods(ctx, 1, nil, 10, 0)
+	if len(allPods) >= 3 {
+		svc.UpdatePodStatus(ctx, allPods[0].PodKey, agentpod.StatusRunning)
+		svc.UpdatePodStatus(ctx, allPods[1].PodKey, agentpod.StatusTerminated)
+	}
+
+	t.Run("list with multiple status filter", func(t *testing.T) {
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusRunning, agentpod.StatusInitializing}, 10, 0)
+		if err != nil {
+			t.Fatalf("ListPods failed: %v", err)
+		}
+		// 1 running + 3 still initializing = 4
+		if total != 4 {
+			t.Errorf("Total = %d, want 4", total)
+		}
+		if len(pods) != 4 {
+			t.Errorf("Pods count = %d, want 4", len(pods))
+		}
+	})
+
+	t.Run("list with non-matching status filter", func(t *testing.T) {
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusPaused}, 10, 0)
+		if err != nil {
+			t.Fatalf("ListPods failed: %v", err)
+		}
+		if total != 0 {
+			t.Errorf("Total = %d, want 0", total)
+		}
+		if len(pods) != 0 {
+			t.Errorf("Pods count = %d, want 0", len(pods))
 		}
 	})
 }

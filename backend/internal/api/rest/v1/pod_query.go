@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
@@ -32,10 +33,15 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 		limit = 20
 	}
 
+	var statuses []string
+	if req.Status != "" {
+		statuses = strings.Split(req.Status, ",")
+	}
+
 	pods, total, err := h.podService.ListPods(
 		c.Request.Context(),
 		tenant.OrganizationID,
-		req.Status,
+		statuses,
 		limit,
 		req.Offset,
 	)

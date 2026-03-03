@@ -81,11 +81,16 @@ func (s *PodService) GetPodsByTicket(ctx context.Context, ticketID int64) ([]*ag
 }
 
 // ListPods returns pods for an organization
-func (s *PodService) ListPods(ctx context.Context, orgID int64, status string, limit, offset int) ([]*agentpod.Pod, int64, error) {
+func (s *PodService) ListPods(ctx context.Context, orgID int64, statuses []string, limit, offset int) ([]*agentpod.Pod, int64, error) {
 	query := s.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("organization_id = ?", orgID)
 
-	if status != "" {
-		query = query.Where("status = ?", status)
+	switch len(statuses) {
+	case 0:
+		// No status filter
+	case 1:
+		query = query.Where("status = ?", statuses[0])
+	default:
+		query = query.Where("status IN ?", statuses)
 	}
 
 	var total int64
