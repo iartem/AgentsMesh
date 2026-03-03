@@ -237,7 +237,7 @@
         "period": "사용자/월"
       },
       "enterprise": {
-        "name": "Business",
+        "name": "Team",
         "description": "고급 보안이 필요한 조직을 위해.",
         "features": {
           "0": "Pro의 모든 기능",

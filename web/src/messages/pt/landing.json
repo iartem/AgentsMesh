@@ -237,7 +237,7 @@
         "period": "por usuário/mês"
       },
       "enterprise": {
-        "name": "Business",
+        "name": "Team",
         "description": "Para organizações com necessidades avançadas de segurança.",
         "features": {
           "0": "Tudo no Pro",

@@ -237,7 +237,7 @@
         "period": "ユーザー/月"
       },
       "enterprise": {
-        "name": "Business",
+        "name": "Team",
         "description": "高度なセキュリティニーズを持つ組織向け。",
         "features": {
           "0": "Proのすべて",

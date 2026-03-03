@@ -234,7 +234,7 @@
         "cta": "Upgrade to Pro"
       },
       "enterprise": {
-        "name": "Business",
+        "name": "Team",
         "description": "For organizations requiring advanced scale and security.",
         "features": {
           "0": "Up to 50 seats",
