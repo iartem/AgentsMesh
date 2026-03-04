@@ -35,30 +35,30 @@
       "title": "与我们一起塑造未来",
       "subtitle": "我们正在构建让 AI 智能体协作完成复杂开发任务的平台。加入我们，共同开启这段激动人心的旅程。"
     },
-    "openPositions": "开放职位",
+    "openPositions": "开放角色",
     "responsibilities": "主要职责",
     "applyNow": "立即申请",
     "positions": {
-      "builder": {
-        "title": "Builder（构建者）",
-        "description": "Builder 是将想法变为现实的创造者。你将探索可能性的边界，实现创新功能，推动技术能力的极限。",
-        "resp1": "设计和实现核心平台功能",
-        "resp2": "探索 AI 智能体能力的边界",
-        "resp3": "构建健壮、可扩展的基础设施"
+      "harnessEngineer": {
+        "title": "Harness Engineer（约束系统工程师）",
+        "description": "Harness Engineer 负责构建 AI 智能体运行的基础环境。你将设计沙箱、定义执行约束，构建让智能体安全、隔离且高性能运行的基础设施。",
+        "resp1": "设计和构建安全、隔离的 AI 智能体运行时环境",
+        "resp2": "定义执行约束、权限边界和安全护栏",
+        "resp3": "开发和优化沙箱基础设施，确保智能体操作可复现"
       },
-      "experiencer": {
-        "title": "Experiencer（体验官）",
-        "description": "Experiencer 将技术转化为令人愉悦的产品。你将专注于用户体验，确保与 AgentsMesh 的每次交互都是直观而强大的。",
-        "resp1": "设计和优化用户体验",
-        "resp2": "将功能打磨成精致的产品",
-        "resp3": "收集并整合用户反馈"
+      "producer": {
+        "title": "Producer（产品制作人）",
+        "description": "Producer 将基础设施转化为用户喜爱的产品。你将连接技术能力与用户需求，将与 AgentsMesh 的每次交互打磨成直观而强大的体验。",
+        "resp1": "将用户需求转化为产品定义和功能设计",
+        "resp2": "将平台能力塑造为精致的用户级产品",
+        "resp3": "收集反馈并持续迭代，交付卓越的用户体验"
       },
-      "growth": {
-        "title": "Growth（增长官）",
-        "description": "Growth 负责将产品推向市场。你将帮助开发者发现 AgentsMesh，并将他们转化为热情的传播者。",
-        "resp1": "制定市场推广策略",
-        "resp2": "与开发者社区建立联系",
-        "resp3": "推动用户获取和留存"
+      "growthHacker": {
+        "title": "Growth Hacker（增长黑客）",
+        "description": "Growth Hacker 以创造性的数据驱动策略将产品推向市场。你将帮助开发者发现 AgentsMesh，快速运行增长实验，将早期用户转化为热情的传播者。",
+        "resp1": "设计和执行数据驱动的增长实验",
+        "resp2": "与开发者社区建立关系，推动产品采用",
+        "resp3": "优化获客漏斗，驱动用户留存"
       }
     },
     "whyJoin": {

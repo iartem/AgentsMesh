@@ -15,13 +15,13 @@ interface JobPosition {
 
 const positions: JobPosition[] = [
   {
-    id: "builder",
-    titleKey: "careers.positions.builder.title",
-    descriptionKey: "careers.positions.builder.description",
+    id: "harnessEngineer",
+    titleKey: "careers.positions.harnessEngineer.title",
+    descriptionKey: "careers.positions.harnessEngineer.description",
     responsibilities: [
-      "careers.positions.builder.resp1",
-      "careers.positions.builder.resp2",
-      "careers.positions.builder.resp3",
+      "careers.positions.harnessEngineer.resp1",
+      "careers.positions.harnessEngineer.resp2",
+      "careers.positions.harnessEngineer.resp3",
     ],
     icon: (
       <svg
@@ -34,19 +34,19 @@ const positions: JobPosition[] = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
         />
       </svg>
     ),
   },
   {
-    id: "experiencer",
-    titleKey: "careers.positions.experiencer.title",
-    descriptionKey: "careers.positions.experiencer.description",
+    id: "producer",
+    titleKey: "careers.positions.producer.title",
+    descriptionKey: "careers.positions.producer.description",
     responsibilities: [
-      "careers.positions.experiencer.resp1",
-      "careers.positions.experiencer.resp2",
-      "careers.positions.experiencer.resp3",
+      "careers.positions.producer.resp1",
+      "careers.positions.producer.resp2",
+      "careers.positions.producer.resp3",
     ],
     icon: (
       <svg
@@ -65,13 +65,13 @@ const positions: JobPosition[] = [
     ),
   },
   {
-    id: "growth",
-    titleKey: "careers.positions.growth.title",
-    descriptionKey: "careers.positions.growth.description",
+    id: "growthHacker",
+    titleKey: "careers.positions.growthHacker.title",
+    descriptionKey: "careers.positions.growthHacker.description",
     responsibilities: [
-      "careers.positions.growth.resp1",
-      "careers.positions.growth.resp2",
-      "careers.positions.growth.resp3",
+      "careers.positions.growthHacker.resp1",
+      "careers.positions.growthHacker.resp2",
+      "careers.positions.growthHacker.resp3",
     ],
     icon: (
       <svg

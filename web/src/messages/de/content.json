@@ -35,30 +35,30 @@
       "title": "Join Us in Shaping the Future",
       "subtitle": "We're building the platform that enables AI agents to collaborate on complex development tasks. Join us in this exciting journey."
     },
-    "openPositions": "Open Positions",
+    "openPositions": "Open Roles",
     "responsibilities": "Key Responsibilities",
     "applyNow": "Apply Now",
     "positions": {
-      "builder": {
-        "title": "Builder",
-        "description": "Builders are the creators who turn ideas into reality. You'll push the boundaries of what's possible, exploring new capabilities and implementing innovative features.",
-        "resp1": "Design and implement core platform features",
-        "resp2": "Explore the boundaries of AI agent capabilities",
-        "resp3": "Build robust, scalable infrastructure"
+      "harnessEngineer": {
+        "title": "Harness Engineer",
+        "description": "Harness Engineers architect the runtime environments where AI agents operate. You'll design sandboxes, define execution constraints, and build the infrastructure that keeps agents secure, isolated, and performant.",
+        "resp1": "Design and build secure, isolated runtime environments for AI agents",
+        "resp2": "Define execution constraints, permission boundaries, and safety guardrails",
+        "resp3": "Develop and optimize sandbox infrastructure for reproducible agent operations"
       },
-      "experiencer": {
-        "title": "Experiencer",
-        "description": "Experiencers transform technology into delightful products. You'll focus on user experience, ensuring every interaction with AgentsMesh is intuitive and powerful.",
-        "resp1": "Design and refine user experiences",
-        "resp2": "Transform features into polished products",
-        "resp3": "Gather and incorporate user feedback"
+      "producer": {
+        "title": "Producer",
+        "description": "Producers turn infrastructure into products that users love. You'll bridge the gap between technical capabilities and user needs, shaping every interaction with AgentsMesh into an intuitive and powerful experience.",
+        "resp1": "Translate user needs into product requirements and features",
+        "resp2": "Shape platform capabilities into polished, user-facing products",
+        "resp3": "Gather feedback and iterate to deliver exceptional user experiences"
       },
-      "growth": {
-        "title": "Growth",
-        "description": "Growth champions take our product to market. You'll help developers discover AgentsMesh and turn them into passionate advocates.",
-        "resp1": "Develop go-to-market strategies",
-        "resp2": "Build relationships with developer communities",
-        "resp3": "Drive user acquisition and retention"
+      "growthHacker": {
+        "title": "Growth Hacker",
+        "description": "Growth Hackers take our product to market with creative, data-driven strategies. You'll help developers discover AgentsMesh, run rapid experiments, and turn early adopters into passionate advocates.",
+        "resp1": "Design and execute data-driven growth experiments",
+        "resp2": "Build relationships with developer communities and drive adoption",
+        "resp3": "Optimize acquisition funnels and drive user retention"
       }
     },
     "whyJoin": {
