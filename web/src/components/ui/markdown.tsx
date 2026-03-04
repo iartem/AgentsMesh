@@ -93,7 +93,7 @@ export function Markdown({
   return (
     <div
       className={cn(
-        "prose prose-neutral dark:prose-invert max-w-none",
+        "prose max-w-none",
         compact && "prose-sm",
         // Override prose defaults for compact mode
         compact && "[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs",
