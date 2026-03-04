@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/i18n";
 import { AuthButtons } from "./AuthButtons";
 import { Logo } from "./Logo";
 
@@ -14,7 +15,10 @@ export function PageHeader() {
           </div>
           <span className="text-xl font-bold">AgentsMesh</span>
         </Link>
-        <AuthButtons consoleVariant="primary" />
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher variant="icon" />
+          <AuthButtons consoleVariant="primary" />
+        </div>
       </div>
     </header>
   );

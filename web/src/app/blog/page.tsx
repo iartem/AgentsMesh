@@ -1,61 +1,35 @@
-"use client";
-
 import Link from "next/link";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PageHeader, PageFooter } from "@/components/common";
-import { useTranslations, useLocale } from "next-intl";
+import { getAllPosts } from "@/lib/blog";
 
-interface BlogPost {
-  slug: string;
-  titleKey: string;
-  excerptKey: string;
-  date: string;
-  author: string;
-  category: string;
-  readTime: number;
+/** Locale → Intl date locale mapping */
+const dateLocaleMap: Record<string, string> = {
+  en: "en-US",
+  zh: "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  pt: "pt-BR",
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations();
+
+  return {
+    title: `${t("blog.hero.title")} | AgentsMesh`,
+    description: t("blog.hero.subtitle"),
+  };
 }
 
-const blogPosts: BlogPost[] = [
-  {
-    slug: "command-center",
-    titleKey: "blog.posts.commandCenter.title",
-    excerptKey: "blog.posts.commandCenter.excerpt",
-    date: "2026-02-23",
-    author: "AgentsMesh Team",
-    category: "Insight",
-    readTime: 10,
-  },
-  {
-    slug: "introducing-agentsmesh",
-    titleKey: "blog.posts.introducing.title",
-    excerptKey: "blog.posts.introducing.excerpt",
-    date: "2025-01-08",
-    author: "AgentsMesh Team",
-    category: "Announcement",
-    readTime: 5,
-  },
-  {
-    slug: "multi-agent-collaboration",
-    titleKey: "blog.posts.multiAgent.title",
-    excerptKey: "blog.posts.multiAgent.excerpt",
-    date: "2024-12-20",
-    author: "AgentsMesh Team",
-    category: "Technical",
-    readTime: 8,
-  },
-  {
-    slug: "self-hosted-runners",
-    titleKey: "blog.posts.selfHosted.title",
-    excerptKey: "blog.posts.selfHosted.excerpt",
-    date: "2024-12-05",
-    author: "AgentsMesh Team",
-    category: "Guide",
-    readTime: 6,
-  },
-];
-
-export default function BlogPage() {
-  const t = useTranslations();
-  const locale = useLocale();
+export default async function BlogPage() {
+  const locale = await getLocale();
+  const t = await getTranslations();
+  const posts = await getAllPosts(locale);
+  const dateLocale = dateLocaleMap[locale] ?? "en-US";
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,7 +51,7 @@ export default function BlogPage() {
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="space-y-8">
-            {blogPosts.map((post) => (
+            {posts.map((post) => (
               <article
                 key={post.slug}
                 className="group p-6 rounded-xl border border-border hover:border-primary/50 transition-colors"
@@ -88,14 +62,11 @@ export default function BlogPage() {
                       {post.category}
                     </span>
                     <time>
-                      {new Date(post.date).toLocaleDateString(
-                        locale === "zh" ? "zh-CN" : "en-US",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        }
-                      )}
+                      {new Date(post.date).toLocaleDateString(dateLocale, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </time>
                     <span>•</span>
                     <span>
@@ -103,11 +74,9 @@ export default function BlogPage() {
                     </span>
                   </div>
                   <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
-                    {t(post.titleKey)}
+                    {post.title}
                   </h2>
-                  <p className="text-muted-foreground mb-4">
-                    {t(post.excerptKey)}
-                  </p>
+                  <p className="text-muted-foreground mb-4">{post.excerpt}</p>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                       <span className="text-xs font-medium text-primary">

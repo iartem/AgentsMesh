@@ -344,3 +344,7 @@ UPDATE users SET is_system_admin = true WHERE email = 'admin@example.com';
 ```
 
 Or use an existing admin to grant privileges via the Admin Console UI.
+
+
+## Principles
+* Architecture must conform to SOLID, GRASP, and YAGNI; files should stay under 200 lines; balance cohesion and SRP — split by reason to change, not by line count. 

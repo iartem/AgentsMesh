@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     ? process.env.ALLOWED_DEV_ORIGINS.split(",")
     : [],
 
+  // Ensure standalone build includes blog markdown files
+  outputFileTracingIncludes: {
+    "/blog/[slug]": ["./src/content/blog/**/*.md"],
+    "/blog": ["./src/content/blog/**/*.md"],
+  },
+
   // Required for next-intl plugin to resolve config in Turbopack dev mode
   // See: https://github.com/amannn/next-intl/issues/1779
   turbopack: {},

@@ -1,80 +1,66 @@
-"use client";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PageHeader, PageFooter } from "@/components/common";
-import { useTranslations, useLocale } from "next-intl";
+import { Markdown } from "@/components/ui/markdown";
+import { getPost, getAllSlugs } from "@/lib/blog";
 
-interface BlogPost {
-  slug: string;
-  titleKey: string;
-  contentKey: string;
-  date: string;
-  author: string;
-  category: string;
-  readTime: number;
-}
-
-const blogPosts: Record<string, BlogPost> = {
-  "command-center": {
-    slug: "command-center",
-    titleKey: "blog.posts.commandCenter.title",
-    contentKey: "blog.posts.commandCenter.content",
-    date: "2026-02-23",
-    author: "AgentsMesh Team",
-    category: "Insight",
-    readTime: 10,
-  },
-  "introducing-agentsmesh": {
-    slug: "introducing-agentsmesh",
-    titleKey: "blog.posts.introducing.title",
-    contentKey: "blog.posts.introducing.content",
-    date: "2025-01-08",
-    author: "AgentsMesh Team",
-    category: "Announcement",
-    readTime: 5,
-  },
-  "multi-agent-collaboration": {
-    slug: "multi-agent-collaboration",
-    titleKey: "blog.posts.multiAgent.title",
-    contentKey: "blog.posts.multiAgent.content",
-    date: "2024-12-20",
-    author: "AgentsMesh Team",
-    category: "Technical",
-    readTime: 8,
-  },
-  "self-hosted-runners": {
-    slug: "self-hosted-runners",
-    titleKey: "blog.posts.selfHosted.title",
-    contentKey: "blog.posts.selfHosted.content",
-    date: "2024-12-05",
-    author: "AgentsMesh Team",
-    category: "Guide",
-    readTime: 6,
-  },
+/** Locale → Intl date locale mapping */
+const dateLocaleMap: Record<string, string> = {
+  en: "en-US",
+  zh: "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  pt: "pt-BR",
 };
 
-export default function BlogPostPage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const t = useTranslations();
-  const locale = useLocale();
+export async function generateStaticParams() {
+  const slugs = await getAllSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
 
-  const post = blogPosts[slug];
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const locale = await getLocale();
+  const post = await getPost(locale, slug);
 
-  if (!post) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">{t("blog.notFound")}</h1>
-          <Link href="/blog">
-            <Button>{t("blog.backToList")}</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!post) return { title: "Post not found" };
+
+  return {
+    title: `${post.title} | AgentsMesh Blog`,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: "article",
+      publishedTime: post.date,
+      authors: [post.author],
+      locale: dateLocaleMap[locale] ?? "en-US",
+    },
+  };
+}
+
+export default async function BlogPostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const locale = await getLocale();
+  const t = await getTranslations();
+  const post = await getPost(locale, slug);
+
+  if (!post) notFound();
+
+  const dateLocale = dateLocaleMap[locale] ?? "en-US";
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,14 +96,11 @@ export default function BlogPostPage() {
               {post.category}
             </span>
             <time>
-              {new Date(post.date).toLocaleDateString(
-                locale === "zh" ? "zh-CN" : "en-US",
-                {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              )}
+              {new Date(post.date).toLocaleDateString(dateLocale, {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </time>
             <span>•</span>
             <span>
@@ -126,7 +109,7 @@ export default function BlogPostPage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl font-bold mb-6">{t(post.titleKey)}</h1>
+          <h1 className="text-4xl font-bold mb-6">{post.title}</h1>
 
           {/* Author */}
           <div className="flex items-center gap-3 mb-12 pb-8 border-b border-border">
@@ -141,11 +124,10 @@ export default function BlogPostPage() {
           </div>
 
           {/* Content */}
-          <div className="prose prose-neutral dark:prose-invert max-w-none">
-            <p className="text-lg text-muted-foreground whitespace-pre-line">
-              {t(post.contentKey)}
-            </p>
-          </div>
+          <Markdown
+            content={post.content}
+            className="prose-lg [&_h2]:mt-10 [&_h2]:mb-4"
+          />
         </div>
       </article>
 
