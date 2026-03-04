@@ -22,6 +22,7 @@ import {
   Server,
   Settings,
   Repeat,
+  LifeBuoy,
   CircleHelp,
   type LucideIcon,
 } from "lucide-react";
@@ -150,8 +151,36 @@ export function ActivityBar({ className }: ActivityBarProps) {
           })}
         </nav>
 
-        {/* Bottom activities (Help + Settings) */}
+        {/* Bottom activities (Support + Help + Settings) */}
         <nav className="flex flex-col items-center py-2 gap-1 border-t border-border">
+          {/* Support link (user-level, no org context) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/support"
+                className={cn(
+                  "w-10 h-10 flex items-center justify-center rounded-md transition-colors relative",
+                  pathname.startsWith("/support")
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {pathname.startsWith("/support") && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
+                )}
+                <LifeBuoy className="w-5 h-5" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent
+                side="right"
+                className="z-50 bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
+              >
+                {t("support.title")}
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+
           {/* Help & Feedback */}
           <Tooltip>
             <TooltipTrigger asChild>

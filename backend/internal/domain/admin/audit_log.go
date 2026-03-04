@@ -59,6 +59,11 @@ const (
 
 	// Config actions
 	AuditActionConfigUpdate AuditAction = "config.update"
+
+	// Support ticket actions
+	AuditActionSupportTicketReply  AuditAction = "support_ticket.reply"
+	AuditActionSupportTicketStatus AuditAction = "support_ticket.status"
+	AuditActionSupportTicketAssign AuditAction = "support_ticket.assign"
 )
 
 // TargetType represents the type of entity being acted upon
@@ -71,6 +76,7 @@ const (
 	TargetTypeRunner       TargetType = "runner"
 	TargetTypePromoCode    TargetType = "promo_code"
 	TargetTypeConfig       TargetType = "config"
+	TargetTypeSupportTicket TargetType = "support_ticket"
 
 	// Aliases for convenience
 	AuditTargetUser         = TargetTypeUser

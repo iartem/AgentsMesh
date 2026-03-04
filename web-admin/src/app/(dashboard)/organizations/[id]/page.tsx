@@ -1,7 +1,6 @@
 "use client";
 
-import { use } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Users, Calendar, Server, Trash2 } from "lucide-react";
@@ -13,7 +12,11 @@ import {
   getOrganizationMembers,
   deleteOrganization,
   listRunners,
+  Organization,
+  OrganizationMember,
+  Runner,
 } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate } from "@/lib/utils";
 import { SubscriptionSection } from "./_components/subscription-section";
 import { MembersSection } from "./_components/members-section";
@@ -27,43 +30,70 @@ export default function OrganizationDetailPage({
   const { id } = use(params);
   const orgId = parseInt(id, 10);
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const { data: org, isLoading: orgLoading } = useQuery({
-    queryKey: ["organization", orgId],
-    queryFn: () => getOrganization(orgId),
-  });
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+  const [membersData, setMembersData] = useState<{ organization: Organization; members: OrganizationMember[] } | null>(null);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [runnersData, setRunnersData] = useState<PaginatedResponse<Runner> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: membersData, isLoading: membersLoading } = useQuery({
-    queryKey: ["organization-members", orgId],
-    queryFn: () => getOrganizationMembers(orgId),
-  });
+  const fetchOrg = useCallback(async () => {
+    try {
+      const result = await getOrganization(orgId);
+      setOrg(result);
+    } catch {
+      // Keep null on error
+    } finally {
+      setOrgLoading(false);
+    }
+  }, [orgId]);
 
-  const { data: runnersData } = useQuery({
-    queryKey: ["organization-runners", orgId],
-    queryFn: () => listRunners({ org_id: orgId, page_size: 100 }),
-  });
+  const fetchMembers = useCallback(async () => {
+    try {
+      const result = await getOrganizationMembers(orgId);
+      setMembersData(result);
+    } catch {
+      // Keep null on error
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [orgId]);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteOrganization,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      toast.success("Organization deleted successfully");
-      router.push("/organizations");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete organization");
-    },
-  });
+  const fetchRunners = useCallback(async () => {
+    try {
+      const result = await listRunners({ org_id: orgId, page_size: 100 });
+      setRunnersData(result);
+    } catch {
+      // Keep null on error
+    }
+  }, [orgId]);
 
-  const handleDelete = () => {
+  useEffect(() => {
+    fetchOrg();
+    fetchMembers();
+    fetchRunners();
+  }, [fetchOrg, fetchMembers, fetchRunners]);
+
+  const handleDelete = async () => {
     if (
-      org &&
-      confirm(
+      !org ||
+      !confirm(
         `Are you sure you want to delete "${org.name}"? This action cannot be undone.`
       )
     ) {
-      deleteMutation.mutate(orgId);
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteOrganization(orgId);
+      toast.success("Organization deleted successfully");
+      router.push("/organizations");
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to delete organization";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -107,7 +137,7 @@ export default function OrganizationDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Link href="/organizations">
             <Button variant="ghost" size="icon">
@@ -135,7 +165,7 @@ export default function OrganizationDetailPage({
         <Button
           variant="destructive"
           onClick={handleDelete}
-          disabled={deleteMutation.isPending}
+          disabled={isDeleting}
         >
           <Trash2 className="mr-2 h-4 w-4" />
           Delete Organization

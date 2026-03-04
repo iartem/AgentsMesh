@@ -12,10 +12,16 @@ import {
   Tag,
   Radio,
   Boxes,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const navItems = [
   {
@@ -54,18 +60,24 @@ const navItems = [
     icon: Tag,
   },
   {
+    title: "Support Tickets",
+    href: "/support-tickets",
+    icon: MessageSquare,
+  },
+  {
     title: "Audit Logs",
     href: "/audit-logs",
     icon: ScrollText,
   },
 ];
 
-export function Sidebar() {
+/** Shared navigation content used by both desktop sidebar and mobile sheet. */
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
+    <>
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
         <svg
@@ -85,7 +97,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
@@ -93,6 +105,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
@@ -137,6 +150,33 @@ export function Sidebar() {
           Sign Out
         </Button>
       </div>
+    </>
+  );
+}
+
+/** Desktop sidebar — hidden below md breakpoint. */
+export function Sidebar() {
+  return (
+    <aside className="hidden md:flex h-screen w-64 flex-col border-r border-border bg-card">
+      <SidebarContent />
     </aside>
+  );
+}
+
+/** Mobile sidebar — rendered as a Sheet overlay, visible below md. */
+export function MobileSidebar({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="left" className="p-0">
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
+        <SidebarContent onNavigate={() => onOpenChange(false)} />
+      </SheetContent>
+    </Sheet>
   );
 }

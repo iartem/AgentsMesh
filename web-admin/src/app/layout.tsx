@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -36,9 +35,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <QueryProvider>
-            {children}
-          </QueryProvider>
+          {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

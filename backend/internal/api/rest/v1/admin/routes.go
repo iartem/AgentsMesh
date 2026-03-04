@@ -10,6 +10,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	"github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +23,7 @@ type Services struct {
 	RelayManager      *relay.Manager
 	ExtensionRepo     extension.Repository
 	MarketplaceWorker *extensionservice.MarketplaceWorker
+	SupportTicket     *supportticket.Service
 }
 
 // RegisterRoutes registers all admin console routes
@@ -81,5 +83,11 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 	if svc.ExtensionRepo != nil {
 		skillRegistryHandler := NewSkillRegistryHandler(svc.ExtensionRepo, svc.MarketplaceWorker)
 		skillRegistryHandler.RegisterRoutes(protected)
+	}
+
+	// Support Tickets (optional - only if support ticket service is available)
+	if svc.SupportTicket != nil {
+		supportTicketHandler := NewSupportTicketHandler(svc.SupportTicket, svc.Admin)
+		supportTicketHandler.RegisterRoutes(protected)
 	}
 }

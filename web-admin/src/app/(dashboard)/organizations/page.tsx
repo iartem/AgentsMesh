@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, Trash2, Users, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -9,32 +8,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listOrganizations, deleteOrganization, Organization } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate } from "@/lib/utils";
 
 export default function OrganizationsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const queryClient = useQueryClient();
+  const [data, setData] = useState<PaginatedResponse<Organization> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["organizations", { search, page }],
-    queryFn: () => listOrganizations({ search, page, page_size: 20 }),
-  });
+  const fetchOrganizations = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await listOrganizations({ search, page, page_size: 20 });
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, page]);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteOrganization,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
+
+  const handleDelete = async (org: Organization) => {
+    if (!confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteOrganization(org.id);
       toast.success("Organization deleted successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete organization");
-    },
-  });
-
-  const handleDelete = (org: Organization) => {
-    if (confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(org.id);
+      await fetchOrganizations();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to delete organization";
+      toast.error(message);
     }
   };
 
@@ -42,7 +51,7 @@ export default function OrganizationsPage() {
     <div className="space-y-4">
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search organizations..."
@@ -125,7 +134,7 @@ function OrgRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         {org.logo_url ? (
           <img
@@ -151,7 +160,7 @@ function OrgRow({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="text-right text-xs text-muted-foreground">
+        <div className="hidden text-right text-xs text-muted-foreground sm:block">
           <p>Created {formatDate(org.created_at)}</p>
         </div>
         <div className="flex gap-1">

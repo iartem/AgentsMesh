@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard,
   Snowflake,
@@ -71,95 +70,182 @@ function getPlanLimit(plan: SubscriptionPlan, resource: string): number {
 }
 
 export function SubscriptionSection({ orgId }: { orgId: number }) {
-  const queryClient = useQueryClient();
   const [renewMonths, setRenewMonths] = useState("1");
   const [newSeatCount, setNewSeatCount] = useState("");
   const [quotaResource, setQuotaResource] = useState("users");
   const [quotaLimit, setQuotaLimit] = useState("");
 
-  const subQueryKey = ["organization-subscription", orgId];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [sub, setSub] = useState<any>(null);
+  const [subLoading, setSubLoading] = useState(true);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
 
-  const { data: sub, isLoading: subLoading } = useQuery({
-    queryKey: subQueryKey,
-    queryFn: async () => {
-      try {
-        return await getOrganizationSubscription(orgId);
-      } catch (err: unknown) {
-        // Return null for 404 (no subscription) instead of throwing
-        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 404) {
-          return null;
-        }
-        throw err;
+  // Loading states for various actions
+  const [changePlanPending, setChangePlanPending] = useState(false);
+  const [changeSeatsPending, setChangeSeatsPending] = useState(false);
+  const [changeCyclePending, setChangeCyclePending] = useState(false);
+  const [freezePending, setFreezePending] = useState(false);
+  const [unfreezePending, setUnfreezePending] = useState(false);
+  const [cancelPending, setCancelPending] = useState(false);
+  const [renewPending, setRenewPending] = useState(false);
+  const [autoRenewPending, setAutoRenewPending] = useState(false);
+  const [quotaPending, setQuotaPending] = useState(false);
+
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const result = await getOrganizationSubscription(orgId);
+      setSub(result);
+    } catch (err: unknown) {
+      // Return null for 404 (no subscription) instead of throwing
+      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 404) {
+        setSub(null);
       }
-    },
-  });
+    } finally {
+      setSubLoading(false);
+    }
+  }, [orgId]);
 
-  const { data: plansData } = useQuery({
-    queryKey: ["subscription-plans", orgId],
-    queryFn: () => getSubscriptionPlans(orgId),
-  });
+  const fetchPlans = useCallback(async () => {
+    try {
+      const result = await getSubscriptionPlans(orgId);
+      setPlans(result?.data || []);
+    } catch {
+      // Keep empty plans on error
+    }
+  }, [orgId]);
 
-  const plans = plansData?.data || [];
+  useEffect(() => {
+    fetchSubscription();
+    fetchPlans();
+  }, [fetchSubscription, fetchPlans]);
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: subQueryKey });
-    queryClient.invalidateQueries({ queryKey: ["organization", orgId] });
+  const refreshData = async () => {
+    await fetchSubscription();
   };
 
-  const changePlanMutation = useMutation({
-    mutationFn: (planName: string) => updateSubscriptionPlan(orgId, planName),
-    onSuccess: () => { invalidate(); toast.success("Plan updated"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to update plan"),
-  });
+  const handleChangePlan = async (planName: string) => {
+    if (!confirm(`Change plan to "${planName}"? This takes effect immediately.`)) return;
+    setChangePlanPending(true);
+    try {
+      await updateSubscriptionPlan(orgId, planName);
+      toast.success("Plan updated");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to update plan");
+    } finally {
+      setChangePlanPending(false);
+    }
+  };
 
-  const changeSeatsMutation = useMutation({
-    mutationFn: (count: number) => updateSubscriptionSeats(orgId, count),
-    onSuccess: () => { invalidate(); setNewSeatCount(""); toast.success("Seats updated"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to update seats"),
-  });
+  const handleChangeSeats = async (count: number) => {
+    setChangeSeatsPending(true);
+    try {
+      await updateSubscriptionSeats(orgId, count);
+      setNewSeatCount("");
+      toast.success("Seats updated");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to update seats");
+    } finally {
+      setChangeSeatsPending(false);
+    }
+  };
 
-  const changeCycleMutation = useMutation({
-    mutationFn: (cycle: string) => updateSubscriptionCycle(orgId, cycle),
-    onSuccess: () => { invalidate(); toast.success("Billing cycle updated"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to update cycle"),
-  });
+  const handleChangeCycle = async () => {
+    const newCycle = sub.billing_cycle === "monthly" ? "yearly" : "monthly";
+    setChangeCyclePending(true);
+    try {
+      await updateSubscriptionCycle(orgId, newCycle);
+      toast.success("Billing cycle updated");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to update cycle");
+    } finally {
+      setChangeCyclePending(false);
+    }
+  };
 
-  const freezeMutation = useMutation({
-    mutationFn: () => freezeSubscription(orgId),
-    onSuccess: () => { invalidate(); toast.success("Subscription frozen"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to freeze"),
-  });
+  const handleFreeze = async () => {
+    if (!confirm("Freeze this subscription? Users will lose access to restricted resources.")) return;
+    setFreezePending(true);
+    try {
+      await freezeSubscription(orgId);
+      toast.success("Subscription frozen");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to freeze");
+    } finally {
+      setFreezePending(false);
+    }
+  };
 
-  const unfreezeMutation = useMutation({
-    mutationFn: () => unfreezeSubscription(orgId),
-    onSuccess: () => { invalidate(); toast.success("Subscription unfrozen"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to unfreeze"),
-  });
+  const handleUnfreeze = async () => {
+    setUnfreezePending(true);
+    try {
+      await unfreezeSubscription(orgId);
+      toast.success("Subscription unfrozen");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to unfreeze");
+    } finally {
+      setUnfreezePending(false);
+    }
+  };
 
-  const cancelMutation = useMutation({
-    mutationFn: () => cancelSubscription(orgId),
-    onSuccess: () => { invalidate(); toast.success("Subscription canceled"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to cancel"),
-  });
+  const handleCancel = async () => {
+    if (!confirm("Cancel this subscription? This will not call external payment APIs.")) return;
+    setCancelPending(true);
+    try {
+      await cancelSubscription(orgId);
+      toast.success("Subscription canceled");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to cancel");
+    } finally {
+      setCancelPending(false);
+    }
+  };
 
-  const renewMutation = useMutation({
-    mutationFn: (months: number) => renewSubscription(orgId, months),
-    onSuccess: () => { invalidate(); toast.success("Subscription renewed"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to renew"),
-  });
+  const handleRenew = async (months: number) => {
+    if (!confirm(`Renew subscription for ${months} month(s)?`)) return;
+    setRenewPending(true);
+    try {
+      await renewSubscription(orgId, months);
+      toast.success("Subscription renewed");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to renew");
+    } finally {
+      setRenewPending(false);
+    }
+  };
 
-  const autoRenewMutation = useMutation({
-    mutationFn: (autoRenew: boolean) => setSubscriptionAutoRenew(orgId, autoRenew),
-    onSuccess: () => { invalidate(); toast.success("Auto-renew updated"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to update auto-renew"),
-  });
+  const handleToggleAutoRenew = async () => {
+    setAutoRenewPending(true);
+    try {
+      await setSubscriptionAutoRenew(orgId, !sub.auto_renew);
+      toast.success("Auto-renew updated");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to update auto-renew");
+    } finally {
+      setAutoRenewPending(false);
+    }
+  };
 
-  const quotaMutation = useMutation({
-    mutationFn: ({ resource, limit }: { resource: string; limit: number }) =>
-      setSubscriptionQuota(orgId, resource, limit),
-    onSuccess: () => { invalidate(); setQuotaLimit(""); toast.success("Quota updated"); },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to set quota"),
-  });
+  const handleSetQuota = async (resource: string, limit: number) => {
+    setQuotaPending(true);
+    try {
+      await setSubscriptionQuota(orgId, resource, limit);
+      setQuotaLimit("");
+      toast.success("Quota updated");
+      await refreshData();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to set quota");
+    } finally {
+      setQuotaPending(false);
+    }
+  };
 
   if (subLoading) {
     return (
@@ -186,7 +272,7 @@ export function SubscriptionSection({ orgId }: { orgId: number }) {
       <NoSubscriptionPanel
         plans={plans}
         orgId={orgId}
-        onCreated={invalidate}
+        onCreated={refreshData}
       />
     );
   }
@@ -208,20 +294,15 @@ export function SubscriptionSection({ orgId }: { orgId: number }) {
             sub={sub}
             plans={plans}
             onChangePlan={(v) => {
-              if (confirm(`Change plan to "${v}"? This takes effect immediately.`)) {
-                changePlanMutation.mutate(v);
-              }
+              if (v !== sub.plan?.name) handleChangePlan(v);
             }}
           />
           <BillingDetailsPanel
             sub={sub}
-            onToggleCycle={() => {
-              const newCycle = sub.billing_cycle === "monthly" ? "yearly" : "monthly";
-              changeCycleMutation.mutate(newCycle);
-            }}
-            onToggleAutoRenew={() => autoRenewMutation.mutate(!sub.auto_renew)}
-            cyclePending={changeCycleMutation.isPending}
-            autoRenewPending={autoRenewMutation.isPending}
+            onToggleCycle={handleChangeCycle}
+            onToggleAutoRenew={handleToggleAutoRenew}
+            cyclePending={changeCyclePending}
+            autoRenewPending={autoRenewPending}
           />
         </div>
 
@@ -231,33 +312,21 @@ export function SubscriptionSection({ orgId }: { orgId: number }) {
             seatUsage={seatUsage}
             newSeatCount={newSeatCount}
             onNewSeatCountChange={setNewSeatCount}
-            onSetSeats={(count) => changeSeatsMutation.mutate(count)}
-            seatsPending={changeSeatsMutation.isPending}
+            onSetSeats={(count) => handleChangeSeats(count)}
+            seatsPending={changeSeatsPending}
           />
           <ActionsPanel
             status={sub.status}
             renewMonths={renewMonths}
             onRenewMonthsChange={setRenewMonths}
-            onFreeze={() => {
-              if (confirm("Freeze this subscription? Users will lose access to restricted resources.")) {
-                freezeMutation.mutate();
-              }
-            }}
-            onUnfreeze={() => unfreezeMutation.mutate()}
-            onCancel={() => {
-              if (confirm("Cancel this subscription? This will not call external payment APIs.")) {
-                cancelMutation.mutate();
-              }
-            }}
-            onRenew={(months) => {
-              if (confirm(`Renew subscription for ${months} month(s)?`)) {
-                renewMutation.mutate(months);
-              }
-            }}
-            freezePending={freezeMutation.isPending}
-            unfreezePending={unfreezeMutation.isPending}
-            cancelPending={cancelMutation.isPending}
-            renewPending={renewMutation.isPending}
+            onFreeze={handleFreeze}
+            onUnfreeze={handleUnfreeze}
+            onCancel={handleCancel}
+            onRenew={handleRenew}
+            freezePending={freezePending}
+            unfreezePending={unfreezePending}
+            cancelPending={cancelPending}
+            renewPending={renewPending}
           />
         </div>
 
@@ -269,8 +338,8 @@ export function SubscriptionSection({ orgId }: { orgId: number }) {
           quotaLimit={quotaLimit}
           onQuotaResourceChange={setQuotaResource}
           onQuotaLimitChange={setQuotaLimit}
-          onSetQuota={(resource, limit) => quotaMutation.mutate({ resource, limit })}
-          quotaPending={quotaMutation.isPending}
+          onSetQuota={(resource, limit) => handleSetQuota(resource, limit)}
+          quotaPending={quotaPending}
         />
 
         {/* Payment Provider Info */}
@@ -642,16 +711,23 @@ function NoSubscriptionPanel({
 }) {
   const [selectedPlan, setSelectedPlan] = useState(plans[0]?.name || "based");
   const [months, setMonths] = useState("1");
+  const [isCreating, setIsCreating] = useState(false);
 
-  const createMutation = useMutation({
-    mutationFn: ({ planName, months: m }: { planName: string; months: number }) =>
-      createSubscription(orgId, planName, m),
-    onSuccess: () => {
-      onCreated();
+  const handleCreate = async () => {
+    const m = parseInt(months);
+    if (m <= 0 || m > 120) return;
+    if (!confirm(`Create an active "${selectedPlan}" subscription for ${m} month(s)?`)) return;
+    setIsCreating(true);
+    try {
+      await createSubscription(orgId, selectedPlan, m);
       toast.success("Subscription created");
-    },
-    onError: (err: { error: string }) => toast.error(err.error || "Failed to create subscription"),
-  });
+      onCreated();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to create subscription");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <Card>
@@ -708,15 +784,8 @@ function NoSubscriptionPanel({
             </div>
             <Button
               className="w-full"
-              disabled={createMutation.isPending || !selectedPlan}
-              onClick={() => {
-                const m = parseInt(months);
-                if (m > 0 && m <= 120) {
-                  if (confirm(`Create an active "${selectedPlan}" subscription for ${m} month(s)?`)) {
-                    createMutation.mutate({ planName: selectedPlan, months: m });
-                  }
-                }
-              }}
+              disabled={isCreating || !selectedPlan}
+              onClick={handleCreate}
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Subscription

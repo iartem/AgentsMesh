@@ -366,5 +366,65 @@
       "theme_solarized_dark": "Solarized 深色",
       "theme_system": "跟随系统"
     }
+  },
+  "support": {
+    "title": "支持工单",
+    "description": "提交问题反馈并跟踪处理进度",
+    "create": "新建工单",
+    "createDescription": "描述您的问题，我们会尽快回复",
+    "submit": "提交",
+    "submitting": "提交中...",
+    "cancel": "取消",
+    "send": "发送",
+    "sending": "发送中...",
+    "attach": "附件",
+    "replyPlaceholder": "输入回复内容...",
+    "empty": "暂无支持工单",
+    "createFirst": "创建您的第一个工单",
+    "notFound": "工单未找到",
+    "backToList": "返回工单列表",
+    "retry": "重试",
+    "download": "下载",
+    "downloadFailed": "附件下载失败",
+    "fileTooLarge": "文件超出最大限制 ({max})",
+    "filter": {
+      "all": "全部"
+    },
+    "status": {
+      "open": "待处理",
+      "in_progress": "处理中",
+      "resolved": "已解决",
+      "closed": "已关闭"
+    },
+    "category": {
+      "bug": "Bug 反馈",
+      "feature_request": "功能建议",
+      "usage_question": "使用问题",
+      "account": "账号相关",
+      "other": "其他"
+    },
+    "priority": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    },
+    "fields": {
+      "title": "标题",
+      "titlePlaceholder": "简要描述您的问题",
+      "category": "分类",
+      "priority": "优先级",
+      "content": "详细描述",
+      "contentPlaceholder": "请详细描述您遇到的问题...",
+      "attachments": "附件",
+      "addFiles": "添加文件"
+    },
+    "validation": {
+      "required": "标题和描述为必填项"
+    },
+    "error": {
+      "createFailed": "创建工单失败，请重试",
+      "loadFailed": "加载数据失败，请重试",
+      "sendFailed": "发送消息失败，请重试"
+    }
   }
 }

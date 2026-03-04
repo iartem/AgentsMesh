@@ -349,5 +349,63 @@
       "theme_solarized_dark": "Solarized Sombre",
       "theme_system": "Système"
     }
+  },
+  "support": {
+    "title": "Tickets de Support",
+    "description": "Soumettez des questions ou des commentaires et suivez vos demandes",
+    "create": "Nouveau Ticket",
+    "createDescription": "Décrivez votre problème et nous vous répondrons",
+    "submit": "Soumettre",
+    "submitting": "Envoi en cours...",
+    "cancel": "Annuler",
+    "send": "Envoyer",
+    "sending": "Envoi en cours...",
+    "attach": "Joindre",
+    "replyPlaceholder": "Saisissez votre réponse...",
+    "empty": "Aucun ticket de support",
+    "createFirst": "Créez votre premier ticket",
+    "notFound": "Ticket non trouvé",
+    "backToList": "Retour aux tickets",
+    "retry": "Réessayer",
+    "download": "Télécharger",
+    "downloadFailed": "Échec du téléchargement de la pièce jointe",
+    "fileTooLarge": "Le fichier dépasse la taille maximale ({max})",
+    "filter": {
+      "all": "Tous"
+    },
+    "status": {
+      "open": "Ouvert",
+      "in_progress": "En cours",
+      "resolved": "Résolu",
+      "closed": "Fermé"
+    },
+    "category": {
+      "bug": "Rapport de bug",
+      "feature_request": "Demande de fonctionnalité",
+      "usage_question": "Question d'utilisation",
+      "account": "Compte",
+      "other": "Autre"
+    },
+    "priority": {
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute"
+    },
+    "fields": {
+      "title": "Titre",
+      "titlePlaceholder": "Résumé bref de votre probl��me",
+      "category": "Catégorie",
+      "priority": "Priorité",
+      "content": "Description",
+      "contentPlaceholder": "Décrivez votre problème en détail...",
+      "attachments": "Pièces jointes",
+      "addFiles": "Ajouter des fichiers"
+    },
+    "validation": {
+      "required": "Le titre et la description sont requis"
+    },
+    "error": {
+      "createFailed": "Impossible de créer le ticket. Veuillez réessayer."
+    }
   }
 }

@@ -349,5 +349,63 @@
       "theme_solarized_dark": "Solarized 다크",
       "theme_system": "시스템"
     }
+  },
+  "support": {
+    "title": "지원 티켓",
+    "description": "질문이나 피드백을 제출하고 요청을 추적하세요",
+    "create": "새 티켓",
+    "createDescription": "문제를 설명해 주시면 답���드리겠습니다",
+    "submit": "제출",
+    "submitting": "제출 중...",
+    "cancel": "취소",
+    "send": "보내기",
+    "sending": "보내는 중...",
+    "attach": "첨부",
+    "replyPlaceholder": "답변을 입력하세요...",
+    "empty": "아직 ���원 티켓이 없습니다",
+    "createFirst": "첫 번째 티켓을 만드세요",
+    "notFound": "티켓을 찾을 수 없습니다",
+    "backToList": "티켓 목록으로 돌아가기",
+    "retry": "다시 시도",
+    "download": "다운로드",
+    "downloadFailed": "첨부파일 다운로드에 실패했습니다",
+    "fileTooLarge": "파일이 최대 크기 ({max})를 초과합니다",
+    "filter": {
+      "all": "전체"
+    },
+    "status": {
+      "open": "대기 중",
+      "in_progress": "처리 중",
+      "resolved": "해결됨",
+      "closed": "종료"
+    },
+    "category": {
+      "bug": "버그 신고",
+      "feature_request": "기능 요청",
+      "usage_question": "사용 질문",
+      "account": "계정",
+      "other": "기타"
+    },
+    "priority": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "fields": {
+      "title": "제목",
+      "titlePlaceholder": "문제를 간략히 요약해 주세요",
+      "category": "카테고리",
+      "priority": "우선순위",
+      "content": "설명",
+      "contentPlaceholder": "문제를 자세히 설명해 주세요...",
+      "attachments": "첨부 파일",
+      "addFiles": "파일 추가"
+    },
+    "validation": {
+      "required": "제목과 설명은 필수입니다"
+    },
+    "error": {
+      "createFailed": "티켓 생성에 실패했습니다. 다시 시도해 주세요."
+    }
   }
 }

@@ -1,7 +1,6 @@
 "use client";
 
-import { use } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -35,7 +34,10 @@ import {
   deletePromoCode,
   listPromoCodeRedemptions,
   PromoCodeType,
+  PromoCode,
+  PromoCodeRedemption,
 } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate } from "@/lib/utils";
 
 const typeLabels: Record<PromoCodeType, string> = {
@@ -54,61 +56,79 @@ export default function PromoCodeDetailPage({
   const { id } = use(params);
   const promoCodeId = parseInt(id, 10);
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const { data: promoCode, isLoading: codeLoading } = useQuery({
-    queryKey: ["promo-code", promoCodeId],
-    queryFn: () => getPromoCode(promoCodeId),
-  });
+  const [promoCode, setPromoCode] = useState<PromoCode | null>(null);
+  const [codeLoading, setCodeLoading] = useState(true);
+  const [redemptionsData, setRedemptionsData] = useState<PaginatedResponse<PromoCodeRedemption> | null>(null);
+  const [redemptionsLoading, setRedemptionsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: redemptionsData, isLoading: redemptionsLoading } = useQuery({
-    queryKey: ["promo-code-redemptions", promoCodeId],
-    queryFn: () => listPromoCodeRedemptions(promoCodeId, { page_size: 50 }),
-    enabled: !!promoCode,
-  });
+  const fetchPromoCode = useCallback(async () => {
+    try {
+      const result = await getPromoCode(promoCodeId);
+      setPromoCode(result);
+    } catch {
+      // Keep null on error
+    } finally {
+      setCodeLoading(false);
+    }
+  }, [promoCodeId]);
 
-  const activateMutation = useMutation({
-    mutationFn: activatePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-code", promoCodeId] });
+  const fetchRedemptions = useCallback(async () => {
+    try {
+      const result = await listPromoCodeRedemptions(promoCodeId, { page_size: 50 });
+      setRedemptionsData(result);
+    } catch {
+      // Keep null on error
+    } finally {
+      setRedemptionsLoading(false);
+    }
+  }, [promoCodeId]);
+
+  useEffect(() => {
+    fetchPromoCode();
+  }, [fetchPromoCode]);
+
+  useEffect(() => {
+    if (promoCode) {
+      fetchRedemptions();
+    }
+  }, [promoCode, fetchRedemptions]);
+
+  const handleActivate = async () => {
+    try {
+      await activatePromoCode(promoCodeId);
       toast.success("Promo code activated");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to activate promo code");
-    },
-  });
+      await fetchPromoCode();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to activate promo code");
+    }
+  };
 
-  const deactivateMutation = useMutation({
-    mutationFn: deactivatePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-code", promoCodeId] });
+  const handleDeactivate = async () => {
+    try {
+      await deactivatePromoCode(promoCodeId);
       toast.success("Promo code deactivated");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to deactivate promo code");
-    },
-  });
+      await fetchPromoCode();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to deactivate promo code");
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-codes"] });
+  const handleDelete = async () => {
+    if (
+      !promoCode ||
+      !confirm(`Are you sure you want to delete "${promoCode.code}"? This action cannot be undone.`)
+    ) return;
+    setIsDeleting(true);
+    try {
+      await deletePromoCode(promoCodeId);
       toast.success("Promo code deleted");
       router.push("/promo-codes");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete promo code");
-    },
-  });
-
-  const handleDelete = () => {
-    if (
-      promoCode &&
-      confirm(
-        `Are you sure you want to delete "${promoCode.code}"? This action cannot be undone.`
-      )
-    ) {
-      deleteMutation.mutate(promoCodeId);
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to delete promo code");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -156,7 +176,7 @@ export default function PromoCodeDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Link href="/promo-codes">
             <Button variant="ghost" size="icon">
@@ -186,8 +206,7 @@ export default function PromoCodeDetailPage({
           {promoCode.is_active ? (
             <Button
               variant="outline"
-              onClick={() => deactivateMutation.mutate(promoCodeId)}
-              disabled={deactivateMutation.isPending}
+              onClick={handleDeactivate}
             >
               <PowerOff className="mr-2 h-4 w-4" />
               Deactivate
@@ -195,8 +214,7 @@ export default function PromoCodeDetailPage({
           ) : (
             <Button
               variant="outline"
-              onClick={() => activateMutation.mutate(promoCodeId)}
-              disabled={activateMutation.isPending}
+              onClick={handleActivate}
             >
               <Power className="mr-2 h-4 w-4" />
               Activate
@@ -205,7 +223,7 @@ export default function PromoCodeDetailPage({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={deleteMutation.isPending}
+            disabled={isDeleting}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete

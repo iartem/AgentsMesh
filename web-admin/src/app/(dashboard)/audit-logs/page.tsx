@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listAuditLogs, AuditLog } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate } from "@/lib/utils";
 
 const actionColors: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
@@ -29,17 +29,30 @@ const actionColors: Record<string, "default" | "secondary" | "destructive" | "ou
 export default function AuditLogsPage() {
   const [page, setPage] = useState(1);
   const [targetType, setTargetType] = useState<string | undefined>();
+  const [data, setData] = useState<PaginatedResponse<AuditLog> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["audit-logs", { page, targetType }],
-    queryFn: () => listAuditLogs({ page, page_size: 50, target_type: targetType }),
-  });
+  const fetchLogs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await listAuditLogs({ page, page_size: 50, target_type: targetType });
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, targetType]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={!targetType ? "default" : "outline"}
             size="sm"
@@ -144,10 +157,10 @@ function AuditLogRow({ log }: { log: AuditLog }) {
   const actionColor = actionColors[log.action] || "secondary";
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant={actionColor}>{log.action}</Badge>
             <span className="text-sm text-muted-foreground">
               {log.target_type} #{log.target_id}
@@ -161,7 +174,7 @@ function AuditLogRow({ log }: { log: AuditLog }) {
           </div>
         </div>
       </div>
-      <div className="text-right text-xs text-muted-foreground">
+      <div className="hidden text-right text-xs text-muted-foreground sm:block">
         {formatDate(log.created_at)}
       </div>
     </div>

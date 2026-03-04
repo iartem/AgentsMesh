@@ -76,7 +76,7 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 }
 
-async function handleTokenRefresh(): Promise<boolean> {
+export async function handleTokenRefresh(): Promise<boolean> {
   // If already refreshing, wait for that to complete
   if (isRefreshing && refreshPromise) {
     return refreshPromise;

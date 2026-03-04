@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Power, PowerOff, Trash2, Server } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,54 +14,64 @@ import {
   deleteRunner,
   Runner,
 } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatRelativeTime } from "@/lib/utils";
 
 export default function RunnersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const queryClient = useQueryClient();
+  const [data, setData] = useState<PaginatedResponse<Runner> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["runners", { search, page }],
-    queryFn: () => listRunners({ search, page, page_size: 20 }),
-  });
+  const fetchRunners = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await listRunners({ search, page, page_size: 20 });
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, page]);
 
-  const disableMutation = useMutation({
-    mutationFn: disableRunner,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["runners"] });
+  useEffect(() => {
+    fetchRunners();
+  }, [fetchRunners]);
+
+  const handleDisable = async (runnerId: number) => {
+    try {
+      await disableRunner(runnerId);
       toast.success("Runner disabled successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to disable runner");
-    },
-  });
+      await fetchRunners();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to disable runner";
+      toast.error(message);
+    }
+  };
 
-  const enableMutation = useMutation({
-    mutationFn: enableRunner,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["runners"] });
+  const handleEnable = async (runnerId: number) => {
+    try {
+      await enableRunner(runnerId);
       toast.success("Runner enabled successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to enable runner");
-    },
-  });
+      await fetchRunners();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to enable runner";
+      toast.error(message);
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteRunner,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["runners"] });
+  const handleDelete = async (runner: Runner) => {
+    if (!confirm(`Are you sure you want to delete runner "${runner.node_id}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteRunner(runner.id);
       toast.success("Runner deleted successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete runner");
-    },
-  });
-
-  const handleDelete = (runner: Runner) => {
-    if (confirm(`Are you sure you want to delete runner "${runner.node_id}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(runner.id);
+      await fetchRunners();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to delete runner";
+      toast.error(message);
     }
   };
 
@@ -70,7 +79,7 @@ export default function RunnersPage() {
     <div className="space-y-4">
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search runners..."
@@ -102,8 +111,8 @@ export default function RunnersPage() {
                 <RunnerRow
                   key={runner.id}
                   runner={runner}
-                  onDisable={() => disableMutation.mutate(runner.id)}
-                  onEnable={() => enableMutation.mutate(runner.id)}
+                  onDisable={() => handleDisable(runner.id)}
+                  onEnable={() => handleEnable(runner.id)}
                   onDelete={() => handleDelete(runner)}
                 />
               ))}
@@ -161,13 +170,13 @@ function RunnerRow({
   const isOnline = runner.status === "online";
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
           <Server className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{runner.node_id}</span>
             <Badge variant={isOnline ? "success" : "secondary"}>
               {runner.status}
@@ -176,7 +185,7 @@ function RunnerRow({
               <Badge variant="destructive">Disabled</Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {runner.organization && (
               <span>{runner.organization.name}</span>
             )}
@@ -190,7 +199,7 @@ function RunnerRow({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="text-right text-xs text-muted-foreground">
+        <div className="hidden text-right text-xs text-muted-foreground sm:block">
           {runner.last_heartbeat && (
             <p>Last seen {formatRelativeTime(runner.last_heartbeat)}</p>
           )}

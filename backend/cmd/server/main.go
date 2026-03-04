@@ -211,6 +211,7 @@ func main() {
 		LoopRun:             services.loopRun,
 		LoopOrchestrator:    loopOrchestrator,
 		LoopScheduler:       loopScheduler,
+		SupportTicket:       services.supportTicket,
 	}
 
 	// Initialize router

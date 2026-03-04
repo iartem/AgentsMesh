@@ -349,5 +349,63 @@
       "theme_solarized_dark": "Solarized ダーク",
       "theme_system": "システム"
     }
+  },
+  "support": {
+    "title": "サポートチケット",
+    "description": "質問やフィードバックを送信し、リクエストを追跡します",
+    "create": "新規チケット",
+    "createDescription": "問題を説明してください。折り返しご連絡いたします",
+    "submit": "送��",
+    "submitting": "送信中...",
+    "cancel": "キャンセル",
+    "send": "送信",
+    "sending": "送信中...",
+    "attach": "添付",
+    "replyPlaceholder": "返信を入力...",
+    "empty": "サ���ートチケットはまだありません",
+    "createFirst": "最初のチケットを作成",
+    "notFound": "チケットが見つかりません",
+    "backToList": "チケット一覧に戻る",
+    "retry": "再試行",
+    "download": "ダウン��ード",
+    "downloadFailed": "添付ファイルのダウンロードに失��しました",
+    "fileTooLarge": "ファイルが最大サイズ ({max}) を超えています",
+    "filter": {
+      "all": "すべて"
+    },
+    "status": {
+      "open": "未対応",
+      "in_progress": "対応中",
+      "resolved": "解決済み",
+      "closed": "クローズ"
+    },
+    "category": {
+      "bug": "バグ報告",
+      "feature_request": "機能リクエスト",
+      "usage_question": "使い方の質問",
+      "account": "アカウント",
+      "other": "その他"
+    },
+    "priority": {
+      "low": "���",
+      "medium": "中",
+      "high": "高"
+    },
+    "fields": {
+      "title": "タイトル",
+      "titlePlaceholder": "問��の概要を簡潔に",
+      "category": "カテゴリ",
+      "priority": "優先���",
+      "content": "説明",
+      "contentPlaceholder": "問題を詳しく説明してください...",
+      "attachments": "添付ファイル",
+      "addFiles": "ファイルを追加"
+    },
+    "validation": {
+      "required": "タイトルと説明は必須です"
+    },
+    "error": {
+      "createFailed": "チケットの作成に失敗し��した。もう一度お試しください。"
+    }
   }
 }

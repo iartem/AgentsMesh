@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, MobileSidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 
 export default function DashboardLayout({
@@ -13,6 +13,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { token, isLoading } = useAuthStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!token && !isLoading) {
@@ -28,9 +29,10 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
+      <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-auto p-6">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </div>

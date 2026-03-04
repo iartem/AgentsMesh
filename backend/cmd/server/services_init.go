@@ -19,6 +19,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
+	supportticketservice "github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 	"github.com/anthropics/agentsmesh/backend/internal/service/invitation"
 	"github.com/anthropics/agentsmesh/backend/internal/service/license"
 	loop "github.com/anthropics/agentsmesh/backend/internal/service/loop"
@@ -69,6 +70,7 @@ type serviceContainer struct {
 	marketplaceWorker *extensionservice.MarketplaceWorker
 	loop              *loop.LoopService
 	loopRun           *loop.LoopRunService
+	supportTicket     *supportticketservice.Service
 }
 
 // initializeServices creates all business services
@@ -129,6 +131,9 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	// Initialize storage (S3-compatible)
 	fileSvc := initializeFileService(cfg, db)
 
+	// Initialize support ticket service (reuses file service's storage config)
+	supportTicketSvc := initializeSupportTicketService(cfg, db)
+
 	// Initialize API key service
 	apikeySvc := apikeyservice.NewService(db, redisClient)
 	apikeyAdapterSvc := apikeyservice.NewMiddlewareAdapter(apikeySvc)
@@ -176,6 +181,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		marketplaceWorker:  mktWorker,
 		loop:               loopSvc,
 		loopRun:            loopRunSvc,
+		supportTicket:      supportTicketSvc,
 	}
 }
 
@@ -275,4 +281,31 @@ func initializeExtensionServices(cfg *config.Config, db *gorm.DB) (*extensionser
 
 	slog.Info("Extension services initialized")
 	return extSvc, extRepo, skillImp, mktWorker
+}
+
+// initializeSupportTicketService initializes the support ticket service
+func initializeSupportTicketService(cfg *config.Config, db *gorm.DB) *supportticketservice.Service {
+	if cfg.Storage.AccessKey == "" || cfg.Storage.SecretKey == "" {
+		slog.Warn("Storage not configured, support ticket attachments disabled")
+		// Still create service with nil storage (text-only tickets work)
+		return supportticketservice.NewService(db, nil, cfg.Storage)
+	}
+
+	s3Storage, err := storage.NewS3Storage(storage.S3Config{
+		Endpoint:       cfg.Storage.Endpoint,
+		PublicEndpoint: cfg.Storage.PublicEndpoint,
+		Region:         cfg.Storage.Region,
+		Bucket:         cfg.Storage.Bucket,
+		AccessKey:      cfg.Storage.AccessKey,
+		SecretKey:      cfg.Storage.SecretKey,
+		UseSSL:         cfg.Storage.UseSSL,
+		UsePathStyle:   cfg.Storage.UsePathStyle,
+	})
+	if err != nil {
+		slog.Error("Failed to initialize storage for support tickets", "error", err)
+		return supportticketservice.NewService(db, nil, cfg.Storage)
+	}
+
+	slog.Info("Support ticket service initialized")
+	return supportticketservice.NewService(db, s3Storage, cfg.Storage)
 }

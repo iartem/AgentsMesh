@@ -119,3 +119,4 @@ agentsmesh-onpremise-v1.0.0.tar.gz
 # Reports (generated artifacts)
 # =========================
 E2E_TEST_REPORT.md
+web-admin/coverage/

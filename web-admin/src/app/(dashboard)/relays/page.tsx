@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Radio,
@@ -29,74 +28,67 @@ import {
   forceUnregisterRelay,
   bulkMigrateSessions,
   RelayInfo,
+  RelayStats,
+  RelayListResponse,
 } from "@/lib/api/admin";
 import { formatRelativeTime } from "@/lib/utils";
 
 export default function RelaysPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [selectedSource, setSelectedSource] = useState<string>("");
   const [selectedTarget, setSelectedTarget] = useState<string>("");
+  const [isMigrating, setIsMigrating] = useState(false);
 
-  const { data: relaysData, isLoading } = useQuery({
-    queryKey: ["relays"],
-    queryFn: listRelays,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-  });
+  const [relaysData, setRelaysData] = useState<RelayListResponse | null>(null);
+  const [stats, setStats] = useState<RelayStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: stats } = useQuery({
-    queryKey: ["relay-stats"],
-    queryFn: getRelayStats,
-    refetchInterval: 10000,
-  });
+  const fetchRelays = useCallback(async () => {
+    try {
+      const result = await listRelays();
+      setRelaysData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const unregisterMutation = useMutation({
-    mutationFn: ({ id, migrate }: { id: string; migrate: boolean }) =>
-      forceUnregisterRelay(id, migrate),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["relays"] });
-      queryClient.invalidateQueries({ queryKey: ["relay-stats"] });
-      toast.success(
-        `Relay unregistered. ${data.affected_sessions} sessions affected.`
-      );
-    },
-    onError: (err: { error?: string }) => {
-      toast.error(err.error || "Failed to unregister relay");
-    },
-  });
+  const fetchStats = useCallback(async () => {
+    try {
+      const result = await getRelayStats();
+      setStats(result);
+    } catch {
+      // Non-critical
+    }
+  }, []);
 
-  const bulkMigrateMutation = useMutation({
-    mutationFn: ({
-      source,
-      target,
-    }: {
-      source: string;
-      target: string;
-    }) => bulkMigrateSessions(source, target),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["relays"] });
-      queryClient.invalidateQueries({ queryKey: ["relay-stats"] });
-      toast.success(
-        `Migration completed: ${data.migrated}/${data.total} sessions migrated`
-      );
-      setSelectedSource("");
-      setSelectedTarget("");
-    },
-    onError: (err: { error?: string }) => {
-      toast.error(err.error || "Failed to migrate sessions");
-    },
-  });
+  useEffect(() => {
+    fetchRelays();
+    fetchStats();
+    const interval = setInterval(() => {
+      fetchRelays();
+      fetchStats();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchRelays, fetchStats]);
 
-  const handleUnregister = (relay: RelayInfo, migrate: boolean) => {
+  const handleUnregister = async (relay: RelayInfo, migrate: boolean) => {
     const msg = migrate
       ? `Unregister relay "${relay.id}" and migrate all sessions to another relay?`
       : `Unregister relay "${relay.id}"? ${relay.connections} active connections will be affected.`;
-    if (confirm(msg)) {
-      unregisterMutation.mutate({ id: relay.id, migrate });
+    if (!confirm(msg)) return;
+    try {
+      const data = await forceUnregisterRelay(relay.id, migrate);
+      toast.success(`Relay unregistered. ${data.affected_sessions} sessions affected.`);
+      await fetchRelays();
+      await fetchStats();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to unregister relay");
     }
   };
 
-  const handleBulkMigrate = () => {
+  const handleBulkMigrate = async () => {
     if (!selectedSource || !selectedTarget) {
       toast.error("Please select source and target relays");
       return;
@@ -105,11 +97,19 @@ export default function RelaysPage() {
       toast.error("Source and target cannot be the same");
       return;
     }
-    if (confirm(`Migrate all sessions from "${selectedSource}" to "${selectedTarget}"?`)) {
-      bulkMigrateMutation.mutate({
-        source: selectedSource,
-        target: selectedTarget,
-      });
+    if (!confirm(`Migrate all sessions from "${selectedSource}" to "${selectedTarget}"?`)) return;
+    setIsMigrating(true);
+    try {
+      const data = await bulkMigrateSessions(selectedSource, selectedTarget);
+      toast.success(`Migration completed: ${data.migrated}/${data.total} sessions migrated`);
+      setSelectedSource("");
+      setSelectedTarget("");
+      await fetchRelays();
+      await fetchStats();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to migrate sessions");
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -118,7 +118,7 @@ export default function RelaysPage() {
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Relays</CardTitle>
@@ -174,7 +174,7 @@ export default function RelaysPage() {
             <CardTitle className="text-base">Bulk Session Migration</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex-1">
                 <Select
                   value={selectedSource}
@@ -217,10 +217,10 @@ export default function RelaysPage() {
                 disabled={
                   !selectedSource ||
                   !selectedTarget ||
-                  bulkMigrateMutation.isPending
+                  isMigrating
                 }
               >
-                {bulkMigrateMutation.isPending ? (
+                {isMigrating ? (
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <ArrowRightLeft className="mr-2 h-4 w-4" />
@@ -289,7 +289,7 @@ function RelayRow({
 
   return (
     <div
-      className="flex items-center justify-between rounded-lg border border-border p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+      className="flex flex-col gap-3 rounded-lg border border-border p-4 cursor-pointer hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between"
       onClick={onClick}
     >
       <div className="flex items-center gap-4">
@@ -305,7 +305,7 @@ function RelayRow({
           )}
         </div>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{relay.id}</span>
             <Badge variant={relay.healthy ? "success" : "destructive"}>
               {relay.healthy ? "Healthy" : "Unhealthy"}
@@ -319,7 +319,7 @@ function RelayRow({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
         <div className="text-right">
           <div className="flex items-center gap-2">
             <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
@@ -343,7 +343,7 @@ function RelayRow({
             {relay.memory_usage?.toFixed(1) || 0}%
           </div>
         </div>
-        <div className="text-right text-xs text-muted-foreground">
+        <div className="hidden text-right text-xs text-muted-foreground sm:block">
           {relay.last_heartbeat && (
             <p>Last seen {formatRelativeTime(relay.last_heartbeat)}</p>
           )}

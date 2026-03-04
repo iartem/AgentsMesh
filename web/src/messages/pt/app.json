@@ -349,5 +349,63 @@
       "theme_solarized_dark": "Solarized Escuro",
       "theme_system": "Sistema"
     }
+  },
+  "support": {
+    "title": "Tickets de Suporte",
+    "description": "Envie perguntas ou feedback e acompanhe suas solicitações",
+    "create": "Novo Ticket",
+    "createDescription": "Descreva seu problema e entraremos em contato",
+    "submit": "Enviar",
+    "submitting": "Enviando...",
+    "cancel": "Cancelar",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "attach": "Anexar",
+    "replyPlaceholder": "Digite sua resposta...",
+    "empty": "Nenhum ticket de suporte ainda",
+    "createFirst": "Crie seu primeiro ticket",
+    "notFound": "Ticket não encontrado",
+    "backToList": "Voltar aos tickets",
+    "retry": "Tentar novamente",
+    "download": "Baixar",
+    "downloadFailed": "Falha ao baixar o anexo",
+    "fileTooLarge": "O arquivo excede o tamanho máximo ({max})",
+    "filter": {
+      "all": "Todos"
+    },
+    "status": {
+      "open": "Aberto",
+      "in_progress": "Em Andamento",
+      "resolved": "Resolvido",
+      "closed": "Fechado"
+    },
+    "category": {
+      "bug": "Relatório de Bug",
+      "feature_request": "Solicitação de Recurso",
+      "usage_question": "Pergunta de Uso",
+      "account": "Conta",
+      "other": "Outro"
+    },
+    "priority": {
+      "low": "Baixa",
+      "medium": "Média",
+      "high": "Alta"
+    },
+    "fields": {
+      "title": "Título",
+      "titlePlaceholder": "Resumo breve do seu problema",
+      "category": "Categoria",
+      "priority": "Prioridade",
+      "content": "Descrição",
+      "contentPlaceholder": "Descreva seu problema em detalhes...",
+      "attachments": "Anexos",
+      "addFiles": "Adicionar arquivos"
+    },
+    "validation": {
+      "required": "Título e descrição são obrigatórios"
+    },
+    "error": {
+      "createFailed": "Falha ao criar o ticket. Por favor, tente novamente."
+    }
   }
 }

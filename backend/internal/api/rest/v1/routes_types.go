@@ -24,6 +24,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	supportticketservice "github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/service/user"
 )
@@ -95,4 +96,7 @@ type Services struct {
 	LoopRun          *loop.LoopRunService
 	LoopOrchestrator *loop.LoopOrchestrator
 	LoopScheduler    *loop.LoopScheduler
+
+	// Support ticket service (user-level, no org scope)
+	SupportTicket *supportticketservice.Service
 }

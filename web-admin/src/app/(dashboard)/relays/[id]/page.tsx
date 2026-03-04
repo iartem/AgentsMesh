@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -39,6 +38,8 @@ import {
   forceUnregisterRelay,
   migrateSession,
   ActiveSession,
+  RelayDetailResponse,
+  RelayListResponse,
 } from "@/lib/api/admin";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -46,64 +47,79 @@ export default function RelayDetailPage() {
   const router = useRouter();
   const params = useParams();
   const relayId = decodeURIComponent(params.id as string);
-  const queryClient = useQueryClient();
   const [migratingPod, setMigratingPod] = useState<string | null>(null);
   const [targetRelay, setTargetRelay] = useState<string>("");
+  const [isUnregistering, setIsUnregistering] = useState(false);
+  const [isMigratingSession, setIsMigratingSession] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["relay", relayId],
-    queryFn: () => getRelay(relayId),
-    refetchInterval: 5000,
-  });
+  const [data, setData] = useState<RelayDetailResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+  const [relaysData, setRelaysData] = useState<RelayListResponse | null>(null);
 
-  const { data: relaysData } = useQuery({
-    queryKey: ["relays"],
-    queryFn: listRelays,
-  });
+  const fetchRelay = useCallback(async () => {
+    try {
+      const result = await getRelay(relayId);
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [relayId]);
 
-  const unregisterMutation = useMutation({
-    mutationFn: ({ migrate }: { migrate: boolean }) =>
-      forceUnregisterRelay(relayId, migrate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["relays"] });
-      toast.success("Relay unregistered");
-      router.push("/relays");
-    },
-    onError: (err: { error?: string }) => {
-      toast.error(err.error || "Failed to unregister relay");
-    },
-  });
+  const fetchRelays = useCallback(async () => {
+    try {
+      const result = await listRelays();
+      setRelaysData(result);
+    } catch {
+      // Non-critical
+    }
+  }, []);
 
-  const migrateMutation = useMutation({
-    mutationFn: ({ podKey, target }: { podKey: string; target: string }) =>
-      migrateSession(podKey, target),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["relay", relayId] });
-      toast.success(`Session migrated from ${data.from_relay} to ${data.to_relay}`);
-      setMigratingPod(null);
-      setTargetRelay("");
-    },
-    onError: (err: { error?: string }) => {
-      toast.error(err.error || "Failed to migrate session");
-    },
-  });
+  useEffect(() => {
+    fetchRelay();
+    fetchRelays();
+    const interval = setInterval(fetchRelay, 5000);
+    return () => clearInterval(interval);
+  }, [fetchRelay, fetchRelays]);
 
-  const handleUnregister = (migrate: boolean) => {
+  const handleUnregister = async (migrate: boolean) => {
     const msg = migrate
       ? `Unregister relay "${relayId}" and migrate all sessions?`
       : `Unregister relay "${relayId}"? ${data?.session_count || 0} sessions will be affected.`;
-    if (confirm(msg)) {
-      unregisterMutation.mutate({ migrate });
+    if (!confirm(msg)) return;
+    setIsUnregistering(true);
+    try {
+      await forceUnregisterRelay(relayId, migrate);
+      toast.success("Relay unregistered");
+      router.push("/relays");
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to unregister relay");
+    } finally {
+      setIsUnregistering(false);
     }
   };
 
-  const handleMigrate = (session: ActiveSession) => {
+  const handleMigrate = async (session: ActiveSession) => {
     if (migratingPod === session.pod_key) {
       if (!targetRelay) {
         toast.error("Please select a target relay");
         return;
       }
-      migrateMutation.mutate({ podKey: session.pod_key, target: targetRelay });
+      setIsMigratingSession(true);
+      try {
+        const result = await migrateSession(session.pod_key, targetRelay);
+        toast.success(`Session migrated from ${result.from_relay} to ${result.to_relay}`);
+        setMigratingPod(null);
+        setTargetRelay("");
+        await fetchRelay();
+      } catch (err: unknown) {
+        toast.error((err as { error?: string })?.error || "Failed to migrate session");
+      } finally {
+        setIsMigratingSession(false);
+      }
     } else {
       setMigratingPod(session.pod_key);
       setTargetRelay("");
@@ -148,7 +164,7 @@ export default function RelayDetailPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.push("/relays")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -166,7 +182,7 @@ export default function RelayDetailPage() {
           <Button
             variant="outline"
             onClick={() => handleUnregister(true)}
-            disabled={unregisterMutation.isPending || healthyRelays.length === 0}
+            disabled={isUnregistering || healthyRelays.length === 0}
           >
             <ArrowRightLeft className="mr-2 h-4 w-4" />
             Unregister & Migrate
@@ -174,7 +190,7 @@ export default function RelayDetailPage() {
           <Button
             variant="destructive"
             onClick={() => handleUnregister(false)}
-            disabled={unregisterMutation.isPending}
+            disabled={isUnregistering}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Force Unregister
@@ -327,9 +343,9 @@ export default function RelayDetailPage() {
                           <Button
                             size="sm"
                             onClick={() => handleMigrate(session)}
-                            disabled={migrateMutation.isPending || !targetRelay}
+                            disabled={isMigratingSession || !targetRelay}
                           >
-                            {migrateMutation.isPending ? (
+                            {isMigratingSession ? (
                               <RefreshCw className="h-4 w-4 animate-spin" />
                             ) : (
                               "Confirm"

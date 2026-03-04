@@ -16,6 +16,23 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_USE_HTTPS: process.env.USE_HTTPS || "__USE_HTTPS__",
   },
 
+  // Proxy API requests to the backend in development to avoid CORS issues
+  async rewrites() {
+    const primaryDomain = process.env.PRIMARY_DOMAIN;
+    const useHttps = process.env.USE_HTTPS === "true";
+    const protocol = useHttps ? "https" : "http";
+    const backendUrl = primaryDomain
+      ? `${protocol}://${primaryDomain}`
+      : "http://localhost:10000";
+
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
+
   // Allow images from any source during development
   images: {
     remotePatterns: [

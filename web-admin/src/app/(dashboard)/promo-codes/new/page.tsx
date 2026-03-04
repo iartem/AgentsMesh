@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Tag } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +21,7 @@ import { createPromoCode, PromoCodeType } from "@/lib/api/admin";
 
 export default function NewPromoCodePage() {
   const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -34,18 +34,7 @@ export default function NewPromoCodePage() {
     expires_at: "",
   });
 
-  const createMutation = useMutation({
-    mutationFn: createPromoCode,
-    onSuccess: () => {
-      toast.success("Promo code created successfully");
-      router.push("/promo-codes");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to create promo code");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const data = {
@@ -62,7 +51,16 @@ export default function NewPromoCodePage() {
         : undefined,
     };
 
-    createMutation.mutate(data);
+    setIsCreating(true);
+    try {
+      await createPromoCode(data);
+      toast.success("Promo code created successfully");
+      router.push("/promo-codes");
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to create promo code");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -260,8 +258,8 @@ export default function NewPromoCodePage() {
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Creating..." : "Create Promo Code"}
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create Promo Code"}
               </Button>
             </div>
           </CardContent>

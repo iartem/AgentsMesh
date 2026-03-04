@@ -366,5 +366,65 @@
       "theme_solarized_dark": "Solarized Dark",
       "theme_system": "System"
     }
+  },
+  "support": {
+    "title": "Support Tickets",
+    "description": "Submit questions or feedback and track your requests",
+    "create": "New Ticket",
+    "createDescription": "Describe your issue and we'll get back to you",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "send": "Send",
+    "sending": "Sending...",
+    "attach": "Attach",
+    "replyPlaceholder": "Type your reply...",
+    "empty": "No support tickets yet",
+    "createFirst": "Create your first ticket",
+    "notFound": "Ticket not found",
+    "backToList": "Back to tickets",
+    "retry": "Retry",
+    "download": "Download",
+    "downloadFailed": "Failed to download attachment",
+    "fileTooLarge": "File exceeds maximum size ({max})",
+    "filter": {
+      "all": "All"
+    },
+    "status": {
+      "open": "Open",
+      "in_progress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "category": {
+      "bug": "Bug Report",
+      "feature_request": "Feature Request",
+      "usage_question": "Usage Question",
+      "account": "Account",
+      "other": "Other"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "Brief summary of your issue",
+      "category": "Category",
+      "priority": "Priority",
+      "content": "Description",
+      "contentPlaceholder": "Describe your issue in detail...",
+      "attachments": "Attachments",
+      "addFiles": "Add files"
+    },
+    "validation": {
+      "required": "Title and description are required"
+    },
+    "error": {
+      "createFailed": "Failed to create ticket. Please try again.",
+      "loadFailed": "Failed to load data. Please try again.",
+      "sendFailed": "Failed to send message. Please try again."
+    }
   }
 }

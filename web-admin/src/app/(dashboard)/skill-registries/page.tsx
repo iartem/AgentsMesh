@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   RefreshCw,
@@ -66,57 +65,25 @@ export default function SkillRegistriesPage() {
   const [formBranch, setFormBranch] = useState("");
   const [formSourceType, setFormSourceType] = useState("");
   const [syncingIds, setSyncingIds] = useState<Set<number>>(new Set());
-  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["skill-registries"],
-    queryFn: listSkillRegistries,
-  });
+  const [data, setData] = useState<{ items: SkillRegistry[]; total: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const createMutation = useMutation({
-    mutationFn: createSkillRegistry,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skill-registries"] });
-      toast.success("Skill registry added successfully");
-      setDialogOpen(false);
-      resetForm();
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to create skill registry");
-    },
-  });
+  const fetchRegistries = useCallback(async () => {
+    try {
+      const result = await listSkillRegistries();
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const syncMutation = useMutation({
-    mutationFn: syncSkillRegistry,
-    onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: ["skill-registries"] });
-      setSyncingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      toast.success("Sync triggered successfully");
-    },
-    onError: (err: { error: string }, id: number) => {
-      setSyncingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      toast.error(err.error || "Failed to sync skill registry");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteSkillRegistry,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skill-registries"] });
-      toast.success("Skill registry deleted successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete skill registry");
-    },
-  });
+  useEffect(() => {
+    fetchRegistries();
+  }, [fetchRegistries]);
 
   const resetForm = () => {
     setFormUrl("");
@@ -124,31 +91,59 @@ export default function SkillRegistriesPage() {
     setFormSourceType("");
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formUrl.trim()) {
       toast.error("Repository URL is required");
       return;
     }
-    createMutation.mutate({
-      repository_url: formUrl.trim(),
-      branch: formBranch.trim() || undefined,
-      source_type: formSourceType.trim() || undefined,
-    });
+    setIsCreating(true);
+    try {
+      await createSkillRegistry({
+        repository_url: formUrl.trim(),
+        branch: formBranch.trim() || undefined,
+        source_type: formSourceType.trim() || undefined,
+      });
+      toast.success("Skill registry added successfully");
+      setDialogOpen(false);
+      resetForm();
+      await fetchRegistries();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to create skill registry");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleSync = (id: number) => {
+  const handleSync = async (id: number) => {
     setSyncingIds((prev) => new Set(prev).add(id));
-    syncMutation.mutate(id);
+    try {
+      await syncSkillRegistry(id);
+      toast.success("Sync triggered successfully");
+      await fetchRegistries();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to sync skill registry");
+    } finally {
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
-  const handleDelete = (registry: SkillRegistry) => {
+  const handleDelete = async (registry: SkillRegistry) => {
     if (
-      confirm(
+      !confirm(
         `Are you sure you want to delete the skill registry "${registry.repository_url}"? This action cannot be undone.`
       )
-    ) {
-      deleteMutation.mutate(registry.id);
+    ) return;
+    try {
+      await deleteSkillRegistry(registry.id);
+      toast.success("Skill registry deleted successfully");
+      await fetchRegistries();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to delete skill registry");
     }
   };
 
@@ -157,7 +152,7 @@ export default function SkillRegistriesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Skill Registries</h1>
           <p className="text-sm text-muted-foreground">
@@ -223,9 +218,9 @@ export default function SkillRegistriesPage() {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending}
+                  disabled={isCreating}
                 >
-                  {createMutation.isPending && (
+                  {isCreating && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Add Registry
@@ -237,7 +232,7 @@ export default function SkillRegistriesPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -340,7 +335,6 @@ export default function SkillRegistriesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(registry)}
-                        disabled={deleteMutation.isPending}
                         title="Delete skill registry"
                         className="text-destructive hover:text-destructive"
                       >

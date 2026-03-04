@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Building2,
@@ -51,11 +51,27 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: stats, isLoading, error } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: getDashboardStats,
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const result = await getDashboardStats();
+      setStats(result);
+      setError(null);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
 
   if (isLoading) {
     return (

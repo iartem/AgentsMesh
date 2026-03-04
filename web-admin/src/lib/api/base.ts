@@ -119,11 +119,48 @@ class ApiClient {
     });
   }
 
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   async delete<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
       body: data ? JSON.stringify(data) : undefined,
     });
+  }
+
+  async postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    const token = getAuthToken();
+    const headers: HeadersInit = {};
+
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+      throw { error: "Session expired. Please login again.", status: 401 };
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw {
+        error: errorData.error || `HTTP ${response.status}`,
+        status: response.status,
+      } as ApiError;
+    }
+
+    return response.json();
   }
 }
 

@@ -349,5 +349,63 @@
       "theme_solarized_dark": "Solarized Dunkel",
       "theme_system": "System"
     }
+  },
+  "support": {
+    "title": "Support-Tickets",
+    "description": "Reichen Sie Fragen oder Feedback ein und verfolgen Sie Ihre Anfragen",
+    "create": "Neues Ticket",
+    "createDescription": "Beschreiben Sie Ihr Problem und wir melden uns bei Ihnen",
+    "submit": "Absenden",
+    "submitting": "Wird gesendet...",
+    "cancel": "Abbrechen",
+    "send": "Senden",
+    "sending": "Wird gesendet...",
+    "attach": "Anhängen",
+    "replyPlaceholder": "Geben Sie Ihre Antwort ein...",
+    "empty": "Noch keine Support-Tickets",
+    "createFirst": "Erstellen Sie Ihr erstes Ticket",
+    "notFound": "Ticket nicht gefunden",
+    "backToList": "Zurück zu Tickets",
+    "retry": "Erneut versuchen",
+    "download": "Herunterladen",
+    "downloadFailed": "Anhang konnte nicht heruntergeladen werden",
+    "fileTooLarge": "Datei überschreitet die maximale Größe ({max})",
+    "filter": {
+      "all": "Alle"
+    },
+    "status": {
+      "open": "Offen",
+      "in_progress": "In Bearbeitung",
+      "resolved": "Gelöst",
+      "closed": "Geschlossen"
+    },
+    "category": {
+      "bug": "Fehlerbericht",
+      "feature_request": "Funktionswunsch",
+      "usage_question": "Nutzungsfrage",
+      "account": "Konto",
+      "other": "Sonstiges"
+    },
+    "priority": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "fields": {
+      "title": "Titel",
+      "titlePlaceholder": "Kurze Zusammenfassung Ihres Problems",
+      "category": "Kategorie",
+      "priority": "Priorität",
+      "content": "Beschreibung",
+      "contentPlaceholder": "Beschreiben Sie Ihr Problem im Detail...",
+      "attachments": "Anhänge",
+      "addFiles": "Dateien hinzufügen"
+    },
+    "validation": {
+      "required": "Titel und Beschreibung sind erforderlich"
+    },
+    "error": {
+      "createFailed": "Ticket konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+    }
   }
 }

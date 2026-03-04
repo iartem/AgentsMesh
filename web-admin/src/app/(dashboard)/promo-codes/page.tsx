@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -50,6 +49,7 @@ import {
   PromoCode,
   PromoCodeType,
 } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate } from "@/lib/utils";
 
 const typeLabels: Record<PromoCodeType, string> = {
@@ -74,60 +74,60 @@ export default function PromoCodesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["promo-codes", search, typeFilter, statusFilter, page],
-    queryFn: () =>
-      listPromoCodes({
+  const [data, setData] = useState<PaginatedResponse<PromoCode> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchPromoCodes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await listPromoCodes({
         search: search || undefined,
         type: typeFilter !== "all" ? (typeFilter as PromoCodeType) : undefined,
         is_active: statusFilter === "all" ? undefined : statusFilter === "active",
         page,
         page_size: pageSize,
-      }),
-  });
+      });
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, typeFilter, statusFilter, page, pageSize]);
 
-  const activateMutation = useMutation({
-    mutationFn: activatePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-codes"] });
+  useEffect(() => {
+    fetchPromoCodes();
+  }, [fetchPromoCodes]);
+
+  const handleActivate = async (id: number) => {
+    try {
+      await activatePromoCode(id);
       toast.success("Promo code activated");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to activate promo code");
-    },
-  });
+      await fetchPromoCodes();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to activate promo code");
+    }
+  };
 
-  const deactivateMutation = useMutation({
-    mutationFn: deactivatePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-codes"] });
+  const handleDeactivate = async (id: number) => {
+    try {
+      await deactivatePromoCode(id);
       toast.success("Promo code deactivated");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to deactivate promo code");
-    },
-  });
+      await fetchPromoCodes();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to deactivate promo code");
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePromoCode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["promo-codes"] });
+  const handleDelete = async (code: PromoCode) => {
+    if (!confirm(`Are you sure you want to delete "${code.code}"? This action cannot be undone.`)) return;
+    try {
+      await deletePromoCode(code.id);
       toast.success("Promo code deleted");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to delete promo code");
-    },
-  });
-
-  const handleDelete = (code: PromoCode) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${code.code}"? This action cannot be undone.`
-      )
-    ) {
-      deleteMutation.mutate(code.id);
+      await fetchPromoCodes();
+    } catch (err: unknown) {
+      toast.error((err as { error?: string })?.error || "Failed to delete promo code");
     }
   };
 
@@ -149,7 +149,7 @@ export default function PromoCodesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Promo Codes</h1>
           <p className="text-sm text-muted-foreground">
@@ -216,7 +216,7 @@ export default function PromoCodesPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -307,16 +307,14 @@ export default function PromoCodesPage() {
                         <DropdownMenuSeparator />
                         {code.is_active ? (
                           <DropdownMenuItem
-                            onClick={() => deactivateMutation.mutate(code.id)}
-                            disabled={deactivateMutation.isPending}
+                            onClick={() => handleDeactivate(code.id)}
                           >
                             <PowerOff className="mr-2 h-4 w-4" />
                             Deactivate
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
-                            onClick={() => activateMutation.mutate(code.id)}
-                            disabled={activateMutation.isPending}
+                            onClick={() => handleActivate(code.id)}
                           >
                             <Power className="mr-2 h-4 w-4" />
                             Activate
@@ -325,7 +323,6 @@ export default function PromoCodesPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleDelete(code)}
-                          disabled={deleteMutation.isPending}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -343,7 +340,7 @@ export default function PromoCodesPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {(page - 1) * pageSize + 1} to{" "}
             {Math.min(page * pageSize, total)} of {total} promo codes

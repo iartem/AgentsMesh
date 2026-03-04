@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, MoreHorizontal, Shield, ShieldOff, UserX, UserCheck, MailCheck, MailX } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Shield, ShieldOff, UserX, UserCheck, MailCheck, MailX } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,89 +17,102 @@ import {
   unverifyUserEmail,
   User,
 } from "@/lib/api/admin";
+import type { PaginatedResponse } from "@/lib/api/base";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const queryClient = useQueryClient();
+  const [data, setData] = useState<PaginatedResponse<User> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["users", { search, page }],
-    queryFn: () => listUsers({ search, page, page_size: 20 }),
-  });
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await listUsers({ search, page, page_size: 20 });
+      setData(result);
+    } catch {
+      // Keep previous data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, page]);
 
-  const disableMutation = useMutation({
-    mutationFn: disableUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleDisable = async (userId: number) => {
+    try {
+      await disableUser(userId);
       toast.success("User disabled successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to disable user");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to disable user";
+      toast.error(message);
+    }
+  };
 
-  const enableMutation = useMutation({
-    mutationFn: enableUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  const handleEnable = async (userId: number) => {
+    try {
+      await enableUser(userId);
       toast.success("User enabled successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to enable user");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to enable user";
+      toast.error(message);
+    }
+  };
 
-  const grantAdminMutation = useMutation({
-    mutationFn: grantAdmin,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  const handleGrantAdmin = async (userId: number) => {
+    try {
+      await grantAdmin(userId);
       toast.success("Admin privileges granted");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to grant admin privileges");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to grant admin privileges";
+      toast.error(message);
+    }
+  };
 
-  const revokeAdminMutation = useMutation({
-    mutationFn: revokeAdmin,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  const handleRevokeAdmin = async (userId: number) => {
+    try {
+      await revokeAdmin(userId);
       toast.success("Admin privileges revoked");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to revoke admin privileges");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to revoke admin privileges";
+      toast.error(message);
+    }
+  };
 
-  const verifyEmailMutation = useMutation({
-    mutationFn: verifyUserEmail,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  const handleVerifyEmail = async (userId: number) => {
+    try {
+      await verifyUserEmail(userId);
       toast.success("Email verified successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to verify email");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to verify email";
+      toast.error(message);
+    }
+  };
 
-  const unverifyEmailMutation = useMutation({
-    mutationFn: unverifyUserEmail,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+  const handleUnverifyEmail = async (userId: number) => {
+    try {
+      await unverifyUserEmail(userId);
       toast.success("Email unverified successfully");
-    },
-    onError: (err: { error: string }) => {
-      toast.error(err.error || "Failed to unverify email");
-    },
-  });
+      await fetchUsers();
+    } catch (err: unknown) {
+      const message = (err as { error?: string })?.error || "Failed to unverify email";
+      toast.error(message);
+    }
+  };
 
   return (
     <div className="space-y-4">
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search users..."
@@ -132,12 +144,12 @@ export default function UsersPage() {
                 <UserRow
                   key={user.id}
                   user={user}
-                  onDisable={() => disableMutation.mutate(user.id)}
-                  onEnable={() => enableMutation.mutate(user.id)}
-                  onGrantAdmin={() => grantAdminMutation.mutate(user.id)}
-                  onRevokeAdmin={() => revokeAdminMutation.mutate(user.id)}
-                  onVerifyEmail={() => verifyEmailMutation.mutate(user.id)}
-                  onUnverifyEmail={() => unverifyEmailMutation.mutate(user.id)}
+                  onDisable={() => handleDisable(user.id)}
+                  onEnable={() => handleEnable(user.id)}
+                  onGrantAdmin={() => handleGrantAdmin(user.id)}
+                  onRevokeAdmin={() => handleRevokeAdmin(user.id)}
+                  onVerifyEmail={() => handleVerifyEmail(user.id)}
+                  onUnverifyEmail={() => handleUnverifyEmail(user.id)}
                 />
               ))}
               {data?.data.length === 0 && (
@@ -198,7 +210,7 @@ function UserRow({
   onUnverifyEmail: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         {user.avatar_url ? (
           <img
@@ -212,7 +224,7 @@ function UserRow({
           </div>
         )}
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{user.name || user.username}</span>
             {user.is_system_admin && (
               <Badge variant="default" className="text-xs">
@@ -235,7 +247,7 @@ function UserRow({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="text-right text-xs text-muted-foreground">
+        <div className="hidden text-right text-xs text-muted-foreground sm:block">
           <p>Joined {formatDate(user.created_at)}</p>
           {user.last_login_at && (
             <p>Last login {formatRelativeTime(user.last_login_at)}</p>

@@ -126,6 +126,12 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			// Path changed: /organizations → /orgs
 			v1.RegisterOrganizationRoutes(protected.Group("/orgs"), svc.Org, svc.User)
 
+			// Support Tickets (user-level, no tenant context required)
+			if svc.SupportTicket != nil {
+				supportTicketHandler := v1.NewSupportTicketHandler(svc.SupportTicket)
+				supportTicketHandler.RegisterRoutes(protected.Group("/support-tickets"))
+			}
+
 			// Organization-scoped routes (require tenant context)
 			// Path changed: /organizations/:slug → /orgs/:slug
 			orgScoped := protected.Group("/orgs/:slug")
@@ -173,6 +179,7 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			RelayManager:      svc.RelayManager,
 			ExtensionRepo:     svc.ExtensionRepo,
 			MarketplaceWorker: svc.MarketplaceWorker,
+			SupportTicket:     svc.SupportTicket,
 		})
 	}
 
