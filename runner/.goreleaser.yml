@@ -32,18 +32,18 @@ builds:
 
 archives:
   - id: cli-archive
-    builds:
+    ids:
       - runner-cli
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
       - README.md
       - LICENSE*
   # Separate archive for macOS universal binary
   - id: cli-archive-darwin-universal
-    builds:
+    ids:
       - runner-universal
     name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_all"
     files:
@@ -64,7 +64,7 @@ universal_binaries:
 nfpms:
   - id: runner-deb-rpm
     package_name: agentsmesh-runner
-    builds:
+    ids:
       - runner-cli
     vendor: AgentsMesh
     homepage: https://agentsmesh.ai
@@ -175,85 +175,35 @@ release:
 
     AgentsMesh Runner is an AI Agent task executor that connects to the AgentsMesh server and executes AI agent tasks in isolated terminal environments.
 
-    ### Installation
+    ### Quick Install
 
-    **macOS (Homebrew) - Recommended:**
+    **macOS / Linux (one-line):**
     ```bash
-    # Add tap
-    brew tap agentsmesh/tap https://github.com/AgentsMesh/BrewCask
+    curl -fsSL https://agentsmesh.ai/install.sh | sh
+    ```
 
-    # Install runner
+    **Windows (PowerShell):**
+    ```powershell
+    irm https://agentsmesh.ai/install.ps1 | iex
+    ```
+
+    **macOS (Homebrew):**
+    ```bash
+    brew tap agentsmesh/tap https://github.com/AgentsMesh/BrewCask
     brew install agentsmesh/tap/agentsmesh-runner
     ```
-
-    **macOS (Direct download):**
-    ```bash
-    # Intel or Apple Silicon (Universal binary)
-    curl -fsSL https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_darwin_all.tar.gz | tar xz
-    sudo mv agentsmesh-runner /usr/local/bin/
-    ```
-
-    **Linux (Debian/Ubuntu):**
-    ```bash
-    # x86_64
-    wget https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_amd64.deb
-    sudo dpkg -i agentsmesh-runner_{{.Version}}_linux_amd64.deb
-
-    # ARM64
-    wget https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_arm64.deb
-    sudo dpkg -i agentsmesh-runner_{{.Version}}_linux_arm64.deb
-    ```
-
-    **Linux (RHEL/CentOS/Fedora):**
-    ```bash
-    # x86_64
-    wget https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_amd64.rpm
-    sudo rpm -i agentsmesh-runner_{{.Version}}_linux_amd64.rpm
-
-    # ARM64
-    wget https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_arm64.rpm
-    sudo rpm -i agentsmesh-runner_{{.Version}}_linux_arm64.rpm
-    ```
-
-    **Linux (Alpine):**
-    ```bash
-    # x86_64
-    wget https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_amd64.apk
-    sudo apk add --allow-untrusted agentsmesh-runner_{{.Version}}_linux_amd64.apk
-    ```
-
-    **Linux (Direct download):**
-    ```bash
-    # x86_64
-    curl -fsSL https://github.com/AgentsMesh/AgentsMesh/releases/download/v{{.Version}}/agentsmesh-runner_{{.Version}}_linux_amd64.tar.gz | tar xz
-    sudo mv agentsmesh-runner /usr/local/bin/
-    ```
-
-    **Windows:**
-    Download `agentsmesh-runner_{{.Version}}_windows_amd64.zip` and extract to a directory in your PATH.
 
     ### Quick Start
 
     ```bash
-    # Global: https://api.agentsmesh.ai (or your own server address)
+    # Register (Global: https://api.agentsmesh.ai or your own server)
     agentsmesh-runner register --server <SERVER_URL> --token YOUR_TOKEN
 
     # Start runner
     agentsmesh-runner run
     ```
 
-    ### Run as System Service
-
-    ```bash
-    # Install service
-    sudo agentsmesh-runner service install
-
-    # Start service
-    sudo agentsmesh-runner service start
-
-    # Check status
-    sudo agentsmesh-runner service status
-    ```
+    For full documentation, visit: https://agentsmesh.ai/docs/runners/setup
 
   footer: |
     ---
