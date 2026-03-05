@@ -134,6 +134,15 @@ func (h *GRPCRunnerHandler) Reactivate(c *gin.Context) {
 
 // ==================== Route Registration ====================
 
+// GetDiscovery returns the current gRPC endpoint for runner auto-discovery.
+// GET /api/v1/runners/grpc/discovery
+// No authentication required - allows runners with stale endpoints to self-heal.
+func (h *GRPCRunnerHandler) GetDiscovery(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"grpc_endpoint": h.config.GRPC.Endpoint,
+	})
+}
+
 // RegisterGRPCRunnerRoutes registers gRPC runner routes.
 func RegisterGRPCRunnerRoutes(r *gin.RouterGroup, handler *GRPCRunnerHandler) {
 	// Public endpoints (no auth required)
@@ -152,6 +161,9 @@ func RegisterGRPCRunnerRoutes(r *gin.RouterGroup, handler *GRPCRunnerHandler) {
 
 		// Certificate renewal (authenticated via mTLS, X-Client-Cert-* headers)
 		grpcPublic.POST("/renew-certificate", handler.RenewCertificate)
+
+		// Discovery - returns current gRPC endpoint for auto-healing stale configs
+		grpcPublic.GET("/discovery", handler.GetDiscovery)
 	}
 }
 

@@ -91,10 +91,46 @@ func New(cfg *config.Config) *Server {
 	return s
 }
 
+// registerWithRetry attempts to register with the backend, retrying with exponential
+// backoff. This handles the startup race condition where the relay starts before the
+// backend HTTP server is fully ready.
+func (s *Server) registerWithRetry(ctx context.Context) error {
+	const maxWait = 2 * time.Minute
+	backoff := time.Second
+	deadline := time.Now().Add(maxWait)
+
+	for {
+		err := s.backendClient.Register(ctx)
+		if err == nil {
+			return nil
+		}
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for backend after %s: %w", maxWait, err)
+		}
+
+		s.logger.Warn("Backend not ready yet, retrying...",
+			"error", err,
+			"retry_in", backoff)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+		}
+
+		backoff *= 2
+		if backoff > 30*time.Second {
+			backoff = 30 * time.Second
+		}
+	}
+}
+
 // Start starts the relay server
 func (s *Server) Start(ctx context.Context) error {
-	// Register with backend
-	if err := s.backendClient.Register(ctx); err != nil {
+	// Register with backend, retrying until the backend is ready.
+	// The relay may start before the backend HTTP server is fully initialized.
+	if err := s.registerWithRetry(ctx); err != nil {
 		return fmt.Errorf("failed to register with backend: %w", err)
 	}
 
