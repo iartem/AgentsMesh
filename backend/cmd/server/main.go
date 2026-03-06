@@ -151,7 +151,7 @@ func main() {
 			terminalRouter.SetCommandSender(grpcCommandSender)
 			sandboxQuerySender = grpcCommandSender
 			slog.Info("PodCoordinator and TerminalRouter connected to gRPC Server")
-			setupRelayTokenRefreshCallback(db, runnerConnMgr, relayTokenGenerator, grpcCommandSender)
+			setupRelayTokenRefreshCallback(db, runnerConnMgr, relayTokenGenerator, grpcCommandSender, cfg.RelayURL())
 		}
 	} else {
 		slog.Warn("PKI CA files not configured, gRPC/mTLS disabled")

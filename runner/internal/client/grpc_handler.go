@@ -204,6 +204,7 @@ func (c *GRPCConnection) handleSubscribeTerminal(cmd *runnerv1.SubscribeTerminal
 	req := SubscribeTerminalRequest{
 		PodKey:          cmd.PodKey,
 		RelayURL:        cmd.RelayUrl,
+		PublicRelayURL:  cmd.PublicRelayUrl,
 		RunnerToken:     cmd.RunnerToken,
 		IncludeSnapshot: cmd.IncludeSnapshot,
 		SnapshotHistory: cmd.SnapshotHistory,

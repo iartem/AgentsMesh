@@ -116,7 +116,8 @@ func (h *TerminalConnectHandler) GetTerminalConnection(c *gin.Context) {
 			c.Request.Context(),
 			pod.RunnerID,
 			podKey,
-			relayInfo.GetRunnerURL(),
+			relayInfo.GetRunnerURL(), // Docker-internal URL for Docker runners
+			relayInfo.URL,            // Public URL via Traefik — fallback for local runners
 			runnerToken,
 			true, // include snapshot
 			1000, // snapshot history lines

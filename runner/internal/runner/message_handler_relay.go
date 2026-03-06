@@ -3,7 +3,6 @@ package runner
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/client"
@@ -56,10 +55,11 @@ func (h *RunnerMessageHandler) OnSubscribeTerminal(req client.SubscribeTerminalR
 		slog.Default().With("pod_key", req.PodKey),
 	)
 
-	// Set fallback relay URL derived from server_url for local runners
-	// that can't resolve Docker-internal hostnames (e.g., ws://relay:8090)
-	if fallback := h.buildFallbackRelayURL(); fallback != "" {
-		relayClient.SetFallbackURL(fallback)
+	// Set fallback relay URL (public Traefik URL) for local runners that
+	// can't resolve Docker-internal hostnames (e.g. ws://relay:8090).
+	// The backend derives this from PRIMARY_DOMAIN — no runner config dependency.
+	if req.PublicRelayURL != "" {
+		relayClient.SetFallbackURL(req.PublicRelayURL)
 	}
 
 	h.setupRelayClientHandlers(relayClient, pod, req)
@@ -187,29 +187,6 @@ func (h *RunnerMessageHandler) setupRelayClientHandlers(relayClient relay.RelayC
 			}()
 		}
 	})
-}
-
-// buildFallbackRelayURL derives a fallback relay WebSocket URL from the runner's server_url config.
-// For example, server_url "http://localhost:29400" becomes "ws://localhost:29400/relay".
-// This allows local runners to reach the relay via Traefik when the backend-provided
-// relay URL is a Docker-internal address (e.g., ws://relay:8090).
-func (h *RunnerMessageHandler) buildFallbackRelayURL() string {
-	serverURL := h.runner.cfg.ServerURL
-	if serverURL == "" {
-		return ""
-	}
-	u, err := url.Parse(serverURL)
-	if err != nil {
-		return ""
-	}
-	switch u.Scheme {
-	case "https":
-		u.Scheme = "wss"
-	default:
-		u.Scheme = "ws"
-	}
-	u.Path = "/relay"
-	return u.String()
 }
 
 // OnUnsubscribeTerminal handles unsubscribe terminal command from server.

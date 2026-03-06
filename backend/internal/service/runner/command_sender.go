@@ -36,9 +36,10 @@ type RunnerCommandSender interface {
 	SendPrompt(ctx context.Context, runnerID int64, podKey, prompt string) error
 
 	// SendSubscribeTerminal sends a subscribe terminal command to a runner.
-	// This notifies the runner that a browser wants to observe the terminal via Relay.
-	// Note: sessionID has been removed - channels are now identified by PodKey only
-	SendSubscribeTerminal(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error
+	// relayURL is the Docker-internal URL (e.g. ws://relay:8090) used by Docker runners.
+	// publicRelayURL is the public Traefik URL (e.g. ws://host:port/relay) used as fallback
+	// by local runners that cannot resolve Docker-internal hostnames.
+	SendSubscribeTerminal(ctx context.Context, runnerID int64, podKey, relayURL, publicRelayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error
 
 	// SendUnsubscribeTerminal sends an unsubscribe terminal command to a runner.
 	// This notifies the runner that all browsers have disconnected and it should disconnect from Relay.
@@ -98,7 +99,7 @@ func (n *NoOpCommandSender) SendPrompt(ctx context.Context, runnerID int64, podK
 	return ErrCommandSenderNotSet
 }
 
-func (n *NoOpCommandSender) SendSubscribeTerminal(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
+func (n *NoOpCommandSender) SendSubscribeTerminal(ctx context.Context, runnerID int64, podKey, relayURL, publicRelayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
 	n.logger.Warn("command sender not configured, cannot send subscribe terminal",
 		"runner_id", runnerID, "pod_key", podKey)
 	return ErrCommandSenderNotSet

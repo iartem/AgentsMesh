@@ -2456,7 +2456,7 @@ type SubscribeTerminalCommand struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	PodKey          string                 `protobuf:"bytes,1,opt,name=pod_key,json=podKey,proto3" json:"pod_key,omitempty"`
 	RelayUrl        string                 `protobuf:"bytes,2,opt,name=relay_url,json=relayUrl,proto3" json:"relay_url,omitempty"`                       // Relay WebSocket URL (wss://relay.example.com)
-	SessionId       string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`                    // 会话 ID，用于 Relay 匹配 Browser 和 Runner
+	PublicRelayUrl  string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"public_relay_url,omitempty"`              // Public Relay URL via Traefik — fallback for local runners
 	IncludeSnapshot bool                   `protobuf:"varint,4,opt,name=include_snapshot,json=includeSnapshot,proto3" json:"include_snapshot,omitempty"` // 是否发送快照
 	SnapshotHistory int32                  `protobuf:"varint,5,opt,name=snapshot_history,json=snapshotHistory,proto3" json:"snapshot_history,omitempty"` // 快照历史行数
 	RunnerToken     string                 `protobuf:"bytes,6,opt,name=runner_token,json=runnerToken,proto3" json:"runner_token,omitempty"`              // Runner 认证 Token（JWT）
@@ -2508,9 +2508,9 @@ func (x *SubscribeTerminalCommand) GetRelayUrl() string {
 	return ""
 }
 
-func (x *SubscribeTerminalCommand) GetSessionId() string {
+func (x *SubscribeTerminalCommand) GetPublicRelayUrl() string {
 	if x != nil {
-		return x.SessionId
+		return x.PublicRelayUrl
 	}
 	return ""
 }

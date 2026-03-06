@@ -65,11 +65,11 @@ type TerminalRedrawRequest struct {
 
 // SubscribeTerminalRequest is sent when a browser wants to observe the terminal via Relay.
 // The Runner should connect to the specified Relay URL and start streaming terminal output.
-// Note: SessionID has been removed - channels are now identified by PodKey only
 type SubscribeTerminalRequest struct {
 	PodKey          string `json:"pod_key"`
-	RelayURL        string `json:"relay_url"`
-	RunnerToken     string `json:"runner_token"` // JWT token for Relay authentication
+	RelayURL        string `json:"relay_url"`         // Docker-internal URL (e.g. ws://relay:8090)
+	PublicRelayURL  string `json:"public_relay_url"`  // Public URL via Traefik — fallback for local runners
+	RunnerToken     string `json:"runner_token"`      // JWT token for Relay authentication
 	IncludeSnapshot bool   `json:"include_snapshot"`
 	SnapshotHistory int32  `json:"snapshot_history"`
 }
