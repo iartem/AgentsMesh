@@ -31,6 +31,7 @@ func (c *TerminalChannel) writeToPublisher(data []byte) error {
 	c.publisherMu.RUnlock()
 
 	if pub == nil {
+		c.logger.Debug("Dropping data, publisher not connected")
 		return nil
 	}
 	return writeToConn(pub, data)
@@ -337,6 +338,15 @@ func (c *TerminalChannel) bufferOutput(data []byte) {
 	}
 }
 
+// clearOutputBuffer removes all buffered output messages.
+// Called when a Snapshot arrives — snapshot supersedes all prior output.
+func (c *TerminalChannel) clearOutputBuffer() {
+	c.outputBufferMu.Lock()
+	defer c.outputBufferMu.Unlock()
+	c.outputBuffer = c.outputBuffer[:0]
+	c.outputBufferBytes = 0
+}
+
 // getBufferedOutput returns a copy of all buffered Output messages
 func (c *TerminalChannel) getBufferedOutput() [][]byte {
 	c.outputBufferMu.RLock()
@@ -382,6 +392,12 @@ func (c *TerminalChannel) forwardPublisherToSubscribers() {
 		msg, _ := protocol.DecodeMessage(data)
 		if msg != nil && msg.Type == protocol.MsgTypeOutput {
 			c.bufferOutput(data)
+		}
+
+		// Snapshot supersedes all buffered output — clear buffer so future
+		// subscribers don't receive stale output followed by a duplicate snapshot
+		if msg != nil && msg.Type == protocol.MsgTypeSnapshot {
+			c.clearOutputBuffer()
 		}
 
 		c.Broadcast(data)
@@ -434,6 +450,8 @@ func (c *TerminalChannel) forwardSubscriberToPublisher(subscriberID string) {
 		}
 
 		// Forward to publisher (serialized via publisherWriteMu)
+		c.logger.Debug("Forwarding subscriber data to publisher",
+			"subscriber_id", subscriberID, "msg_type", msg.Type, "data_len", len(data))
 		if err := c.writeToPublisher(data); err != nil {
 			c.logger.Warn("Failed to forward to publisher", "error", err)
 		}

@@ -335,9 +335,13 @@ class TerminalConnectionPool {
           }
 
           // Forward serialized content to xterm (includes ANSI escape sequences)
+          // Clear terminal first since snapshot is complete state — prevents duplication
+          // when relay buffered output was already written before publisher reconnected
           if (snapshot.serialized_content) {
+            const clearSeq = new TextEncoder().encode("\x1b[2J\x1b[H\x1b[3J");
             const content = new TextEncoder().encode(snapshot.serialized_content);
             for (const callback of conn.subscribers.values()) {
+              callback(clearSeq);
               callback(content);
             }
           }
