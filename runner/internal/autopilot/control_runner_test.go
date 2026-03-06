@@ -142,7 +142,7 @@ func TestControlRunner_StartControlProcess_Timeout(t *testing.T) {
 
 	// Create a script that sleeps longer than timeout
 	scriptPath := filepath.Join(tmpDir, "slow_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\nsleep 10"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\nsleep 10"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{
@@ -178,7 +178,7 @@ func TestControlRunner_StartControlProcess_Success(t *testing.T) {
 
 	// Create a script that outputs a valid decision
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo '{"result": "TASK_COMPLETED\nAll done.", "session_id": "test-session-abc"}'
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)
@@ -217,7 +217,7 @@ func TestControlRunner_ResumeControlProcess_Success(t *testing.T) {
 
 	// Create a script that outputs a valid decision
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo '{"result": "CONTINUE\nMore work needed."}'
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)

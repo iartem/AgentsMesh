@@ -49,7 +49,7 @@ func TestAutopilotController_HandleDecision_Completed(t *testing.T) {
 
 	// Create mock agent that returns TASK_COMPLETED
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo "TASK_COMPLETED"
 echo "All tasks done."
 `
@@ -113,7 +113,7 @@ func TestAutopilotController_HandleDecision_NeedHumanHelp(t *testing.T) {
 
 	// Create mock agent that returns NEED_HUMAN_HELP
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo "NEED_HUMAN_HELP"
 echo "Need credentials."
 `
@@ -167,7 +167,7 @@ func TestAutopilotController_HandleDecision_GiveUp(t *testing.T) {
 
 	// Create mock agent that returns GIVE_UP
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo "GIVE_UP"
 echo "Cannot complete."
 `
@@ -231,7 +231,7 @@ func TestAutopilotController_HandleDecision_Continue(t *testing.T) {
 
 	// Create mock agent that returns CONTINUE
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo "CONTINUE"
 echo "Working on it."
 `
@@ -334,7 +334,7 @@ func TestAutopilotController_RunSingleDecision_ControlFailureRetry(t *testing.T)
 
 	// Create mock agent that fails
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 exit 1
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)
@@ -402,7 +402,7 @@ func TestAutopilotController_RunSingleDecision_WorkerNotWaitingAfterFailure(t *t
 
 	// Create mock agent that fails
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 exit 1
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)

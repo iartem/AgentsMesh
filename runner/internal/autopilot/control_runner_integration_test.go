@@ -21,7 +21,7 @@ func TestControlRunner_StartControlProcess_NonJSONOutput(t *testing.T) {
 
 	// Create a script that outputs non-JSON
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo "Working on task..."
 echo "TASK_COMPLETED"
 echo "All done successfully."
@@ -58,7 +58,7 @@ func TestControlRunner_StartControlProcess_LongOutput(t *testing.T) {
 
 	// Create a script that outputs a lot of text
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 for i in {1..500}; do
   echo "Line $i of output"
 done
@@ -96,7 +96,7 @@ func TestControlRunner_ResumeControlProcess_Timeout(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	scriptPath := filepath.Join(tmpDir, "slow_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\nsleep 10"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\nsleep 10"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{
@@ -131,7 +131,7 @@ func TestControlRunner_StartControlProcess_ProcessError(t *testing.T) {
 
 	// Create a script that exits with error
 	scriptPath := filepath.Join(tmpDir, "error_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\nexit 1"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\nexit 1"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{
@@ -164,7 +164,7 @@ func TestControlRunner_ResumeControlProcess_ProcessError(t *testing.T) {
 
 	// Create a script that exits with error
 	scriptPath := filepath.Join(tmpDir, "error_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\nexit 1"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\nexit 1"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{

@@ -24,7 +24,7 @@ func TestControlRunner_StartControlProcess_WithLogger(t *testing.T) {
 
 	// Create a script that outputs a valid decision with session_id
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo '{"result": "TASK_COMPLETED\nAll done.", "session_id": "test-session-xyz"}'
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)
@@ -66,7 +66,7 @@ func TestControlRunner_ResumeControlProcess_WithLogger(t *testing.T) {
 
 	// Create a script that outputs a valid decision
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 echo '{"result": "CONTINUE\nMore work needed."}'
 `
 	err = os.WriteFile(scriptPath, []byte(script), 0755)
@@ -111,7 +111,7 @@ func TestControlRunner_StartControlProcess_LongOutputTruncation(t *testing.T) {
 
 	// Create a script that outputs >2000 chars without JSON
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 for i in {1..300}; do
   echo "This is a very long line of output number $i that should help us exceed the 2000 character limit"
 done
@@ -156,7 +156,7 @@ func TestControlRunner_ResumeControlProcess_LongOutputTruncation(t *testing.T) {
 
 	// Create a script that outputs >2000 chars without JSON
 	scriptPath := filepath.Join(tmpDir, "mock_agent")
-	script := `#!/bin/bash
+	script := `#!/bin/sh
 for i in {1..300}; do
   echo "This is a very long line of output number $i that should help us exceed the 2000 character limit"
 done
@@ -204,7 +204,7 @@ func TestControlRunner_StartControlProcess_ErrorWithLogger(t *testing.T) {
 
 	// Create a script that exits with error
 	scriptPath := filepath.Join(tmpDir, "error_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\necho 'error' >&2\nexit 1"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\necho 'error' >&2\nexit 1"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{
@@ -243,7 +243,7 @@ func TestControlRunner_ResumeControlProcess_ErrorWithLogger(t *testing.T) {
 
 	// Create a script that exits with error
 	scriptPath := filepath.Join(tmpDir, "error_agent")
-	err = os.WriteFile(scriptPath, []byte("#!/bin/bash\necho 'error' >&2\nexit 1"), 0755)
+	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\necho 'error' >&2\nexit 1"), 0755)
 	require.NoError(t, err)
 
 	pb := NewPromptBuilder(PromptBuilderConfig{
