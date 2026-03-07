@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/anthropics/agentsmesh/backend/internal/domain/repository"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/gitprovider"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/git"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +14,7 @@ import (
 func TestGetTicketMRs(t *testing.T) {
 	ctx := context.Background()
 	db := setupMRSyncTestDB(t)
-	service := NewMRSyncService(db, nil)
+	service := newTestMRSyncService(db, nil)
 
 	// Create a ticket
 	tkt := &ticket.Ticket{
@@ -65,7 +65,7 @@ func TestGetTicketMRs(t *testing.T) {
 func TestGetPodMRs(t *testing.T) {
 	ctx := context.Background()
 	db := setupMRSyncTestDB(t)
-	service := NewMRSyncService(db, nil)
+	service := newTestMRSyncService(db, nil)
 
 	podID := int64(100)
 	ticketID := int64(1)
@@ -99,7 +99,7 @@ func TestGetPodMRs(t *testing.T) {
 func TestFindTicketByBranch(t *testing.T) {
 	ctx := context.Background()
 	db := setupMRSyncTestDB(t)
-	service := NewMRSyncService(db, nil)
+	service := newTestMRSyncService(db, nil)
 
 	// Create a ticket
 	tkt := &ticket.Ticket{
@@ -145,7 +145,7 @@ func TestSyncMRByURL(t *testing.T) {
 
 	t.Run("returns error for non-existent MR", func(t *testing.T) {
 		provider := &MockGitProvider{}
-		service := NewMRSyncService(db, provider)
+		service := newTestMRSyncService(db, provider)
 
 		_, err := service.SyncMRByURL(ctx, "https://gitlab.com/org/repo/-/merge_requests/999")
 		assert.Error(t, err)
@@ -165,11 +165,11 @@ func TestSyncMRByURL(t *testing.T) {
 				}, nil
 			},
 		}
-		service := NewMRSyncService(db, provider)
+		service := newTestMRSyncService(db, provider)
 
 		// Create repository
 		repoID := int64(10)
-		repo := &repository.Repository{
+		repo := &gitprovider.Repository{
 			OrganizationID: 1,
 			Name:           "repo",
 			FullPath:       "org/repo",
@@ -211,7 +211,7 @@ func TestSyncMRByURL(t *testing.T) {
 
 	t.Run("returns error when ticket has no repository", func(t *testing.T) {
 		provider := &MockGitProvider{}
-		service := NewMRSyncService(db, provider)
+		service := newTestMRSyncService(db, provider)
 
 		// Create ticket without repository
 		tkt := &ticket.Ticket{
