@@ -133,10 +133,8 @@ export function BlockEditor({
 
   return (
     <div className={className}>
-      {/* @blocknote/react@0.47 and @blocknote/mantine@0.46 have mismatched core types */}
       <BlockNoteView
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        editor={editor as any}
+        editor={editor}
         editable={editable}
         theme={theme}
         onChange={handleChange}
@@ -173,8 +171,7 @@ export function BlockViewer({
   return (
     <div className={className}>
       <BlockNoteView
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        editor={editor as any}
+        editor={editor}
         editable={false}
         theme={theme}
       />
