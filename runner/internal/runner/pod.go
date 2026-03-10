@@ -117,7 +117,7 @@ func (p *Pod) HasRelayClient() bool {
 
 // DisconnectRelay disconnects and clears the relay client.
 // Lock strategy: relayMu is held ONLY for the pointer swap.
-// Stop() and SetRelayOutput() are called outside the lock to avoid
+// Stop() and SetRelayClient() are called outside the lock to avoid
 // deadlocking with relay callbacks (e.g., fireOnClose → SetRelayClient → relayMu).
 func (p *Pod) DisconnectRelay() {
 	p.relayMu.Lock()
@@ -131,9 +131,9 @@ func (p *Pod) DisconnectRelay() {
 		logger.Pod().Debug("Disconnecting relay client", "pod_key", p.PodKey)
 		rc.Stop()
 	}
-	// Clear aggregator relay output - will fall back to gRPC
+	// Clear aggregator relay client - will fall back to gRPC
 	if p.Aggregator != nil {
-		p.Aggregator.SetRelayOutput(nil)
+		p.Aggregator.SetRelayClient(nil)
 	}
 }
 
