@@ -12,6 +12,8 @@ func (s *PodService) GetPod(ctx context.Context, podKey string) (*agentpod.Pod, 
 	if err != nil {
 		return nil, ErrPodNotFound
 	}
+	// Best-effort: enrich with loop info for display
+	_ = s.repo.EnrichWithLoopInfo(ctx, []*agentpod.Pod{pod})
 	return pod, nil
 }
 
@@ -60,7 +62,13 @@ func (s *PodService) GetPodsByTicket(ctx context.Context, ticketID int64) ([]*ag
 
 // ListPods returns pods for an organization
 func (s *PodService) ListPods(ctx context.Context, orgID int64, statuses []string, limit, offset int) ([]*agentpod.Pod, int64, error) {
-	return s.repo.ListByOrg(ctx, orgID, statuses, limit, offset)
+	pods, total, err := s.repo.ListByOrg(ctx, orgID, statuses, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Best-effort: enrich with loop info for display
+	_ = s.repo.EnrichWithLoopInfo(ctx, pods)
+	return pods, total, nil
 }
 
 // ListActivePods returns active pods for a runner

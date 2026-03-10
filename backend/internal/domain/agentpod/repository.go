@@ -64,6 +64,8 @@ type PodRepository interface {
 	GetByKeyAndRunner(ctx context.Context, podKey string, runnerID int64) (*Pod, error)
 	// CountActiveByKeys counts how many of the given pod keys are in active status.
 	CountActiveByKeys(ctx context.Context, podKeys []string) (int, error)
+	// EnrichWithLoopInfo populates the Loop field on pods by joining loop_runs → loops.
+	EnrichWithLoopInfo(ctx context.Context, pods []*Pod) error
 }
 
 // SettingsRepository defines persistence operations for UserAgentPodSettings.

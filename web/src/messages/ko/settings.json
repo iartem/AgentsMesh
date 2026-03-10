@@ -1,6 +1,7 @@
 {
   "settings": {
     "title": "설정",
+    "backToSettings": "설정으로 돌아가기",
     "general": "일반",
     "team": "팀",
     "gitProviders": "Git 제공자",

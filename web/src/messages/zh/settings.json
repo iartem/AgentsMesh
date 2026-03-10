@@ -1,6 +1,7 @@
 {
   "settings": {
     "title": "设置",
+    "backToSettings": "返回设置",
     "general": "通用",
     "team": "团队",
     "gitProviders": {

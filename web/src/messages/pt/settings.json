@@ -1,6 +1,7 @@
 {
   "settings": {
     "title": "Configurações",
+    "backToSettings": "Voltar às configurações",
     "general": "Geral",
     "team": "Equipe",
     "gitProviders": "Provedores Git",

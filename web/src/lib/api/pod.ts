@@ -35,6 +35,11 @@ export interface PodData {
     slug: string;
     title: string;
   };
+  loop?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   error_code?: string;
   error_message?: string;
   created_by?: {

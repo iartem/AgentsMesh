@@ -102,6 +102,16 @@ type Pod struct {
 	Repository      *gitprovider.Repository     `gorm:"foreignKey:RepositoryID" json:"repository,omitempty"`
 	Ticket          *ticket.Ticket             `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
 	CreatedBy       *user.User                 `gorm:"foreignKey:CreatedByID" json:"created_by,omitempty"`
+
+	// Virtual field: populated by service layer via loop_runs join, not a DB column
+	Loop *PodLoopInfo `gorm:"-" json:"loop,omitempty"`
+}
+
+// PodLoopInfo contains minimal loop information for pod display.
+type PodLoopInfo struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 func (Pod) TableName() string {

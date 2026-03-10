@@ -264,6 +264,51 @@ func (r *podRepo) CountActiveByKeys(ctx context.Context, podKeys []string) (int,
 	return int(count), err
 }
 
+func (r *podRepo) EnrichWithLoopInfo(ctx context.Context, pods []*agentpod.Pod) error {
+	if len(pods) == 0 {
+		return nil
+	}
+
+	podKeys := make([]string, 0, len(pods))
+	for _, p := range pods {
+		podKeys = append(podKeys, p.PodKey)
+	}
+
+	type loopRow struct {
+		PodKey   string `gorm:"column:pod_key"`
+		LoopID   int64  `gorm:"column:loop_id"`
+		LoopName string `gorm:"column:loop_name"`
+		LoopSlug string `gorm:"column:loop_slug"`
+	}
+
+	var rows []loopRow
+	err := r.db.WithContext(ctx).
+		Table("loop_runs").
+		Select("loop_runs.pod_key, loops.id AS loop_id, loops.name AS loop_name, loops.slug AS loop_slug").
+		Joins("JOIN loops ON loops.id = loop_runs.loop_id").
+		Where("loop_runs.pod_key IN ?", podKeys).
+		Find(&rows).Error
+	if err != nil {
+		return err
+	}
+
+	loopByKey := make(map[string]*agentpod.PodLoopInfo, len(rows))
+	for _, row := range rows {
+		loopByKey[row.PodKey] = &agentpod.PodLoopInfo{
+			ID:   row.LoopID,
+			Name: row.LoopName,
+			Slug: row.LoopSlug,
+		}
+	}
+
+	for _, p := range pods {
+		if info, ok := loopByKey[p.PodKey]; ok {
+			p.Loop = info
+		}
+	}
+	return nil
+}
+
 // isUniqueConstraintViolation checks if the error is a PostgreSQL unique constraint violation.
 func isUniqueConstraintViolation(err error, constraintName string) bool {
 	if err == nil {
