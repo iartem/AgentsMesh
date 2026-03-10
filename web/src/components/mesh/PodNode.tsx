@@ -28,7 +28,7 @@ function PodNode({ data }: PodNodeProps) {
       pod_key: node.pod_key,
       title: node.title,
       ticket: node.ticket_slug
-        ? { slug: node.ticket_slug }
+        ? { slug: node.ticket_slug, title: node.ticket_title }
         : undefined,
     },
     16
