@@ -21,8 +21,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgentsMesh - AI Agent Fleet Command Center",
-  description: "Orchestrate AI agents. Ship code faster. The development platform for Claude Code, Codex CLI, Gemini CLI, Aider and more.",
+  metadataBase: new URL("https://agentsmesh.ai"),
+  title: {
+    default: "AgentsMesh - AI Agent Fleet Command Center",
+    template: "%s | AgentsMesh",
+  },
+  description: "Don't just vibe code. Ship an enterprise-grade product. An agent fleet command center where you plan, collaborate, and ship — all in one place.",
+  keywords: [
+    "AI agents", "AI coding", "Claude Code", "Codex CLI", "Gemini CLI", "Aider",
+    "multi-agent", "agent orchestration", "terminal AI", "code automation",
+    "developer tools", "enterprise development", "self-hosted", "agent fleet",
+  ],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -31,6 +40,30 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "AgentsMesh",
+    title: "AgentsMesh - AI Agent Fleet Command Center",
+    description: "Don't just vibe code. Ship an enterprise-grade product. An agent fleet command center where you plan, collaborate, and ship — all in one place.",
+    url: "https://agentsmesh.ai",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "AgentsMesh - AI Agent Fleet Command Center",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AgentsMesh - AI Agent Fleet Command Center",
+    description: "Don't just vibe code. Ship an enterprise-grade product. Orchestrate Claude Code, Codex CLI, Gemini CLI, Aider and more.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "https://agentsmesh.ai",
   },
 };
 

@@ -1,7 +1,7 @@
 {
   "name": "AgentsMesh",
   "short_name": "AgentsMesh",
-  "description": "AI Code Agent Platform - Multi-terminal workspace for Claude Code and other AI agents",
+  "description": "AI Agent Fleet Command Center — plan, collaborate, and ship with AI agents, all in one place.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

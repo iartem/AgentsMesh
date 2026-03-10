@@ -50,8 +50,34 @@ export default function Home() {
     );
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "AgentsMesh",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Web, Linux, macOS, Windows",
+    description: "An agent fleet command center where you plan, collaborate, and ship — all in one place.",
+    url: "https://agentsmesh.ai",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Free tier available",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "AgentsMesh",
+      url: "https://agentsmesh.ai",
+      logo: "https://agentsmesh.ai/icons/icon-512.png",
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <main>
         <HeroSection />
