@@ -31,11 +31,34 @@ function Show-Banner {
 
 # Detect architecture
 function Get-Platform {
-    $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    $arch = $null
+
+    # Primary: use RuntimeInformation if available (.NET 4.7.1+ / PowerShell 6+)
+    # OSArchitecture always returns the OS arch, even from a 32-bit process.
+    try {
+        $rtArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+        $arch = $rtArch.ToString()
+    } catch {
+        # Fallback: use environment variables (works on all Windows versions)
+        # PROCESSOR_ARCHITEW6432 is set when a 32-bit process runs on 64-bit OS (WoW64),
+        # and contains the real OS architecture. PROCESSOR_ARCHITECTURE reflects the
+        # process architecture, which may be x86 even on a 64-bit system.
+        if ($env:PROCESSOR_ARCHITEW6432) {
+            $arch = $env:PROCESSOR_ARCHITEW6432
+        } else {
+            $arch = $env:PROCESSOR_ARCHITECTURE
+        }
+    }
+
     switch ($arch) {
-        "X64" { return "windows_amd64" }
-        "Arm64" { return "windows_arm64" }
-        default { throw "Unsupported architecture: $arch" }
+        { $_ -in "X64", "AMD64" }   { return "windows_amd64" }
+        { $_ -in "Arm64", "ARM64" } { return "windows_arm64" }
+        { $_ -in "X86", "x86" } {
+            throw "Unsupported architecture: x86 (32-bit). AgentsMesh Runner requires 64-bit Windows (x64 or ARM64)."
+        }
+        default {
+            throw "Unsupported architecture: $arch. AgentsMesh Runner supports Windows x64 and ARM64 only. Download manually from: https://github.com/$GITHUB_REPO/releases/latest"
+        }
     }
 }
 
