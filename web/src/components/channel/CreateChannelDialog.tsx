@@ -90,6 +90,7 @@ export function CreateChannelDialog({
               onChange={(e) => setName(e.target.value)}
               placeholder={t("channels.createDialog.namePlaceholder")}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
                 if (e.key === "Enter" && !saving) handleSubmit();
               }}
               autoFocus
@@ -107,6 +108,7 @@ export function CreateChannelDialog({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("channels.createDialog.descriptionPlaceholder")}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
                 if (e.key === "Enter" && !saving) handleSubmit();
               }}
             />
