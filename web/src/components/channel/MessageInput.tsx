@@ -161,6 +161,9 @@ export function MessageInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ignore key events during IME composition (e.g. Chinese Pinyin input)
+    if (e.nativeEvent.isComposing) return;
+
     if (mentionVisible && filteredCandidates.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
