@@ -53,7 +53,7 @@ type CreateTicketRequest struct {
 // UpdateTicketRequest represents ticket update request
 type UpdateTicketRequest struct {
 	Title        string   `json:"title"`
-	Content      string   `json:"content"`
+	Content      *string  `json:"content"`
 	Status       string   `json:"status"`
 	Priority     string   `json:"priority"`
 	RepositoryID *int64   `json:"repository_id"`
@@ -195,8 +195,8 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	if req.Title != "" {
 		updates["title"] = req.Title
 	}
-	if req.Content != "" {
-		updates["content"] = req.Content
+	if req.Content != nil {
+		updates["content"] = *req.Content
 	}
 	if req.Status != "" {
 		updates["status"] = req.Status

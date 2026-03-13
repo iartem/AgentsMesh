@@ -3,7 +3,7 @@
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import { useEffect, useMemo, useCallback, useSyncExternalStore } from "react";
+import { useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from "react";
 import { PartialBlock } from "@blocknote/core";
 import { useAuthStore } from "@/stores/auth";
 import { getApiBaseUrl } from "@/lib/env";
@@ -124,10 +124,28 @@ export function BlockEditor({
     uploadFile,
   });
 
-  // Handle onChange with debounce to avoid excessive updates
+  // Track the last content string we emitted (onChange) or received (external sync).
+  // Used to distinguish our own saves from external updates (e.g., WebSocket).
+  const lastContentRef = useRef<string | undefined>(initialContent);
+
+  // Sync external content changes (e.g., from WebSocket updates) into the editor.
+  // When initialContent changes to something we didn't emit, replace the editor blocks.
+  // The subsequent onChange from replaceBlocks is harmless — the debounced save will
+  // write back the same content, and the next useEffect comparison will match.
+  useEffect(() => {
+    if (!initialContent || initialContent === lastContentRef.current) return;
+    const newBlocks = parseInitialContent(initialContent);
+    if (newBlocks) {
+      editor.replaceBlocks(editor.document, newBlocks);
+      lastContentRef.current = initialContent;
+    }
+  }, [initialContent, editor]);
+
   const handleChange = useCallback(() => {
     if (onChange) {
-      onChange(JSON.stringify(editor.document));
+      const json = JSON.stringify(editor.document);
+      lastContentRef.current = json;
+      onChange(json);
     }
   }, [onChange, editor]);
 

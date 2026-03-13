@@ -162,8 +162,14 @@ export function RealtimeProvider({
         case "ticket:moved":
         case "ticket:deleted": {
           const data = event.data as TicketStatusChangedData;
+          const ticketState = useTicketStore.getState();
           // Refresh tickets list
-          useTicketStore.getState().fetchTickets?.();
+          ticketState.fetchTickets?.();
+          // Refresh currentTicket if the event matches the currently viewed ticket
+          // (skip deleted — fetchTicket would 404)
+          if (event.type !== "ticket:deleted" && data.slug && ticketState.currentTicket?.slug === data.slug) {
+            ticketState.fetchTicket?.(data.slug);
+          }
           console.log("[Realtime] Ticket event:", event.type, data.slug);
           break;
         }
