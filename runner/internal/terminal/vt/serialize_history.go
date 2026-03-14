@@ -95,7 +95,7 @@ func (h *StringSerializeHandler) serializeStringForHistory(startRow, endRow, his
 
 	rowEnd := len(h.allRows)
 	bufferLength := endRow - startRow + 1
-	if bufferLength <= h.vt.Rows() {
+	if bufferLength <= h.vt.rows {
 		rowEnd = h.lastContentCursorRow + 1 - h.firstRow
 		if rowEnd < 0 {
 			rowEnd = 0

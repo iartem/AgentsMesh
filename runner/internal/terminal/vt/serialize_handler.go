@@ -60,7 +60,7 @@ func (h *StringSerializeHandler) serialize(startRow, endRow int, excludeFinalCur
 		h.currentRow.Reset()
 		h.nullCellCount = 0
 
-		cells := h.vt.GetCellsRow(row)
+		cells := h.vt.getCellsRowNoLock(row)
 		if cells != nil {
 			for col := 0; col < len(cells); col++ {
 				cell := cells[col]
@@ -157,7 +157,7 @@ func (h *StringSerializeHandler) rowEnd(row int, isLastRow bool) {
 
 	rowSeparator := ""
 	if !isLastRow {
-		if !h.vt.IsLineWrapped(row + 1) {
+		if !h.vt.isLineWrappedNoLock(row + 1) {
 			rowSeparator = "\r\n"
 			h.lastCursorRow = row + 1
 			h.lastCursorCol = 0
@@ -182,7 +182,7 @@ func (h *StringSerializeHandler) serializeString(startRow, endRow int, excludeFi
 
 	rowEnd := len(h.allRows)
 	bufferLength := endRow - startRow + 1
-	if bufferLength <= h.vt.Rows() {
+	if bufferLength <= h.vt.rows {
 		rowEnd = h.lastContentCursorRow + 1 - h.firstRow
 		if rowEnd < 0 {
 			rowEnd = 0
@@ -202,11 +202,12 @@ func (h *StringSerializeHandler) serializeString(startRow, endRow int, excludeFi
 	}
 
 	if !excludeFinalCursorPosition {
-		cursorRow, cursorCol := h.vt.CursorPosition()
+		cursorRow := h.vt.cursorY
+		cursorCol := h.vt.cursorX
 		fmt.Fprintf(&content, "\x1b[%d;%dH", cursorRow+1, cursorCol+1)
 	}
 
-	curFg, curBg, curAttrs, curUlStyle, curUlColor := h.vt.GetCurrentStyle()
+	curFg, curBg, curAttrs, curUlStyle, curUlColor := h.vt.getCurrentStyleNoLock()
 	curCell := NewFullStyledCell(' ', curFg, curBg, curAttrs, 1, curUlStyle, curUlColor)
 	sgrSeq := h.diffStyle(curCell, h.cursorStyle)
 	if len(sgrSeq) > 0 {

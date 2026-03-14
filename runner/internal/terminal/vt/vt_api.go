@@ -183,7 +183,11 @@ func StripANSIBytes(data []byte) []byte {
 func (vt *VirtualTerminal) GetCellsRow(row int) []Cell {
 	vt.mu.RLock()
 	defer vt.mu.RUnlock()
+	return vt.getCellsRowNoLock(row)
+}
 
+// getCellsRowNoLock returns a copy of the cells for a given row without locking (caller must hold lock)
+func (vt *VirtualTerminal) getCellsRowNoLock(row int) []Cell {
 	if row < 0 || row >= len(vt.cells) {
 		return nil
 	}
@@ -196,7 +200,11 @@ func (vt *VirtualTerminal) GetCellsRow(row int) []Cell {
 func (vt *VirtualTerminal) IsLineWrapped(row int) bool {
 	vt.mu.RLock()
 	defer vt.mu.RUnlock()
+	return vt.isLineWrappedNoLock(row)
+}
 
+// isLineWrappedNoLock returns true if the given line is wrapped without locking (caller must hold lock)
+func (vt *VirtualTerminal) isLineWrappedNoLock(row int) bool {
 	if row < 0 || row >= len(vt.isWrapped) {
 		return false
 	}
