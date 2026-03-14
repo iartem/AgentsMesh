@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -95,17 +96,24 @@ func (s *Server) Start() error {
 	}
 	mux.Handle("/", http.FileServer(http.FS(staticFS)))
 
+	addr := fmt.Sprintf("127.0.0.1:%d", s.port)
 	s.httpServer = &http.Server{
-		Addr:         fmt.Sprintf("127.0.0.1:%d", s.port),
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
+	// Bind port synchronously so that callers (Supervisor) see bind errors immediately.
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("console server failed to bind %s: %w", addr, err)
+	}
+
 	log.Info("Starting web console", "url", fmt.Sprintf("http://127.0.0.1:%d", s.port))
 
 	safego.Go("console-http-listen", func() {
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 			log.Error("Server error", "error", err)
 		}
 	})

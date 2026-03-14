@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"sync"
@@ -108,18 +109,26 @@ func (s *HTTPServer) Start() error {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
+	addr := fmt.Sprintf("127.0.0.1:%d", s.port)
 	s.httpServer = &http.Server{
-		Addr:         fmt.Sprintf("127.0.0.1:%d", s.port),
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
 	log := logger.MCP()
+
+	// Bind port synchronously so that callers (Supervisor) see bind errors immediately.
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("MCP server failed to bind %s: %w", addr, err)
+	}
+
 	log.Info("Starting MCP HTTP server", "port", s.port)
 
 	safego.Go("mcp-http-listen", func() {
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 			log.Error("Server error", "error", err)
 		}
 	})
