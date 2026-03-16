@@ -42,6 +42,10 @@ func NewGitHubReleaseDetector() (*GitHubReleaseDetector, error) {
 
 	updater, err := selfupdate.NewUpdater(selfupdate.Config{
 		Source: source,
+		// Filter assets by the actual binary name used by goreleaser.
+		// Without this, go-selfupdate defaults to the repo name ("AgentsMesh")
+		// which doesn't match our archive names ("agentsmesh-runner_*").
+		Filters: []string{"agentsmesh-runner"},
 		// Require checksum validation for downloaded binaries.
 		// Release assets must include a "checksums.txt" file.
 		// If missing, update fails safely (ErrValidationAssetNotFound) —

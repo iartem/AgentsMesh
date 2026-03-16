@@ -116,9 +116,8 @@
       "generate": "Generate Token",
       "generating": "Generating...",
       "generateHint": "Click the button below to generate a one-time registration token for connecting a new Runner.",
-      "installTitle": "Install / Update Runner CLI",
+      "installTitle": "Install Runner CLI",
       "installHint": "If you haven't installed the runner yet, run one of the following commands:",
-      "updateHint": "To update to the latest version:",
       "serviceTitle": "Run as a Background Service (Recommended)",
       "serviceHint": "Install the runner as a system service so it starts automatically and survives reboots:"
     },

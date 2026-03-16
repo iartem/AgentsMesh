@@ -96,7 +96,7 @@ export function AddRunnerModal({ t, onClose, onCreated, serverUrl }: AddRunnerMo
               </div>
             </div>
 
-            {/* Install / Update CLI section */}
+            {/* Install CLI section */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 {t("runners.addRunnerModal.installTitle")}
@@ -116,17 +116,6 @@ export function AddRunnerModal({ t, onClose, onCreated, serverUrl }: AddRunnerMo
                     {`irm ${serverUrl}/install.ps1 | iex`}
                   </code>
                   <CopyBtn text={`irm ${serverUrl}/install.ps1 | iex`} id="install-win" />
-                </div>
-                <p className="text-xs text-muted-foreground">{t("runners.addRunnerModal.updateHint")}</p>
-                <div className="bg-muted rounded-lg p-3 relative">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-                    <Terminal className="w-4 h-4" />
-                    <span>Terminal</span>
-                  </div>
-                  <code className="text-green-600 dark:text-green-400 text-sm font-mono block pr-24">
-                    agentsmesh-runner update
-                  </code>
-                  <CopyBtn text="agentsmesh-runner update" id="update" />
                 </div>
               </div>
             </div>

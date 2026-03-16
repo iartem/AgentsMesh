@@ -84,9 +84,8 @@
       "generate": "生成令牌",
       "generating": "生成中...",
       "generateHint": "点击下方按钮生成一次性注册令牌，用于连接新的 Runner。",
-      "installTitle": "安装 / 更新 Runner CLI",
+      "installTitle": "安装 Runner CLI",
       "installHint": "如果尚未安装 Runner，请运行以下命令：",
-      "updateHint": "更新至最新版本：",
       "serviceTitle": "以后台服务方式运行（推荐）",
       "serviceHint": "将 Runner 安装为系统服务，使其自动启动并在重启后持续运行："
     },
