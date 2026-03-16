@@ -22,6 +22,11 @@ vi.mock('@/stores/auth', () => ({
 }))
 
 // Mock ticket store — supports both selector and no-selector calls
+const mockSetCurrentTicket = vi.fn()
+const mockUpdateTicket = vi.fn()
+const mockUpdateTicketStatus = vi.fn()
+const mockDeleteTicket = vi.fn()
+
 const mockTicketStoreState: Record<string, unknown> = {}
 vi.mock('@/stores/ticket', () => ({
   useTicketStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
@@ -42,6 +47,7 @@ vi.mock('@/stores/ticket', () => ({
 // Mock ticket API
 vi.mock('@/lib/api', () => ({
   ticketApi: {
+    get: vi.fn(),
     getSubTickets: vi.fn(),
     listRelations: vi.fn(),
     listCommits: vi.fn(),
@@ -113,25 +119,27 @@ describe('TicketDetail Component', () => {
     repository: { id: 1, name: 'my-repo' },
   }
 
-  const mockFetchTicket = vi.fn().mockResolvedValue(undefined)
-  const mockUpdateTicket = vi.fn()
-  const mockUpdateTicketStatus = vi.fn()
-  const mockDeleteTicket = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // The component calls setCurrentTicket(null) first, then ticketApi.get()
+    // resolves and calls setCurrentTicket(ticket). We simulate this by
+    // having setCurrentTicket update the store's currentTicket.
+    mockSetCurrentTicket.mockImplementation((ticket: unknown) => {
+      mockTicketStoreState.currentTicket = ticket
+    })
 
     // Update mutable store state (shared with the mock)
     Object.assign(mockTicketStoreState, {
       currentTicket: mockTicket,
-      fetchTicket: mockFetchTicket,
       updateTicket: mockUpdateTicket,
       updateTicketStatus: mockUpdateTicketStatus,
       deleteTicket: mockDeleteTicket,
-      loading: false,
-      error: null,
+      setCurrentTicket: mockSetCurrentTicket,
     })
 
+    // ticketApi.get resolves with the mock ticket
+    ;(ticketApi.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockTicket)
     ;(ticketApi.getSubTickets as ReturnType<typeof vi.fn>).mockResolvedValue({ sub_tickets: [] })
     ;(ticketApi.listRelations as ReturnType<typeof vi.fn>).mockResolvedValue({ relations: [] })
     ;(ticketApi.listCommits as ReturnType<typeof vi.fn>).mockResolvedValue({ commits: [] })
@@ -172,21 +180,22 @@ describe('TicketDetail Component', () => {
       })
     })
 
-    it('should call fetchTicket on mount', async () => {
+    it('should call ticketApi.get on mount', async () => {
       render(<TicketDetail slug="PROJ-42" />)
       await waitFor(() => {
-        expect(mockFetchTicket).toHaveBeenCalledWith('PROJ-42')
+        expect(ticketApi.get).toHaveBeenCalledWith('PROJ-42')
       })
     })
   })
 
   describe('loading state', () => {
     it('should render skeleton when loading', () => {
+      // When currentTicket is null and loadedSlug !== slug, skeleton shows
       Object.assign(mockTicketStoreState, {
         currentTicket: null,
-        loading: true,
-        error: null,
       })
+      // Make ticketApi.get never resolve to keep loading state
+      ;(ticketApi.get as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}))
 
       render(<TicketDetail slug="PROJ-42" />)
       expect(screen.getByTestId('ticket-detail-skeleton')).toBeInTheDocument()
@@ -197,9 +206,8 @@ describe('TicketDetail Component', () => {
     it('should render error message', async () => {
       Object.assign(mockTicketStoreState, {
         currentTicket: null,
-        loading: false,
-        error: 'Failed to load ticket',
       })
+      ;(ticketApi.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to load ticket'))
 
       render(<TicketDetail slug="PROJ-42" />)
       await waitFor(() => {
@@ -210,9 +218,8 @@ describe('TicketDetail Component', () => {
     it('should render retry button on error', async () => {
       Object.assign(mockTicketStoreState, {
         currentTicket: null,
-        loading: false,
-        error: 'Failed to load ticket',
       })
+      ;(ticketApi.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to load ticket'))
 
       render(<TicketDetail slug="PROJ-42" />)
       await waitFor(() => {
@@ -221,12 +228,11 @@ describe('TicketDetail Component', () => {
       })
     })
 
-    it('should call fetchTicket when retry is clicked', async () => {
+    it('should call ticketApi.get when retry is clicked', async () => {
       Object.assign(mockTicketStoreState, {
         currentTicket: null,
-        loading: false,
-        error: 'Failed to load ticket',
       })
+      ;(ticketApi.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to load ticket'))
 
       render(<TicketDetail slug="PROJ-42" />)
       await waitFor(() => {
@@ -234,7 +240,8 @@ describe('TicketDetail Component', () => {
         fireEvent.click(retryButton)
       })
 
-      expect(mockFetchTicket).toHaveBeenCalledTimes(2)
+      // Once from mount effect, once from retry
+      expect(ticketApi.get).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -242,8 +249,13 @@ describe('TicketDetail Component', () => {
     it('should render not found message when ticket is null', async () => {
       Object.assign(mockTicketStoreState, {
         currentTicket: null,
-        loading: false,
-        error: null,
+      })
+      // API resolves but setCurrentTicket(null) keeps currentTicket null after
+      // the initial setCurrentTicket(null) call, then ticketApi.get resolves
+      // but the ticket returned is null-ish
+      ;(ticketApi.get as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+      mockSetCurrentTicket.mockImplementation((ticket: unknown) => {
+        mockTicketStoreState.currentTicket = ticket
       })
 
       render(<TicketDetail slug="PROJ-42" />)
