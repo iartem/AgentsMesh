@@ -3,6 +3,7 @@ package tokenusage
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -12,6 +13,16 @@ import (
 
 // epoch is a zero time used as podStartedAt when we want all files to pass the mtime filter.
 var epoch = time.Time{}
+
+// setHome overrides the home directory for os.UserHomeDir() on all platforms.
+// On Unix it sets HOME; on Windows it sets USERPROFILE.
+func setHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", dir)
+	}
+}
 
 // --- TokenUsage tests ---
 
@@ -86,38 +97,97 @@ invalid json line
 	assert.Equal(t, int64(200), opus.OutputTokens)
 }
 
-func TestClaudeParser_Parse_SandboxOnly(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+// setupClaudeHomeProject creates the HOME-based .claude/projects/{hash}/ structure
+// that mirrors how Claude Code actually stores session data.
+// Returns (home, sandboxPath) for use in tests.
+func setupClaudeHomeProject(t *testing.T, sandboxPath string) string {
+	t.Helper()
+	home := t.TempDir()
+	setHome(t, home)
 
-	projectDir := filepath.Join(dir, ".claude", "projects", "testproject")
+	// Resolve symlinks to match what claudePathHash does
+	resolved, err := filepath.EvalSymlinks(sandboxPath)
+	require.NoError(t, err)
+
+	hash := claudePathHash(resolved)
+	projectDir := filepath.Join(home, ".claude", "projects", hash)
 	require.NoError(t, os.MkdirAll(projectDir, 0o755))
+	return projectDir
+}
+
+func TestClaudeParser_Parse_HomeBasedPath(t *testing.T) {
+	sandbox := t.TempDir()
+	projectDir := setupClaudeHomeProject(t, sandbox)
 
 	jsonl := `{"type":"assistant","message":{"model":"claude-sonnet-4-20250514","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
 `
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "session.jsonl"), []byte(jsonl), 0o644))
 
 	parser := &ClaudeParser{}
-	// epoch allows all files through the mtime filter
-	usage, err := parser.Parse(dir, epoch)
+	usage, err := parser.Parse(sandbox, epoch)
 	require.NoError(t, err)
 	require.NotNil(t, usage)
 	assert.Len(t, usage.Models, 1)
+	assert.Equal(t, int64(100), usage.Models["claude-sonnet-4-20250514"].InputTokens)
+}
+
+func TestClaudeParser_Parse_WorkspaceSubdir(t *testing.T) {
+	sandbox := t.TempDir()
+	wsDir := filepath.Join(sandbox, "workspace")
+	require.NoError(t, os.MkdirAll(wsDir, 0o755))
+
+	// Setup project dir based on workspace/ path
+	projectDir := setupClaudeHomeProject(t, wsDir)
+
+	jsonl := `{"type":"assistant","message":{"model":"claude-sonnet-4-20250514","usage":{"input_tokens":200,"output_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "session.jsonl"), []byte(jsonl), 0o644))
+
+	parser := &ClaudeParser{}
+	usage, err := parser.Parse(sandbox, epoch)
+	require.NoError(t, err)
+	require.NotNil(t, usage)
+	assert.Len(t, usage.Models, 1)
+	assert.Equal(t, int64(200), usage.Models["claude-sonnet-4-20250514"].InputTokens)
+}
+
+func TestClaudeParser_Parse_SubagentFiles(t *testing.T) {
+	sandbox := t.TempDir()
+	projectDir := setupClaudeHomeProject(t, sandbox)
+
+	// Main session
+	jsonl := `{"type":"assistant","message":{"model":"claude-sonnet-4-20250514","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "session.jsonl"), []byte(jsonl), 0o644))
+
+	// Subagent session in nested directory
+	subagentDir := filepath.Join(projectDir, "subagents", "abc123")
+	require.NoError(t, os.MkdirAll(subagentDir, 0o755))
+	subagentJSONL := `{"type":"assistant","message":{"model":"claude-haiku-3-20250514","usage":{"input_tokens":300,"output_tokens":150,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(subagentDir, "subagent.jsonl"), []byte(subagentJSONL), 0o644))
+
+	parser := &ClaudeParser{}
+	usage, err := parser.Parse(sandbox, epoch)
+	require.NoError(t, err)
+	require.NotNil(t, usage)
+	assert.Len(t, usage.Models, 2, "should find both main and subagent sessions")
+	assert.Equal(t, int64(100), usage.Models["claude-sonnet-4-20250514"].InputTokens)
+	assert.Equal(t, int64(300), usage.Models["claude-haiku-3-20250514"].InputTokens)
 }
 
 func TestClaudeParser_NoFiles(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HOME", dir) // Override HOME to avoid scanning real files
+	setHome(t, dir) // Override HOME to avoid scanning real files
 	parser := &ClaudeParser{}
-	usage, err := parser.Parse(dir, epoch)
+	usage, err := parser.Parse(t.TempDir(), epoch)
 	assert.NoError(t, err)
 	assert.Nil(t, usage)
 }
 
 func TestClaudeParser_SkipsOldFiles(t *testing.T) {
-	dir := t.TempDir()
-	projectDir := filepath.Join(dir, ".claude", "projects", "testproject")
-	require.NoError(t, os.MkdirAll(projectDir, 0o755))
+	sandbox := t.TempDir()
+	projectDir := setupClaudeHomeProject(t, sandbox)
 
 	jsonl := `{"type":"assistant","message":{"model":"claude-sonnet-4-20250514","usage":{"input_tokens":100,"output_tokens":50}}}`
 	filePath := filepath.Join(projectDir, "old-session.jsonl")
@@ -129,9 +199,29 @@ func TestClaudeParser_SkipsOldFiles(t *testing.T) {
 
 	parser := &ClaudeParser{}
 	// podStartedAt is recent, so old file should be skipped
-	usage, err := parser.Parse(dir, time.Now().Add(-1*time.Minute))
+	usage, err := parser.Parse(sandbox, time.Now().Add(-1*time.Minute))
 	require.NoError(t, err)
 	assert.Nil(t, usage, "old session file should be skipped")
+}
+
+func TestClaudePathHash(t *testing.T) {
+	// Unix-style paths (cross-platform: filepath.ToSlash is a no-op on these)
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"/tmp/sandbox", "-tmp-sandbox"},
+		{"/home/user/workspace", "-home-user-workspace"},
+		{"/", "-"},
+	}
+	for _, tt := range tests {
+		got := claudePathHash(tt.input)
+		assert.Equal(t, tt.want, got, "claudePathHash(%q)", tt.input)
+	}
+
+	// Windows-style paths (filepath.ToSlash converts \ to / on all platforms)
+	assert.Equal(t, "C-Users-test", claudePathHash(`C:\Users\test`))
+	assert.Equal(t, "D-workspace", claudePathHash(`D:\workspace`))
 }
 
 // --- Codex parser tests ---
@@ -351,23 +441,20 @@ func TestCollect_UnknownAgent(t *testing.T) {
 }
 
 func TestCollect_NoData(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	usage := Collect("claude", dir, epoch)
+	setHome(t, t.TempDir())
+	usage := Collect("claude", t.TempDir(), epoch)
 	assert.Nil(t, usage)
 }
 
 func TestCollect_WithData(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	projectDir := filepath.Join(dir, ".claude", "projects", "testproject")
-	require.NoError(t, os.MkdirAll(projectDir, 0o755))
+	sandbox := t.TempDir()
+	projectDir := setupClaudeHomeProject(t, sandbox)
 
 	jsonl := `{"type":"assistant","message":{"model":"claude-sonnet-4-20250514","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
 `
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "s.jsonl"), []byte(jsonl), 0o644))
 
-	usage := Collect("claude", dir, epoch)
+	usage := Collect("claude", sandbox, epoch)
 	require.NotNil(t, usage)
 	assert.Len(t, usage.Models, 1)
 }
