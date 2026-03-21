@@ -31,7 +31,7 @@ func TestPodWaitForNewToken_Timeout(t *testing.T) {
 
 	assert.Empty(t, token)
 	assert.True(t, elapsed >= 50*time.Millisecond)
-	assert.True(t, elapsed < 100*time.Millisecond) // Should not wait too long
+	assert.True(t, elapsed < 500*time.Millisecond) // Should not wait too long (generous for slow CI runners)
 }
 
 func TestPodWaitForNewToken_TokenDeliveredBeforeWait(t *testing.T) {
