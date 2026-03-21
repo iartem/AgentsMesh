@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     default: "AgentsMesh - AI Agent Fleet Command Center",
     template: "%s | AgentsMesh",
   },
-  description: "AgentsMesh is the AI agent fleet command center for agent orchestration and swarm coordination. Harness engineering productivity with Claude Code, Codex CLI, Gemini CLI, Aider and more — plan, collaborate, and ship enterprise-grade products.",
+  description: "Don't let humans bottleneck AI agents. Agent-centered development starts here. Orchestrate fleets of Claude Code, Codex, and more — each in its own isolated workspace, collaborating autonomously.",
   keywords: [
     "agentsmesh", "agentmesh", "agents mesh",
     "agent fleet command center", "agent swarm", "agent orchestration",
@@ -50,13 +50,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "AgentsMesh",
     title: "AgentsMesh - AI Agent Fleet Command Center",
-    description: "AgentsMesh is the AI agent fleet command center for agent orchestration and swarm coordination. Harness engineering productivity with Claude Code, Codex CLI, Gemini CLI, Aider and more.",
+    description: "Don't let humans bottleneck AI agents. Agent-centered development starts here. Orchestrate fleets of Claude Code, Codex, and more — each in its own isolated workspace, collaborating autonomously.",
     url: "https://agentsmesh.ai",
   },
   twitter: {
     card: "summary_large_image",
     title: "AgentsMesh - AI Agent Fleet Command Center",
-    description: "Agent orchestration and swarm coordination platform. Harness engineering productivity — orchestrate Claude Code, Codex CLI, Gemini CLI, Aider and more.",
+    description: "Don't let humans bottleneck AI agents. Agent-centered development starts here. Orchestrate Claude Code, Codex CLI, Gemini CLI, Aider and more.",
   },
   alternates: {
     canonical: "https://agentsmesh.ai",

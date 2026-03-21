@@ -14,10 +14,10 @@
       "title1": "Terminal-based",
       "title2": "Coding Agent",
       "title3": "Collaboration Platform",
-      "slogan1": "Don't just vibe code.",
-      "slogan2": "Ship an enterprise-grade product.",
+      "slogan1": "Don't let humans bottleneck AI agents.",
+      "slogan2": "Agent-centered development starts here.",
       "tagline": "The new development platform for the age of AI coding agents",
-      "description": "An agent fleet command center where you plan, collaborate, and ship — all in one place.",
+      "description": "Orchestrate fleets of Claude Code, Codex, and more — each in its own isolated workspace, collaborating autonomously.",
       "getStartedFree": "Get Started Free",
       "viewDocs": "Request a Demo",
       "trustedBy": "Trusted by developers worldwide",
@@ -373,7 +373,7 @@
       "highlight3": "Real-time fleet control"
     },
     "footer": {
-      "tagline": "AI Agent Fleet Command Center — Don't just vibe code. Ship an enterprise-grade product.",
+      "tagline": "AI Agent Fleet Command Center — Don't let humans bottleneck AI agents. Agent-centered development starts here.",
       "copyright": "AgentsMesh. All rights reserved.",
       "madeWith": "Made with love for developers",
       "product": {

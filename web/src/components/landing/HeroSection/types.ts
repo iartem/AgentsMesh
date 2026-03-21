@@ -1,44 +1,33 @@
 /**
- * Type definitions for Hero Section TUI demonstration
+ * Type definitions for Hero Section Kanban + Terminal demonstration
  */
 
-export interface TuiLine {
-  type: string;
-  textKey?: string;
-  text?: string;
-}
-
-export interface TopologyNode {
+export interface KanbanTicket {
   id: string;
-  label: string;
+  title: string;
   agent: string;
-  status: string;
-  x: number;
-  y: number;
+  status: "backlog" | "in_progress" | "done";
+  color: string;
+  /** When true, the Execute button shows a "clicking" highlight */
+  executing?: boolean;
 }
 
-export interface TopologyConnection {
-  from: string;
-  to: string;
-  label: string;
-  type?: string;
-  animated?: boolean;
+export interface TerminalLine {
+  text: string;
+  type: "command" | "output" | "success" | "info";
 }
 
-export interface Topology {
-  nodes: TopologyNode[];
-  connections: TopologyConnection[];
+export interface TerminalPane {
+  id: string;
+  agent: string;
+  ticketId: string;
+  lines: TerminalLine[];
+  active: boolean;
 }
 
-export interface TuiFrameContent {
-  header: string;
-  podInfoKey: "initializing" | "running" | "observing";
-  mainContent: TuiLine[];
-  input: string;
-  topology: Topology;
-}
-
-export interface TuiFrame {
+export interface DemoFrame {
   time: number;
-  content: TuiFrameContent;
+  tickets: KanbanTicket[];
+  terminals: TerminalPane[];
+  showTerminals: boolean;
 }

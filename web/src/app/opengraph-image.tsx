@@ -89,7 +89,7 @@ export default async function Image() {
         {/* Slogan */}
         <div
           style={{
-            fontSize: 40,
+            fontSize: 36,
             fontWeight: 700,
             textAlign: "center",
             maxWidth: 900,
@@ -99,7 +99,7 @@ export default async function Image() {
             alignItems: "center",
           }}
         >
-          <span style={{ color: "#ededed" }}>Don&apos;t just vibe code.</span>
+          <span style={{ color: "#ededed" }}>Don&apos;t let humans bottleneck AI agents.</span>
           <span
             style={{
               background: "linear-gradient(90deg, #22d3ee, #0ea5e9)",
@@ -107,7 +107,7 @@ export default async function Image() {
               color: "transparent",
             }}
           >
-            Ship an enterprise-grade product.
+            Agent-centered development starts here.
           </span>
         </div>
       </div>

@@ -1,20 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useTuiAnimation } from "./useTuiAnimation";
 import { HeroContent } from "./HeroContent";
-import { TuiWindow } from "./TuiWindow";
-import { TopologyVisualization } from "./TopologyVisualization";
 
 /**
- * HeroSection - Landing page hero section with animated TUI demonstration
- *
- * Combines hero text content with an interactive demonstration showing
- * multi-agent collaboration through the Claude Code TUI interface.
+ * HeroSection - Landing page hero section
  */
 export function HeroSection() {
   const t = useTranslations();
-  const { currentFrame, currentFrameIndex, displayedLines, isTyping } = useTuiAnimation(t);
 
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
@@ -50,30 +43,8 @@ export function HeroSection() {
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Left: Text Content */}
+        <div className="max-w-5xl mx-auto text-center">
           <HeroContent t={t} />
-
-          {/* Right: TUI + Topology */}
-          <div className="relative space-y-4 animate-float">
-            {/* Glow effect */}
-            <div className="absolute -inset-8 bg-primary/20 blur-[60px] rounded-full animate-glow-pulse" />
-
-            {/* Claude Code TUI Window */}
-            <TuiWindow
-              frame={currentFrame}
-              frameIndex={currentFrameIndex}
-              displayedLines={displayedLines}
-              isTyping={isTyping}
-              t={t}
-            />
-
-            {/* Topology visualization */}
-            <TopologyVisualization
-              topology={currentFrame.content.topology}
-              t={t}
-            />
-          </div>
         </div>
       </div>
 
