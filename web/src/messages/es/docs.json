@@ -37,6 +37,8 @@
       "apiRunners": "Runners API",
       "apiRepositories": "Repositories API",
       "tutorials": "Tutoriales",
+      "tutorialRunnerSetup": "Configurar Runner",
+      "tutorialGitSetup": "Conectar Repos Git",
       "tutorialFirstPod": "Tu Primer Pod",
       "tutorialTicketWorkflow": "Gestión de Tareas",
       "tutorialMultiAgent": "Colaboración Multi-Agente",
@@ -1619,6 +1621,141 @@
       }
     },
     "tutorials": {
+      "runnerSetup": {
+        "title": "Tutorial: Configurar un Runner",
+        "description": "Aprende a instalar, registrar y verificar un Runner de AgentsMesh paso a paso. Se requiere un Runner antes de poder crear Pods.",
+        "prerequisites": {
+          "title": "Requisitos Previos",
+          "description": "Antes de comenzar, asegúrate de tener:",
+          "item1": "Una cuenta de AgentsMesh (regístrate en la página de registro)",
+          "item2": "Una máquina con Linux, macOS o Windows (se recomienda WSL2)",
+          "item3": "Git instalado y configurado en la máquina",
+          "item4": "Acceso de red al servidor de AgentsMesh"
+        },
+        "step1": {
+          "title": "Instalar el Runner",
+          "description": "Descarga e instala el Runner de AgentsMesh en tu máquina. Elige el método que mejor te funcione:",
+          "oneLine": "Instalación en una línea (Recomendado) — Funciona en Linux y macOS:",
+          "linux": "Gestor de paquetes Linux — Disponible para Debian/Ubuntu y RHEL/Fedora",
+          "docker": "Docker — Ejecuta el Runner como contenedor para un aislamiento sencillo",
+          "tip": "El instalador de una línea detecta automáticamente tu sistema operativo y arquitectura."
+        },
+        "step2": {
+          "title": "Registrar el Runner",
+          "description": "Después de la instalación, registra el Runner con tu instancia de AgentsMesh. Tienes dos opciones:",
+          "methodToken": "Opción A: Registrar con un token (servidores sin interfaz gráfica)",
+          "methodTokenDesc": "Obtén un token de registro desde Configuración → Runners → Crear Token en la interfaz web, luego ejecuta el comando de registro con tu token.",
+          "methodLogin": "Opción B: Registrar con inicio de sesión en el navegador (máquinas de desarrollo)",
+          "methodLoginDesc": "Ejecuta el comando de inicio de sesión — se abrirá una ventana del navegador para autenticación. Ideal para máquinas donde tienes un navegador.",
+          "tip": "Los tokens de registro son de un solo uso. Una vez registrado, el Runner recibe certificados mTLS para comunicación segura."
+        },
+        "step3": {
+          "title": "Iniciar el Runner",
+          "description": "Después del registro, inicia el demonio del Runner:",
+          "item1": "Ejecuta el comando de inicio para comenzar el proceso del Runner",
+          "item2": "El Runner se conecta al backend de AgentsMesh mediante gRPC con mTLS",
+          "item3": "Reporta las CLIs de agentes IA disponibles (Claude Code, Codex, Gemini, etc.) encontradas en el PATH",
+          "tip": "Para despliegues en producción, instala el Runner como servicio del sistema para que inicie automáticamente al arrancar."
+        },
+        "step4": {
+          "title": "Instalar CLIs de Agentes IA",
+          "description": "Instala los agentes de codificación IA que deseas usar en la máquina del Runner:",
+          "item1": "Claude Code — npm install -g @anthropic-ai/claude-code (configura ANTHROPIC_API_KEY)",
+          "item2": "Codex CLI — npm install -g @openai/codex (configura OPENAI_API_KEY)",
+          "item3": "Gemini CLI — npm install -g @google/gemini-cli (configura GOOGLE_API_KEY)",
+          "tip": "Después de instalar, reinicia el Runner o espera al siguiente heartbeat. Los agentes recién disponibles aparecerán en el diálogo de Nuevo Pod."
+        },
+        "step5": {
+          "title": "Verificar que el Runner está En Línea",
+          "description": "Comprueba que tu Runner está conectado y listo:",
+          "item1": "Ve a Configuración → Runners en la interfaz web",
+          "item2": "Busca tu Runner en la lista — debería mostrar un estado verde En Línea",
+          "item3": "Verifica que los agentes disponibles aparecen correctamente",
+          "item4": "Intenta crear un Pod de prueba para confirmar que todo funciona"
+        },
+        "troubleshooting": {
+          "title": "Solución de Problemas",
+          "item1": "El Runner aparece Fuera de Línea — Verifica la conectividad de red y asegúrate de que los firewalls permitan conexiones gRPC salientes (puerto 9443)",
+          "item2": "Los Pods no inician — Verifica que Git está instalado y que el Runner tiene acceso para clonar repositorios",
+          "item3": "Error de token inválido — Los tokens de registro son de un solo uso. Crea un nuevo token desde Configuración → Runners"
+        },
+        "nextSteps": {
+          "title": "¿Qué Sigue?",
+          "description": "Tu Runner está listo. Continúa con el siguiente tutorial:",
+          "item1": "Conectar Repositorios Git — Vincula tus repositorios de código para acceso desde los Pods",
+          "item2": "Tu Primer Pod — Crea e interactúa con tu primer agente IA"
+        }
+      },
+      "gitSetup": {
+        "title": "Tutorial: Conectar Repositorios Git",
+        "description": "Aprende a conectar tu proveedor de Git (GitHub, GitLab o Gitee) a AgentsMesh para que tus agentes IA puedan trabajar en tus repositorios de código.",
+        "prerequisites": {
+          "title": "Requisitos Previos",
+          "description": "Antes de comenzar, asegúrate de tener:",
+          "item1": "Una cuenta de AgentsMesh con un Runner conectado (consulta el tutorial de Configurar Runner)",
+          "item2": "Una cuenta de GitHub, GitLab o Gitee con repositorios que deseas usar"
+        },
+        "step1": {
+          "title": "Abrir Configuración de Git",
+          "description": "Navega a Configuración → Personal → Configuración de Git. Aquí es donde gestionas todas tus conexiones con proveedores de Git."
+        },
+        "step2": {
+          "title": "Conectar GitHub (OAuth)",
+          "description": "Para GitHub, usa OAuth para la configuración más sencilla:",
+          "item1": "Haz clic en Conectar GitHub",
+          "item2": "Autoriza AgentsMesh en la ventana emergente de GitHub",
+          "item3": "Selecciona a qué repositorios otorgar acceso",
+          "item4": "Tus repositorios aparecerán en Configuración → Repositorios",
+          "tip": "Los tokens OAuth de GitHub se cifran y almacenan de forma segura. Puedes revocar el acceso en cualquier momento desde Configuración de GitHub → Aplicaciones."
+        },
+        "step3": {
+          "title": "Conectar GitLab (Token de Acceso Personal)",
+          "description": "Para GitLab, usa un Token de Acceso Personal:",
+          "item1": "En GitLab, ve a Configuración → Tokens de Acceso",
+          "item2": "Crea un nuevo token con los alcances api y read_repository",
+          "item3": "De vuelta en AgentsMesh, haz clic en Añadir Proveedor GitLab",
+          "item4": "Pega tu token e introduce la URL de tu GitLab",
+          "tip": "GitLab autoalojado es totalmente compatible. Introduce la URL completa de tu instancia (por ejemplo, https://gitlab.tuempresa.com)."
+        },
+        "step4": {
+          "title": "Conectar Gitee (Token de Acceso Personal)",
+          "description": "Para Gitee, usa un Token de Acceso Personal:",
+          "item1": "En Gitee, ve a Configuración → Tokens de Acceso Personal",
+          "item2": "Crea un nuevo token con el alcance projects",
+          "item3": "De vuelta en AgentsMesh, haz clic en Añadir Proveedor Gitee y pega tu token"
+        },
+        "step5": {
+          "title": "Importar Repositorios",
+          "description": "Después de conectar un proveedor, importa los repositorios que necesitas:",
+          "item1": "Ve a Configuración → Repositorios",
+          "item2": "Haz clic en Añadir Repositorio y selecciona tu proveedor",
+          "item3": "Busca o explora los repositorios para importar",
+          "item4": "Los repositorios seleccionados estarán disponibles al crear Pods"
+        },
+        "step6": {
+          "title": "Configurar Claves SSH (Opcional)",
+          "description": "Si tus repositorios usan acceso SSH, configura las claves SSH en el Runner:",
+          "item1": "Genera un par de claves SSH en tu máquina del Runner",
+          "item2": "Añade la clave pública a tu proveedor de Git",
+          "item3": "El Runner usará la clave SSH al clonar repositorios",
+          "tip": "Runners en Docker: Monta tus claves SSH como volumen de solo lectura: -v ~/.ssh:/root/.ssh:ro"
+        },
+        "step7": {
+          "title": "Verificar Creando un Pod",
+          "description": "Prueba tu configuración creando un Pod con un repositorio vinculado:",
+          "item1": "Ve a Espacio de Trabajo y haz clic en Nuevo Pod",
+          "item2": "Selecciona un agente IA y tu Runner",
+          "item3": "Elige uno de tus repositorios importados",
+          "item4": "El Pod debería iniciarse con el repositorio clonado en un worktree",
+          "tip": "Cada Pod obtiene su propio worktree de Git, por lo que múltiples Pods pueden trabajar en el mismo repositorio sin conflictos."
+        },
+        "nextSteps": {
+          "title": "¿Qué Sigue?",
+          "description": "Tus repositorios están conectados. Continúa explorando:",
+          "item1": "Tu Primer Pod — Guía completa para crear e interactuar con un Pod",
+          "item2": "Gestión de Tareas — Vincula tickets a Pods para flujos de trabajo estructurados"
+        }
+      },
       "firstPod": {
         "title": "Tutorial: Tu Primer Pod",
         "description": "Aprende a crear e interactuar con tu primer AgentPod paso a paso. Al finalizar este tutorial, habrás lanzado un agente de codificación IA, lo habrás conectado a un repositorio y completado una tarea.",

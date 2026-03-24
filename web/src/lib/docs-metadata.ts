@@ -26,6 +26,16 @@ const docsMetadataMap: Record<string, DocsMeta> = {
     description:
       "Frequently asked questions about AgentsMesh — troubleshooting Runners, Pods, API keys, Git integration, and billing.",
   },
+  "/docs/tutorials/runner-setup": {
+    title: "Tutorial: Runner Setup",
+    description:
+      "Step-by-step guide to installing, registering, and verifying an AgentsMesh Runner for AI agent execution.",
+  },
+  "/docs/tutorials/git-setup": {
+    title: "Tutorial: Connect Git Repositories",
+    description:
+      "Connect GitHub, GitLab, or Gitee to AgentsMesh and import repositories for AI agent workflows.",
+  },
   "/docs/features/agentpod": {
     title: "AgentPod",
     description:

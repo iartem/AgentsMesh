@@ -31,6 +31,14 @@ export const docsNavSections: DocNavSection[] = [
     titleKey: "docs.nav.tutorials",
     items: [
       {
+        titleKey: "docs.nav.tutorialRunnerSetup",
+        href: "/docs/tutorials/runner-setup",
+      },
+      {
+        titleKey: "docs.nav.tutorialGitSetup",
+        href: "/docs/tutorials/git-setup",
+      },
+      {
         titleKey: "docs.nav.tutorialFirstPod",
         href: "/docs/tutorials/first-pod",
       },
@@ -62,18 +70,7 @@ export const docsNavSections: DocNavSection[] = [
         titleKey: "docs.nav.repositoriesGit",
         href: "/docs/concepts/repositories-git",
       },
-    ],
-  },
-  {
-    titleKey: "docs.nav.runners",
-    items: [
-      { titleKey: "docs.nav.runnerSetup", href: "/docs/runners/setup" },
       { titleKey: "docs.nav.mcpTools", href: "/docs/runners/mcp-tools" },
-    ],
-  },
-  {
-    titleKey: "docs.nav.guides",
-    items: [
       {
         titleKey: "docs.nav.teamManagement",
         href: "/docs/guides/team-management",

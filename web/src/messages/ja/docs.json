@@ -37,6 +37,8 @@
       "apiRunners": "Runners API",
       "apiRepositories": "Repositories API",
       "tutorials": "チュートリアル",
+      "tutorialRunnerSetup": "Runner セットアップ",
+      "tutorialGitSetup": "Git リポジトリ接続",
       "tutorialFirstPod": "はじめての Pod",
       "tutorialTicketWorkflow": "タスク管理",
       "tutorialMultiAgent": "マルチエージェントコラボレーション",
@@ -1619,6 +1621,141 @@
       }
     },
     "tutorials": {
+      "runnerSetup": {
+        "title": "チュートリアル：Runner のセットアップ",
+        "description": "AgentsMesh Runner のインストール、登録、確認方法をステップバイステップで学びます。Pod を作成するには、Runner が必要です。",
+        "prerequisites": {
+          "title": "前提条件",
+          "description": "始める前に、以下を準備してください：",
+          "item1": "AgentsMesh アカウント（登録ページからサインアップ）",
+          "item2": "Linux、macOS、または Windows（WSL2 推奨）のマシン",
+          "item3": "マシンに Git がインストールされ、設定されていること",
+          "item4": "AgentsMesh サーバーへのネットワークアクセス"
+        },
+        "step1": {
+          "title": "Runner をインストールする",
+          "description": "マシンに AgentsMesh Runner をダウンロードしてインストールします。最適な方法を選択してください：",
+          "oneLine": "ワンラインインストール（推奨） — Linux と macOS で動作します：",
+          "linux": "Linux パッケージマネージャー — Debian/Ubuntu および RHEL/Fedora で利用可能",
+          "docker": "Docker — コンテナとして Runner を実行し、簡単に分離できます",
+          "tip": "ワンラインインストーラーは、OS とアーキテクチャを自動的に検出します。"
+        },
+        "step2": {
+          "title": "Runner を登録する",
+          "description": "インストール後、AgentsMesh インスタンスに Runner を登録します。2 つのオプションがあります：",
+          "methodToken": "オプション A：トークンで登録する（ヘッドレスサーバー向け）",
+          "methodTokenDesc": "Web インターフェースの 設定 → Runner → トークン作成 から登録トークンを取得し、トークンを使って登録コマンドを実行します。",
+          "methodLogin": "オプション B：ブラウザログインで登録する（開発マシン向け）",
+          "methodLoginDesc": "ログインコマンドを実行すると、認証用のブラウザウィンドウが開きます。ブラウザが利用できるマシンに最適です。",
+          "tip": "登録トークンは一度のみ使用可能です。登録後、Runner は安全な通信のために mTLS 証明書を受け取ります。"
+        },
+        "step3": {
+          "title": "Runner を起動する",
+          "description": "登録後、Runner デーモンを起動します：",
+          "item1": "起動コマンドを実行して Runner プロセスを開始します",
+          "item2": "Runner は mTLS を使用して gRPC 経由で AgentsMesh バックエンドに接続します",
+          "item3": "PATH にある利用可能な AI エージェント CLI（Claude Code、Codex、Gemini など）を報告します",
+          "tip": "本番環境では、起動時に自動的に開始されるように Runner をシステムサービスとしてインストールしてください。"
+        },
+        "step4": {
+          "title": "AI エージェント CLI をインストールする",
+          "description": "Runner マシンで使用したい AI コーディングエージェントをインストールします：",
+          "item1": "Claude Code — npm install -g @anthropic-ai/claude-code（ANTHROPIC_API_KEY を設定）",
+          "item2": "Codex CLI — npm install -g @openai/codex（OPENAI_API_KEY を設定）",
+          "item3": "Gemini CLI — npm install -g @google/gemini-cli（GOOGLE_API_KEY を設定）",
+          "tip": "インストール後、Runner を再起動するか、次のハートビートまで待ちます。新しく利用可能なエージェントは「新規 Pod」ダイアログに表示されます。"
+        },
+        "step5": {
+          "title": "Runner がオンラインであることを確認する",
+          "description": "Runner が接続され、準備ができていることを確認します：",
+          "item1": "Web インターフェースの 設定 → Runner に移動します",
+          "item2": "リストで Runner を見つけます — 緑色のオンラインステータスが表示されるはずです",
+          "item3": "利用可能なエージェントが正しく表示されていることを確認します",
+          "item4": "テスト Pod を作成して、すべてが正常に動作することを確認します"
+        },
+        "troubleshooting": {
+          "title": "トラブルシューティング",
+          "item1": "Runner がオフラインと表示される — ネットワーク接続を確認し、ファイアウォールが送信 gRPC 接続（ポート 9443）を許可していることを確認してください",
+          "item2": "Pod の起動に失敗する — Git がインストールされており、Runner がリポジトリをクローンできることを確認してください",
+          "item3": "トークン無効エラー — 登録トークンは一度のみ使用可能です。設定 → Runner から新しいトークンを作成してください"
+        },
+        "nextSteps": {
+          "title": "次のステップ",
+          "description": "Runner の準備ができました。次のチュートリアルに進みましょう：",
+          "item1": "Git リポジトリを接続する — Pod がコードリポジトリにアクセスできるようにリンクします",
+          "item2": "はじめての Pod — 最初の AI エージェントを作成し、操作します"
+        }
+      },
+      "gitSetup": {
+        "title": "チュートリアル：Git リポジトリの接続",
+        "description": "Git プロバイダー（GitHub、GitLab、または Gitee）を AgentsMesh に接続して、AI エージェントがコードリポジトリで作業できるようにする方法を学びます。",
+        "prerequisites": {
+          "title": "前提条件",
+          "description": "始める前に、以下を準備してください：",
+          "item1": "Runner が接続された AgentsMesh アカウント（Runner セットアップチュートリアルを参照）",
+          "item2": "使用したいリポジトリがある GitHub、GitLab、または Gitee アカウント"
+        },
+        "step1": {
+          "title": "Git 設定を開く",
+          "description": "設定 → 個人設定 → Git 設定 に移動します。ここで、すべての Git プロバイダー接続を管理します。"
+        },
+        "step2": {
+          "title": "GitHub を接続する（OAuth）",
+          "description": "GitHub の場合、最も簡単なセットアップとして OAuth を使用します：",
+          "item1": "「GitHub を接続」をクリックします",
+          "item2": "GitHub のポップアップで AgentsMesh を承認します",
+          "item3": "アクセスを許可するリポジトリを選択します",
+          "item4": "リポジトリが 設定 → リポジトリ に表示されます",
+          "tip": "GitHub OAuth トークンは暗号化されて安全に保存されます。GitHub の 設定 → アプリケーション からいつでもアクセスを取り消すことができます。"
+        },
+        "step3": {
+          "title": "GitLab を接続する（個人アクセストークン）",
+          "description": "GitLab の場合、個人アクセストークンを使用します：",
+          "item1": "GitLab で 設定 → アクセストークン に移動します",
+          "item2": "api と read_repository スコープを持つ新しいトークンを作成します",
+          "item3": "AgentsMesh に戻り、「GitLab プロバイダーを追加」をクリックします",
+          "item4": "トークンを貼り付け、GitLab の URL を入力します",
+          "tip": "セルフホスト型の GitLab も完全にサポートされています。インスタンスの完全な URL（例：https://gitlab.yourcompany.com）を入力してください。"
+        },
+        "step4": {
+          "title": "Gitee を接続する（個人アクセストークン）",
+          "description": "Gitee の場合、個人アクセストークンを使用します：",
+          "item1": "Gitee で 設定 → 個人アクセストークン に移動します",
+          "item2": "projects スコープを持つ新しいトークンを作成します",
+          "item3": "AgentsMesh に戻り、「Gitee プロバイダーを追加」をクリックしてトークンを貼り付けます"
+        },
+        "step5": {
+          "title": "リポジトリをインポートする",
+          "description": "プロバイダーを接続した後、必要なリポジトリをインポートします：",
+          "item1": "設定 → リポジトリ に移動します",
+          "item2": "「リポジトリを追加」をクリックし、プロバイダーを選択します",
+          "item3": "インポートするリポジトリを参照または検索します",
+          "item4": "選択したリポジトリは Pod 作成時に利用可能になります"
+        },
+        "step6": {
+          "title": "SSH キーを設定する（オプション）",
+          "description": "リポジトリが SSH アクセスを使用する場合、Runner で SSH キーを設定します：",
+          "item1": "Runner マシンで SSH キーペアを生成します",
+          "item2": "公開キーを Git プロバイダーに追加します",
+          "item3": "Runner はリポジトリのクローン時に SSH キーを使用します",
+          "tip": "Docker Runner の場合：SSH キーを読み取り専用ボリュームとしてマウントします：-v ~/.ssh:/root/.ssh:ro"
+        },
+        "step7": {
+          "title": "Pod を作成して確認する",
+          "description": "リンクされたリポジトリで Pod を作成してセットアップをテストします：",
+          "item1": "ワークスペースに移動し、「新規 Pod」をクリックします",
+          "item2": "AI エージェントと Runner を選択します",
+          "item3": "インポートしたリポジトリの 1 つを選択します",
+          "item4": "リポジトリがワークツリーにクローンされた状態で Pod が起動するはずです",
+          "tip": "各 Pod は独自の Git ワークツリーを取得するため、複数の Pod が競合なく同じリポジトリで作業できます。"
+        },
+        "nextSteps": {
+          "title": "次のステップ",
+          "description": "リポジトリが接続されました。引き続き探索してください：",
+          "item1": "はじめての Pod — Pod の作成と操作の完全なウォークスルー",
+          "item2": "タスク管理 — 構造化されたワークフローのためにチケットを Pod にリンクします"
+        }
+      },
       "firstPod": {
         "title": "チュートリアル：はじめての Pod",
         "description": "はじめての AgentPod をステップバイステップで作成し、操作する方法を学びます。このチュートリアルを完了すると、AI コーディングエージェントの起動、リポジトリへの接続、タスクの完了ができるようになります。",

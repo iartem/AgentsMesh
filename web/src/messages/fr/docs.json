@@ -37,6 +37,8 @@
       "apiRunners": "Runners API",
       "apiRepositories": "Repositories API",
       "tutorials": "Tutoriels",
+      "tutorialRunnerSetup": "Configurer un Runner",
+      "tutorialGitSetup": "Connecter des Dépôts Git",
       "tutorialFirstPod": "Votre Premier Pod",
       "tutorialTicketWorkflow": "Gestion des Tâches",
       "tutorialMultiAgent": "Collaboration Multi-Agents",
@@ -1619,6 +1621,141 @@
       }
     },
     "tutorials": {
+      "runnerSetup": {
+        "title": "Tutoriel : Configurer un Runner",
+        "description": "Apprenez à installer, enregistrer et vérifier un Runner AgentsMesh étape par étape. Un Runner est nécessaire avant de pouvoir créer des Pods.",
+        "prerequisites": {
+          "title": "Prérequis",
+          "description": "Avant de commencer, assurez-vous d'avoir :",
+          "item1": "Un compte AgentsMesh (inscrivez-vous sur la page d'inscription)",
+          "item2": "Une machine sous Linux, macOS ou Windows (WSL2 recommandé)",
+          "item3": "Git installé et configuré sur la machine",
+          "item4": "Un accès réseau au serveur AgentsMesh"
+        },
+        "step1": {
+          "title": "Installer le Runner",
+          "description": "Téléchargez et installez le Runner AgentsMesh sur votre machine. Choisissez la méthode qui vous convient le mieux :",
+          "oneLine": "Installation en une ligne (Recommandé) — Fonctionne sur Linux et macOS :",
+          "linux": "Gestionnaire de paquets Linux — Disponible pour Debian/Ubuntu et RHEL/Fedora",
+          "docker": "Docker — Exécutez le Runner dans un conteneur pour une isolation facile",
+          "tip": "L'installateur en une ligne détecte automatiquement votre système d'exploitation et votre architecture."
+        },
+        "step2": {
+          "title": "Enregistrer le Runner",
+          "description": "Après l'installation, enregistrez le Runner auprès de votre instance AgentsMesh. Vous avez deux options :",
+          "methodToken": "Option A : Enregistrer avec un jeton (serveurs sans interface)",
+          "methodTokenDesc": "Obtenez un jeton d'enregistrement depuis Paramètres → Runners → Créer un jeton dans l'interface web, puis exécutez la commande d'enregistrement avec votre jeton.",
+          "methodLogin": "Option B : Enregistrer via connexion navigateur (machines de développement)",
+          "methodLoginDesc": "Exécutez la commande de connexion — une fenêtre de navigateur s'ouvre pour l'authentification. Idéal pour les machines disposant d'un navigateur.",
+          "tip": "Les jetons d'enregistrement sont à usage unique. Une fois enregistré, le Runner reçoit des certificats mTLS pour une communication sécurisée."
+        },
+        "step3": {
+          "title": "Démarrer le Runner",
+          "description": "Après l'enregistrement, démarrez le démon Runner :",
+          "item1": "Exécutez la commande de démarrage pour lancer le processus Runner",
+          "item2": "Le Runner se connecte au backend AgentsMesh via gRPC avec mTLS",
+          "item3": "Il signale les CLI d'agents IA disponibles (Claude Code, Codex, Gemini, etc.) trouvés dans le PATH",
+          "tip": "Pour les déploiements en production, installez le Runner en tant que service système afin qu'il démarre automatiquement au démarrage."
+        },
+        "step4": {
+          "title": "Installer les CLI d'Agents IA",
+          "description": "Installez les agents de codage IA que vous souhaitez utiliser sur la machine Runner :",
+          "item1": "Claude Code — npm install -g @anthropic-ai/claude-code (définir ANTHROPIC_API_KEY)",
+          "item2": "Codex CLI — npm install -g @openai/codex (définir OPENAI_API_KEY)",
+          "item3": "Gemini CLI — npm install -g @google/gemini-cli (définir GOOGLE_API_KEY)",
+          "tip": "Après l'installation, redémarrez le Runner ou attendez le prochain battement de cœur. Les agents nouvellement disponibles apparaissent dans la boîte de dialogue Nouveau Pod."
+        },
+        "step5": {
+          "title": "Vérifier que le Runner est en Ligne",
+          "description": "Vérifiez que votre Runner est connecté et prêt :",
+          "item1": "Allez dans Paramètres → Runners dans l'interface web",
+          "item2": "Trouvez votre Runner dans la liste — il devrait afficher un statut En ligne vert",
+          "item3": "Vérifiez que les agents disponibles sont correctement listés",
+          "item4": "Essayez de créer un Pod de test pour confirmer que tout fonctionne"
+        },
+        "troubleshooting": {
+          "title": "Dépannage",
+          "item1": "Le Runner affiche Hors ligne — Vérifiez la connectivité réseau et assurez-vous que les pare-feux autorisent les connexions gRPC sortantes (port 9443)",
+          "item2": "Les Pods ne démarrent pas — Vérifiez que Git est installé et que le Runner a accès pour cloner les dépôts",
+          "item3": "Erreur de jeton invalide — Les jetons d'enregistrement sont à usage unique. Créez un nouveau jeton depuis Paramètres → Runners"
+        },
+        "nextSteps": {
+          "title": "Et Ensuite ?",
+          "description": "Votre Runner est prêt. Continuez avec le tutoriel suivant :",
+          "item1": "Connecter des Dépôts Git — Liez vos dépôts de code pour l'accès aux Pods",
+          "item2": "Votre Premier Pod — Créez et interagissez avec votre premier agent IA"
+        }
+      },
+      "gitSetup": {
+        "title": "Tutoriel : Connecter des Dépôts Git",
+        "description": "Apprenez à connecter votre fournisseur Git (GitHub, GitLab ou Gitee) à AgentsMesh afin que vos agents IA puissent travailler sur vos dépôts de code.",
+        "prerequisites": {
+          "title": "Prérequis",
+          "description": "Avant de commencer, assurez-vous d'avoir :",
+          "item1": "Un compte AgentsMesh avec un Runner connecté (voir le tutoriel Configurer un Runner)",
+          "item2": "Un compte GitHub, GitLab ou Gitee avec des dépôts que vous souhaitez utiliser"
+        },
+        "step1": {
+          "title": "Ouvrir les Paramètres Git",
+          "description": "Naviguez vers Paramètres → Personnel → Paramètres Git. C'est ici que vous gérez toutes vos connexions de fournisseurs Git."
+        },
+        "step2": {
+          "title": "Connecter GitHub (OAuth)",
+          "description": "Pour GitHub, utilisez OAuth pour la configuration la plus simple :",
+          "item1": "Cliquez sur Connecter GitHub",
+          "item2": "Autorisez AgentsMesh dans la fenêtre popup GitHub",
+          "item3": "Sélectionnez les dépôts auxquels accorder l'accès",
+          "item4": "Vos dépôts apparaîtront dans Paramètres → Dépôts",
+          "tip": "Les jetons OAuth GitHub sont chiffrés et stockés en toute sécurité. Vous pouvez révoquer l'accès à tout moment depuis Paramètres GitHub → Applications."
+        },
+        "step3": {
+          "title": "Connecter GitLab (Jeton d'Accès Personnel)",
+          "description": "Pour GitLab, utilisez un Jeton d'Accès Personnel :",
+          "item1": "Dans GitLab, allez dans Paramètres → Jetons d'accès",
+          "item2": "Créez un nouveau jeton avec les portées api et read_repository",
+          "item3": "De retour dans AgentsMesh, cliquez sur Ajouter un fournisseur GitLab",
+          "item4": "Collez votre jeton et entrez votre URL GitLab",
+          "tip": "GitLab auto-hébergé est entièrement pris en charge. Entrez l'URL complète de votre instance (ex. https://gitlab.votreentreprise.com)."
+        },
+        "step4": {
+          "title": "Connecter Gitee (Jeton d'Accès Personnel)",
+          "description": "Pour Gitee, utilisez un Jeton d'Accès Personnel :",
+          "item1": "Dans Gitee, allez dans Paramètres → Jetons d'accès personnels",
+          "item2": "Créez un nouveau jeton avec la portée projects",
+          "item3": "De retour dans AgentsMesh, cliquez sur Ajouter un fournisseur Gitee et collez votre jeton"
+        },
+        "step5": {
+          "title": "Importer des Dépôts",
+          "description": "Après avoir connecté un fournisseur, importez les dépôts dont vous avez besoin :",
+          "item1": "Allez dans Paramètres → Dépôts",
+          "item2": "Cliquez sur Ajouter un dépôt et sélectionnez votre fournisseur",
+          "item3": "Parcourez ou recherchez les dépôts à importer",
+          "item4": "Les dépôts sélectionnés deviennent disponibles lors de la création de Pods"
+        },
+        "step6": {
+          "title": "Configurer les Clés SSH (Optionnel)",
+          "description": "Si vos dépôts utilisent un accès SSH, configurez les clés SSH sur le Runner :",
+          "item1": "Générez une paire de clés SSH sur votre machine Runner",
+          "item2": "Ajoutez la clé publique à votre fournisseur Git",
+          "item3": "Le Runner utilisera la clé SSH lors du clonage des dépôts",
+          "tip": "Runners Docker : Montez vos clés SSH en volume lecture seule : -v ~/.ssh:/root/.ssh:ro"
+        },
+        "step7": {
+          "title": "Vérifier en Créant un Pod",
+          "description": "Testez votre configuration en créant un Pod avec un dépôt lié :",
+          "item1": "Allez dans Espace de travail et cliquez sur Nouveau Pod",
+          "item2": "Sélectionnez un agent IA et votre Runner",
+          "item3": "Choisissez l'un de vos dépôts importés",
+          "item4": "Le Pod devrait démarrer avec le dépôt cloné dans un worktree",
+          "tip": "Chaque Pod obtient son propre worktree Git, ce qui permet à plusieurs Pods de travailler sur le même dépôt sans conflits."
+        },
+        "nextSteps": {
+          "title": "Et Ensuite ?",
+          "description": "Vos dépôts sont connectés. Continuez à explorer :",
+          "item1": "Votre Premier Pod — Guide complet pour créer et interagir avec un Pod",
+          "item2": "Gestion des Tâches — Liez des tickets aux Pods pour des flux de travail structurés"
+        }
+      },
       "firstPod": {
         "title": "Tutoriel : Votre Premier Pod",
         "description": "Apprenez à créer et interagir avec votre premier AgentPod étape par étape. À la fin de ce tutoriel, vous aurez lancé un agent de codage IA, connecté à un dépôt, et accompli une tâche.",
