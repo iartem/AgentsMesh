@@ -56,7 +56,7 @@
     },
     "architecture": {
       "title": "작동 원리",
-      "description": "AgentsMesh는 컨트롤 플레인과 데이터 플레인을 분리합니다. 오케스트레이션 명령은 gRPC + 상호 TLS (mTLS)를 통해 전송되고, 터미널 I/O는 글로벌 분산 Relay 클러스터를 통해 스트리밍됩니다. 어떤 기기에서든, 어떤 머신의 에이전트든 안전하게 조작할 수 있습니다.",
+      "description": "AgentsMesh를 사용하면 노트북, 서버, 클라우드 VM 등 어디서든 실행 중인 AI 에이전트를 브라우저에서 제어할 수 있습니다. 명령은 암호화된 연결을 통해 안전하게 전송되며, 터미널 출력은 실시간으로 스트리밍됩니다. 코드는 절대로 사용자의 인프라를 벗어나지 않습니다.",
       "clientLayer": "클라이언트 계층",
       "clientSubtitle": "언제 어디서나 접근 — 브라우저, 모바일, 태블릿",
       "cloudLayer": "클라우드",
@@ -227,7 +227,7 @@
     },
     "gettingStarted": {
       "title": "빠른 시작",
-      "description": "6단계로 AgentsMesh를 시작하세요. 계정 생성, Runner 설정, 에이전트 설치, 첫 번째 AI Pod 실행까지 안내합니다.",
+      "description": "6단계로 AgentsMesh를 시작하세요. 각 단계의 간략한 개요이며, 문제 해결 및 고급 옵션이 포함된 상세 튜토리얼로 연결됩니다.",
       "step1": {
         "title": "계정 만들기",
         "description": "가입 페이지에서 이메일, 사용자 이름, 비밀번호를 입력하여 등록합니다. 확인 이메일이 발송됩니다. 몇 분 내에 도착하지 않으면 스팸 폴더를 확인하세요.",
@@ -237,7 +237,7 @@
       },
       "step2": {
         "title": "Runner 설정",
-        "description": "Runner는 AI 에이전트 Pod의 실행 환경입니다. 개발 머신이나 서버에 AgentsMesh Runner를 설치하세요.",
+        "description": "Runner는 사용자의 머신에서 실행되는 경량 데몬으로, Pod라는 격리된 작업 공간에서 AI 에이전트를 실행합니다. 개발 머신이나 서버에 AgentsMesh Runner를 설치하세요.",
         "methodToken": "토큰으로 등록",
         "methodLogin": "브라우저 로그인으로 등록",
         "seeSetup": "Docker, Linux 패키지 및 Kubernetes 배포 옵션에 대해서는 {link}을 참조하세요."
@@ -257,7 +257,8 @@
         "geminiCliInstall": "npm install -g @google/gemini-cli",
         "geminiCliEnv": "export GOOGLE_API_KEY=...",
         "geminiCliHint": "API 키 발급처",
-        "tip": "설치 후 Runner를 재시작하거나 다음 하트비트를 기다리세요. 새로 사용 가능한 에이전트가 새 Pod 대화상자에 표시됩니다."
+        "tip": "설치 후 Runner를 재시작하거나 다음 하트비트를 기다리세요. 새로 사용 가능한 에이전트가 새 Pod 대화상자에 표시됩니다.",
+        "seeSetup": "MCP 도구 및 스킬 구성에 대한 자세한 내용은 {link}을 참조하세요."
       },
       "step4": {
         "title": "Git 제공자 연결",
@@ -271,23 +272,34 @@
       },
       "step5": {
         "title": "Pod 시작",
-        "description": "첫 번째 AgentPod를 만들고 AI 어시스턴트로 코딩을 시작하세요!",
+        "description": "Pod(AgentPod)는 AI 에이전트가 자체 터미널과 격리된 코드 작업 공간에서 실행되는 가상 워크스테이션입니다. 지금 첫 번째 Pod를 만들어 보세요!",
         "item1": "사이드바에서 워크스페이스로 이동",
         "item2": "새 Pod 클릭",
         "item3": "AI 에이전트 타입 선택 (Claude Code, Codex CLI 등)",
         "item4": "Runner 선택",
-        "item5": "선택적으로 리포지토리 및 브랜치 선택",
+        "item5": "선택적으로 리포지토리와 브랜치를 선택하세요 — 에이전트는 격리된 복사본(Git 워크트리)에서 작업하므로 메인 브랜치는 안전합니다",
         "item6": "선택적으로 티켓을 링크하여 컨텍스트 제공",
-        "item7": "작업을 설명하는 초기 프롬프트 추가",
-        "item8": "만들기 클릭"
+        "item7": "작업을 설명하는 초기 프롬프트를 추가하세요 (예: \"로그인 폼에 입력 유효성 검사 추가\" 또는 \"auth.test.ts의 실패하는 테스트 수정\")",
+        "item8": "만들기 클릭",
+        "seeSetup": "문제 해결이 포함된 상세 안내는 {link}을 참조하세요."
       },
       "step6": {
         "title": "에이전트와 상호작용",
         "description": "생성 후 실시간 세션이 있는 터미널 뷰가 열립니다. AI 에이전트가 초기 프롬프트 실행을 시작하거나, 제공되지 않은 경우 입력을 기다립니다.",
         "item1": "터미널에서 직접 후속 프롬프트나 명령을 입력",
-        "item2": "에이전트 상태 표시기 확인 — 유휴, 실행 중, 대기 중",
+        "item2": "에이전트 상태 표시기를 확인하세요 — 유휴(입력 대기), 실행 중(작업 처리 중), 대기 중(승인 필요)",
         "item3": "리포지토리가 링크된 경우 에이전트가 워크트리 내에서 작업",
         "item4": "작업 완료 후 툴바에서 Pod 종료"
+      },
+      "tryIt": {
+        "title": "체험하기: 60초 만에 첫 번째 Pod",
+        "description": "바로 작동하는 것을 확인하고 싶으신가요? 리포지토리 없이 가장 빠른 방법을 소개합니다:",
+        "item1": "워크스페이스 → 새 Pod를 클릭하세요",
+        "item2": "Claude Code(또는 설치된 에이전트)와 Runner를 선택하세요",
+        "item3": "리포지토리와 티켓 필드를 건너뛰세요",
+        "item4": "초기 프롬프트를 입력하세요: \"안녕하세요, 현재 디렉토리의 파일을 나열하고 보이는 내용을 설명해 주세요.\"",
+        "item5": "만들기를 클릭하고 터미널에서 에이전트의 응답을 확인하세요",
+        "tip": "이렇게 하면 리포지토리 없이 Pod가 생성됩니다 — 에이전트는 임시 디렉토리에서 실행됩니다. 실제 코드로 작업하기 전에 설정을 테스트하기에 적합합니다."
       },
       "nextSteps": {
         "title": "다음 단계",
@@ -1632,6 +1644,7 @@
     "tutorials": {
       "runnerSetup": {
         "title": "튜토리얼: Runner 설정하기",
+        "difficulty": "초급 — 5분",
         "description": "AgentsMesh Runner를 단계별로 설치, 등록, 확인하는 방법을 알아보세요. Pod를 생성하려면 먼저 Runner가 필요합니다.",
         "prerequisites": {
           "title": "사전 준비",
@@ -1697,6 +1710,7 @@
       },
       "gitSetup": {
         "title": "튜토리얼: Git 저장소 연결",
+        "difficulty": "초급 — 5분",
         "description": "Git 제공자(GitHub, GitLab 또는 Gitee)를 AgentsMesh에 연결하여 AI 에이전트가 코드 리포지토리에서 작업할 수 있도록 하는 방법을 알아보세요.",
         "prerequisites": {
           "title": "사전 준비",
@@ -1767,6 +1781,7 @@
       },
       "mcpSkills": {
         "title": "튜토리얼: MCP 도구 및 스킬",
+        "difficulty": "초급 — 10분",
         "description": "MCP(Model Context Protocol) 서버와 스킬로 AI 에이전트를 확장하는 방법을 알아보세요. MCP 도구를 사용하면 에이전트가 협업하고, 티켓을 관리하고, 외부 서비스와 상호작용할 수 있습니다. 스킬은 에이전트에 재사용 가능한 워크플로를 추가합니다.",
         "whatIsMcp": {
           "title": "MCP 도구란?",
@@ -1848,6 +1863,7 @@
       },
       "firstPod": {
         "title": "튜토리얼: 첫 번째 Pod",
+        "difficulty": "초급 — 5분",
         "description": "첫 번째 AgentPod를 단계별로 생성하고 상호작용하는 방법을 알아보세요. 이 튜토리얼을 마치면 AI 코딩 에이전트를 실행하고, 리포지토리에 연결하고, 작업을 완료하게 됩니다.",
         "prerequisites": {
           "title": "사전 준비",
@@ -1895,16 +1911,28 @@
           "item3": "Pod 도구 모음에서 종료를 클릭하여 Pod를 중지하고 워크트리를 정리하세요",
           "item4": "Pod 상태가 종료됨으로 변경되고 리소스가 해제됩니다"
         },
+        "troubleshooting": {
+          "title": "문제 해결",
+          "noRunners": "드롭다운에 Runner가 없음",
+          "noRunnersDesc": "Runner가 오프라인 상태일 수 있습니다. 설정 → Runners에서 상태를 확인하세요. 오프라인으로 표시되면 Runner 프로세스를 재시작하고 AgentsMesh 서버에 접근 가능한지 확인하세요.",
+          "stuckInit": "Pod가 초기화 중 상태에서 멈춤",
+          "stuckInitDesc": "보통 리포지토리가 크고 아직 클론 중일 때 발생합니다. 몇 분 기다려 보세요. 해결되지 않으면 Runner 로그에서 클론 오류를 확인하세요. 기본 기능을 테스트하려면 리포지토리 없이 Pod를 생성해 보세요.",
+          "agentNotResponding": "에이전트가 응답하지 않음",
+          "agentNotRespondingDesc": "Runner에 AI 에이전트 CLI가 설치되어 있는지 확인하세요 (예: Runner 머신에서 'claude --version' 실행). API 키 환경 변수가 올바르게 설정되어 있는지 확인하세요. 에이전트가 권한을 기다리고 있을 수도 있습니다 — 터미널에서 권한 프롬프트를 확인하세요.",
+          "terminated": "Pod가 즉시 종료됨",
+          "terminatedDesc": "에이전트 CLI가 시작 시 크래시된 것일 수 있습니다. API 키가 유효하고 만료되지 않았는지 확인하세요. Runner에서 에이전트 CLI를 수동으로 실행하여 오류 메시지를 확인해 보세요."
+        },
         "nextSteps": {
-          "title": "다음 단계",
-          "description": "첫 번째 Pod를 생성했으니, 다음 튜토리얼을 시도해 보세요:",
-          "item1": "작업 관리 — 체계적인 워크플로를 위해 티켓을 Pod에 연결",
-          "item2": "멀티 에이전트 협업 — 여러 에이전트가 함께 작업하도록 설정",
-          "item3": "자동화 Loop — 반복적인 에이전트 작업 설정"
+          "title": "다음은 무엇을 할까요?",
+          "description": "축하합니다! Pod가 작동합니다. 달성하고자 하는 목표에 따라 다음 단계를 선택하세요:",
+          "item1": "작업을 추적하고 싶다면 → 작업 관리 — 티켓과 칸반 보드를 활용하세요",
+          "item2": "여러 에이전트가 함께 작업하게 하고 싶다면 → 멀티 에이전트 협업",
+          "item3": "반복 작업을 자동화하고 싶다면 → 자동화 Loop"
         }
       },
       "ticketWorkflow": {
         "title": "튜토리얼: 티켓으로 작업 관리하기",
+        "difficulty": "초급 — 10분",
         "description": "AgentsMesh의 티켓 시스템을 사용하여 작업을 정리하고, 칸반 보드에서 진행 상황을 추적하고, 티켓을 AgentPod에 연결하여 자동으로 컨텍스트를 주입하는 방법을 알아보세요.",
         "step1": {
           "title": "티켓 보드로 이동",
@@ -1960,6 +1988,7 @@
       },
       "multiAgent": {
         "title": "튜토리얼: 멀티 에이전트 협업",
+        "difficulty": "중급 — 15분",
         "description": "채널을 통해 통신하고 협업하는 여러 AI 에이전트를 설정하는 방법을 알아보세요. 이 튜토리얼에서는 프론트엔드 에이전트와 백엔드 에이전트가 함께 기능을 개발하는 실제 시나리오를 안내합니다.",
         "scenario": {
           "title": "시나리오 개요",
@@ -2025,6 +2054,7 @@
       },
       "loops": {
         "title": "튜토리얼: Loop으로 자동화하기",
+        "difficulty": "중급 — 10분",
         "description": "스케줄에 따라 Pod를 생성하는 자동화 Loop를 설정하는 방법을 알아보세요. Loop는 코드 리뷰, 의존성 업데이트, 테스트 실행, 모니터링과 같은 반복 작업에 완벽합니다.",
         "whatAreLoops": {
           "title": "Loop이란?",

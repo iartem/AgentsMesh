@@ -56,7 +56,7 @@
     },
     "architecture": {
       "title": "Como Funciona",
-      "description": "O AgentsMesh separa o plano de controle do plano de dados. Comandos de orquestração trafegam via gRPC com TLS mútuo (mTLS), enquanto o I/O do terminal é transmitido através de um cluster Relay distribuído globalmente — para que você possa operar agentes em qualquer máquina, de qualquer dispositivo, com segurança.",
+      "description": "O AgentsMesh permite que você controle agentes de IA executando em qualquer lugar — no seu notebook, em um servidor ou em uma VM na nuvem — direto do navegador. Comandos são enviados de forma segura por conexões criptografadas, enquanto a saída do terminal é transmitida em tempo real. Seu código nunca sai da sua infraestrutura.",
       "clientLayer": "Camada do Cliente",
       "clientSubtitle": "Acesse de qualquer lugar — navegador, celular ou tablet",
       "cloudLayer": "Nuvem",
@@ -227,7 +227,7 @@
     },
     "gettingStarted": {
       "title": "Início Rápido",
-      "description": "Inicie o AgentsMesh em seis passos. Este guia acompanha você na criação de conta, configuração do Runner, instalação de agentes e lançamento do seu primeiro Pod com IA.",
+      "description": "Inicie o AgentsMesh em seis passos. Esta é uma visão geral rápida — cada passo tem um link para um tutorial detalhado com solução de problemas e opções avançadas.",
       "step1": {
         "title": "Criar uma conta",
         "description": "Registre-se na página de cadastro com seu e-mail, nome de usuário e senha. Você receberá um e-mail de verificação. Se não chegar em alguns minutos, verifique a pasta de spam.",
@@ -237,7 +237,7 @@
       },
       "step2": {
         "title": "Configurar um Runner",
-        "description": "Um Runner é o ambiente de execução onde os Pods de agentes IA são executados. Instale o AgentsMesh Runner na sua máquina de desenvolvimento ou servidor.",
+        "description": "Um Runner é um daemon leve que roda na sua máquina e executa agentes de IA em espaços de trabalho isolados chamados Pods. Instale o AgentsMesh Runner na sua máquina de desenvolvimento ou servidor.",
         "methodToken": "Registrar com um token",
         "methodLogin": "Registrar com login pelo navegador",
         "seeSetup": "Consulte {link} para opções de implantação com Docker, pacotes Linux e Kubernetes."
@@ -257,7 +257,8 @@
         "geminiCliInstall": "npm install -g @google/gemini-cli",
         "geminiCliEnv": "export GOOGLE_API_KEY=...",
         "geminiCliHint": "Obtenha sua chave API em",
-        "tip": "Após a instalação, reinicie o Runner ou aguarde o próximo heartbeat. Os novos agentes disponíveis aparecerão na caixa de diálogo Novo Pod."
+        "tip": "Após a instalação, reinicie o Runner ou aguarde o próximo heartbeat. Os novos agentes disponíveis aparecerão na caixa de diálogo Novo Pod.",
+        "seeSetup": "Consulte {link} para mais detalhes sobre ferramentas MCP e configuração de skills."
       },
       "step4": {
         "title": "Conectar um provedor Git",
@@ -271,23 +272,34 @@
       },
       "step5": {
         "title": "Iniciar um Pod",
-        "description": "Crie seu primeiro AgentPod e comece a programar com assistência de IA!",
+        "description": "Um Pod (AgentPod) é uma estação de trabalho virtual onde um agente de IA executa com seu próprio terminal e espaço de código isolado. Crie o seu primeiro agora!",
         "item1": "Navegue até Workspace na barra lateral",
         "item2": "Clique em Novo Pod",
         "item3": "Selecione um tipo de agente IA (Claude Code, Codex CLI, etc.)",
         "item4": "Escolha um Runner",
-        "item5": "Opcionalmente selecione um repositório e branch",
+        "item5": "Opcionalmente selecione um repositório e branch — o agente trabalhará em uma cópia isolada (Git worktree) para que sua branch principal fique segura",
         "item6": "Opcionalmente vincule um ticket para contexto",
-        "item7": "Adicione um prompt inicial descrevendo a tarefa",
-        "item8": "Clique em Criar"
+        "item7": "Adicione um prompt inicial descrevendo a tarefa (ex.: \"Adicionar validação de entrada no formulário de login\" ou \"Corrigir o teste falhando em auth.test.ts\")",
+        "item8": "Clique em Criar",
+        "seeSetup": "Consulte {link} para um passo a passo detalhado com solução de problemas."
       },
       "step6": {
         "title": "Interagir com seu agente",
         "description": "Após a criação, a visualização do terminal abre com uma sessão ao vivo. Seu agente IA começa a executar o prompt inicial ou aguarda entrada caso nenhum tenha sido fornecido.",
         "item1": "Digite prompts ou comandos de acompanhamento diretamente no terminal",
-        "item2": "Observe o indicador de status do agente — ocioso, executando ou aguardando",
+        "item2": "Observe o indicador de status do agente — Ocioso (pronto para entrada), Executando (trabalhando na sua tarefa) ou Aguardando (precisa da sua aprovação)",
         "item3": "O agente trabalha dentro da worktree do repositório se um foi vinculado",
         "item4": "Encerre o Pod pela barra de ferramentas quando sua tarefa estiver completa"
+      },
+      "tryIt": {
+        "title": "Experimente: Seu Primeiro Pod em 60 Segundos",
+        "description": "Quer ver funcionando agora mesmo? Aqui está o caminho mais rápido — nenhum repositório necessário:",
+        "item1": "Clique em Workspace → Novo Pod",
+        "item2": "Selecione Claude Code (ou qualquer agente instalado) e seu Runner",
+        "item3": "Pule os campos de repositório e ticket",
+        "item4": "Defina o prompt inicial como: \"Diga olá, depois liste os arquivos no diretório atual e explique o que você vê.\"",
+        "item5": "Clique em Criar e observe o agente responder no terminal",
+        "tip": "Isso cria um Pod sem repositório — o agente executa em um diretório temporário. É perfeito para testar sua configuração antes de trabalhar com código real."
       },
       "nextSteps": {
         "title": "Próximos passos",
@@ -1632,6 +1644,7 @@
     "tutorials": {
       "runnerSetup": {
         "title": "Tutorial: Configurando um Runner",
+        "difficulty": "Iniciante — 5 minutos",
         "description": "Aprenda como instalar, registrar e verificar um Runner do AgentsMesh passo a passo. Um Runner é necessário antes de criar Pods.",
         "prerequisites": {
           "title": "Pré-requisitos",
@@ -1697,6 +1710,7 @@
       },
       "gitSetup": {
         "title": "Tutorial: Conectar Repositórios Git",
+        "difficulty": "Iniciante — 5 minutos",
         "description": "Aprenda como conectar seu provedor Git (GitHub, GitLab ou Gitee) ao AgentsMesh para que seus agentes IA possam trabalhar nos seus repositórios de código.",
         "prerequisites": {
           "title": "Pré-requisitos",
@@ -1767,6 +1781,7 @@
       },
       "mcpSkills": {
         "title": "Tutorial: Ferramentas MCP e Skills",
+        "difficulty": "Iniciante — 10 minutos",
         "description": "Aprenda como estender seus agentes de IA com servidores MCP (Model Context Protocol) e skills. As ferramentas MCP permitem que os agentes colaborem, gerenciem tickets e interajam com serviços externos. Skills adicionam fluxos de trabalho reutilizáveis aos seus agentes.",
         "whatIsMcp": {
           "title": "O Que São Ferramentas MCP?",
@@ -1848,6 +1863,7 @@
       },
       "firstPod": {
         "title": "Tutorial: Seu Primeiro Pod",
+        "difficulty": "Iniciante — 5 minutos",
         "description": "Aprenda como criar e interagir com seu primeiro AgentPod passo a passo. Ao final deste tutorial, você terá lançado um agente de codificação IA, conectado a um repositório e concluído uma tarefa.",
         "prerequisites": {
           "title": "Pré-requisitos",
@@ -1895,16 +1911,28 @@
           "item3": "Clique em Encerrar na barra de ferramentas do Pod para parar o Pod e limpar o worktree",
           "item4": "O status do Pod muda para Encerrado e os recursos são liberados"
         },
+        "troubleshooting": {
+          "title": "Solução de Problemas",
+          "noRunners": "Nenhum Runner no menu suspenso",
+          "noRunnersDesc": "Seu Runner pode estar offline. Vá em Configurações → Runners e verifique o status. Se aparecer Offline, reinicie o processo do Runner e certifique-se de que ele consegue alcançar o servidor AgentsMesh.",
+          "stuckInit": "Pod travado em Inicializando",
+          "stuckInitDesc": "Isso geralmente significa que o repositório é grande e ainda está sendo clonado. Aguarde alguns minutos. Se não resolver, verifique os logs do Runner para erros de clone. Tente criar um Pod sem repositório para testar a funcionalidade básica.",
+          "agentNotResponding": "Agente não responde",
+          "agentNotRespondingDesc": "Verifique se a CLI do agente de IA está instalada no Runner (ex.: execute 'claude --version' na máquina do Runner). Verifique se a variável de ambiente da chave de API está definida corretamente. O agente também pode estar aguardando permissão — procure um prompt de permissão no terminal.",
+          "terminated": "Pod encerra imediatamente",
+          "terminatedDesc": "Isso geralmente significa que a CLI do agente travou na inicialização. Verifique se sua chave de API é válida e não expirou. Tente executar a CLI do agente manualmente no Runner para ver a mensagem de erro."
+        },
         "nextSteps": {
-          "title": "Próximos Passos",
-          "description": "Agora que você criou seu primeiro Pod, experimente estes próximos tutoriais:",
-          "item1": "Gestão de Tarefas — Vincule tickets a Pods para fluxos de trabalho estruturados",
-          "item2": "Colaboração Multi-Agente — Faça múltiplos agentes trabalharem juntos",
-          "item3": "Loops Automatizados — Configure tarefas recorrentes de agentes"
+          "title": "O Que Devo Fazer Agora?",
+          "description": "Parabéns! Você tem um Pod funcionando. Seu próximo passo depende do que você quer alcançar:",
+          "item1": "Quero rastrear tarefas → Gestão de Tarefas — Use tickets e um quadro Kanban",
+          "item2": "Quero múltiplos agentes trabalhando juntos → Colaboração Multi-Agente",
+          "item3": "Quero automatizar tarefas recorrentes → Loops Automatizados"
         }
       },
       "ticketWorkflow": {
         "title": "Tutorial: Gerenciando Tarefas com Tickets",
+        "difficulty": "Iniciante — 10 minutos",
         "description": "Aprenda como usar o sistema de tickets do AgentsMesh para organizar o trabalho, acompanhar o progresso em um quadro Kanban e conectar tickets a AgentPods para injeção automática de contexto.",
         "step1": {
           "title": "Navegue até o Quadro de Tickets",
@@ -1960,6 +1988,7 @@
       },
       "multiAgent": {
         "title": "Tutorial: Colaboração Multi-Agente",
+        "difficulty": "Intermediário — 15 minutos",
         "description": "Aprenda como configurar múltiplos agentes IA que se comunicam e colaboram através de channels. Este tutorial apresenta um cenário real onde um agente frontend e um agente backend trabalham juntos em uma funcionalidade.",
         "scenario": {
           "title": "Visão Geral do Cenário",
@@ -2025,6 +2054,7 @@
       },
       "loops": {
         "title": "Tutorial: Automatizando com Loops",
+        "difficulty": "Intermediário — 10 minutos",
         "description": "Aprenda como configurar loops automatizados que criam Pods em um agendamento. Loops são perfeitos para tarefas recorrentes como revisões de código, atualizações de dependências, execuções de testes e monitoramento.",
         "whatAreLoops": {
           "title": "O Que São Loops?",

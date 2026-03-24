@@ -56,7 +56,7 @@
     },
     "architecture": {
       "title": "Funktionsweise",
-      "description": "AgentsMesh trennt die Steuerungsebene von der Datenebene. Orchestrierungsbefehle werden über gRPC mit gegenseitigem TLS (mTLS) übertragen, während Terminal-E/A über ein global verteiltes Relay-Cluster gestreamt wird — so können Sie Agenten auf jedem Rechner, von jedem Gerät aus, sicher bedienen.",
+      "description": "AgentsMesh ermöglicht es Ihnen, KI-Agenten zu steuern, die überall laufen — auf Ihrem Laptop, einem Server oder einer Cloud-VM — direkt aus Ihrem Browser. Befehle werden sicher über verschlüsselte Verbindungen gesendet, während die Terminal-Ausgabe in Echtzeit gestreamt wird. Ihr Code verlässt nie Ihre Infrastruktur.",
       "clientLayer": "Client-Schicht",
       "clientSubtitle": "Zugriff von überall — Browser, Mobilgerät oder Tablet",
       "cloudLayer": "Cloud",
@@ -227,7 +227,7 @@
     },
     "gettingStarted": {
       "title": "Schnellstart",
-      "description": "Starten Sie AgentsMesh in sechs Schritten. Diese Anleitung führt Sie durch die Kontoerstellung, Runner-Einrichtung, Agenten-Installation und den Start Ihres ersten KI-Pods.",
+      "description": "Starten Sie AgentsMesh in sechs Schritten. Dies ist ein kurzer Überblick — jeder Schritt verlinkt auf ein ausführliches Tutorial mit Fehlerbehebung und erweiterten Optionen.",
       "step1": {
         "title": "Konto erstellen",
         "description": "Registrieren Sie sich auf der Anmeldeseite mit E-Mail, Benutzername und Passwort. Sie erhalten eine Bestätigungs-E-Mail. Falls sie nicht innerhalb weniger Minuten eintrifft, prüfen Sie Ihren Spam-Ordner.",
@@ -237,7 +237,7 @@
       },
       "step2": {
         "title": "Runner einrichten",
-        "description": "Ein Runner ist die Ausführungsumgebung, in der KI-Agenten-Pods laufen. Installieren Sie AgentsMesh Runner auf Ihrer Entwicklungsmaschine oder Ihrem Server.",
+        "description": "Ein Runner ist ein leichtgewichtiger Daemon, der auf Ihrem Rechner läuft und KI-Agenten in isolierten Arbeitsbereichen namens Pods ausführt. Installieren Sie den AgentsMesh Runner auf Ihrer Entwicklungsmaschine oder Ihrem Server.",
         "methodToken": "Mit einem Token registrieren",
         "methodLogin": "Mit Browser-Login registrieren",
         "seeSetup": "Siehe {link} für Docker-, Linux-Paket- und Kubernetes-Bereitstellungsoptionen."
@@ -257,7 +257,8 @@
         "geminiCliInstall": "npm install -g @google/gemini-cli",
         "geminiCliEnv": "export GOOGLE_API_KEY=...",
         "geminiCliHint": "API-Schlüssel erhalten von",
-        "tip": "Starten Sie nach der Installation den Runner neu oder warten Sie auf den nächsten Heartbeat. Die neu verfügbaren Agenten erscheinen im Neues-Pod-Dialog."
+        "tip": "Starten Sie nach der Installation den Runner neu oder warten Sie auf den nächsten Heartbeat. Die neu verfügbaren Agenten erscheinen im Neues-Pod-Dialog.",
+        "seeSetup": "Siehe {link} für weitere Details zu MCP-Tools und Skill-Konfiguration."
       },
       "step4": {
         "title": "Git-Anbieter verbinden",
@@ -271,23 +272,34 @@
       },
       "step5": {
         "title": "Pod starten",
-        "description": "Erstellen Sie Ihren ersten AgentPod und beginnen Sie mit KI-unterstützter Programmierung!",
+        "description": "Ein Pod (AgentPod) ist eine virtuelle Workstation, in der ein KI-Agent mit eigenem Terminal und isoliertem Code-Arbeitsbereich läuft. Erstellen Sie jetzt Ihren ersten!",
         "item1": "Navigieren Sie zum Workspace in der Seitenleiste",
         "item2": "Klicken Sie auf Neuer Pod",
         "item3": "Wählen Sie einen KI-Agenten-Typ (Claude Code, Codex CLI usw.)",
         "item4": "Wählen Sie einen Runner",
-        "item5": "Wählen Sie optional ein Repository und einen Branch",
+        "item5": "Wählen Sie optional ein Repository und einen Branch — der Agent arbeitet in einer isolierten Kopie (Git-Worktree), sodass Ihr Hauptbranch sicher bleibt",
         "item6": "Verknüpfen Sie optional ein Ticket für Kontext",
-        "item7": "Fügen Sie einen initialen Prompt hinzu, der die Aufgabe beschreibt",
-        "item8": "Klicken Sie auf Erstellen"
+        "item7": "Fügen Sie einen initialen Prompt hinzu, der die Aufgabe beschreibt (z. B. \"Eingabevalidierung zum Login-Formular hinzufügen\" oder \"Den fehlschlagenden Test in auth.test.ts beheben\")",
+        "item8": "Klicken Sie auf Erstellen",
+        "seeSetup": "Siehe {link} für eine ausführliche Anleitung mit Fehlerbehebung."
       },
       "step6": {
         "title": "Mit Ihrem Agenten interagieren",
         "description": "Nach der Erstellung öffnet sich die Terminal-Ansicht mit einer Live-Sitzung. Ihr KI-Agent beginnt mit der Ausführung des initialen Prompts oder wartet auf Eingabe, falls keiner angegeben wurde.",
         "item1": "Geben Sie Folge-Prompts oder Befehle direkt im Terminal ein",
-        "item2": "Beobachten Sie die Statusanzeige des Agenten — Leerlauf, Ausführung oder Warten",
+        "item2": "Beobachten Sie die Statusanzeige des Agenten — Leerlauf (bereit für Eingabe), Ausführung (arbeitet an Ihrer Aufgabe) oder Warten (benötigt Ihre Genehmigung)",
         "item3": "Der Agent arbeitet im Repository-Worktree, wenn einer verknüpft wurde",
         "item4": "Beenden Sie den Pod über die Symbolleiste, wenn Ihre Aufgabe abgeschlossen ist"
+      },
+      "tryIt": {
+        "title": "Ausprobieren: Dein erster Pod in 60 Sekunden",
+        "description": "Möchten Sie es sofort in Aktion sehen? Hier ist der schnellste Weg — kein Repository nötig:",
+        "item1": "Klicken Sie auf Arbeitsbereich → Neuer Pod",
+        "item2": "Wählen Sie Claude Code (oder einen anderen installierten Agenten) und Ihren Runner",
+        "item3": "Überspringen Sie die Repository- und Ticket-Felder",
+        "item4": "Setzen Sie den initialen Prompt auf: \"Sage Hallo, liste dann die Dateien im aktuellen Verzeichnis auf und erkläre, was du siehst.\"",
+        "item5": "Klicken Sie auf Erstellen und beobachten Sie, wie der Agent im Terminal antwortet",
+        "tip": "Dies erstellt einen Pod ohne Repository — der Agent läuft in einem temporären Verzeichnis. Perfekt, um Ihre Einrichtung zu testen, bevor Sie mit echtem Code arbeiten."
       },
       "nextSteps": {
         "title": "Nächste Schritte",
@@ -1632,6 +1644,7 @@
     "tutorials": {
       "runnerSetup": {
         "title": "Tutorial: Einen Runner einrichten",
+        "difficulty": "Anfänger — 5 Minuten",
         "description": "Lerne Schritt für Schritt, wie du einen AgentsMesh Runner installierst, registrierst und verifizierst. Ein Runner wird benötigt, bevor du Pods erstellen kannst.",
         "prerequisites": {
           "title": "Voraussetzungen",
@@ -1697,6 +1710,7 @@
       },
       "gitSetup": {
         "title": "Tutorial: Git-Repositories verbinden",
+        "difficulty": "Anfänger — 5 Minuten",
         "description": "Lerne, wie du deinen Git-Anbieter (GitHub, GitLab oder Gitee) mit AgentsMesh verbindest, damit deine KI-Agenten an deinen Code-Repositories arbeiten können.",
         "prerequisites": {
           "title": "Voraussetzungen",
@@ -1767,6 +1781,7 @@
       },
       "mcpSkills": {
         "title": "Tutorial: MCP-Tools & Skills",
+        "difficulty": "Anfänger — 10 Minuten",
         "description": "Erfahre, wie du deine KI-Agenten mit MCP-Servern (Model Context Protocol) und Skills erweitern kannst. MCP-Tools ermöglichen Agenten die Zusammenarbeit, Ticketverwaltung und Interaktion mit externen Diensten. Skills fügen deinen Agenten wiederverwendbare Arbeitsabläufe hinzu.",
         "whatIsMcp": {
           "title": "Was sind MCP-Tools?",
@@ -1848,6 +1863,7 @@
       },
       "firstPod": {
         "title": "Tutorial: Dein erster Pod",
+        "difficulty": "Anfänger — 5 Minuten",
         "description": "Lerne Schritt für Schritt, wie du deinen ersten AgentPod erstellst und damit interagierst. Am Ende dieses Tutorials wirst du einen KI-Coding-Agenten gestartet, ihn mit einem Repository verbunden und eine Aufgabe abgeschlossen haben.",
         "prerequisites": {
           "title": "Voraussetzungen",
@@ -1895,16 +1911,28 @@
           "item3": "Klicke auf Beenden in der Pod-Symbolleiste, um den Pod zu stoppen und den Worktree aufzuräumen",
           "item4": "Der Pod-Status wechselt zu Beendet und die Ressourcen werden freigegeben"
         },
+        "troubleshooting": {
+          "title": "Fehlerbehebung",
+          "noRunners": "Keine Runner im Dropdown",
+          "noRunnersDesc": "Dein Runner ist möglicherweise offline. Gehe zu Einstellungen → Runner und überprüfe den Status. Wenn er Offline anzeigt, starte den Runner-Prozess neu und stelle sicher, dass er den AgentsMesh-Server erreichen kann.",
+          "stuckInit": "Pod hängt in der Initialisierung",
+          "stuckInitDesc": "Das bedeutet normalerweise, dass das Repository groß ist und noch geklont wird. Warte einige Minuten. Falls es sich nicht löst, überprüfe die Runner-Logs auf Klon-Fehler. Versuche, einen Pod ohne Repository zu erstellen, um die grundlegende Funktionalität zu testen.",
+          "agentNotResponding": "Agent antwortet nicht",
+          "agentNotRespondingDesc": "Überprüfe, ob die KI-Agenten-CLI auf dem Runner installiert ist (z. B. 'claude --version' auf dem Runner-Rechner ausführen). Stelle sicher, dass die API-Key-Umgebungsvariable korrekt gesetzt ist. Der Agent wartet möglicherweise auch auf eine Genehmigung — achte auf eine Berechtigungsabfrage im Terminal.",
+          "terminated": "Pod wird sofort beendet",
+          "terminatedDesc": "Dies bedeutet oft, dass die Agenten-CLI beim Start abgestürzt ist. Überprüfe, ob dein API-Key gültig und nicht abgelaufen ist. Versuche, die Agenten-CLI manuell auf dem Runner auszuführen, um die Fehlermeldung zu sehen."
+        },
         "nextSteps": {
-          "title": "Wie geht es weiter?",
-          "description": "Nachdem du deinen ersten Pod erstellt hast, probiere diese nächsten Tutorials aus:",
-          "item1": "Aufgabenverwaltung — Verknüpfe Tickets mit Pods für strukturierte Workflows",
-          "item2": "Multi-Agent-Zusammenarbeit — Lass mehrere Agenten zusammenarbeiten",
-          "item3": "Automatisierte Loops — Richte wiederkehrende Agentenaufgaben ein"
+          "title": "Was soll ich als Nächstes tun?",
+          "description": "Glückwunsch! Du hast einen funktionierenden Pod. Dein nächster Schritt hängt davon ab, was du erreichen möchtest:",
+          "item1": "Ich möchte Aufgaben verfolgen → Aufgabenverwaltung — Verwende Tickets und ein Kanban-Board",
+          "item2": "Ich möchte mehrere Agenten zusammenarbeiten lassen → Multi-Agent-Zusammenarbeit",
+          "item3": "Ich möchte wiederkehrende Aufgaben automatisieren → Automatisierte Loops"
         }
       },
       "ticketWorkflow": {
         "title": "Tutorial: Aufgaben mit Tickets verwalten",
+        "difficulty": "Anfänger — 10 Minuten",
         "description": "Lerne, wie du das Ticket-System von AgentsMesh nutzt, um Arbeit zu organisieren, den Fortschritt auf einem Kanban-Board zu verfolgen und Tickets mit AgentPods zu verbinden, um automatisch Kontext einzuspeisen.",
         "step1": {
           "title": "Zum Ticket-Board navigieren",
@@ -1960,6 +1988,7 @@
       },
       "multiAgent": {
         "title": "Tutorial: Multi-Agent-Zusammenarbeit",
+        "difficulty": "Fortgeschritten — 15 Minuten",
         "description": "Lerne, wie du mehrere KI-Agenten einrichtest, die über Channels kommunizieren und zusammenarbeiten. Dieses Tutorial führt dich durch ein praxisnahes Szenario, in dem ein Frontend-Agent und ein Backend-Agent gemeinsam an einem Feature arbeiten.",
         "scenario": {
           "title": "Szenarioübersicht",
@@ -2025,6 +2054,7 @@
       },
       "loops": {
         "title": "Tutorial: Automatisierung mit Loops",
+        "difficulty": "Fortgeschritten — 10 Minuten",
         "description": "Lerne, wie du automatisierte Loops einrichtest, die Pods nach einem Zeitplan erstellen. Loops eignen sich perfekt für wiederkehrende Aufgaben wie Code-Reviews, Abhängigkeitsaktualisierungen, Testläufe und Monitoring.",
         "whatAreLoops": {
           "title": "Was sind Loops?",

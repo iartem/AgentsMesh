@@ -56,7 +56,7 @@
     },
     "architecture": {
       "title": "How It Works",
-      "description": "AgentsMesh separates the control plane from the data plane. Orchestration commands travel through gRPC with mutual TLS, while terminal I/O streams through a globally distributed Relay cluster — so you can operate agents on any machine, from any device, securely.",
+      "description": "AgentsMesh lets you control AI agents running anywhere — on your laptop, a server, or a cloud VM — from your browser. Commands are sent securely over encrypted connections, while terminal output streams in real time. Your code never leaves your infrastructure.",
       "clientLayer": "Client Layer",
       "clientSubtitle": "Access from anywhere — browser, phone, or tablet",
       "cloudLayer": "Cloud",
@@ -227,7 +227,7 @@
     },
     "gettingStarted": {
       "title": "Quick Start",
-      "description": "Get AgentsMesh up and running in six steps. This guide walks you through account creation, Runner setup, agent installation, and launching your first AI-powered Pod.",
+      "description": "Get AgentsMesh up and running in six steps. This is a quick overview — each step links to a detailed tutorial with troubleshooting and advanced options.",
       "step1": {
         "title": "Create an Account",
         "description": "Register at the sign-up page with your email, username, and password. After submitting you will receive a verification email — check your spam folder if it does not arrive within a few minutes.",
@@ -237,7 +237,7 @@
       },
       "step2": {
         "title": "Setup a Runner",
-        "description": "A Runner is the execution environment where AI agent Pods run. Install the AgentsMesh Runner on your development machine or server.",
+        "description": "A Runner is a lightweight daemon that runs on your machine and executes AI agents in isolated workspaces called Pods. Install the AgentsMesh Runner on your development machine or server.",
         "methodToken": "Register with a token",
         "methodLogin": "Register with browser login",
         "seeSetup": "See {link} for Docker, Linux packages, and Kubernetes deployment options."
@@ -257,7 +257,8 @@
         "geminiCliInstall": "npm install -g @google/gemini-cli",
         "geminiCliEnv": "export GOOGLE_API_KEY=...",
         "geminiCliHint": "Get your API key from",
-        "tip": "After installing, restart the Runner or wait for the next heartbeat. The newly available agents will appear in the New Pod dialog."
+        "tip": "After installing, restart the Runner or wait for the next heartbeat. The newly available agents will appear in the New Pod dialog.",
+        "seeSetup": "See {link} for more details on MCP tools and skill configuration."
       },
       "step4": {
         "title": "Connect a Git Provider",
@@ -271,23 +272,34 @@
       },
       "step5": {
         "title": "Start a Pod",
-        "description": "Create your first AgentPod and start coding with AI assistance!",
+        "description": "A Pod (AgentPod) is a virtual workstation where an AI agent runs with its own terminal and isolated code workspace. Create your first one now!",
         "item1": "Navigate to Workspace in the sidebar",
         "item2": "Click New Pod",
         "item3": "Select an AI agent type (Claude Code, Codex CLI, etc.)",
         "item4": "Choose a Runner",
-        "item5": "Optionally select a repository and branch",
+        "item5": "Optionally select a repository and branch — the agent will work in an isolated copy (Git worktree) so your main branch stays safe",
         "item6": "Optionally link to a ticket for context",
-        "item7": "Add an initial prompt describing the task",
-        "item8": "Click Create"
+        "item7": "Add an initial prompt describing the task (e.g., \"Add input validation to the login form\" or \"Fix the failing test in auth.test.ts\")",
+        "item8": "Click Create",
+        "seeSetup": "See {link} for a detailed walkthrough with troubleshooting."
       },
       "step6": {
         "title": "Interact with Your Agent",
         "description": "After creation the terminal view opens with a live session. Your AI agent begins executing the initial prompt or waits for input if none was provided.",
         "item1": "Type follow-up prompts or commands directly in the terminal",
-        "item2": "Watch the agent status indicator — idle, executing, or waiting",
+        "item2": "Watch the agent status indicator — Idle (ready for input), Executing (working on your task), or Waiting (needs your approval)",
         "item3": "The agent works inside the repository worktree if one was linked",
         "item4": "Terminate the Pod from the toolbar when your task is complete"
+      },
+      "tryIt": {
+        "title": "Try It: Your First Pod in 60 Seconds",
+        "description": "Want to see it work right away? Here's the fastest path — no repository needed:",
+        "item1": "Click Workspace → New Pod",
+        "item2": "Select Claude Code (or any installed agent) and your Runner",
+        "item3": "Skip the repository and ticket fields",
+        "item4": "Set the initial prompt to: \"Say hello, then list the files in the current directory and explain what you see.\"",
+        "item5": "Click Create and watch the agent respond in the terminal",
+        "tip": "This creates a Pod without a repository — the agent runs in a temporary directory. It's perfect for testing your setup before working with real code."
       },
       "nextSteps": {
         "title": "Next Steps",
@@ -1632,6 +1644,7 @@
     "tutorials": {
       "runnerSetup": {
         "title": "Tutorial: Setting Up a Runner",
+        "difficulty": "Beginner — 5 minutes",
         "description": "Learn how to install, register, and verify an AgentsMesh Runner step by step. A Runner is required before you can create Pods.",
         "prerequisites": {
           "title": "Prerequisites",
@@ -1697,6 +1710,7 @@
       },
       "gitSetup": {
         "title": "Tutorial: Connect Git Repositories",
+        "difficulty": "Beginner — 5 minutes",
         "description": "Learn how to connect your Git provider (GitHub, GitLab, or Gitee) to AgentsMesh so your AI agents can work on your code repositories.",
         "prerequisites": {
           "title": "Prerequisites",
@@ -1767,6 +1781,7 @@
       },
       "mcpSkills": {
         "title": "Tutorial: MCP Tools & Skills",
+        "difficulty": "Beginner — 10 minutes",
         "description": "Learn how to extend your AI agents with MCP (Model Context Protocol) servers and skills. MCP tools let agents collaborate, manage tickets, and interact with external services. Skills add reusable workflows to your agents.",
         "whatIsMcp": {
           "title": "What Are MCP Tools?",
@@ -1848,6 +1863,7 @@
       },
       "firstPod": {
         "title": "Tutorial: Your First Pod",
+        "difficulty": "Beginner — 5 minutes",
         "description": "Learn how to create and interact with your first AgentPod step by step. By the end of this tutorial, you will have launched an AI coding agent, connected it to a repository, and completed a task.",
         "prerequisites": {
           "title": "Prerequisites",
@@ -1895,16 +1911,28 @@
           "item3": "Click Terminate in the Pod toolbar to stop the Pod and clean up the worktree",
           "item4": "The Pod status changes to Terminated and resources are freed"
         },
+        "troubleshooting": {
+          "title": "Troubleshooting",
+          "noRunners": "No Runners in the dropdown",
+          "noRunnersDesc": "Your Runner may be offline. Go to Settings → Runners and check the status. If it shows Offline, restart the Runner process and ensure it can reach the AgentsMesh server.",
+          "stuckInit": "Pod stuck in Initializing",
+          "stuckInitDesc": "This usually means the repository is large and still cloning. Wait a few minutes. If it doesn't resolve, check the Runner logs for clone errors. Try creating a Pod without a repository to test basic functionality.",
+          "agentNotResponding": "Agent not responding",
+          "agentNotRespondingDesc": "Verify the AI agent CLI is installed on the Runner (e.g., run 'claude --version' on the Runner machine). Check that the API key environment variable is set correctly. The agent may also be waiting for permission — look for a permission prompt in the terminal.",
+          "terminated": "Pod immediately terminates",
+          "terminatedDesc": "This often means the agent CLI crashed at startup. Check that your API key is valid and not expired. Try running the agent CLI manually on the Runner to see the error message."
+        },
         "nextSteps": {
-          "title": "What's Next?",
-          "description": "Now that you have created your first Pod, try these next tutorials:",
-          "item1": "Task Management — Link tickets to Pods for structured workflows",
-          "item2": "Multi-Agent Collaboration — Have multiple agents work together",
-          "item3": "Automated Loops — Set up recurring agent tasks"
+          "title": "What Should I Do Next?",
+          "description": "Congrats! You have a working Pod. Your next step depends on what you want to achieve:",
+          "item1": "I want to track tasks → Task Management — Use tickets and a Kanban board",
+          "item2": "I want multiple agents working together → Multi-Agent Collaboration",
+          "item3": "I want to automate recurring tasks → Automated Loops"
         }
       },
       "ticketWorkflow": {
         "title": "Tutorial: Managing Tasks with Tickets",
+        "difficulty": "Beginner — 10 minutes",
         "description": "Learn how to use AgentsMesh's ticket system to organize work, track progress on a Kanban board, and connect tickets to AgentPods for automatic context injection.",
         "step1": {
           "title": "Navigate to the Ticket Board",
@@ -1960,6 +1988,7 @@
       },
       "multiAgent": {
         "title": "Tutorial: Multi-Agent Collaboration",
+        "difficulty": "Intermediate — 15 minutes",
         "description": "Learn how to set up multiple AI agents that communicate and collaborate through channels. This tutorial walks you through a real-world scenario where a frontend agent and a backend agent work together on a feature.",
         "scenario": {
           "title": "Scenario Overview",
@@ -2025,6 +2054,7 @@
       },
       "loops": {
         "title": "Tutorial: Automating with Loops",
+        "difficulty": "Intermediate — 10 minutes",
         "description": "Learn how to set up automated loops that create Pods on a schedule. Loops are perfect for recurring tasks like code reviews, dependency updates, test runs, and monitoring.",
         "whatAreLoops": {
           "title": "What Are Loops?",

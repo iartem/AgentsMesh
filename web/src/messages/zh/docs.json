@@ -56,7 +56,7 @@
     },
     "architecture": {
       "title": "工作原理",
-      "description": "AgentsMesh 将控制面与数据面分离。编排指令通过 gRPC + 双向 TLS (mTLS) 传输，终端 I/O 数据流则通过全球分布的 Relay 集群转发——让你可以在任何设备上，安全地操控任何机器上的 AI 智能体。",
+      "description": "AgentsMesh 让你通过浏览器控制在任何地方运行的 AI 智能体——无论是你的笔记本电脑、服务器还是云虚拟机。命令通过加密连接安全传输，终端输出实时推流。你的代码永远不会离开你的基础设施。",
       "clientLayer": "客户端层",
       "clientSubtitle": "随时随地访问——浏览器、手机或平板",
       "cloudLayer": "云端",
@@ -227,7 +227,7 @@
     },
     "gettingStarted": {
       "title": "快速上手",
-      "description": "六步启动 AgentsMesh。本指南将带你完成账户创建、Runner 配置、智能体安装，并启动你的第一个 AI Pod。",
+      "description": "六步启动 AgentsMesh。这是一个快速概览——每个步骤都链接到包含故障排除和高级选项的详细教程。",
       "step1": {
         "title": "创建账户",
         "description": "前往注册页面，填写邮箱、用户名和密码。提交后你将收到一封验证邮件——如果几分钟内没有收到，请检查垃圾邮件文件夹。",
@@ -237,7 +237,7 @@
       },
       "step2": {
         "title": "配置 Runner",
-        "description": "Runner 是 AI 智能体 Pod 的执行环境。在你的开发机器或服务器上安装 AgentsMesh Runner。",
+        "description": "Runner 是一个轻量级守护进程，运行在你的机器上，在称为 Pod 的隔离工作空间中执行 AI 智能体。在你的开发机器或服务器上安装 AgentsMesh Runner。",
         "methodToken": "使用令牌注册",
         "methodLogin": "使用浏览器登录注册",
         "seeSetup": "查看 {link} 了解 Docker、Linux 包和 Kubernetes 部署选项。"
@@ -257,7 +257,8 @@
         "geminiCliInstall": "npm install -g @google/gemini-cli",
         "geminiCliEnv": "export GOOGLE_API_KEY=...",
         "geminiCliHint": "从以下网站获取 API 密钥",
-        "tip": "安装后重启 Runner 或等待下一次心跳。新的可用智能体将出现在新建 Pod 对话框中。"
+        "tip": "安装后重启 Runner 或等待下一次心跳。新的可用智能体将出现在新建 Pod 对话框中。",
+        "seeSetup": "查看 {link} 了解更多关于 MCP 工具和技能配置的详情。"
       },
       "step4": {
         "title": "连接 Git 服务商",
@@ -271,23 +272,34 @@
       },
       "step5": {
         "title": "启动 Pod",
-        "description": "创建你的第一个 AgentPod，开始 AI 辅助编程！",
+        "description": "Pod（AgentPod）是一个虚拟工作站，AI 智能体在其中运行，拥有自己的终端和隔离的代码工作空间。现在创建你的第一个 Pod！",
         "item1": "在侧边栏中导航到工作空间",
         "item2": "点击 新建 Pod",
         "item3": "选择 AI 智能体类型（Claude Code、Codex CLI 等）",
         "item4": "选择一个 Runner",
-        "item5": "可选地选择仓库和分支",
+        "item5": "可选地选择仓库和分支——智能体将在隔离副本（Git worktree）中工作，你的主分支保持安全",
         "item6": "可选地关联任务以提供上下文",
-        "item7": "添加描述任务的初始提示",
-        "item8": "点击 创建"
+        "item7": "添加描述任务的初始提示（例如「为登录表单添加输入验证」或「修复 auth.test.ts 中失败的测试」）",
+        "item8": "点击 创建",
+        "seeSetup": "查看 {link} 了解包含故障排除的详细操作指南。"
       },
       "step6": {
         "title": "与智能体交互",
         "description": "创建后将打开终端视图，显示实时会话。AI 智能体开始执行初始提示，如果未提供则等待输入。",
         "item1": "直接在终端中输入后续提示或命令",
-        "item2": "观察智能体状态指示器——空闲、执行中或等待中",
+        "item2": "观察智能体状态指示器——空闲（等待输入）、执行中（正在处理任务）或等待中（需要你的批准）",
         "item3": "如果关联了仓库，智能体在仓库工作树中工作",
         "item4": "任务完成后从工具栏终止 Pod"
+      },
+      "tryIt": {
+        "title": "试一试：60 秒创建你的第一个 Pod",
+        "description": "想立刻看到效果？这是最快的方式——无需仓库：",
+        "item1": "点击 工作空间 → 新建 Pod",
+        "item2": "选择 Claude Code（或任何已安装的智能体）和你的 Runner",
+        "item3": "跳过仓库和任务字段",
+        "item4": "将初始提示设置为：\"打个招呼，然后列出当前目录中的文件并解释你看到的内容。\"",
+        "item5": "点击 创建，观看智能体在终端中响应",
+        "tip": "这会创建一个没有仓库的 Pod——智能体在临时目录中运行。非常适合在使用真实代码之前测试你的设置。"
       },
       "nextSteps": {
         "title": "下一步",
@@ -1632,6 +1644,7 @@
     "tutorials": {
       "runnerSetup": {
         "title": "教程：配置 Runner",
+        "difficulty": "初学者 — 5 分钟",
         "description": "逐步学习如何安装、注册和验证 AgentsMesh Runner。创建 Pod 之前需要先配置好 Runner。",
         "prerequisites": {
           "title": "前提条件",
@@ -1697,6 +1710,7 @@
       },
       "gitSetup": {
         "title": "教程：连接 Git 仓库",
+        "difficulty": "初学者 — 5 分钟",
         "description": "学习如何将你的 Git 提供商（GitHub、GitLab 或 Gitee）连接到 AgentsMesh，以便 AI 智能体可以操作你的代码仓库。",
         "prerequisites": {
           "title": "前提条件",
@@ -1767,6 +1781,7 @@
       },
       "mcpSkills": {
         "title": "教程：MCP 工具与技能",
+        "difficulty": "初学者 — 10 分钟",
         "description": "了解如何使用 MCP（模型上下文协议）服务器和技能来扩展你的 AI 智能体。MCP 工具让智能体能够协作、管理工单并与外部服务交互。技能为你的智能体添加可复用的工作流。",
         "whatIsMcp": {
           "title": "什么是 MCP 工具？",
@@ -1848,6 +1863,7 @@
       },
       "firstPod": {
         "title": "教程：创建你的第一个 Pod",
+        "difficulty": "初学者 — 5 分钟",
         "description": "逐步学习如何创建并使用你的第一个 AgentPod。完成本教程后，你将成功启动一个 AI 编程智能体，将其连接到代码仓库，并完成一项任务。",
         "prerequisites": {
           "title": "前提条件",
@@ -1895,16 +1911,28 @@
           "item3": "点击 Pod 工具栏中的终止按钮以停止 Pod 并清理 worktree",
           "item4": "Pod 状态变为已终止，资源被释放"
         },
+        "troubleshooting": {
+          "title": "故障排除",
+          "noRunners": "下拉菜单中没有 Runner",
+          "noRunnersDesc": "你的 Runner 可能已离线。前往 设置 → Runner 检查状态。如果显示离线，请重启 Runner 进程并确保它能连接到 AgentsMesh 服务器。",
+          "stuckInit": "Pod 一直停留在初始化状态",
+          "stuckInitDesc": "这通常意味着仓库较大，仍在克隆中。请等待几分钟。如果问题仍未解决，请检查 Runner 日志中的克隆错误。尝试创建一个不带仓库的 Pod 来测试基本功能。",
+          "agentNotResponding": "智能体无响应",
+          "agentNotRespondingDesc": "确认 Runner 上已安装 AI 智能体 CLI（例如在 Runner 机器上运行 'claude --version'）。检查 API 密钥环境变量是否正确设置。智能体也可能正在等待权限——查看终端中是否有权限提示。",
+          "terminated": "Pod 立即终止",
+          "terminatedDesc": "这通常意味着智能体 CLI 在启动时崩溃。检查你的 API 密钥是否有效且未过期。尝试在 Runner 上手动运行智能体 CLI 以查看错误信息。"
+        },
         "nextSteps": {
-          "title": "下一步",
-          "description": "现在你已经创建了第一个 Pod，尝试以下教程：",
-          "item1": "任务管理 - 将工单关联到 Pod 以实现结构化工作流",
-          "item2": "多智能体协作 - 让多个智能体协同工作",
-          "item3": "自动化循环 - 设置定期执行的智能体任务"
+          "title": "接下来该做什么？",
+          "description": "恭喜！你已经有了一个可用的 Pod。下一步取决于你想实现什么：",
+          "item1": "我想跟踪任务 → 任务管理 — 使用工单和看板",
+          "item2": "我想让多个智能体协同工作 → 多智能体协作",
+          "item3": "我想自动化定期任务 → 自动化循环"
         }
       },
       "ticketWorkflow": {
         "title": "教程：使用工单管理任务",
+        "difficulty": "初学者 — 10 分钟",
         "description": "学习如何使用 AgentsMesh 的工单系统来组织工作、在看板上跟踪进度，以及将工单连接到 AgentPod 以自动注入上下文。",
         "step1": {
           "title": "导航到工单看板",
@@ -1960,6 +1988,7 @@
       },
       "multiAgent": {
         "title": "教程：多智能体协作",
+        "difficulty": "进阶 — 15 分钟",
         "description": "学习如何设置多个 AI 智能体通过频道进行沟通和协作。本教程将引导你完成一个实际场景：前端智能体和后端智能体协同开发一个功能。",
         "scenario": {
           "title": "场景概述",
@@ -2025,6 +2054,7 @@
       },
       "loops": {
         "title": "教程：使用循环实现自动化",
+        "difficulty": "进阶 — 10 分钟",
         "description": "学习如何设置按计划自动创建 Pod 的循环任务。循环非常适合定期任务，如代码审查、依赖更新、测试运行和监控。",
         "whatAreLoops": {
           "title": "什么是循环？",

@@ -187,6 +187,14 @@ agentsmesh-runner run`}</pre>
           <div className="bg-muted/50 border border-border rounded-lg p-4 mt-4 text-sm text-muted-foreground">
             {t("docs.gettingStarted.step3.tip")}
           </div>
+
+          <p className="text-sm text-muted-foreground mt-4">
+            <LinkInText
+              raw={t.raw("docs.gettingStarted.step3.seeSetup")}
+              linkHref="/docs/tutorials/mcp-and-skills"
+              linkLabel={t("docs.nav.tutorialMcpSkills")}
+            />
+          </p>
         </div>
       </section>
 
@@ -226,8 +234,8 @@ agentsmesh-runner run`}</pre>
           <p className="text-sm text-muted-foreground">
             <LinkInText
               raw={t.raw("docs.gettingStarted.step4.seeGuide")}
-              linkHref="/docs/guides/git-integration"
-              linkLabel={t("docs.nav.gitIntegration")}
+              linkHref="/docs/tutorials/git-setup"
+              linkLabel={t("docs.nav.tutorialGitSetup")}
             />
           </p>
         </div>
@@ -250,6 +258,14 @@ agentsmesh-runner run`}</pre>
             <li>{t("docs.gettingStarted.step5.item7")}</li>
             <li>{t("docs.gettingStarted.step5.item8")}</li>
           </ol>
+
+          <p className="text-sm text-muted-foreground mt-4">
+            <LinkInText
+              raw={t.raw("docs.gettingStarted.step5.seeSetup")}
+              linkHref="/docs/tutorials/first-pod"
+              linkLabel={t("docs.nav.tutorialFirstPod")}
+            />
+          </p>
         </div>
       </section>
 
@@ -266,6 +282,28 @@ agentsmesh-runner run`}</pre>
             <li>{t("docs.gettingStarted.step6.item3")}</li>
             <li>{t("docs.gettingStarted.step6.item4")}</li>
           </ul>
+        </div>
+      </section>
+
+      {/* Try It */}
+      <section className="mb-8">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">
+            {t("docs.gettingStarted.tryIt.title")}
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {t("docs.gettingStarted.tryIt.description")}
+          </p>
+          <ol className="list-decimal list-inside text-muted-foreground space-y-2 mb-4">
+            <li>{t("docs.gettingStarted.tryIt.item1")}</li>
+            <li>{t("docs.gettingStarted.tryIt.item2")}</li>
+            <li>{t("docs.gettingStarted.tryIt.item3")}</li>
+            <li>{t("docs.gettingStarted.tryIt.item4")}</li>
+            <li>{t("docs.gettingStarted.tryIt.item5")}</li>
+          </ol>
+          <div className="bg-muted/50 border border-border rounded-lg p-4 text-sm text-muted-foreground">
+            {t("docs.gettingStarted.tryIt.tip")}
+          </div>
         </div>
       </section>
 

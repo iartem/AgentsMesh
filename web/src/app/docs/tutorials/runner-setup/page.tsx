@@ -30,9 +30,12 @@ export default function RunnerSetupTutorialPage() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-8">
+      <h1 className="text-4xl font-bold mb-2">
         {t("docs.tutorials.runnerSetup.title")}
       </h1>
+      <p className="text-sm text-muted-foreground mb-8">
+        {t("docs.tutorials.runnerSetup.difficulty")}
+      </p>
 
       <p className="text-muted-foreground leading-relaxed mb-8">
         {t("docs.tutorials.runnerSetup.description")}

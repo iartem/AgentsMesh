@@ -28,9 +28,12 @@ export default function FirstPodTutorialPage() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-8">
+      <h1 className="text-4xl font-bold mb-2">
         {t("docs.tutorials.firstPod.title")}
       </h1>
+      <p className="text-sm text-muted-foreground mb-8">
+        {t("docs.tutorials.firstPod.difficulty")}
+      </p>
 
       <p className="text-muted-foreground leading-relaxed mb-8">
         {t("docs.tutorials.firstPod.description")}
@@ -151,6 +154,47 @@ export default function FirstPodTutorialPage() {
             <li>{t("docs.tutorials.firstPod.step5.item3")}</li>
             <li>{t("docs.tutorials.firstPod.step5.item4")}</li>
           </ul>
+        </div>
+      </section>
+
+      {/* Troubleshooting */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">
+          {t("docs.tutorials.firstPod.troubleshooting.title")}
+        </h2>
+        <div className="space-y-3">
+          <div className="border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-1">
+              {t("docs.tutorials.firstPod.troubleshooting.noRunners")}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t("docs.tutorials.firstPod.troubleshooting.noRunnersDesc")}
+            </p>
+          </div>
+          <div className="border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-1">
+              {t("docs.tutorials.firstPod.troubleshooting.stuckInit")}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t("docs.tutorials.firstPod.troubleshooting.stuckInitDesc")}
+            </p>
+          </div>
+          <div className="border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-1">
+              {t("docs.tutorials.firstPod.troubleshooting.agentNotResponding")}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t("docs.tutorials.firstPod.troubleshooting.agentNotRespondingDesc")}
+            </p>
+          </div>
+          <div className="border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-1">
+              {t("docs.tutorials.firstPod.troubleshooting.terminated")}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t("docs.tutorials.firstPod.troubleshooting.terminatedDesc")}
+            </p>
+          </div>
         </div>
       </section>
 
