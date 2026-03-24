@@ -39,6 +39,7 @@
       "tutorials": "Tutoriels",
       "tutorialRunnerSetup": "Configurer un Runner",
       "tutorialGitSetup": "Connecter des Dépôts Git",
+      "tutorialMcpSkills": "MCP et Skills",
       "tutorialFirstPod": "Votre Premier Pod",
       "tutorialTicketWorkflow": "Gestion des Tâches",
       "tutorialMultiAgent": "Collaboration Multi-Agents",
@@ -1762,6 +1763,87 @@
           "description": "Vos dépôts sont connectés. Continuez à explorer :",
           "item1": "Votre Premier Pod — Guide complet pour créer et interagir avec un Pod",
           "item2": "Gestion des Tâches — Liez des tickets aux Pods pour des flux de travail structurés"
+        }
+      },
+      "mcpSkills": {
+        "title": "Tutoriel : Outils MCP et Skills",
+        "description": "Apprenez à étendre vos agents IA avec des serveurs MCP (Model Context Protocol) et des skills. Les outils MCP permettent aux agents de collaborer, gérer des tickets et interagir avec des services externes. Les skills ajoutent des flux de travail réutilisables à vos agents.",
+        "whatIsMcp": {
+          "title": "Que sont les outils MCP ?",
+          "description": "Les outils MCP (Model Context Protocol) sont des capacités que les agents IA peuvent utiliser lorsqu'ils travaillent dans un Pod. AgentsMesh fournit 26 outils MCP intégrés organisés en 7 catégories :",
+          "item1": "Découverte — Lister les Pods, Runners et dépôts disponibles",
+          "item2": "Terminal — Observer et contrôler les terminaux d'autres Pods",
+          "item3": "Liaison — Demander et gérer les connexions Pod-à-Pod",
+          "item4": "Canal — Créer des canaux, envoyer des messages, partager des documents",
+          "item5": "Ticket — Rechercher, créer et mettre à jour des tickets",
+          "item6": "Pod — Créer de nouveaux Pods, obtenir des instantanés, envoyer des entrées",
+          "item7": "Boucle — Lister et déclencher des boucles automatisées",
+          "autoNote": "Ces outils intégrés sont automatiquement disponibles pour chaque Pod — aucune configuration nécessaire."
+        },
+        "step1": {
+          "title": "Comprendre les serveurs MCP intégrés et personnalisés",
+          "description": "Il existe deux types d'outils MCP disponibles pour vos agents :",
+          "builtinTitle": "Serveur MCP intégré AgentsMesh",
+          "builtinDesc": "Configuré automatiquement pour chaque Pod. Fournit les 26 outils de collaboration (canaux, tickets, liaisons, etc.). Aucune configuration requise.",
+          "customTitle": "Serveurs MCP personnalisés",
+          "customDesc": "Des serveurs MCP supplémentaires que vous installez pour des capacités spécifiques — par exemple, un serveur MCP de base de données, une intégration Slack ou un connecteur API personnalisé. Ceux-ci sont configurés par organisation ou par utilisateur."
+        },
+        "step2": {
+          "title": "Installer un serveur MCP personnalisé",
+          "description": "Ajoutez un serveur MCP personnalisé pour étendre les capacités de vos agents :",
+          "item1": "Allez dans Paramètres → Extensions → Serveurs MCP",
+          "item2": "Cliquez sur Ajouter un serveur MCP",
+          "item3": "Choisissez le type de transport : stdio (outil en ligne de commande), HTTP ou SSE (Server-Sent Events)",
+          "item4": "Pour stdio : Entrez la commande et les arguments (par ex., npx -y @modelcontextprotocol/server-filesystem /chemin)",
+          "item5": "Pour HTTP/SSE : Entrez l'URL du serveur et les en-têtes requis",
+          "item6": "Ajoutez des variables d'environnement si nécessaire (par ex., clés API)",
+          "item7": "Définissez la portée : Organisation (partagé avec tous les membres) ou Personnel (uniquement vos Pods)",
+          "tip": "Les serveurs MCP sont démarrés automatiquement au lancement d'un Pod. Les agents Claude Code reçoivent la configuration via .mcp.json."
+        },
+        "step3": {
+          "title": "Vérifier les outils MCP dans un Pod",
+          "description": "Après avoir configuré les serveurs MCP, vérifiez qu'ils fonctionnent :",
+          "item1": "Créez un nouveau Pod avec Claude Code",
+          "item2": "Dans le terminal, demandez à l'agent : « Quels outils MCP avez-vous à disposition ? »",
+          "item3": "L'agent devrait lister à la fois les outils intégrés AgentsMesh et tous les serveurs MCP personnalisés que vous avez installés",
+          "item4": "Essayez d'utiliser un outil — par ex., « Lister tous les pods disponibles » ou « Rechercher des tickets »"
+        },
+        "whatAreSkills": {
+          "title": "Que sont les Skills ?",
+          "description": "Les skills sont des flux de travail d'agent réutilisables définis sous forme de fichiers markdown avec des instructions. Une fois installés, ils sont injectés dans le contexte de votre agent afin qu'il puisse les exécuter à la demande. AgentsMesh fournit deux skills intégrés :",
+          "item1": "am-channel — Permet aux agents de vérifier les messages, synchroniser l'état des tâches et échanger des informations avec d'autres agents via des canaux",
+          "item2": "am-delegate — Permet aux agents de déléguer des tâches à d'autres Pods, créer des sous-Pods pour le travail en parallèle et déclencher des agents de suivi"
+        },
+        "step4": {
+          "title": "Comprendre les skills intégrés",
+          "description": "Les skills intégrés sont toujours disponibles pour les agents Claude Code dans chaque Pod :",
+          "channelTitle": "Skill am-channel",
+          "channelDesc": "Vérifie automatiquement les nouveaux messages avant de démarrer les tâches, synchronise les mises à jour de statut vers les canaux et échange des informations avec les agents collaborateurs. Utilisez-le lorsque les agents doivent se coordonner.",
+          "delegateTitle": "Skill am-delegate",
+          "delegateDesc": "Permet à un agent de déléguer des sous-tâches à d'autres Pods ou environnements. L'agent peut créer des Pods enfants, assigner du travail et attendre les résultats. Utilisez-le pour les tâches complexes qui bénéficient d'une exécution parallèle."
+        },
+        "step5": {
+          "title": "Installer des skills personnalisés",
+          "description": "Vous pouvez installer des skills supplémentaires depuis le marketplace ou créer les vôtres :",
+          "item1": "Allez dans Paramètres → Extensions → Skills",
+          "item2": "Parcourez les skills disponibles ou cliquez sur Ajouter un skill pour installer depuis une URL",
+          "item3": "Les skills peuvent être limités à votre organisation ou à votre compte personnel",
+          "item4": "Les skills installés sont automatiquement injectés dans les nouveaux Pods",
+          "tip": "Les skills personnalisés sont des fichiers markdown avec un en-tête YAML (frontmatter). Vous pouvez créer les vôtres en définissant quand le skill doit se déclencher et quelles instructions l'agent doit suivre."
+        },
+        "step6": {
+          "title": "Configurer les serveurs MCP par dépôt",
+          "description": "Pour les outils spécifiques à un dépôt, vous pouvez limiter les serveurs MCP à des dépôts particuliers :",
+          "item1": "Lors de l'ajout d'un serveur MCP, vous pouvez optionnellement le lier à des dépôts spécifiques",
+          "item2": "Le serveur MCP ne sera disponible que dans les Pods utilisant ces dépôts",
+          "item3": "Ceci est utile pour les intégrations spécifiques à un projet (par ex., un outil de base de données pour un projet spécifique)",
+          "tip": "Les serveurs MCP à portée organisation sont disponibles pour tous les membres. Les serveurs à portée utilisateur ne sont disponibles que pour vos propres Pods."
+        },
+        "nextSteps": {
+          "title": "Et Ensuite ?",
+          "description": "Vos agents sont maintenant étendus avec des outils MCP et des skills. Continuez à explorer :",
+          "item1": "Votre Premier Pod — Créez un Pod et voyez les outils MCP en action",
+          "item2": "Collaboration Multi-Agents — Utilisez les outils de canaux et de liaison pour la coordination des agents"
         }
       },
       "firstPod": {

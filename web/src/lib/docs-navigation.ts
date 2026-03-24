@@ -39,6 +39,10 @@ export const docsNavSections: DocNavSection[] = [
         href: "/docs/tutorials/git-setup",
       },
       {
+        titleKey: "docs.nav.tutorialMcpSkills",
+        href: "/docs/tutorials/mcp-and-skills",
+      },
+      {
         titleKey: "docs.nav.tutorialFirstPod",
         href: "/docs/tutorials/first-pod",
       },

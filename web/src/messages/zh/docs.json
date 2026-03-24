@@ -39,6 +39,7 @@
       "tutorials": "教程",
       "tutorialRunnerSetup": "Runner 配置",
       "tutorialGitSetup": "连接 Git 仓库",
+      "tutorialMcpSkills": "MCP 与技能",
       "tutorialFirstPod": "创建你的第一个 Pod",
       "tutorialTicketWorkflow": "任务管理",
       "tutorialMultiAgent": "多智能体协作",
@@ -1762,6 +1763,87 @@
           "description": "你的仓库已连接。继续探索：",
           "item1": "创建你的第一个 Pod — 创建并使用 Pod 的完整指南",
           "item2": "任务管理 — 将工单关联到 Pod 以实现结构化工作流"
+        }
+      },
+      "mcpSkills": {
+        "title": "教程：MCP 工具与技能",
+        "description": "了解如何使用 MCP（模型上下文协议）服务器和技能来扩展你的 AI 智能体。MCP 工具让智能体能够协作、管理工单并与外部服务交互。技能为你的智能体添加可复用的工作流。",
+        "whatIsMcp": {
+          "title": "什么是 MCP 工具？",
+          "description": "MCP（模型上下文协议）工具是 AI 智能体在 Pod 内工作时可以使用的能力。AgentsMesh 提供 26 个内置 MCP 工具，分为 7 个类别：",
+          "item1": "发现 — 列出可用的 Pod、Runner 和仓库",
+          "item2": "终端 — 观察和控制其他 Pod 的终端",
+          "item3": "绑定 — 请求和管理 Pod 间连接",
+          "item4": "频道 — 创建频道、发送消息、共享文档",
+          "item5": "工单 — 搜索、创建和更新工单",
+          "item6": "Pod — 创建新 Pod、获取快照、发送输入",
+          "item7": "循环 — 列出和触发自动化循环",
+          "autoNote": "这些内置工具自动对每个 Pod 可用——无需任何配置。"
+        },
+        "step1": {
+          "title": "了解内置与自定义 MCP 服务器",
+          "description": "你的智能体可以使用两种类型的 MCP 工具：",
+          "builtinTitle": "内置 AgentsMesh MCP 服务器",
+          "builtinDesc": "自动为每个 Pod 配置。提供 26 个协作工具（频道、工单、绑定等）。无需设置。",
+          "customTitle": "自定义 MCP 服务器",
+          "customDesc": "你安装的用于特定功能的额外 MCP 服务器——例如数据库 MCP 服务器、Slack 集成或自定义 API 连接器。这些按组织或按用户配置。"
+        },
+        "step2": {
+          "title": "安装自定义 MCP 服务器",
+          "description": "添加自定义 MCP 服务器以扩展你的智能体能力：",
+          "item1": "前往设置 → 扩展 → MCP 服务器",
+          "item2": "点击添加 MCP 服务器",
+          "item3": "选择传输类型：stdio（命令行工具）、HTTP 或 SSE（服务器推送事件）",
+          "item4": "对于 stdio：输入命令和参数（例如 npx -y @modelcontextprotocol/server-filesystem /path）",
+          "item5": "对于 HTTP/SSE：输入服务器 URL 和所需的请求头",
+          "item6": "如需要可添加环境变量（例如 API 密钥）",
+          "item7": "设置作用域：组织（与所有成员共享）或个人（仅限你的 Pod）",
+          "tip": "MCP 服务器在 Pod 启动时自动启动。Claude Code 智能体通过 .mcp.json 接收配置。"
+        },
+        "step3": {
+          "title": "在 Pod 中验证 MCP 工具",
+          "description": "配置 MCP 服务器后，验证其是否正常工作：",
+          "item1": "使用 Claude Code 创建一个新 Pod",
+          "item2": "在终端中询问智能体：\"你有哪些可用的 MCP 工具？\"",
+          "item3": "智能体应列出内置的 AgentsMesh 工具和你安装的所有自定义 MCP 服务器",
+          "item4": "尝试使用一个工具——例如\"列出所有可用的 Pod\"或\"搜索工单\""
+        },
+        "whatAreSkills": {
+          "title": "什么是技能？",
+          "description": "技能是以 Markdown 文件定义的可复用智能体工作流，包含指令说明。安装后，它们会被注入到你的智能体上下文中，以便按需执行。AgentsMesh 提供两个内置技能：",
+          "item1": "am-channel — 使智能体能够检查消息、同步任务状态，并通过频道与其他智能体交换信息",
+          "item2": "am-delegate — 使智能体能够将任务委派给其他 Pod、创建子 Pod 以并行工作，并触发后续智能体"
+        },
+        "step4": {
+          "title": "了解内置技能",
+          "description": "内置技能始终对每个 Pod 中的 Claude Code 智能体可用：",
+          "channelTitle": "am-channel 技能",
+          "channelDesc": "在开始任务前自动检查新消息，将状态更新同步到频道，并与协作智能体交换信息。当智能体需要协调时使用此技能。",
+          "delegateTitle": "am-delegate 技能",
+          "delegateDesc": "使智能体能够将子任务委派给其他 Pod 或环境。智能体可以创建子 Pod、分配工作并等待结果。适用于需要并行执行的复杂任务。"
+        },
+        "step5": {
+          "title": "安装自定义技能",
+          "description": "你可以从市场安装额外的技能或创建自己的技能：",
+          "item1": "前往设置 → 扩展 → 技能",
+          "item2": "浏览可用技能或点击添加技能从 URL 安装",
+          "item3": "技能可以限定在你的组织或个人账户范围内",
+          "item4": "已安装的技能会自动注入到新的 Pod 中",
+          "tip": "自定义技能是带有 YAML 前置元数据的 Markdown 文件。你可以通过定义技能触发时机和智能体应遵循的指令来创建自己的技能。"
+        },
+        "step6": {
+          "title": "按仓库配置 MCP 服务器",
+          "description": "对于仓库特定的工具，你可以将 MCP 服务器限定到特定仓库：",
+          "item1": "添加 MCP 服务器时，你可以选择将其关联到特定仓库",
+          "item2": "该 MCP 服务器仅在使用这些仓库的 Pod 中可用",
+          "item3": "这对于项目特定的集成非常有用（例如特定项目的数据库工具）",
+          "tip": "组织范围的 MCP 服务器对所有成员可用。用户范围的服务器仅对你自己的 Pod 可用。"
+        },
+        "nextSteps": {
+          "title": "下一步",
+          "description": "你的智能体现在已通过 MCP 工具和技能进行了扩展。继续探索：",
+          "item1": "创建你的第一个 Pod — 创建 Pod 并查看 MCP 工具的实际效果",
+          "item2": "多智能体协作 — 使用频道和绑定工具进行智能体协调"
         }
       },
       "firstPod": {

@@ -31,6 +31,11 @@ const docsMetadataMap: Record<string, DocsMeta> = {
     description:
       "Step-by-step guide to installing, registering, and verifying an AgentsMesh Runner for AI agent execution.",
   },
+  "/docs/tutorials/mcp-and-skills": {
+    title: "Tutorial: MCP Tools & Skills",
+    description:
+      "Extend AI agents with MCP servers and skills — install custom tools, configure built-in collaboration features, and add reusable workflows.",
+  },
   "/docs/tutorials/git-setup": {
     title: "Tutorial: Connect Git Repositories",
     description:
