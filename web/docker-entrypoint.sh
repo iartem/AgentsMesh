@@ -25,7 +25,7 @@ find /app/.next -type f -name "*.js" -exec sed -i \
 echo "Environment variables injected:"
 echo "  PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-<empty>}"
 echo "  USE_HTTPS=${USE_HTTPS:-false}"
-echo "  POSTHOG_KEY=${POSTHOG_KEY:+<set>}${POSTHOG_KEY:-<empty>}"
+echo "  POSTHOG_KEY=$([ -n "${POSTHOG_KEY}" ] && echo '<set>' || echo '<empty>')"
 echo "  POSTHOG_HOST=${POSTHOG_HOST:-<empty>}"
 
 # Execute the main command

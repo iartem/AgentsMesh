@@ -85,10 +85,14 @@ function PostHogIdentify() {
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   return (
     <PHProvider client={posthog}>
-      <Suspense fallback={null}>
-        <PostHogPageView />
-      </Suspense>
-      <PostHogIdentify />
+      {POSTHOG_KEY && (
+        <>
+          <Suspense fallback={null}>
+            <PostHogPageView />
+          </Suspense>
+          <PostHogIdentify />
+        </>
+      )}
       {children}
     </PHProvider>
   );
