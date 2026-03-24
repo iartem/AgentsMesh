@@ -89,18 +89,29 @@ func (m *Manager) CreateWorktreeWithOptions(ctx context.Context, repoURL, branch
 		branch = "main"
 	}
 
-	// Fetch from remote
-	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", branch)
-	fetchCmd.Dir = mainRepoPath
-	m.setGitAuthEnv(fetchCmd, options)
-	if output, err := fetchCmd.CombinedOutput(); err != nil {
+	// Fetch from remote.
+	// Use transient auth URL for token-based HTTPS auth because shared bare repo's
+	// origin URL is intentionally cleaned to avoid persisting credentials.
+	fetchBranch := func(fetchRef string) ([]byte, error) {
+		remote := "origin"
+		refspec := fetchRef
+		if options != nil && options.GitToken != "" {
+			authURL := m.prepareAuthURL(repoURL, options)
+			if authURL != "" && authURL != repoURL {
+				remote = authURL
+				refspec = fmt.Sprintf("refs/heads/%s:refs/remotes/origin/%s", fetchRef, fetchRef)
+			}
+		}
+		fetchCmd := exec.CommandContext(ctx, "git", "fetch", remote, refspec)
+		fetchCmd.Dir = mainRepoPath
+		m.setGitAuthEnv(fetchCmd, options)
+		return fetchCmd.CombinedOutput()
+	}
+	if output, err := fetchBranch(branch); err != nil {
 		// Try 'master' if 'main' fails
 		if branch == "main" {
 			branch = "master"
-			fetchCmd = exec.CommandContext(ctx, "git", "fetch", "origin", branch)
-			fetchCmd.Dir = mainRepoPath
-			m.setGitAuthEnv(fetchCmd, options)
-			if output, err = fetchCmd.CombinedOutput(); err != nil {
+			if output, err = fetchBranch(branch); err != nil {
 				return nil, fmt.Errorf("failed to fetch branch: %s, output: %s", err, output)
 			}
 		} else {
