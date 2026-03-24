@@ -154,7 +154,7 @@
         "providers": {
           "title": "支持的 Git 提供商",
           "github": "GitHub",
-          "githubDesc": "通过 OAuth 连接，实现无缝授权。支持公开和私有仓库。",
+          "githubDesc": "通过个人访问令牌 (PAT) 或 OAuth（如果你使用 GitHub 注册）连接。支持公开和私有仓库。",
           "gitlab": "GitLab",
           "gitlabDesc": "通过个人访问令牌 (PAT) 连接。支持自托管 GitLab 实例。",
           "gitee": "Gitee",
@@ -162,12 +162,20 @@
         },
         "github": {
           "title": "连接 GitHub",
-          "description": "使用 OAuth 一键授权连接你的 GitHub 账户：",
-          "step1": "前往 设置 → 个人 → Git 设置",
-          "step2": "点击 连接 GitHub",
-          "step3": "在 GitHub 弹窗中授权 AgentsMesh",
-          "step4": "选择要授权访问的仓库",
-          "step5": "你的仓库将显示在 设置 → 仓库 中"
+          "description": "有两种连接 GitHub 的方式，取决于你的注册方式：",
+          "patTitle": "方式 A：个人访问令牌（推荐）",
+          "patDesc": "适用于所有用户，无论注册方式：",
+          "step1": "在 GitHub 中，前往 Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "step2": "点击 Generate new token 并选择你要授权访问的仓库",
+          "step3": "授予仓库权限：至少选择 Contents（只读）和 Metadata（只读）",
+          "step4": "在 AgentsMesh 中，前往 设置 → 个人 → Git 设置",
+          "step5": "点击 添加 GitHub 提供商 并粘贴你的令牌",
+          "oauthTitle": "方式 B：OAuth（仅限 GitHub 注册用户）",
+          "oauthDesc": "如果你使用 GitHub 账户注册了 AgentsMesh，可以使用 OAuth 连接：",
+          "oauthStep1": "前往 设置 → 个人 → Git 设置",
+          "oauthStep2": "点击 连接 GitHub — 你的账户已通过 OAuth 关联",
+          "oauthStep3": "选择要授权访问的仓库",
+          "oauthNote": "OAuth 仅在你使用 GitHub 注册时可用。使用邮箱注册的用户必须使用个人访问令牌。"
         },
         "gitlab": {
           "title": "连接 GitLab",
@@ -1700,13 +1708,13 @@
           "description": "前往 设置 → 个人设置 → Git 设置。这里可以管理你所有的 Git 提供商连接。"
         },
         "step2": {
-          "title": "连接 GitHub（OAuth）",
-          "description": "对于 GitHub，使用 OAuth 是最简单的方式：",
-          "item1": "点击 连接 GitHub",
-          "item2": "在 GitHub 弹窗中授权 AgentsMesh",
-          "item3": "选择要授予访问权限的仓库",
+          "title": "连接 GitHub",
+          "description": "对于 GitHub，你可以使用个人访问令牌（适用于所有人）或 OAuth（仅限使用 GitHub 注册的用户）：",
+          "item1": "个人访问令牌：在 GitHub 中，前往 Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "item2": "生成一个令牌，为你的仓库授予 Contents（只读）和 Metadata（只读）权限",
+          "item3": "在 AgentsMesh 中，点击 添加 GitHub 提供商 并粘贴你的令牌",
           "item4": "你的仓库将出现在 设置 → 仓库 中",
-          "tip": "GitHub OAuth 令牌经过加密安全存储。你可以随时在 GitHub 设置 → 应用程序 中撤销访问权限。"
+          "tip": "如果你使用 GitHub 账户注册了 AgentsMesh，也可以使用 连接 GitHub 按钮通过 OAuth 连接 — 你的账户已关联。使用邮箱注册的用户必须使用个人访问令牌。"
         },
         "step3": {
           "title": "连接 GitLab（个人访问令牌）",

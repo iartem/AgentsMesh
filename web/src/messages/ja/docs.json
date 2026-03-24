@@ -154,7 +154,7 @@
         "providers": {
           "title": "対応 Git プロバイダー",
           "github": "GitHub",
-          "githubDesc": "OAuth 経由で接続し、シームレスな認証を実現します。パブリックおよびプライベートリポジトリに対応しています。",
+          "githubDesc": "個人アクセストークン（PAT）または OAuth（GitHub でサインアップした場合）経由で接続します。パブリックおよびプライベートリポジトリに対応しています。",
           "gitlab": "GitLab",
           "gitlabDesc": "個人アクセストークン（PAT）経由で接続します。セルフホスト型 GitLab インスタンスに対応しています。",
           "gitee": "Gitee",
@@ -162,12 +162,20 @@
         },
         "github": {
           "title": "GitHub の接続",
-          "description": "OAuth を使用してワンクリック認証で GitHub アカウントを接続します：",
-          "step1": "設定 → 個人設定 → Git 設定に移動",
-          "step2": "GitHub を接続をクリック",
-          "step3": "GitHub のポップアップで AgentsMesh を認証",
-          "step4": "アクセスを許可するリポジトリを選択",
-          "step5": "リポジトリが設定 → リポジトリに表示されます"
+          "description": "サインアップ方法に応じて、GitHub に接続する方法は2つあります：",
+          "patTitle": "オプション A：個人アクセストークン（推奨）",
+          "patDesc": "サインアップ方法に関係なく、すべてのユーザーに対応します：",
+          "step1": "GitHub で 設定 → 開発者設定 → 個人アクセストークン → Fine-grained トークン に移動します",
+          "step2": "「新しいトークンを生成」をクリックし、アクセスを許可するリポジトリを選択します",
+          "step3": "リポジトリの権限を付与します：最低限 Contents（読み取り専用）と Metadata（読み取り専用）",
+          "step4": "AgentsMesh で 設定 → 個人設定 → Git 設定 に移動します",
+          "step5": "「GitHub プロバイダーを追加」をクリックし、トークンを貼り付けます",
+          "oauthTitle": "オプション B：OAuth（GitHub サインアップユーザーのみ）",
+          "oauthDesc": "GitHub アカウントを使用して AgentsMesh に登録した場合、OAuth 接続が利用できます：",
+          "oauthStep1": "設定 → 個人設定 → Git 設定 に移動します",
+          "oauthStep2": "「GitHub を接続」をクリックします — アカウントは既に OAuth でリンクされています",
+          "oauthStep3": "アクセスを許可するリポジトリを選択します",
+          "oauthNote": "OAuth は GitHub でサインアップした場合のみ利用可能です。メールで登録したユーザーは個人アクセストークンを使用する必要があります。"
         },
         "gitlab": {
           "title": "GitLab の接続",
@@ -1700,13 +1708,13 @@
           "description": "設定 → 個人設定 → Git 設定 に移動します。ここで、すべての Git プロバイダー接続を管理します。"
         },
         "step2": {
-          "title": "GitHub を接続する（OAuth）",
-          "description": "GitHub の場合、最も簡単なセットアップとして OAuth を使用します：",
-          "item1": "「GitHub を接続」をクリックします",
-          "item2": "GitHub のポップアップで AgentsMesh を承認します",
-          "item3": "アクセスを許可するリポジトリを選択します",
+          "title": "GitHub を接続する",
+          "description": "GitHub の場合、個人アクセストークン（すべてのユーザー対応）または OAuth（GitHub でサインアップした場合のみ）を使用できます：",
+          "item1": "個人アクセストークン：GitHub で 設定 → 開発者設定 → 個人アクセストークン → Fine-grained トークン に移動します",
+          "item2": "Contents（読み取り専用）と Metadata（読み取り専用）の権限を持つトークンを生成します",
+          "item3": "AgentsMesh で「GitHub プロバイダーを追加」をクリックし、トークンを貼り付けます",
           "item4": "リポジトリが 設定 → リポジトリ に表示されます",
-          "tip": "GitHub OAuth トークンは暗号化されて安全に保存されます。GitHub の 設定 → アプリケーション からいつでもアクセスを取り消すことができます。"
+          "tip": "GitHub アカウントで AgentsMesh にサインアップした場合は、OAuth 用の「GitHub を接続」ボタンも使用できます — アカウントは既にリンクされています。メールでサインアップしたユーザーは個人アクセストークンを使用する必要があります。"
         },
         "step3": {
           "title": "GitLab を接続する（個人アクセストークン）",

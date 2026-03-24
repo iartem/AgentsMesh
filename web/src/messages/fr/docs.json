@@ -154,7 +154,7 @@
         "providers": {
           "title": "Fournisseurs Git pris en charge",
           "github": "GitHub",
-          "githubDesc": "Connexion via OAuth pour une autorisation simplifiée. Prend en charge les dépôts publics et privés.",
+          "githubDesc": "Connexion via un jeton d'accès personnel (PAT) ou OAuth (si vous vous êtes inscrit avec GitHub). Prend en charge les dépôts publics et privés.",
           "gitlab": "GitLab",
           "gitlabDesc": "Connexion via un jeton d'accès personnel (PAT). Prend en charge les instances GitLab auto-hébergées.",
           "gitee": "Gitee",
@@ -162,12 +162,20 @@
         },
         "github": {
           "title": "Connecter GitHub",
-          "description": "Connectez votre compte GitHub via OAuth pour une autorisation en un clic :",
-          "step1": "Accédez à Paramètres → Personnel → Paramètres Git",
-          "step2": "Cliquez sur Connecter GitHub",
-          "step3": "Autorisez AgentsMesh dans la fenêtre contextuelle GitHub",
-          "step4": "Sélectionnez les dépôts auxquels accorder l'accès",
-          "step5": "Vos dépôts apparaîtront dans Paramètres → Dépôts"
+          "description": "Il existe deux façons de connecter GitHub, selon votre méthode d'inscription :",
+          "patTitle": "Option A : Jeton d'Accès Personnel (Recommandé)",
+          "patDesc": "Fonctionne pour tous les utilisateurs quelle que soit la méthode d'inscription :",
+          "step1": "Dans GitHub, allez dans Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "step2": "Cliquez sur Generate new token et sélectionnez les dépôts auxquels vous souhaitez accorder l'accès",
+          "step3": "Accordez les permissions Repository : Contents (Read-only) et Metadata (Read-only) au minimum",
+          "step4": "Dans AgentsMesh, allez dans Paramètres → Personnel → Paramètres Git",
+          "step5": "Cliquez sur Ajouter un fournisseur GitHub et collez votre jeton",
+          "oauthTitle": "Option B : OAuth (utilisateurs inscrits via GitHub uniquement)",
+          "oauthDesc": "Si vous vous êtes inscrit sur AgentsMesh avec votre compte GitHub, la connexion OAuth est disponible :",
+          "oauthStep1": "Allez dans Paramètres → Personnel → Paramètres Git",
+          "oauthStep2": "Cliquez sur Connecter GitHub — votre compte est déjà lié via OAuth",
+          "oauthStep3": "Sélectionnez les dépôts auxquels accorder l'accès",
+          "oauthNote": "OAuth n'est disponible que si vous vous êtes inscrit avec GitHub. Les utilisateurs inscrits par e-mail doivent utiliser un jeton d'accès personnel."
         },
         "gitlab": {
           "title": "Connecter GitLab",
@@ -1700,13 +1708,13 @@
           "description": "Naviguez vers Paramètres → Personnel → Paramètres Git. C'est ici que vous gérez toutes vos connexions de fournisseurs Git."
         },
         "step2": {
-          "title": "Connecter GitHub (OAuth)",
-          "description": "Pour GitHub, utilisez OAuth pour la configuration la plus simple :",
-          "item1": "Cliquez sur Connecter GitHub",
-          "item2": "Autorisez AgentsMesh dans la fenêtre popup GitHub",
-          "item3": "Sélectionnez les dépôts auxquels accorder l'accès",
+          "title": "Connecter GitHub",
+          "description": "Pour GitHub, vous pouvez utiliser un jeton d'accès personnel (fonctionne pour tous) ou OAuth (uniquement si vous vous êtes inscrit avec GitHub) :",
+          "item1": "Jeton d'accès personnel : Dans GitHub, allez dans Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "item2": "Générez un jeton avec les permissions Contents (Read-only) et Metadata (Read-only) pour vos dépôts",
+          "item3": "Dans AgentsMesh, cliquez sur Ajouter un fournisseur GitHub et collez votre jeton",
           "item4": "Vos dépôts apparaîtront dans Paramètres → Dépôts",
-          "tip": "Les jetons OAuth GitHub sont chiffrés et stockés en toute sécurité. Vous pouvez révoquer l'accès à tout moment depuis Paramètres GitHub → Applications."
+          "tip": "Si vous vous êtes inscrit sur AgentsMesh avec votre compte GitHub, vous pouvez également utiliser le bouton Connecter GitHub pour OAuth — votre compte est déjà lié. Les utilisateurs inscrits par e-mail doivent utiliser un jeton d'accès personnel."
         },
         "step3": {
           "title": "Connecter GitLab (Jeton d'Accès Personnel)",

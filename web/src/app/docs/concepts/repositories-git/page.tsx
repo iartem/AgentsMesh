@@ -67,14 +67,38 @@ export default function RepositoriesGitPage() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           {t("docs.concepts.repositoriesGit.github.description")}
         </p>
-        <div className="border border-border rounded-lg p-6">
-          <ol className="list-decimal list-inside text-muted-foreground space-y-3">
-            <li>{t("docs.concepts.repositoriesGit.github.step1")}</li>
-            <li>{t("docs.concepts.repositoriesGit.github.step2")}</li>
-            <li>{t("docs.concepts.repositoriesGit.github.step3")}</li>
-            <li>{t("docs.concepts.repositoriesGit.github.step4")}</li>
-            <li>{t("docs.concepts.repositoriesGit.github.step5")}</li>
-          </ol>
+        <div className="space-y-4">
+          <div className="border border-border rounded-lg p-6">
+            <h3 className="font-medium mb-2">
+              {t("docs.concepts.repositoriesGit.github.patTitle")}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              {t("docs.concepts.repositoriesGit.github.patDesc")}
+            </p>
+            <ol className="list-decimal list-inside text-muted-foreground space-y-3">
+              <li>{t("docs.concepts.repositoriesGit.github.step1")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.step2")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.step3")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.step4")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.step5")}</li>
+            </ol>
+          </div>
+          <div className="border border-border rounded-lg p-6">
+            <h3 className="font-medium mb-2">
+              {t("docs.concepts.repositoriesGit.github.oauthTitle")}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              {t("docs.concepts.repositoriesGit.github.oauthDesc")}
+            </p>
+            <ol className="list-decimal list-inside text-muted-foreground space-y-3">
+              <li>{t("docs.concepts.repositoriesGit.github.oauthStep1")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.oauthStep2")}</li>
+              <li>{t("docs.concepts.repositoriesGit.github.oauthStep3")}</li>
+            </ol>
+            <div className="bg-muted/50 border border-border rounded-lg p-4 mt-4 text-sm text-muted-foreground">
+              {t("docs.concepts.repositoriesGit.github.oauthNote")}
+            </div>
+          </div>
         </div>
       </section>
 

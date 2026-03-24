@@ -154,7 +154,7 @@
         "providers": {
           "title": "Proveedores Git compatibles",
           "github": "GitHub",
-          "githubDesc": "Conéctate mediante OAuth para una autorización sin interrupciones. Compatible con repositorios públicos y privados.",
+          "githubDesc": "Conéctate mediante Token de Acceso Personal (PAT) o OAuth (si te registraste con GitHub). Compatible con repositorios públicos y privados.",
           "gitlab": "GitLab",
           "gitlabDesc": "Conéctate mediante Token de Acceso Personal (PAT). Compatible con instancias de GitLab autoalojadas.",
           "gitee": "Gitee",
@@ -162,12 +162,20 @@
         },
         "github": {
           "title": "Conectar GitHub",
-          "description": "Conecta tu cuenta de GitHub usando OAuth para una autorización con un solo clic:",
-          "step1": "Ve a Configuración → Personal → Configuración de Git",
-          "step2": "Haz clic en Conectar GitHub",
-          "step3": "Autoriza AgentsMesh en la ventana emergente de GitHub",
-          "step4": "Selecciona a qué repositorios otorgar acceso",
-          "step5": "Tus repositorios aparecerán en Configuración → Repositorios"
+          "description": "Hay dos formas de conectar GitHub, dependiendo de cómo te registraste:",
+          "patTitle": "Opción A: Token de Acceso Personal (Recomendado)",
+          "patDesc": "Funciona para todos los usuarios independientemente del método de registro:",
+          "step1": "En GitHub, ve a Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "step2": "Haz clic en Generate new token y selecciona los repositorios a los que deseas otorgar acceso",
+          "step3": "Otorga permisos de repositorio: Contents (Solo lectura) y Metadata (Solo lectura) como mínimo",
+          "step4": "En AgentsMesh, ve a Configuración → Personal → Configuración de Git",
+          "step5": "Haz clic en Añadir proveedor GitHub y pega tu token",
+          "oauthTitle": "Opción B: OAuth (solo usuarios registrados con GitHub)",
+          "oauthDesc": "Si te registraste en AgentsMesh usando tu cuenta de GitHub, la conexión OAuth está disponible:",
+          "oauthStep1": "Ve a Configuración → Personal → Configuración de Git",
+          "oauthStep2": "Haz clic en Conectar GitHub — tu cuenta ya está vinculada mediante OAuth",
+          "oauthStep3": "Selecciona a qué repositorios otorgar acceso",
+          "oauthNote": "OAuth solo está disponible si te registraste con GitHub. Los usuarios que se registraron con correo electrónico deben usar un Token de Acceso Personal."
         },
         "gitlab": {
           "title": "Conectar GitLab",
@@ -1700,13 +1708,13 @@
           "description": "Navega a Configuración → Personal → Configuración de Git. Aquí es donde gestionas todas tus conexiones con proveedores de Git."
         },
         "step2": {
-          "title": "Conectar GitHub (OAuth)",
-          "description": "Para GitHub, usa OAuth para la configuración más sencilla:",
-          "item1": "Haz clic en Conectar GitHub",
-          "item2": "Autoriza AgentsMesh en la ventana emergente de GitHub",
-          "item3": "Selecciona a qué repositorios otorgar acceso",
+          "title": "Conectar GitHub",
+          "description": "Para GitHub, puedes usar un Token de Acceso Personal (funciona para todos) u OAuth (solo si te registraste con GitHub):",
+          "item1": "Token de Acceso Personal: En GitHub, ve a Settings → Developer settings → Personal access tokens → Fine-grained tokens",
+          "item2": "Genera un token con permisos de Contents (Solo lectura) y Metadata (Solo lectura) para tus repositorios",
+          "item3": "En AgentsMesh, haz clic en Añadir proveedor GitHub y pega tu token",
           "item4": "Tus repositorios aparecerán en Configuración → Repositorios",
-          "tip": "Los tokens OAuth de GitHub se cifran y almacenan de forma segura. Puedes revocar el acceso en cualquier momento desde Configuración de GitHub → Aplicaciones."
+          "tip": "Si te registraste en AgentsMesh con tu cuenta de GitHub, también puedes usar el botón Conectar GitHub para OAuth — tu cuenta ya está vinculada. Los usuarios registrados con correo electrónico deben usar un Token de Acceso Personal."
         },
         "step3": {
           "title": "Conectar GitLab (Token de Acceso Personal)",

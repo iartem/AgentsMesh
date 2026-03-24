@@ -154,7 +154,7 @@
         "providers": {
           "title": "지원되는 Git 공급자",
           "github": "GitHub",
-          "githubDesc": "원활한 인증을 위해 OAuth로 연결합니다. 공개 및 비공개 저장소를 지원합니다.",
+          "githubDesc": "개인 액세스 토큰(PAT) 또는 OAuth(GitHub으로 가입한 경우)를 통해 연결합니다. 공개 및 비공개 저장소를 지원합니다.",
           "gitlab": "GitLab",
           "gitlabDesc": "개인 액세스 토큰(PAT)으로 연결합니다. 자체 호스팅 GitLab 인스턴스를 지원합니다.",
           "gitee": "Gitee",
@@ -162,12 +162,20 @@
         },
         "github": {
           "title": "GitHub 연결",
-          "description": "원클릭 인증을 위해 OAuth를 사용하여 GitHub 계정을 연결하세요:",
-          "step1": "설정 → 개인 → Git 설정으로 이동합니다",
-          "step2": "GitHub 연결을 클릭합니다",
-          "step3": "GitHub 팝업에서 AgentsMesh를 인증합니다",
-          "step4": "접근 권한을 부여할 저장소를 선택합니다",
-          "step5": "저장소가 설정 → 저장소에 표시됩니다"
+          "description": "가입 방법에 따라 GitHub을 연결하는 두 가지 방법이 있습니다:",
+          "patTitle": "옵션 A: 개인 액세스 토큰 (권장)",
+          "patDesc": "가입 방법에 관계없이 모든 사용자에게 적용됩니다:",
+          "step1": "GitHub에서 Settings → Developer settings → Personal access tokens → Fine-grained tokens으로 이동합니다",
+          "step2": "Generate new token을 클릭하고 접근 권한을 부여할 저장소를 선택합니다",
+          "step3": "Repository permissions에서 최소 Contents (Read-only) 및 Metadata (Read-only)를 부여합니다",
+          "step4": "AgentsMesh에서 설정 → 개인 → Git 설정으로 이동합니다",
+          "step5": "GitHub 공급자 추가를 클릭하고 토큰을 붙여넣습니다",
+          "oauthTitle": "옵션 B: OAuth (GitHub 가입 사용자 전용)",
+          "oauthDesc": "GitHub 계정으로 AgentsMesh에 가입한 경우 OAuth 연결을 사용할 수 있습니다:",
+          "oauthStep1": "설정 → 개인 → Git 설정으로 이동합니다",
+          "oauthStep2": "GitHub 연결을 클릭합니다 — OAuth를 통해 계정이 이미 연결되어 있습니다",
+          "oauthStep3": "접근 권한을 부여할 저장소를 선택합니다",
+          "oauthNote": "OAuth는 GitHub으로 가입한 경우에만 사용할 수 있습니다. 이메일로 가입한 사용자는 개인 액세스 토큰을 사용해야 합니다."
         },
         "gitlab": {
           "title": "GitLab 연결",
@@ -1700,13 +1708,13 @@
           "description": "설정 → 개인 → Git 설정으로 이동하세요. 여기에서 모든 Git 제공자 연결을 관리합니다."
         },
         "step2": {
-          "title": "GitHub 연결 (OAuth)",
-          "description": "GitHub의 경우, 가장 쉬운 설정을 위해 OAuth를 사용하세요:",
-          "item1": "GitHub 연결을 클릭합니다",
-          "item2": "GitHub 팝업에서 AgentsMesh를 승인합니다",
-          "item3": "접근 권한을 부여할 리포지토리를 선택합니다",
+          "title": "GitHub 연결",
+          "description": "GitHub의 경우, 개인 액세스 토큰(모든 사용자) 또는 OAuth(GitHub으로 가입한 경우에만)를 사용할 수 있습니다:",
+          "item1": "개인 액세스 토큰: GitHub에서 Settings → Developer settings → Personal access tokens → Fine-grained tokens으로 이동합니다",
+          "item2": "Contents (Read-only) 및 Metadata (Read-only) 권한으로 토큰을 생성합니다",
+          "item3": "AgentsMesh에서 GitHub 공급자 추가를 클릭하고 토큰을 붙여넣습니다",
           "item4": "리포지토리가 설정 → 리포지토리에 표시됩니다",
-          "tip": "GitHub OAuth 토큰은 암호화되어 안전하게 저장됩니다. GitHub 설정 → 애플리케이션에서 언제든지 접근 권한을 취소할 수 있습니다."
+          "tip": "GitHub 계정으로 AgentsMesh에 가입한 경우 GitHub 연결 버튼을 사용하여 OAuth로 연결할 수도 있습니다 — 계정이 이미 연결되어 있습니다. 이메일로 가입한 사용자는 개인 액세스 토큰을 사용해야 합니다."
         },
         "step3": {
           "title": "GitLab 연결 (개인 접근 토큰)",
