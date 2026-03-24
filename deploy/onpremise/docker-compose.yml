@@ -193,6 +193,8 @@ services:
       # Runtime environment variables (injected by docker-entrypoint.sh)
       - PRIMARY_DOMAIN=${SERVER_IP}
       - USE_HTTPS=false
+      - POSTHOG_KEY=${POSTHOG_KEY:-}
+      - POSTHOG_HOST=${POSTHOG_HOST:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s

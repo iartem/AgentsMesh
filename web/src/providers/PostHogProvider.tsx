@@ -6,10 +6,16 @@ import { Suspense, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 
-const POSTHOG_KEY = "phc_MA31kFOuqaLC9BaTOH6sL7BAXw7uPrfzDanUtXKOqIr";
-const POSTHOG_HOST = "https://posthog.monitor.agentsmesh.ai";
+// Filter out unresolved docker-entrypoint.sh placeholders (e.g. "__POSTHOG_KEY__")
+function resolveEnv(val: string | undefined): string {
+  if (!val || val.startsWith("__")) return "";
+  return val;
+}
 
-if (typeof window !== "undefined") {
+const POSTHOG_KEY = resolveEnv(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+const POSTHOG_HOST = resolveEnv(process.env.NEXT_PUBLIC_POSTHOG_HOST);
+
+if (typeof window !== "undefined" && POSTHOG_KEY) {
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
     capture_pageview: false, // We capture manually below

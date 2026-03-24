@@ -18,11 +18,15 @@ echo "Injecting runtime environment variables..."
 find /app/.next -type f -name "*.js" -exec sed -i \
   -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN:-}|g" \
   -e "s|__USE_HTTPS__|${USE_HTTPS:-false}|g" \
+  -e "s|__POSTHOG_KEY__|${POSTHOG_KEY:-}|g" \
+  -e "s|__POSTHOG_HOST__|${POSTHOG_HOST:-}|g" \
   {} \;
 
 echo "Environment variables injected:"
 echo "  PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-<empty>}"
 echo "  USE_HTTPS=${USE_HTTPS:-false}"
+echo "  POSTHOG_KEY=${POSTHOG_KEY:+<set>}${POSTHOG_KEY:-<empty>}"
+echo "  POSTHOG_HOST=${POSTHOG_HOST:-<empty>}"
 
 # Execute the main command
 exec "$@"

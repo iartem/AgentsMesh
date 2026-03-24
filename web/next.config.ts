@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_PRIMARY_DOMAIN:
       process.env.PRIMARY_DOMAIN || "__PRIMARY_DOMAIN__",
     NEXT_PUBLIC_USE_HTTPS: process.env.USE_HTTPS || "__USE_HTTPS__",
+    NEXT_PUBLIC_POSTHOG_KEY:
+      process.env.NEXT_PUBLIC_POSTHOG_KEY || "__POSTHOG_KEY__",
+    NEXT_PUBLIC_POSTHOG_HOST:
+      process.env.NEXT_PUBLIC_POSTHOG_HOST || "__POSTHOG_HOST__",
   },
 
   // 本地开发时代理 API 请求，避免跨域问题
