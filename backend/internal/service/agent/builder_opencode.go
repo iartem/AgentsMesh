@@ -28,11 +28,11 @@ func (b *OpenCodeBuilder) Slug() string {
 	return OpenCodeSlug
 }
 
-// HandleInitialPrompt prepends the initial prompt to launch arguments.
-// OpenCode syntax: opencode [prompt] [options]
+// HandleInitialPrompt prepends "run" and the initial prompt to launch arguments.
+// OpenCode syntax: opencode run [message..] [options]
 func (b *OpenCodeBuilder) HandleInitialPrompt(ctx *BuildContext, args []string) []string {
 	if ctx.Request.InitialPrompt != "" {
-		return append([]string{ctx.Request.InitialPrompt}, args...)
+		return append([]string{"run", ctx.Request.InitialPrompt}, args...)
 	}
 	return args
 }

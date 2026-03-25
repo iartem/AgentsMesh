@@ -132,7 +132,7 @@ func TestCodexCLIBuilder_HandleInitialPrompt(t *testing.T) {
 func TestOpenCodeBuilder_HandleInitialPrompt(t *testing.T) {
 	builder := NewOpenCodeBuilder()
 
-	t.Run("prepends prompt to args", func(t *testing.T) {
+	t.Run("prepends run and prompt to args", func(t *testing.T) {
 		ctx := &BuildContext{
 			Request: &ConfigBuildRequest{
 				InitialPrompt: "Fix the bug",
@@ -142,11 +142,14 @@ func TestOpenCodeBuilder_HandleInitialPrompt(t *testing.T) {
 
 		result := builder.HandleInitialPrompt(ctx, args)
 
-		if len(result) != 1 {
-			t.Fatalf("Result length = %d, want 1", len(result))
+		if len(result) != 2 {
+			t.Fatalf("Result length = %d, want 2", len(result))
 		}
-		if result[0] != "Fix the bug" {
-			t.Errorf("First arg = %s, want 'Fix the bug'", result[0])
+		if result[0] != "run" {
+			t.Errorf("First arg = %s, want 'run'", result[0])
+		}
+		if result[1] != "Fix the bug" {
+			t.Errorf("Second arg = %s, want 'Fix the bug'", result[1])
 		}
 	})
 }
