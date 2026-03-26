@@ -223,7 +223,7 @@ export function CreatePodForm({
                       {t("ide.createPod.pluginConfig")}
                     </label>
                     <ConfigForm
-                      fields={configFields}
+                      fields={configFields.filter((f) => f.type !== "model_list")}
                       values={configValues}
                       onChange={handleConfigChange}
                       agentSlug={form.selectedAgentSlug}

@@ -14,19 +14,6 @@ UPDATE agent_types SET
             {
                 "name": "models",
                 "type": "model_list"
-            },
-            {
-                "name": "model",
-                "type": "select",
-                "default": ""
-            }
-        ]
-    }'::jsonb,
-    command_template = '{
-        "args": [
-            {
-                "condition": {"field": "model", "operator": "not_empty"},
-                "args": ["--model", "{{.config.model}}"]
             }
         ]
     }'::jsonb
