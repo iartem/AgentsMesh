@@ -28,11 +28,12 @@ func (b *OpenCodeBuilder) Slug() string {
 	return OpenCodeSlug
 }
 
-// HandleInitialPrompt prepends "run" and the initial prompt to launch arguments.
-// OpenCode syntax: opencode run [message..] [options]
+// HandleInitialPrompt prepends --prompt flag for TUI mode.
+// OpenCode syntax: opencode --prompt "message" [options]
+// This starts the TUI with the prompt pre-filled and stays running.
 func (b *OpenCodeBuilder) HandleInitialPrompt(ctx *BuildContext, args []string) []string {
 	if ctx.Request.InitialPrompt != "" {
-		return append([]string{"run", ctx.Request.InitialPrompt}, args...)
+		return append([]string{"--prompt", ctx.Request.InitialPrompt}, args...)
 	}
 	return args
 }
