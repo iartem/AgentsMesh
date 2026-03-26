@@ -35,6 +35,11 @@ func NewGRPCRunnerHandler(runnerService *runner.Service, pkiService *pki.Service
 // POST /api/v1/runners/grpc/renew-certificate
 // Authenticated via mTLS - Nginx verifies client certificate and passes CN.
 func (h *GRPCRunnerHandler) RenewCertificate(c *gin.Context) {
+	if h.pkiService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "PKI service not configured")
+		return
+	}
+
 	// Get identity from Nginx-passed headers
 	nodeID := c.GetHeader("X-Client-Cert-CN")
 	oldSerial := c.GetHeader("X-Client-Cert-Serial")
@@ -117,6 +122,11 @@ func (h *GRPCRunnerHandler) GenerateReactivationToken(c *gin.Context) {
 // POST /api/v1/runners/grpc/reactivate
 // No authentication required - token serves as authentication.
 func (h *GRPCRunnerHandler) Reactivate(c *gin.Context) {
+	if h.pkiService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "PKI service not configured")
+		return
+	}
+
 	var req ReactivateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())

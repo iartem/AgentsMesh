@@ -221,6 +221,8 @@ func main() {
 		}
 	} else {
 		slog.Warn("PKI CA files not configured, gRPC/mTLS disabled")
+		// Create handler without PKI so token management routes still work
+		grpcRunnerHandler = v1.NewGRPCRunnerHandler(services.runner, nil, cfg)
 	}
 
 	// Initialize Runner version checker (checks GitHub Releases for latest version)

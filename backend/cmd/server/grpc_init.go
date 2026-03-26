@@ -41,8 +41,9 @@ func initializePKIAndGRPC(
 	})
 	if err != nil {
 		slog.Error("Failed to initialize PKI service", "error", err)
-		slog.Warn("Continuing without gRPC/mTLS support")
-		return nil, nil
+		slog.Warn("Continuing without gRPC/mTLS support - token management routes still available")
+		// Return handler with nil pkiService so token management routes still work
+		return nil, v1.NewGRPCRunnerHandler(runnerSvc, nil, cfg)
 	}
 
 	slog.Info("PKI service initialized",

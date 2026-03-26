@@ -125,6 +125,11 @@ func (h *GRPCRunnerHandler) DeleteGRPCToken(c *gin.Context) {
 // POST /api/v1/runners/grpc/register
 // No authentication required - token serves as authentication.
 func (h *GRPCRunnerHandler) RegisterWithToken(c *gin.Context) {
+	if h.pkiService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "PKI service not configured")
+		return
+	}
+
 	var req RegisterWithTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())

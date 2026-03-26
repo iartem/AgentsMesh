@@ -46,6 +46,11 @@ func (h *GRPCRunnerHandler) RequestAuthURL(c *gin.Context) {
 // GET /api/v1/runners/grpc/auth-status?key=xxx
 // No authentication required - Runner polls for completion.
 func (h *GRPCRunnerHandler) GetAuthStatus(c *gin.Context) {
+	if h.pkiService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "PKI service not configured")
+		return
+	}
+
 	authKey := c.Query("key")
 	if authKey == "" {
 		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Missing auth key")
