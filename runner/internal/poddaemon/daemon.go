@@ -48,22 +48,24 @@ func RunDaemon(configPath string) {
 
 	log.Info("child process started", "pid", proc.Pid())
 
-	// Update state with daemon PID
-	state.DaemonPID = os.Getpid()
-	if err := SaveState(state); err != nil {
-		log.Error("failed to save state", "error", err)
-	}
-
-	// Listen on IPC
-	listener, err := Listen(state.IPCPath)
+	// Listen on TCP loopback (OS assigns port)
+	listener, err := Listen()
 	if err != nil {
-		log.Error("failed to listen on IPC", "error", err, "path", state.IPCPath)
+		log.Error("failed to listen on IPC", "error", err)
 		os.Exit(1)
 	}
 	defer listener.Close()
-	defer os.Remove(state.IPCPath)
 
-	log.Info("IPC listening", "path", state.IPCPath)
+	// Write assigned address back to state file for manager to discover
+	state.IPCAddr = listener.Addr().String()
+	state.DaemonPID = os.Getpid()
+	if err := SaveState(state); err != nil {
+		log.Error("failed to save state with IPC addr", "error", err)
+		listener.Close() // explicit close — defers don't run on os.Exit
+		os.Exit(1)
+	}
+
+	log.Info("IPC listening", "addr", state.IPCAddr)
 
 	// Accept client connections and forward I/O
 	d := &daemonServer{
@@ -163,8 +165,16 @@ func (d *daemonServer) run() {
 	}
 }
 
-// orphanChecker periodically checks if the state file still exists.
-// If deleted, signals the daemon to exit (orphan protection).
+// orphanChecker periodically checks if the state file (pod_daemon.json) still
+// exists. If the file has been deleted (e.g., by CleanupSession), the daemon
+// is considered orphaned and shuts down gracefully.
+//
+// Behavior:
+//   - Polls every 60 seconds (configurable via orphanCheckInterval for tests,
+//     or _AGENTSMESH_ORPHAN_CHECK_INTERVAL_SEC env var).
+//   - On detection: closes orphanCh → run() triggers GracefulStop on child
+//     process, waits 5s, then kills if needed.
+//   - Stops automatically when the child process exits (exitDone).
 func (d *daemonServer) orphanChecker() {
 	interval := d.orphanCheckInterval
 	if interval <= 0 {

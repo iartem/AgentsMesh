@@ -1,6 +1,8 @@
 package poddaemon
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -14,7 +16,6 @@ import (
 // PodDaemonManager manages the lifecycle of pod daemon sessions.
 type PodDaemonManager struct {
 	sandboxesDir  string // Base directory containing per-pod sandbox directories
-	socketDir     string // IPC socket directory (short path, provided by config)
 	runnerBinPath string
 }
 
@@ -36,24 +37,30 @@ type CreateOpts struct {
 	VTHistoryLimit int
 }
 
+// authTokenBytes is the number of random bytes for IPC authentication tokens.
+const authTokenBytes = 32
+
 // NewPodDaemonManager creates a new manager.
 // sandboxesDir is the base directory containing per-pod sandbox directories (each with pod_daemon.json).
-// socketDir is the directory for IPC sockets (must be short for Unix socket path limits).
-func NewPodDaemonManager(sandboxesDir, socketDir string) (*PodDaemonManager, error) {
+func NewPodDaemonManager(sandboxesDir string) (*PodDaemonManager, error) {
 	binPath, err := os.Executable()
 	if err != nil {
 		return nil, fmt.Errorf("get executable path: %w", err)
 	}
 
-	if err := EnsureSocketDir(socketDir); err != nil {
-		return nil, fmt.Errorf("ensure socket dir: %w", err)
-	}
-
 	return &PodDaemonManager{
 		sandboxesDir:  sandboxesDir,
-		socketDir:     socketDir,
 		runnerBinPath: binPath,
 	}, nil
+}
+
+// generateAuthToken creates a cryptographically random hex-encoded token.
+func generateAuthToken() (string, error) {
+	b := make([]byte, authTokenBytes)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate auth token: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // CreateSession spawns a new daemon process and returns a connected daemonPTY.
@@ -64,12 +71,15 @@ func (m *PodDaemonManager) CreateSession(opts CreateOpts) (*daemonPTY, *PodDaemo
 		return nil, nil, fmt.Errorf("sandbox path is required")
 	}
 
-	ipcPath := IPCPath(m.socketDir, opts.PodKey)
+	authToken, err := generateAuthToken()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	state := &PodDaemonState{
 		PodKey:         opts.PodKey,
 		AgentType:      opts.AgentType,
-		IPCPath:        ipcPath,
+		AuthToken:      authToken,
 		SandboxPath:    opts.SandboxPath,
 		WorkDir:        opts.WorkDir,
 		RepositoryURL:  opts.RepositoryURL,
@@ -83,7 +93,8 @@ func (m *PodDaemonManager) CreateSession(opts CreateOpts) (*daemonPTY, *PodDaemo
 		VTHistoryLimit: opts.VTHistoryLimit,
 	}
 
-	// Save state before starting daemon (daemon reads it on startup)
+	// Save state before starting daemon (daemon reads it on startup).
+	// IPCAddr is empty — the daemon will fill it after binding a port.
 	if err := SaveState(state); err != nil {
 		return nil, nil, fmt.Errorf("save state: %w", err)
 	}
@@ -95,55 +106,61 @@ func (m *PodDaemonManager) CreateSession(opts CreateOpts) (*daemonPTY, *PodDaemo
 		return nil, nil, fmt.Errorf("start daemon: %w", err)
 	}
 
-	state.DaemonPID = pid
-	if err := SaveState(state); err != nil {
-		log.Error("failed to update state with daemon PID", "error", err)
-	}
+	log.Info("daemon started, waiting for IPC", "pid", pid)
 
-	log.Info("daemon started, waiting for IPC", "pid", pid, "ipc", ipcPath)
-
-	// Wait for daemon to start listening on IPC
-	dpty, err := m.waitForDaemon(ipcPath, pid)
+	// Wait for daemon to bind a port and write it to state file
+	dpty, updatedState, err := m.waitForDaemon(opts.SandboxPath, authToken, pid)
 	if err != nil {
 		status := daemonProcessStatus(pid)
 		log.Error("daemon failed to become ready",
 			"pod_key", opts.PodKey, "pid", pid, "process_status", status, "error", err)
 		captureDaemonLog(log, opts.SandboxPath, opts.PodKey)
-		_ = os.Remove(ipcPath) // Clean up socket file if daemon died before Listen()
 		_ = DeleteState(opts.SandboxPath)
 		return nil, nil, fmt.Errorf("connect to daemon (pid %d, %s): %w", pid, status, err)
 	}
 
-	return dpty, state, nil
+	return dpty, updatedState, nil
 }
 
-// waitForDaemon polls the IPC path until the daemon is ready.
-// It also checks if the daemon process is still alive to fail fast.
-func (m *PodDaemonManager) waitForDaemon(ipcPath string, pid int) (*daemonPTY, error) {
+// waitForDaemon polls the state file until the daemon writes its IPC address,
+// then connects. It also checks if the daemon process is still alive to fail fast.
+func (m *PodDaemonManager) waitForDaemon(sandboxPath, authToken string, pid int) (*daemonPTY, *PodDaemonState, error) {
 	const maxAttempts = 50
 	const retryDelay = 100 * time.Millisecond
 
 	var lastErr error
 	for i := 0; i < maxAttempts; i++ {
-		dpty, err := connectDaemon(ipcPath)
-		if err == nil {
-			return dpty, nil
+		// Read state file to check if daemon has written its address
+		state, err := LoadState(sandboxPath)
+		if err == nil && state.IPCAddr != "" {
+			// Defensive check: verify the auth token hasn't been tampered with
+			if state.AuthToken != authToken {
+				return nil, nil, fmt.Errorf("auth token mismatch in state file (possible tampering)")
+			}
+			dpty, err := connectDaemon(connectOpts{Addr: state.IPCAddr, AuthToken: authToken})
+			if err == nil {
+				return dpty, state, nil
+			}
+			lastErr = err
+		} else if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("daemon has not written IPC address yet")
 		}
-		lastErr = err
 
 		// Fail fast if daemon process is no longer alive
 		if pid > 0 && process.IsAlive(pid) != nil {
-			return nil, fmt.Errorf("daemon process (pid %d) exited before IPC ready: %w", pid, lastErr)
+			return nil, nil, fmt.Errorf("daemon process (pid %d) exited before IPC ready: %w", pid, lastErr)
 		}
 
 		time.Sleep(retryDelay)
 	}
-	return nil, fmt.Errorf("daemon did not become ready within %v: %w", time.Duration(maxAttempts)*retryDelay, lastErr)
+	return nil, nil, fmt.Errorf("daemon did not become ready within %v: %w", time.Duration(maxAttempts)*retryDelay, lastErr)
 }
 
 // AttachSession connects to an existing daemon via IPC.
 func (m *PodDaemonManager) AttachSession(state *PodDaemonState) (*daemonPTY, error) {
-	return connectDaemon(state.IPCPath)
+	return connectDaemon(connectOpts{Addr: state.IPCAddr, AuthToken: state.AuthToken})
 }
 
 // RecoverSessions scans the sandboxes directory for existing daemon state files.
@@ -171,12 +188,9 @@ func (m *PodDaemonManager) RecoverSessions() ([]*PodDaemonState, error) {
 	return sessions, nil
 }
 
-// CleanupSession removes the state file and associated socket file for a session.
+// CleanupSession removes the state file for a session.
+// TCP loopback connections have no file artifacts to clean up.
 func (m *PodDaemonManager) CleanupSession(sandboxPath string) error {
-	// Try to read state to find the socket path before deleting
-	if state, err := LoadState(sandboxPath); err == nil && state.IPCPath != "" {
-		_ = os.Remove(state.IPCPath)
-	}
 	return DeleteState(sandboxPath)
 }
 

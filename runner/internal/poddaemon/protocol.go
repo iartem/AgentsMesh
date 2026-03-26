@@ -12,7 +12,7 @@ const (
 	MsgInput        byte = 0x01 // R→D: raw terminal input
 	MsgOutput       byte = 0x02 // D→R: raw terminal output
 	MsgResize       byte = 0x03 // R→D: {cols uint16, rows uint16} big-endian
-	MsgAttach       byte = 0x04 // R→D: {version uint8}
+	MsgAttach       byte = 0x04 // R→D: {version uint8}{auth_token bytes}
 	MsgAttachAck    byte = 0x05 // D→R: JSON {pid, cols, rows, alive}
 	MsgExit         byte = 0x06 // D→R: {exit_code int32} big-endian
 	MsgGracefulStop byte = 0x07 // R→D: none

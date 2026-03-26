@@ -1,5 +1,3 @@
-//go:build !windows
-
 package poddaemon
 
 import (
@@ -63,7 +61,7 @@ func TestClientReplacementDisconnectsPrevious(t *testing.T) {
 	// First client attaches
 	conn1, err := Dial(ipcPath)
 	require.NoError(t, err)
-	WriteMessage(conn1, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn1, MsgAttach, testAttachPayload())
 	conn1.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn1) // AttachAck
 	conn1.SetReadDeadline(time.Time{})
@@ -73,7 +71,7 @@ func TestClientReplacementDisconnectsPrevious(t *testing.T) {
 	require.NoError(t, err)
 	defer conn2.Close()
 
-	WriteMessage(conn2, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn2, MsgAttach, testAttachPayload())
 	conn2.SetReadDeadline(time.Now().Add(2 * time.Second))
 	msgType, _, err := ReadMessage(conn2)
 	require.NoError(t, err)
@@ -174,7 +172,7 @@ func TestResizeValidationRejectsInvalidDimensions(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // consume AttachAck
 	conn.SetReadDeadline(time.Time{})
@@ -221,7 +219,7 @@ func TestResizeShortPayloadIgnored(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 	conn.SetReadDeadline(time.Time{})
@@ -272,7 +270,7 @@ func TestPtyReaderAndPingConcurrentWriteSafety(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // AttachAck
 	conn.SetReadDeadline(time.Time{})
@@ -323,7 +321,7 @@ func TestRapidAttachDetachCycles(t *testing.T) {
 		conn, err := Dial(ipcPath)
 		require.NoError(t, err)
 
-		WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+		WriteMessage(conn, MsgAttach, testAttachPayload())
 		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		msgType, _, err := ReadMessage(conn)
 		require.NoError(t, err)

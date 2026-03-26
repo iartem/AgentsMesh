@@ -1,5 +1,3 @@
-//go:build !windows
-
 package poddaemon
 
 import (
@@ -21,7 +19,7 @@ func TestHandleClientAttachHandshake(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	err = WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	err = WriteMessage(conn, MsgAttach, testAttachPayload())
 	require.NoError(t, err)
 
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
@@ -65,7 +63,7 @@ func TestReadClientCommandsInput(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // consume AttachAck
 	conn.SetReadDeadline(time.Time{})
@@ -89,7 +87,7 @@ func TestReadClientCommandsResize(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 	conn.SetReadDeadline(time.Time{})
@@ -121,7 +119,7 @@ func TestReadClientCommandsGracefulStop(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 	conn.SetReadDeadline(time.Time{})
@@ -143,7 +141,7 @@ func TestReadClientCommandsKill(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 	conn.SetReadDeadline(time.Time{})
@@ -165,7 +163,7 @@ func TestReadClientCommandsPing(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 
@@ -186,7 +184,7 @@ func TestReadClientCommandsDetach(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn)
 	conn.SetReadDeadline(time.Time{})
@@ -209,7 +207,7 @@ func TestPtyReaderForwardsOutput(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // AttachAck
 
@@ -231,4 +229,69 @@ func TestPtyReaderNoClientDiscards(t *testing.T) {
 
 	close(proc.readCh)
 	time.Sleep(100 * time.Millisecond)
+}
+
+// TestHandleClientRejectsInvalidToken verifies that the daemon disconnects
+// a client that sends a wrong auth token.
+func TestHandleClientRejectsInvalidToken(t *testing.T) {
+	d, _, ipcPath := setupDaemonServer(t)
+	go d.acceptLoop()
+
+	conn, err := Dial(ipcPath)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Build attach payload with wrong token
+	wrongToken := make([]byte, 32)
+	for i := range wrongToken {
+		wrongToken[i] = 0xFF
+	}
+	payload := make([]byte, 1+len(wrongToken))
+	payload[0] = protocolVersion
+	copy(payload[1:], wrongToken)
+
+	WriteMessage(conn, MsgAttach, payload)
+
+	// Daemon should close the connection without sending AttachAck
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, err = ReadMessage(conn)
+	assert.Error(t, err, "daemon should disconnect client with invalid token")
+}
+
+// TestHandleClientRejectsEmptyToken verifies that the daemon disconnects
+// a client that sends no token bytes.
+func TestHandleClientRejectsEmptyToken(t *testing.T) {
+	d, _, ipcPath := setupDaemonServer(t)
+	go d.acceptLoop()
+
+	conn, err := Dial(ipcPath)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Send only version byte, no token
+	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, err = ReadMessage(conn)
+	assert.Error(t, err, "daemon should disconnect client with empty token")
+}
+
+// TestHandleClientAcceptsWhenNoTokenConfigured verifies that if the daemon
+// state has an empty AuthToken (legacy/edge case), it skips token validation.
+func TestHandleClientAcceptsWhenNoTokenConfigured(t *testing.T) {
+	d, _, ipcPath := setupDaemonServer(t)
+	d.state.AuthToken = "" // Simulate no token configured
+	go d.acceptLoop()
+
+	conn, err := Dial(ipcPath)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Send attach with just version byte (no token)
+	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	msgType, _, err := ReadMessage(conn)
+	require.NoError(t, err, "should accept when no token is configured")
+	assert.Equal(t, MsgAttachAck, msgType)
 }

@@ -16,7 +16,8 @@ func TestStateSaveLoadRoundtrip(t *testing.T) {
 	state := &PodDaemonState{
 		PodKey:         "test-pod-123",
 		AgentType:      "claude-code",
-		IPCPath:        IPCPath(dir, "test-pod-123"),
+		IPCAddr:        "127.0.0.1:12345",
+		AuthToken:      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		DaemonPID:      12345,
 		SandboxPath:    dir,
 		WorkDir:        "/tmp/work",

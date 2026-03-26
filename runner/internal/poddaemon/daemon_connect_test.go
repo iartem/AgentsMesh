@@ -1,8 +1,7 @@
-//go:build !windows
-
 package poddaemon
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 	"time"
@@ -11,15 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testAuthToken = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
 // TestConnectDaemonMalformedAttachAck verifies connectDaemon handles
 // corrupted JSON in AttachAck gracefully.
 func TestConnectDaemonMalformedAttachAck(t *testing.T) {
-	dir := shortSocketDir(t)
-	ipcPath := IPCPath(dir, "mal")
-
-	listener, err := Listen(ipcPath)
+	listener, err := Listen()
 	require.NoError(t, err)
 	defer listener.Close()
+	addr := listener.Addr().String()
 
 	go func() {
 		conn, err := listener.Accept()
@@ -32,7 +31,7 @@ func TestConnectDaemonMalformedAttachAck(t *testing.T) {
 		WriteMessage(conn, MsgAttachAck, []byte("{broken json"))
 	}()
 
-	_, err = connectDaemon(ipcPath)
+	_, err = connectDaemon(connectOpts{Addr: addr, AuthToken: testAuthToken})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unmarshal attach ack")
 }
@@ -40,12 +39,10 @@ func TestConnectDaemonMalformedAttachAck(t *testing.T) {
 // TestConnectDaemonWrongMessageType verifies connectDaemon handles
 // unexpected message type instead of AttachAck.
 func TestConnectDaemonWrongMessageType(t *testing.T) {
-	dir := shortSocketDir(t)
-	ipcPath := IPCPath(dir, "wr")
-
-	listener, err := Listen(ipcPath)
+	listener, err := Listen()
 	require.NoError(t, err)
 	defer listener.Close()
+	addr := listener.Addr().String()
 
 	go func() {
 		conn, err := listener.Accept()
@@ -58,7 +55,7 @@ func TestConnectDaemonWrongMessageType(t *testing.T) {
 		WriteMessage(conn, MsgOutput, []byte("surprise"))
 	}()
 
-	_, err = connectDaemon(ipcPath)
+	_, err = connectDaemon(connectOpts{Addr: addr, AuthToken: testAuthToken})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expected AttachAck")
 }
@@ -66,12 +63,10 @@ func TestConnectDaemonWrongMessageType(t *testing.T) {
 // TestConnectDaemonHandshakeTimeout verifies the 5-second timeout on
 // AttachAck response.
 func TestConnectDaemonHandshakeTimeout(t *testing.T) {
-	dir := shortSocketDir(t)
-	ipcPath := IPCPath(dir, "to")
-
-	listener, err := Listen(ipcPath)
+	listener, err := Listen()
 	require.NoError(t, err)
 	defer listener.Close()
+	addr := listener.Addr().String()
 
 	go func() {
 		conn, err := listener.Accept()
@@ -85,7 +80,7 @@ func TestConnectDaemonHandshakeTimeout(t *testing.T) {
 	}()
 
 	start := time.Now()
-	_, err = connectDaemon(ipcPath)
+	_, err = connectDaemon(connectOpts{Addr: addr, AuthToken: testAuthToken})
 	elapsed := time.Since(start)
 
 	require.Error(t, err)
@@ -95,23 +90,33 @@ func TestConnectDaemonHandshakeTimeout(t *testing.T) {
 }
 
 // TestConnectDaemonDialFailure verifies connectDaemon returns clear error
-// when IPC socket doesn't exist.
+// when no daemon is listening.
 func TestConnectDaemonDialFailure(t *testing.T) {
-	_, err := connectDaemon("/nonexistent/path.sock")
+	_, err := connectDaemon(connectOpts{Addr: "127.0.0.1:1", AuthToken: testAuthToken})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "dial daemon")
 }
 
-// TestConnectDaemonSuccess verifies the full connectDaemon happy path.
-func TestConnectDaemonSuccess(t *testing.T) {
-	dir := shortSocketDir(t)
-	ipcPath := IPCPath(dir, "test")
-
-	listener, err := Listen(ipcPath)
+// TestConnectDaemonInvalidToken verifies connectDaemon rejects invalid hex tokens.
+func TestConnectDaemonInvalidToken(t *testing.T) {
+	listener, err := Listen()
 	require.NoError(t, err)
 	defer listener.Close()
+	addr := listener.Addr().String()
 
-	// Mock daemon: accept, read Attach, send AttachAck
+	_, err = connectDaemon(connectOpts{Addr: addr, AuthToken: "not-a-hex-string!"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode auth token")
+}
+
+// TestConnectDaemonSuccess verifies the full connectDaemon happy path.
+func TestConnectDaemonSuccess(t *testing.T) {
+	listener, err := Listen()
+	require.NoError(t, err)
+	defer listener.Close()
+	addr := listener.Addr().String()
+
+	// Mock daemon: accept, read Attach (with token), send AttachAck
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -119,8 +124,18 @@ func TestConnectDaemonSuccess(t *testing.T) {
 		}
 		defer conn.Close()
 
-		msgType, _, err := ReadMessage(conn)
+		msgType, payload, err := ReadMessage(conn)
 		if err != nil || msgType != MsgAttach {
+			return
+		}
+
+		// Verify token in payload: [version][token_bytes]
+		if len(payload) < 1 {
+			return
+		}
+		tokenBytes := payload[1:]
+		expectedToken, _ := hex.DecodeString(testAuthToken)
+		if len(tokenBytes) != len(expectedToken) {
 			return
 		}
 
@@ -132,7 +147,7 @@ func TestConnectDaemonSuccess(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}()
 
-	d, err := connectDaemon(ipcPath)
+	d, err := connectDaemon(connectOpts{Addr: addr, AuthToken: testAuthToken})
 	require.NoError(t, err)
 	defer d.Close()
 

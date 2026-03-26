@@ -1,11 +1,9 @@
-//go:build !windows
-
 package poddaemon
 
 import (
+	"encoding/hex"
 	"io"
 	"log/slog"
-	"os"
 	"sync"
 	"testing"
 
@@ -104,30 +102,21 @@ func (m *mockDaemonProcess) Kill() error {
 	return m.killErr
 }
 
-// shortSocketDir returns a short temp dir suitable for Unix sockets (macOS 104-byte limit).
-func shortSocketDir(t *testing.T) string {
-	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "pd-")
-	require.NoError(t, err)
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	return dir
-}
-
-// setupDaemonServer creates a daemonServer with a mock process and IPC listener.
+// setupDaemonServer creates a daemonServer with a mock process and TCP listener.
 func setupDaemonServer(t *testing.T) (*daemonServer, *mockDaemonProcess, string) {
 	t.Helper()
-	dir := shortSocketDir(t)
-	ipcPath := IPCPath(dir, "t")
 
-	listener, err := Listen(ipcPath)
+	listener, err := Listen()
 	require.NoError(t, err)
+	addr := listener.Addr().String()
 
 	proc := newMockProcess(123)
 
 	state := &PodDaemonState{
 		PodKey:      "test-pod",
-		IPCPath:     ipcPath,
-		SandboxPath: dir,
+		IPCAddr:     addr,
+		AuthToken:   testAuthToken,
+		SandboxPath: t.TempDir(),
 		Cols:        80,
 		Rows:        24,
 	}
@@ -145,5 +134,14 @@ func setupDaemonServer(t *testing.T) (*daemonServer, *mockDaemonProcess, string)
 		listener.Close()
 	})
 
-	return d, proc, ipcPath
+	return d, proc, addr
+}
+
+// testAttachPayload builds a MsgAttach payload with the test auth token.
+func testAttachPayload() []byte {
+	tokenBytes, _ := hex.DecodeString(testAuthToken)
+	payload := make([]byte, 1+len(tokenBytes))
+	payload[0] = protocolVersion
+	copy(payload[1:], tokenBytes)
+	return payload
 }

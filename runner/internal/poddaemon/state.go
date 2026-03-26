@@ -14,7 +14,8 @@ const stateFileName = "pod_daemon.json"
 type PodDaemonState struct {
 	PodKey         string    `json:"pod_key"`
 	AgentType      string    `json:"agent_type"`
-	IPCPath        string    `json:"ipc_path"`
+	IPCAddr        string    `json:"ipc_addr"`   // TCP loopback address (e.g. "127.0.0.1:12345")
+	AuthToken      string    `json:"auth_token"` // hex-encoded 32-byte random token for IPC authentication
 	DaemonPID      int       `json:"daemon_pid"`
 	SandboxPath    string    `json:"sandbox_path"`
 	WorkDir        string    `json:"work_dir"`

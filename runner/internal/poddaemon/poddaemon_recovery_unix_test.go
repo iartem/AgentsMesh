@@ -50,7 +50,6 @@ func TestDaemonSurvivesParentDeath(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -71,8 +70,8 @@ func TestDaemonSurvivesParentDeath(t *testing.T) {
 
 	daemonPID := state.DaemonPID
 	childPID := dpty.Pid()
-	ipcPath := state.IPCPath
-	t.Logf("daemon PID: %d, child PID: %d, IPC: %s", daemonPID, childPID, ipcPath)
+	ipcAddr := state.IPCAddr
+	t.Logf("daemon PID: %d, child PID: %d, IPC: %s", daemonPID, childPID, ipcAddr)
 
 	t.Cleanup(func() {
 		// Final cleanup: kill daemon if still alive
@@ -110,7 +109,6 @@ func TestDaemonSurvivesParentDeath(t *testing.T) {
 	// Phase 4: Fresh manager recovers sessions (simulates Runner B starting)
 	mgr2 := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -118,7 +116,7 @@ func TestDaemonSurvivesParentDeath(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, sessions, 1, "should find exactly one recoverable session")
 	assert.Equal(t, "persist", sessions[0].PodKey)
-	assert.Equal(t, ipcPath, sessions[0].IPCPath)
+	assert.Equal(t, ipcAddr, sessions[0].IPCAddr)
 
 	// Phase 5: Attach to surviving daemon
 	dpty2, err := mgr2.AttachSession(sessions[0])
@@ -155,7 +153,6 @@ func TestDaemonSurvivesMultipleReattachCycles(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -232,7 +229,6 @@ func TestRecoveredSessionResize(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -293,7 +289,6 @@ func TestRecoveredSessionGracefulStop(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -354,7 +349,6 @@ func TestOrphanCleanupAfterRecovery(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 

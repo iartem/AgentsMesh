@@ -1,7 +1,9 @@
 package poddaemon
 
 import (
+	"crypto/subtle"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"net"
 
@@ -42,6 +44,23 @@ func (d *daemonServer) handleClient(conn net.Conn) {
 	if len(payload) > 0 {
 		version = payload[0]
 	}
+
+	// Token authentication (required since protocol version 2)
+	if d.state.AuthToken != "" {
+		expectedToken, err := hex.DecodeString(d.state.AuthToken)
+		if err != nil {
+			log.Error("invalid auth token in state", "error", err)
+			conn.Close()
+			return
+		}
+		receivedToken := payload[1:] // bytes after version
+		if len(receivedToken) != len(expectedToken) || subtle.ConstantTimeCompare(receivedToken, expectedToken) != 1 {
+			log.Warn("client auth failed: invalid token")
+			conn.Close()
+			return
+		}
+	}
+
 	log.Info("client attached", "version", version)
 
 	// Send AttachAck — read terminal size under clientMu to avoid data race
@@ -61,14 +80,14 @@ func (d *daemonServer) handleClient(conn net.Conn) {
 		return
 	}
 
-	// Set as current client
+	// Set as current client — swap pointer under lock, close old conn outside.
 	d.clientMu.Lock()
-	if d.client != nil {
-		// Disconnect previous client
-		d.client.Close()
-	}
+	oldClient := d.client
 	d.client = conn
 	d.clientMu.Unlock()
+	if oldClient != nil {
+		oldClient.Close()
+	}
 
 	// Read commands from client
 	d.readClientCommands(conn)

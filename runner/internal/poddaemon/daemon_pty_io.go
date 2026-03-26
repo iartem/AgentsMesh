@@ -71,7 +71,7 @@ func (d *daemonPTY) Close() error {
 	d.closeOnce.Do(func() {
 		close(d.closedCh)
 		// Best-effort detach notification. Use a short deadline so we don't
-		// block if the pipe/socket is congested or recvLoop holds the read side.
+		// block if the connection is congested or recvLoop holds the read side.
 		d.writeMu.Lock()
 		d.conn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
 		_ = WriteMessage(d.conn, MsgDetach, nil)
@@ -119,12 +119,21 @@ func (d *daemonPTY) SetReadDeadline(t time.Time) error {
 
 // Wait blocks until the daemon child process exits.
 // exitCh is only consumed here (Read uses outputCh closure for EOF).
+// We prioritize exitCh over closedCh: if both are ready, always
+// try to deliver the real exit code first.
 func (d *daemonPTY) Wait() (int, error) {
 	select {
 	case code := <-d.exitCh:
 		return code, nil
 	case <-d.closedCh:
-		return -1, fmt.Errorf("connection closed")
+		// Connection closed — but exitCh may have been filled concurrently.
+		// Do a non-blocking check to avoid losing the exit code.
+		select {
+		case code := <-d.exitCh:
+			return code, nil
+		default:
+			return -1, fmt.Errorf("connection closed")
+		}
 	}
 }
 

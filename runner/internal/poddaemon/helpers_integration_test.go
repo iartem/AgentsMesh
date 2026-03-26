@@ -52,23 +52,12 @@ func buildTestRunner(t *testing.T) string {
 	return binPath
 }
 
-// shortWorkspace creates a short temp dir to avoid macOS 104-byte
-// Unix socket path limit. On Windows, t.TempDir() is fine.
+// shortWorkspace creates a short temp dir for integration tests.
 // Returns (workspace, sandbox) paths.
 func shortWorkspace(t *testing.T, name string) (string, string) {
 	t.Helper()
 
-	var workspace string
-	if runtime.GOOS == "darwin" {
-		// macOS has a 104-byte limit for Unix socket paths.
-		var err error
-		workspace, err = os.MkdirTemp("/tmp", "pd-")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(workspace) })
-	} else {
-		workspace = t.TempDir()
-	}
-
+	workspace := t.TempDir()
 	sandbox := filepath.Join(workspace, name)
 	require.NoError(t, os.MkdirAll(sandbox, 0755))
 	return workspace, sandbox

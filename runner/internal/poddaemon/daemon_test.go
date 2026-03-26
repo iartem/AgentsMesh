@@ -1,5 +1,3 @@
-//go:build !windows
-
 package poddaemon
 
 import (
@@ -22,7 +20,7 @@ func TestRunExitPathSendsExitToClient(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // AttachAck
 
@@ -123,7 +121,7 @@ func TestExitDuringClientHandshake(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	WriteMessage(conn, MsgAttach, []byte{protocolVersion})
+	WriteMessage(conn, MsgAttach, testAttachPayload())
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	ReadMessage(conn) // AttachAck
 	conn.SetReadDeadline(time.Time{})

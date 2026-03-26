@@ -67,7 +67,7 @@ func CreateDeps(cfg *config.Config) (RunnerDeps, error) {
 	}
 
 	// Create Pod Daemon manager for session persistence
-	podDaemonMgr, err := poddaemon.NewPodDaemonManager(cfg.GetSandboxesDir(), cfg.GetSocketDir())
+	podDaemonMgr, err := poddaemon.NewPodDaemonManager(cfg.GetSandboxesDir())
 	if err != nil {
 		log.Warn("Pod Daemon manager unavailable, sessions won't persist across restarts", "error", err)
 	}

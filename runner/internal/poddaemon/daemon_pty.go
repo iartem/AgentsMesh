@@ -2,6 +2,7 @@ package poddaemon
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -19,7 +20,8 @@ type attachAckPayload struct {
 }
 
 // protocolVersion is the current attach protocol version.
-const protocolVersion = 1
+// Version 2 adds token-based authentication for TCP loopback security.
+const protocolVersion = 2
 
 // daemonPTY implements ptyProcess by communicating with a daemon over IPC.
 // Close sends Detach but does NOT kill the daemon process.
@@ -51,16 +53,32 @@ type daemonPTY struct {
 	closedCh  chan struct{}
 }
 
-// connectDaemon dials the IPC socket, performs the Attach handshake,
-// and returns a ready daemonPTY.
-func connectDaemon(ipcPath string) (*daemonPTY, error) {
-	conn, err := Dial(ipcPath)
+// connectOpts holds the parameters for connecting to a daemon.
+type connectOpts struct {
+	Addr      string // TCP loopback address (e.g. "127.0.0.1:12345")
+	AuthToken string // hex-encoded auth token
+}
+
+// connectDaemon dials the IPC address, performs the Attach handshake
+// with token authentication, and returns a ready daemonPTY.
+func connectDaemon(opts connectOpts) (*daemonPTY, error) {
+	conn, err := Dial(opts.Addr)
 	if err != nil {
 		return nil, fmt.Errorf("dial daemon: %w", err)
 	}
 
+	// Build Attach payload: [version uint8][token bytes]
+	tokenBytes, err := hex.DecodeString(opts.AuthToken)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("decode auth token: %w", err)
+	}
+	attachPayload := make([]byte, 1+len(tokenBytes))
+	attachPayload[0] = protocolVersion
+	copy(attachPayload[1:], tokenBytes)
+
 	// Send Attach message
-	if err := WriteMessage(conn, MsgAttach, []byte{protocolVersion}); err != nil {
+	if err := WriteMessage(conn, MsgAttach, attachPayload); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("send attach: %w", err)
 	}

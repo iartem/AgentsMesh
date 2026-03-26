@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -15,8 +14,7 @@ import (
 
 func TestRecoverSessionsEmpty(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -26,7 +24,6 @@ func TestRecoverSessionsEmpty(t *testing.T) {
 
 func TestRecoverSessionsFindsState(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
 
 	// Create a sandbox with a state file
 	sandbox := filepath.Join(dir, "sandbox-1")
@@ -43,7 +40,7 @@ func TestRecoverSessionsFindsState(t *testing.T) {
 	}
 	require.NoError(t, SaveState(state))
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -53,8 +50,7 @@ func TestRecoverSessionsFindsState(t *testing.T) {
 }
 
 func TestRecoverSessionsNonExistentDir(t *testing.T) {
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager("/nonexistent/path", socketDir)
+	mgr, err := NewPodDaemonManager("/nonexistent/path")
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -64,7 +60,6 @@ func TestRecoverSessionsNonExistentDir(t *testing.T) {
 
 func TestCleanupSession(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
 
 	state := &PodDaemonState{
 		PodKey:      "cleanup-me",
@@ -72,7 +67,7 @@ func TestCleanupSession(t *testing.T) {
 	}
 	require.NoError(t, SaveState(state))
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	require.NoError(t, mgr.CleanupSession(dir))
@@ -83,40 +78,21 @@ func TestCleanupSession(t *testing.T) {
 
 func TestNewPodDaemonManager(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 	assert.NotNil(t, mgr)
 	assert.Equal(t, dir, mgr.sandboxesDir)
-	assert.Equal(t, socketDir, mgr.socketDir)
 	assert.NotEmpty(t, mgr.runnerBinPath) // should resolve to test binary
-}
-
-func TestNewPodDaemonManagerCreatesSocketDir(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("EnsureSocketDir is a no-op on Windows (named pipes)")
-	}
-	dir := t.TempDir()
-	socketDir := filepath.Join(t.TempDir(), "nested", "sockets")
-	mgr, err := NewPodDaemonManager(dir, socketDir)
-	require.NoError(t, err)
-	assert.NotNil(t, mgr)
-
-	// Verify socket dir was created
-	info, err := os.Stat(socketDir)
-	require.NoError(t, err)
-	assert.True(t, info.IsDir())
 }
 
 func TestAttachSessionSuccess(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	ipcPath := IPCPath(socketDir, "a")
 
 	// Start a mock daemon listener
-	listener, err := Listen(ipcPath)
+	listener, err := Listen()
 	require.NoError(t, err)
 	defer listener.Close()
+	addr := listener.Addr().String()
 
 	go func() {
 		conn, err := listener.Accept()
@@ -140,12 +116,13 @@ func TestAttachSessionSuccess(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}()
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	state := &PodDaemonState{
-		PodKey:  "attach-pod",
-		IPCPath: ipcPath,
+		PodKey:    "attach-pod",
+		IPCAddr:   addr,
+		AuthToken: testAuthToken,
 	}
 
 	dpty, err := mgr.AttachSession(state)
@@ -158,15 +135,15 @@ func TestAttachSessionSuccess(t *testing.T) {
 	assert.Equal(t, 30, rows)
 }
 
-func TestAttachSessionFailsOnBadIPC(t *testing.T) {
+func TestAttachSessionFailsOnBadAddr(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	state := &PodDaemonState{
-		PodKey:  "fail-pod",
-		IPCPath: filepath.Join(dir, "nonexistent.sock"),
+		PodKey:    "fail-pod",
+		IPCAddr:   "127.0.0.1:1",
+		AuthToken: testAuthToken,
 	}
 
 	_, err = mgr.AttachSession(state)
@@ -175,8 +152,7 @@ func TestAttachSessionFailsOnBadIPC(t *testing.T) {
 
 func TestCreateSessionMissingSandboxPath(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	_, _, err = mgr.CreateSession(CreateOpts{
@@ -189,7 +165,6 @@ func TestCreateSessionMissingSandboxPath(t *testing.T) {
 
 func TestRecoverSessionsSkipsCorruptState(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
 
 	// Create a sandbox with a corrupt state file
 	sandbox := filepath.Join(dir, "sandbox-corrupt")
@@ -206,7 +181,7 @@ func TestRecoverSessionsSkipsCorruptState(t *testing.T) {
 	}
 	require.NoError(t, SaveState(state))
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -217,12 +192,11 @@ func TestRecoverSessionsSkipsCorruptState(t *testing.T) {
 
 func TestRecoverSessionsSkipsFiles(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
 
 	// Create a regular file (not a directory) — should be skipped
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "not-a-dir.txt"), []byte("hello"), 0644))
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -232,8 +206,7 @@ func TestRecoverSessionsSkipsFiles(t *testing.T) {
 
 func TestCleanupSessionNonExistent(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	// Cleaning up a non-existent session should not error
@@ -243,7 +216,6 @@ func TestCleanupSessionNonExistent(t *testing.T) {
 
 func TestRecoverSessionsMixedValidity(t *testing.T) {
 	dir := t.TempDir()
-	socketDir := t.TempDir()
 
 	// Valid session 1
 	sandbox1 := filepath.Join(dir, "valid-1")
@@ -270,7 +242,7 @@ func TestRecoverSessionsMixedValidity(t *testing.T) {
 	// Regular file (not a directory)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "not-a-dir.txt"), []byte("hello"), 0644))
 
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
 	sessions, err := mgr.RecoverSessions()
@@ -286,18 +258,25 @@ func TestRecoverSessionsMixedValidity(t *testing.T) {
 }
 
 func TestWaitForDaemonFailsFastOnDeadProcess(t *testing.T) {
-	socketDir := t.TempDir()
 	dir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	sandbox := filepath.Join(dir, "sandbox")
+	require.NoError(t, os.MkdirAll(sandbox, 0755))
+
+	// Save state without IPCAddr (simulates daemon not yet started)
+	require.NoError(t, SaveState(&PodDaemonState{
+		PodKey:      "dead-daemon",
+		SandboxPath: sandbox,
+		AuthToken:   testAuthToken,
+	}))
+
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
-	ipcPath := IPCPath(socketDir, "dead-daemon")
-
-	// Use a PID that definitely doesn't exist (max PID)
+	// Use a PID that definitely doesn't exist
 	deadPID := 999999999
 
 	start := time.Now()
-	_, err = mgr.waitForDaemon(ipcPath, deadPID)
+	_, _, err = mgr.waitForDaemon(sandbox, testAuthToken, deadPID)
 	elapsed := time.Since(start)
 
 	require.Error(t, err)
@@ -307,15 +286,22 @@ func TestWaitForDaemonFailsFastOnDeadProcess(t *testing.T) {
 }
 
 func TestWaitForDaemonZeroPIDSkipsAliveCheck(t *testing.T) {
-	socketDir := t.TempDir()
 	dir := t.TempDir()
-	mgr, err := NewPodDaemonManager(dir, socketDir)
+	sandbox := filepath.Join(dir, "sandbox")
+	require.NoError(t, os.MkdirAll(sandbox, 0755))
+
+	// Save state without IPCAddr
+	require.NoError(t, SaveState(&PodDaemonState{
+		PodKey:      "no-pid",
+		SandboxPath: sandbox,
+		AuthToken:   testAuthToken,
+	}))
+
+	mgr, err := NewPodDaemonManager(dir)
 	require.NoError(t, err)
 
-	ipcPath := IPCPath(socketDir, "no-pid")
-
 	start := time.Now()
-	_, err = mgr.waitForDaemon(ipcPath, 0)
+	_, _, err = mgr.waitForDaemon(sandbox, testAuthToken, 0)
 	elapsed := time.Since(start)
 
 	require.Error(t, err)
@@ -354,4 +340,14 @@ func TestDaemonProcessStatus(t *testing.T) {
 	assert.Equal(t, "unknown", daemonProcessStatus(-1))
 	assert.Equal(t, "alive", daemonProcessStatus(os.Getpid()))
 	assert.Equal(t, "dead", daemonProcessStatus(999999999))
+}
+
+func TestGenerateAuthToken(t *testing.T) {
+	token1, err := generateAuthToken()
+	require.NoError(t, err)
+	assert.Len(t, token1, authTokenBytes*2) // hex-encoded
+
+	token2, err := generateAuthToken()
+	require.NoError(t, err)
+	assert.NotEqual(t, token1, token2, "tokens should be unique")
 }

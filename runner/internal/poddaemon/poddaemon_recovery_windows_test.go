@@ -18,7 +18,7 @@ import (
 // (simulating Runner crash), and verifies:
 //  1. Daemon process survives (CREATE_NEW_PROCESS_GROUP).
 //  2. Fresh manager can scan and recover the session.
-//  3. I/O works normally after recovery via Named Pipe.
+//  3. I/O works normally after recovery via TCP loopback.
 func TestDaemonSurvivesParentDeathWindows(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -29,7 +29,6 @@ func TestDaemonSurvivesParentDeathWindows(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -50,8 +49,8 @@ func TestDaemonSurvivesParentDeathWindows(t *testing.T) {
 
 	daemonPID := state.DaemonPID
 	childPID := dpty.Pid()
-	ipcPath := state.IPCPath
-	t.Logf("daemon PID: %d, child PID: %d, IPC: %s", daemonPID, childPID, ipcPath)
+	ipcAddr := state.IPCAddr
+	t.Logf("daemon PID: %d, child PID: %d, IPC: %s", daemonPID, childPID, ipcAddr)
 
 	t.Cleanup(func() {
 		DeleteState(sandbox)
@@ -91,7 +90,6 @@ func TestDaemonSurvivesParentDeathWindows(t *testing.T) {
 	// Phase 4: Fresh manager recovers sessions
 	mgr2 := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -129,7 +127,7 @@ func TestDaemonSurvivesParentDeathWindows(t *testing.T) {
 }
 
 // TestDaemonSurvivesMultipleReattachCyclesWindows verifies multiple
-// detach→reattach cycles on Windows Named Pipes.
+// detach→reattach cycles on Windows.
 func TestDaemonSurvivesMultipleReattachCyclesWindows(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -140,7 +138,6 @@ func TestDaemonSurvivesMultipleReattachCyclesWindows(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -215,7 +212,6 @@ func TestRecoveredSessionResizeWindows(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 
@@ -274,7 +270,6 @@ func TestRecoveredSessionKillWindows(t *testing.T) {
 
 	mgr := &PodDaemonManager{
 		sandboxesDir: workspace,
-		socketDir:     workspace,
 		runnerBinPath: binPath,
 	}
 

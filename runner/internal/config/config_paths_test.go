@@ -7,13 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetSocketDir(t *testing.T) {
-	cfg := &Config{}
-	got := cfg.GetSocketDir()
-	expected := filepath.Join(TempBaseDir(), "sockets")
-	assert.Equal(t, expected, got)
-}
-
 func TestGetLogPTYDir(t *testing.T) {
 	cfg := &Config{}
 	got := cfg.GetLogPTYDir()
