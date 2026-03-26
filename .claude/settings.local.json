@@ -7,7 +7,8 @@
       "mcp__chrome-devtools__click",
       "mcp__chrome-devtools__wait_for",
       "mcp__chrome-devtools__take_snapshot",
-      "Bash(grep -r \"MessageFilter\\\\|before_time\\\\|after_time\" --include=*.go backend/internal/)"
+      "Bash(grep -r \"MessageFilter\\\\|before_time\\\\|after_time\" --include=*.go backend/internal/)",
+      "Bash(go test:*)"
     ]
   }
 }
