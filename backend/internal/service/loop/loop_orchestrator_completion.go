@@ -108,13 +108,14 @@ func (o *LoopOrchestrator) HandleRunCompleted(ctx context.Context, run *loopDoma
 	// 2. Update runtime state for persistent sandbox resume.
 	loop, _ := o.loopService.GetByID(ctx, run.LoopID)
 	if run.PodKey != nil && loop != nil && loop.IsPersistent() {
-		if effectiveStatus == loopDomain.RunStatusCompleted {
+		switch effectiveStatus {
+		case loopDomain.RunStatusCompleted:
 			// Successful completion: advance the resume chain to this run's pod.
 			if err := o.loopService.UpdateRuntimeState(ctx, run.LoopID, nil, run.PodKey); err != nil {
 				o.logger.Error("failed to update loop runtime state",
 					"loop_id", run.LoopID, "error", err)
 			}
-		} else if effectiveStatus == loopDomain.RunStatusFailed {
+		case loopDomain.RunStatusFailed:
 			// Failed run: clear the resume chain to break the death spiral.
 			// Without this, async runner errors (e.g., "mcp.json escapes sandbox root")
 			// cause every subsequent run to retry the same broken resume, since the
