@@ -86,8 +86,8 @@ func (s *Service) SendMessage(ctx context.Context, channelID int64, senderPod *s
 }
 
 // GetMessages returns messages for a channel
-func (s *Service) GetMessages(ctx context.Context, channelID int64, before *time.Time, limit int) ([]*channel.Message, error) {
-	messages, err := s.repo.GetMessages(ctx, channelID, before, limit)
+func (s *Service) GetMessages(ctx context.Context, channelID int64, before *time.Time, after *time.Time, limit int) ([]*channel.Message, error) {
+	messages, err := s.repo.GetMessages(ctx, channelID, before, after, limit)
 	if err != nil {
 		return nil, err
 	}

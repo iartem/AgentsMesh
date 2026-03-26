@@ -131,10 +131,13 @@ func (r *channelRepository) TouchChannel(ctx context.Context, channelID int64) e
 		Update("updated_at", time.Now()).Error
 }
 
-func (r *channelRepository) GetMessages(ctx context.Context, channelID int64, before *time.Time, limit int) ([]*channel.Message, error) {
+func (r *channelRepository) GetMessages(ctx context.Context, channelID int64, before *time.Time, after *time.Time, limit int) ([]*channel.Message, error) {
 	query := r.db.WithContext(ctx).Where("channel_id = ? AND is_deleted = FALSE", channelID)
 	if before != nil {
 		query = query.Where("created_at < ?", *before)
+	}
+	if after != nil {
+		query = query.Where("created_at > ?", *after)
 	}
 	var messages []*channel.Message
 	if err := query.

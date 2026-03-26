@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	channelDomain "github.com/anthropics/agentsmesh/backend/internal/domain/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
@@ -245,7 +246,33 @@ func (a *GRPCRunnerAdapter) mcpGetMessages(ctx context.Context, tc *middleware.T
 		limit = 50
 	}
 
-	messages, err := a.channelService.GetMessages(ctx, params.ChannelID, nil, limit)
+	// If filtering by mentioned pod, use dedicated method
+	if params.MentionedPod != nil && *params.MentionedPod != "" {
+		messages, err := a.channelService.GetMessagesMentioning(ctx, params.ChannelID, *params.MentionedPod, limit)
+		if err != nil {
+			return nil, newMcpError(500, "failed to get messages")
+		}
+		return map[string]interface{}{"messages": messages}, nil
+	}
+
+	// Parse time filters
+	var before, after *time.Time
+	if params.BeforeTime != nil && *params.BeforeTime != "" {
+		if t, err := time.Parse(time.RFC3339, *params.BeforeTime); err == nil {
+			before = &t
+		} else {
+			return nil, newMcpError(400, "invalid before_time format, expected RFC3339")
+		}
+	}
+	if params.AfterTime != nil && *params.AfterTime != "" {
+		if t, err := time.Parse(time.RFC3339, *params.AfterTime); err == nil {
+			after = &t
+		} else {
+			return nil, newMcpError(400, "invalid after_time format, expected RFC3339")
+		}
+	}
+
+	messages, err := a.channelService.GetMessages(ctx, params.ChannelID, before, after, limit)
 	if err != nil {
 		return nil, newMcpError(500, "failed to get messages")
 	}

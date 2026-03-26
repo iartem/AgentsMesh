@@ -55,7 +55,7 @@ func (h *ChannelHandler) ListMessages(c *gin.Context) {
 		}
 	} else {
 		var fetchErr error
-		messages, fetchErr = h.channelService.GetMessages(c.Request.Context(), channelID, nil, limit)
+		messages, fetchErr = h.channelService.GetMessages(c.Request.Context(), channelID, nil, nil, limit)
 		if fetchErr != nil {
 			apierr.InternalError(c, "Failed to list messages")
 			return

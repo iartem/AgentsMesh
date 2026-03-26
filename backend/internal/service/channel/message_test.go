@@ -51,24 +51,24 @@ func TestGetMessages(t *testing.T) {
 	}
 
 	t.Run("get all messages", func(t *testing.T) {
-		messages, err := svc.GetMessages(ctx, ch.ID, nil, 10)
+		messages, err := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
 		if err != nil || len(messages) != 5 {
 			t.Errorf("GetMessages failed: %v, count=%d", err, len(messages))
 		}
 	})
 
 	t.Run("with limit", func(t *testing.T) {
-		messages, _ := svc.GetMessages(ctx, ch.ID, nil, 3)
+		messages, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 3)
 		if len(messages) != 3 {
 			t.Errorf("Expected 3 messages, got %d", len(messages))
 		}
 	})
 
 	t.Run("with before filter", func(t *testing.T) {
-		allMsgs, _ := svc.GetMessages(ctx, ch.ID, nil, 10)
+		allMsgs, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
 		if len(allMsgs) >= 3 {
 			before := allMsgs[2].CreatedAt
-			msgs, err := svc.GetMessages(ctx, ch.ID, &before, 10)
+			msgs, err := svc.GetMessages(ctx, ch.ID, &before, nil, 10)
 			if err != nil {
 				t.Fatalf("GetMessages failed: %v", err)
 			}
