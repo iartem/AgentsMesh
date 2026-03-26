@@ -85,9 +85,9 @@ func (s *Service) SendMessage(ctx context.Context, channelID int64, senderPod *s
 
 // GetMessages returns messages for a channel.
 // Returns (messages, hasMore, error) where hasMore indicates if older messages exist.
-func (s *Service) GetMessages(ctx context.Context, channelID int64, before *time.Time, limit int) ([]*channel.Message, bool, error) {
+func (s *Service) GetMessages(ctx context.Context, channelID int64, before *time.Time, after *time.Time, limit int) ([]*channel.Message, bool, error) {
 	// Fetch limit+1 to determine if more messages exist
-	messages, err := s.repo.GetMessages(ctx, channelID, before, limit+1)
+	messages, err := s.repo.GetMessages(ctx, channelID, before, after, limit+1)
 	if err != nil {
 		return nil, false, err
 	}
