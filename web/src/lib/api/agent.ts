@@ -20,7 +20,7 @@ export interface ConfigFieldOption {
 // Frontend is responsible for i18n using: agent.{slug}.fields.{name}.label
 export interface ConfigField {
   name: string;
-  type: "boolean" | "string" | "select" | "number" | "secret";
+  type: "boolean" | "string" | "select" | "number" | "secret" | "model_list";
   default?: unknown;
   options?: ConfigFieldOption[];
   required?: boolean;

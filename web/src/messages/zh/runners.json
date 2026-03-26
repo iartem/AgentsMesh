@@ -291,6 +291,21 @@
         "mcp_enabled": {
           "label": "启用 MCP 集成",
           "description": "允许 Agent 通过 MCP 协议与 AgentsMesh 平台通信"
+        },
+        "skip_permissions": {
+          "label": "跳过权限检查",
+          "description": "允许所有操作而无需确认"
+        },
+        "models": {
+          "label": "模型列表",
+          "description": "要使用的模型列表。拖动以重新排序。默认使用第一个模型。"
+        },
+        "model": {
+          "label": "模型",
+          "description": "选择一个模型或留空以使用列表中的第一个模型",
+          "options": {
+            "": "自动（列表中的第一个）"
+          }
         }
       }
     }

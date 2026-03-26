@@ -29,7 +29,8 @@ const FieldWrapper = memo(function FieldWrapper({
   value,
   onChange,
   agentSlug,
-}: FieldWrapperProps) {
+  values,
+}: FieldWrapperProps & { values?: Record<string, unknown> }) {
   const fieldKey = field.name;
 
   const handleChange = useCallback(
@@ -46,6 +47,7 @@ const FieldWrapper = memo(function FieldWrapper({
       value={value}
       onChange={handleChange}
       agentSlug={agentSlug}
+      values={values}
     />
   );
 });
@@ -87,6 +89,7 @@ export const ConfigForm = memo(function ConfigForm({
                 value={currentValue}
                 onChange={onChange}
                 agentSlug={agentSlug}
+                values={values}
               />
             );
           })}
