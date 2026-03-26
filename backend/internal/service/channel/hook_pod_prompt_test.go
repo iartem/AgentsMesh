@@ -70,6 +70,7 @@ func TestBuildPodPrompt(t *testing.T) {
 		name        string
 		content     string
 		channelName string
+		channelID   int64
 		podKeys     []string
 		want        string
 	}{
@@ -77,28 +78,31 @@ func TestBuildPodPrompt(t *testing.T) {
 			name:        "basic prompt with mention stripped",
 			content:     "@abcd1234 fix the login bug",
 			channelName: "dev-team",
+			channelID:   42,
 			podKeys:     []string{"abcd1234efgh5678"},
-			want:        "Message from channel(#dev-team): fix the login bug\n\nIf you finish it, please reply to this channel.",
+			want:        "Message from channel(#dev-team, channel_id=42): fix the login bug\n\nIf you finish it, please reply to this channel using send_channel_message(channel_id=42).",
 		},
 		{
 			name:        "no mentions to strip",
 			content:     "deploy to staging",
 			channelName: "ops",
+			channelID:   7,
 			podKeys:     []string{"abcd1234efgh5678"},
-			want:        "Message from channel(#ops): deploy to staging\n\nIf you finish it, please reply to this channel.",
+			want:        "Message from channel(#ops, channel_id=7): deploy to staging\n\nIf you finish it, please reply to this channel using send_channel_message(channel_id=7).",
 		},
 		{
 			name:        "multiple mentions stripped",
 			content:     "@aabbccdd @eeffgghh review PR #42",
 			channelName: "code-review",
+			channelID:   100,
 			podKeys:     []string{"aabbccddxxxxxxxx", "eeffgghhyyyyyyyy"},
-			want:        "Message from channel(#code-review): review PR #42\n\nIf you finish it, please reply to this channel.",
+			want:        "Message from channel(#code-review, channel_id=100): review PR #42\n\nIf you finish it, please reply to this channel using send_channel_message(channel_id=100).",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildPodPrompt(tt.content, tt.channelName, tt.podKeys)
+			got := buildPodPrompt(tt.content, tt.channelName, tt.channelID, tt.podKeys)
 			assert.Equal(t, tt.want, got)
 		})
 	}

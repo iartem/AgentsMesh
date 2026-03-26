@@ -31,7 +31,7 @@ func NewPodPromptHook(router TerminalInputRouter, msgWriter SystemMessageWriter)
 			return nil
 		}
 
-		prompt := buildPodPrompt(mc.Message.Content, mc.Channel.Name, mc.Mentions.PodKeys)
+		prompt := buildPodPrompt(mc.Message.Content, mc.Channel.Name, mc.Channel.ID, mc.Mentions.PodKeys)
 
 		for _, podKey := range mc.Mentions.PodKeys {
 			// Skip if the message was sent by this pod (don't echo back)
@@ -97,7 +97,9 @@ func stripPodMentions(content string, podKeys []string) string {
 
 // buildPodPrompt builds a context-aware prompt matching the frontend's buildChannelPrompt.
 // Strips @pod mentions from content and wraps with channel context + reply instruction.
-func buildPodPrompt(content, channelName string, podKeys []string) string {
+// Includes channel_id so agents without built-in skills (e.g. Codex) can use
+// the send_channel_message MCP tool to reply directly.
+func buildPodPrompt(content, channelName string, channelID int64, podKeys []string) string {
 	rawPrompt := stripPodMentions(content, podKeys)
-	return fmt.Sprintf("Message from channel(#%s): %s\n\nIf you finish it, please reply to this channel.", channelName, rawPrompt)
+	return fmt.Sprintf("Message from channel(#%s, channel_id=%d): %s\n\nIf you finish it, please reply to this channel using send_channel_message(channel_id=%d).", channelName, channelID, rawPrompt, channelID)
 }

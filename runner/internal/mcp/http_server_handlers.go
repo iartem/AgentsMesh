@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
@@ -82,6 +83,14 @@ func (s *HTTPServer) handleMCP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debug("MCP request received", "method", req.Method, "id", req.ID, "pod_key", podKey)
+
+	// Handle MCP notifications (no "id" field, method starts with "notifications/").
+	// Per the Streamable HTTP spec, notifications MUST receive 202 Accepted with no body.
+	if strings.HasPrefix(req.Method, "notifications/") {
+		log.Debug("MCP notification received", "method", req.Method, "pod_key", podKey)
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
 
 	// Route request
 	switch req.Method {

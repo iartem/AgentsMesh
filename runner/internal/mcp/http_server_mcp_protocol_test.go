@@ -93,15 +93,32 @@ func TestHTTPServerMCPNotificationsInitialized(t *testing.T) {
 
 	server.handleMCP(rec, req)
 
-	// Notifications don't return a response
-	if rec.Body.Len() == 0 {
-		// This is expected for notifications
-		return
+	// Per Streamable HTTP spec, notifications MUST receive 202 Accepted with no body
+	if rec.Code != http.StatusAccepted {
+		t.Errorf("expected status 202 Accepted for notification, got %d", rec.Code)
 	}
+	if rec.Body.Len() != 0 {
+		t.Errorf("expected empty body for notification, got %q", rec.Body.String())
+	}
+}
 
-	var resp MCPResponse
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		// Empty or no response is expected for notifications
-		return
+func TestHTTPServerMCPNotificationsCancelled(t *testing.T) {
+	server := NewHTTPServer(nil, 9090)
+	server.RegisterPod("test-pod", "test-org", nil, nil, "codex")
+
+	body := bytes.NewBufferString(`{
+		"jsonrpc": "2.0",
+		"method": "notifications/cancelled",
+		"params": {"requestId": 1}
+	}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp", body)
+	req.Header.Set("X-Pod-Key", "test-pod")
+	rec := httptest.NewRecorder()
+
+	server.handleMCP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Errorf("expected status 202 for notifications/cancelled, got %d", rec.Code)
 	}
 }
