@@ -327,6 +327,21 @@
         "mcp_enabled": {
           "label": "Enable MCP Integration",
           "description": "Allow the agent to communicate with AgentsMesh platform via MCP protocol"
+        },
+        "skip_permissions": {
+          "label": "Skip Permission Checks",
+          "description": "Allow all operations without confirmation"
+        },
+        "models": {
+          "label": "Model List",
+          "description": "List of models to use. Drag to reorder. First model is used by default."
+        },
+        "model": {
+          "label": "Model",
+          "description": "Select a model or leave empty to use the first in your list",
+          "options": {
+            "": "Auto (First in List)"
+          }
         }
       }
     }

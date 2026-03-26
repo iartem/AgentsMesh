@@ -10,8 +10,8 @@ import (
 const OpenCodeSlug = "opencode"
 
 // OpenCodeBuilder is the builder for OpenCode agent.
-// OpenCode CLI syntax: opencode [prompt] [options]
-// Similar to Claude Code, the prompt comes before options.
+// OpenCode CLI syntax: opencode [options]
+// MCP and permissions are configured via OPENCODE_CONFIG_CONTENT env var.
 type OpenCodeBuilder struct {
 	*BaseAgentBuilder
 }
@@ -38,43 +38,72 @@ func (b *OpenCodeBuilder) HandleInitialPrompt(ctx *BuildContext, args []string) 
 	return args
 }
 
-// BuildLaunchArgs uses the base implementation
+// BuildLaunchArgs builds launch args and adds --model flag if configured.
+// If model is empty but models list exists, uses the first model.
 func (b *OpenCodeBuilder) BuildLaunchArgs(ctx *BuildContext) ([]string, error) {
-	return b.BaseAgentBuilder.BuildLaunchArgs(ctx)
+	args, err := b.BaseAgentBuilder.BuildLaunchArgs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	model := b.getConfigString(ctx.Config, "model")
+	if model != "" {
+		args = append(args, "--model", model)
+		return args, nil
+	}
+
+	if models, ok := ctx.Config["models"]; ok && models != nil {
+		if modelsList, ok := models.([]interface{}); ok && len(modelsList) > 0 {
+			if firstModel, ok := modelsList[0].(string); ok && firstModel != "" {
+				args = append(args, "--model", firstModel)
+			}
+		}
+	}
+
+	return args, nil
 }
 
 // SupportsMcp returns true - OpenCode supports MCP servers
 func (b *OpenCodeBuilder) SupportsMcp() bool { return true }
 
-// BuildFilesToCreate creates OpenCode-specific files including MCP configuration.
+// BuildFilesToCreate uses the base implementation
 func (b *OpenCodeBuilder) BuildFilesToCreate(ctx *BuildContext) ([]*runnerv1.FileToCreate, error) {
-	files, err := b.BaseAgentBuilder.BuildFilesToCreate(ctx)
+	return b.BaseAgentBuilder.BuildFilesToCreate(ctx)
+}
+
+// BuildEnvVars creates env vars including OPENCODE_CONFIG_CONTENT for MCP and permissions.
+func (b *OpenCodeBuilder) BuildEnvVars(ctx *BuildContext) (map[string]string, error) {
+	envVars, err := b.BaseAgentBuilder.BuildEnvVars(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	mcpConfig := b.buildMcpConfig(ctx)
-	if mcpConfig == nil {
-		return files, nil
+	config := make(map[string]interface{})
+
+	if b.getConfigBool(ctx.Config, "mcp_enabled") {
+		mcpServers := b.buildMcpServers(ctx)
+		if len(mcpServers) > 0 {
+			config["mcp"] = mcpServers
+		}
 	}
 
-	configJSON, err := json.MarshalIndent(mcpConfig, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal opencode config: %w", err)
+	if b.getConfigBool(ctx.Config, "skip_permissions") {
+		config["permission"] = map[string]string{"*": "allow"}
 	}
 
-	files = append(files, &runnerv1.FileToCreate{
-		Path:    "{{.sandbox.work_dir}}/opencode.json",
-		Content: string(configJSON),
-		Mode:    0644,
-	})
+	if len(config) > 0 {
+		configJSON, err := json.Marshal(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal opencode config: %w", err)
+		}
+		envVars["OPENCODE_CONFIG_CONTENT"] = string(configJSON)
+	}
 
-	return files, nil
+	return envVars, nil
 }
 
-// buildMcpConfig builds the OpenCode MCP server configuration.
-// Returns nil if no MCP servers are configured.
-func (b *OpenCodeBuilder) buildMcpConfig(ctx *BuildContext) map[string]interface{} {
+// buildMcpServers builds the MCP server configurations.
+func (b *OpenCodeBuilder) buildMcpServers(ctx *BuildContext) map[string]interface{} {
 	servers := make(map[string]interface{})
 
 	if mcpPort, ok := ctx.TemplateCtx["mcp_port"]; ok && mcpPort != nil {
@@ -118,19 +147,7 @@ func (b *OpenCodeBuilder) buildMcpConfig(ctx *BuildContext) map[string]interface
 		servers[srv.Slug] = serverConfig
 	}
 
-	if len(servers) == 0 {
-		return nil
-	}
-
-	return map[string]interface{}{
-		"$schema": "https://opencode.ai/config.json",
-		"mcp":     servers,
-	}
-}
-
-// BuildEnvVars uses the base implementation
-func (b *OpenCodeBuilder) BuildEnvVars(ctx *BuildContext) (map[string]string, error) {
-	return b.BaseAgentBuilder.BuildEnvVars(ctx)
+	return servers
 }
 
 // PostProcess uses the base implementation
