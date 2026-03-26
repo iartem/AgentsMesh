@@ -466,6 +466,7 @@ export const FieldRenderer = memo(function FieldRenderer({
   value,
   onChange,
   agentSlug,
+  values,
 }: FieldRendererProps) {
   const { label, description, getOptionLabel } = useFieldTranslation(agentSlug, field.name);
 
