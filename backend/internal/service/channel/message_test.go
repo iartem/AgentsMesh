@@ -51,7 +51,7 @@ func TestGetMessages(t *testing.T) {
 	}
 
 	t.Run("get all messages", func(t *testing.T) {
-		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, 10)
+		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
 		if err != nil || len(messages) != 5 {
 			t.Errorf("GetMessages failed: %v, count=%d", err, len(messages))
 		}
@@ -61,7 +61,7 @@ func TestGetMessages(t *testing.T) {
 	})
 
 	t.Run("with limit", func(t *testing.T) {
-		messages, hasMore, _ := svc.GetMessages(ctx, ch.ID, nil, 3)
+		messages, hasMore, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 3)
 		if len(messages) != 3 {
 			t.Errorf("Expected 3 messages, got %d", len(messages))
 		}
@@ -72,7 +72,7 @@ func TestGetMessages(t *testing.T) {
 
 	t.Run("exact limit boundary", func(t *testing.T) {
 		// 5 messages with limit=5 → hasMore=false (no extra message returned)
-		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, 5)
+		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, nil, 5)
 		if err != nil {
 			t.Fatalf("GetMessages failed: %v", err)
 		}
@@ -85,7 +85,7 @@ func TestGetMessages(t *testing.T) {
 	})
 
 	t.Run("limit=1", func(t *testing.T) {
-		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, 1)
+		messages, hasMore, err := svc.GetMessages(ctx, ch.ID, nil, nil, 1)
 		if err != nil {
 			t.Fatalf("GetMessages failed: %v", err)
 		}
@@ -99,7 +99,7 @@ func TestGetMessages(t *testing.T) {
 
 	t.Run("empty channel", func(t *testing.T) {
 		emptyCh, _ := svc.CreateChannel(ctx, &CreateChannelRequest{OrganizationID: 1, Name: "empty-test"})
-		messages, hasMore, err := svc.GetMessages(ctx, emptyCh.ID, nil, 10)
+		messages, hasMore, err := svc.GetMessages(ctx, emptyCh.ID, nil, nil, 10)
 		if err != nil {
 			t.Fatalf("GetMessages failed: %v", err)
 		}
@@ -112,7 +112,7 @@ func TestGetMessages(t *testing.T) {
 	})
 
 	t.Run("cursor-based pagination hasMore", func(t *testing.T) {
-		allMsgs, _, _ := svc.GetMessages(ctx, ch.ID, nil, 10)
+		allMsgs, _, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
 		if len(allMsgs) < 3 {
 			t.Skip("Need at least 3 messages")
 		}
@@ -139,10 +139,10 @@ func TestGetMessages(t *testing.T) {
 	})
 
 	t.Run("with before filter", func(t *testing.T) {
-		allMsgs, _, _ := svc.GetMessages(ctx, ch.ID, nil, 10)
+		allMsgs, _, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
 		if len(allMsgs) >= 3 {
 			before := allMsgs[2].CreatedAt
-			msgs, _, err := svc.GetMessages(ctx, ch.ID, &before, 10)
+			msgs, _, err := svc.GetMessages(ctx, ch.ID, &before, nil, 10)
 			if err != nil {
 				t.Fatalf("GetMessages failed: %v", err)
 			}

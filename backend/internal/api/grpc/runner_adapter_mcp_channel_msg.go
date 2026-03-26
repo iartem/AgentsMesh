@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
@@ -57,8 +58,11 @@ func (a *GRPCRunnerAdapter) mcpSendMessage(ctx context.Context, tc *middleware.T
 // mcpGetMessages handles the "get_messages" MCP method.
 func (a *GRPCRunnerAdapter) mcpGetMessages(ctx context.Context, tc *middleware.TenantContext, payload []byte) (interface{}, *mcpError) {
 	var params struct {
-		ChannelID int64 `json:"channel_id"`
-		Limit     int   `json:"limit"`
+		ChannelID    int64   `json:"channel_id"`
+		BeforeTime   *string `json:"before_time"`
+		AfterTime    *string `json:"after_time"`
+		MentionedPod *string `json:"mentioned_pod"`
+		Limit        int     `json:"limit"`
 	}
 	if err := unmarshalPayload(payload, &params); err != nil {
 		return nil, err
@@ -76,7 +80,34 @@ func (a *GRPCRunnerAdapter) mcpGetMessages(ctx context.Context, tc *middleware.T
 	} else if limit > 100 {
 		limit = 100
 	}
-	messages, hasMore, err := a.channelService.GetMessages(ctx, params.ChannelID, nil, limit)
+
+	// If filtering by mentioned pod, use dedicated method
+	if params.MentionedPod != nil && *params.MentionedPod != "" {
+		messages, err := a.channelService.GetMessagesMentioning(ctx, params.ChannelID, *params.MentionedPod, limit)
+		if err != nil {
+			return nil, newMcpError(500, "failed to get messages")
+		}
+		return map[string]interface{}{"messages": messages}, nil
+	}
+
+	// Parse time filters
+	var before, after *time.Time
+	if params.BeforeTime != nil && *params.BeforeTime != "" {
+		if t, err := time.Parse(time.RFC3339, *params.BeforeTime); err == nil {
+			before = &t
+		} else {
+			return nil, newMcpError(400, "invalid before_time format, expected RFC3339")
+		}
+	}
+	if params.AfterTime != nil && *params.AfterTime != "" {
+		if t, err := time.Parse(time.RFC3339, *params.AfterTime); err == nil {
+			after = &t
+		} else {
+			return nil, newMcpError(400, "invalid after_time format, expected RFC3339")
+		}
+	}
+
+	messages, hasMore, err := a.channelService.GetMessages(ctx, params.ChannelID, before, after, limit)
 	if err != nil {
 		return nil, newMcpError(500, "failed to get messages")
 	}
