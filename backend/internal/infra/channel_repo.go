@@ -139,12 +139,18 @@ func (r *channelRepository) GetMessages(ctx context.Context, channelID int64, be
 	if after != nil {
 		query = query.Where("created_at > ?", *after)
 	}
+	// After-only: return oldest-first so hasMore means "newer messages exist beyond the limit".
+	// All other cases: newest-first so hasMore means "older messages exist" (load-more / scroll-up).
+	order := "created_at DESC"
+	if after != nil && before == nil {
+		order = "created_at ASC"
+	}
 	var messages []*channel.Message
 	if err := query.
 		Preload("SenderUser").
 		Preload("SenderPodInfo").
 		Preload("SenderPodInfo.AgentType").
-		Order("created_at DESC").
+		Order(order).
 		Limit(limit).
 		Find(&messages).Error; err != nil {
 		return nil, err
@@ -152,7 +158,7 @@ func (r *channelRepository) GetMessages(ctx context.Context, channelID int64, be
 	return messages, nil
 }
 
-func (r *channelRepository) GetMessagesMentioning(ctx context.Context, channelID int64, podKey string, limit int) ([]*channel.Message, error) {
+func (r *channelRepository) GetMessagesMentioning(ctx context.Context, channelID int64, podKey string, limit int) ([]*channel.Message, bool, error) {
 	var messages []*channel.Message
 	// Require BOTH "mentioned_pods" key AND exact pod key value in metadata.
 	// Using two LIKE conditions scopes the match to the mentioned_pods field, avoiding false
@@ -165,11 +171,15 @@ func (r *channelRepository) GetMessagesMentioning(ctx context.Context, channelID
 		Where(`channel_id = ? AND is_deleted = FALSE AND ((CAST(metadata AS TEXT) LIKE '%mentioned_pods%' AND CAST(metadata AS TEXT) LIKE ?) OR content LIKE ?)`,
 			channelID, podValuePattern, textPattern).
 		Order("created_at DESC").
-		Limit(limit).
+		Limit(limit + 1).
 		Find(&messages).Error; err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return messages, nil
+	hasMore := len(messages) > limit
+	if hasMore {
+		messages = messages[:limit]
+	}
+	return messages, hasMore, nil
 }
 
 func (r *channelRepository) GetRecentMessages(ctx context.Context, channelID int64, limit int) ([]*channel.Message, error) {

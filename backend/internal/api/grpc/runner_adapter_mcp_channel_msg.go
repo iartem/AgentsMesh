@@ -83,11 +83,11 @@ func (a *GRPCRunnerAdapter) mcpGetMessages(ctx context.Context, tc *middleware.T
 
 	// If filtering by mentioned pod, use dedicated method
 	if params.MentionedPod != nil && *params.MentionedPod != "" {
-		messages, err := a.channelService.GetMessagesMentioning(ctx, params.ChannelID, *params.MentionedPod, limit)
+		messages, hasMore, err := a.channelService.GetMessagesMentioning(ctx, params.ChannelID, *params.MentionedPod, limit)
 		if err != nil {
 			return nil, newMcpError(500, "failed to get messages")
 		}
-		return map[string]interface{}{"messages": messages}, nil
+		return map[string]interface{}{"messages": messages, "has_more": hasMore}, nil
 	}
 
 	// Parse time filters

@@ -32,7 +32,7 @@ type ChannelStore interface {
 type MessageStore interface {
 	CreateMessage(ctx context.Context, msg *Message) error
 	GetMessages(ctx context.Context, channelID int64, before *time.Time, after *time.Time, limit int) ([]*Message, error)
-	GetMessagesMentioning(ctx context.Context, channelID int64, podKey string, limit int) ([]*Message, error)
+	GetMessagesMentioning(ctx context.Context, channelID int64, podKey string, limit int) ([]*Message, bool, error)
 	GetRecentMessages(ctx context.Context, channelID int64, limit int) ([]*Message, error)
 	GetMessagesBefore(ctx context.Context, channelID int64, beforeID int64, limit int) ([]*Message, error)
 	UpdateMessageMetadata(ctx context.Context, messageID int64, metadata map[string]interface{}) error
